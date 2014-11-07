@@ -35,4 +35,4 @@ rule demultiplex:
 	resources: time=60
 	shell:
 		# This is the forward primer. The reverse primer is: GTAGTCCTTGACCAGGCAGCCCAG
-		"cutadapt -g ^GCCCAGGTGAAACTGCCTCGAG --no-trim --discard-untrimmed -o {output.fastq} {input.fastq}"
+		"cutadapt -g ^GCCCAGGTGAAACTGCCTCGAG --discard-untrimmed -o {output.fastq} {input.fastq}"
