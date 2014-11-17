@@ -8,6 +8,9 @@ module use -a /proj/b2013006/sw/modules
 module load snakemake
 module load flash
 """
+
+USEARCH = '/proj/b2011210/dlbin/usearch7.0.1001_i86linux64'
+
 rule merge_persson:
 	output: "data/persson-merged.fastq.gz"
 	input: expand("raw/lane1_Undetermined_L001_R{r}_001.fastq", r=(1,2))
@@ -36,3 +39,14 @@ rule demultiplex:
 	shell:
 		# This is the forward primer. The reverse primer is: GTAGTCCTTGACCAGGCAGCCCAG
 		"cutadapt -g ^GCCCAGGTGAAACTGCCTCGAG --discard-untrimmed -o {output.fastq} {input.fastq}"
+
+rule usearch_fastq_to_fasta:
+	output: fasta="data/{dataset}.fasta"
+	input: fastq="data/{dataset}.fastq"
+	shell:
+		"{USEARCH} -fastq_filter {input.fastq} -fastq_minlen 400 -fastq_maxee 1 -fastaout {output.fasta}"
+
+rule uncompress:
+	output: "{file}"
+	input: "{file}.gz"
+	shell: "zcat {input} > {output}"
