@@ -11,67 +11,86 @@ module load FastQC
 module use /proj/b2013006/sw/modules
 module load snakemake
 module load flash
+
+To run this, create symlinks in the reads/ directory that point to your raw data.
 """
 USEARCH = '/proj/b2011210/dlbin/usearch7.0.1001_i86linux64'
 
+DATASETS = [ 'persson' ]
 
 rule all:
-	input: "fastqc/lane1_Undetermined_L001_R1_001.fastq"
+	input:
+		expand("fastqc/{dataset}.{r}.zip", r=(1, 2), dataset=DATASETS),
+		expand("stats/{dataset}.readlengthhisto.pdf", dataset=DATASETS),
+		expand("unique/{dataset}.fasta", dataset=DATASETS),
+
 
 rule flash_merge:
 	"""Use FLASH to merge paired-end reads"""
-	output: "data/persson-merged.fastq.gz"
-	input: expand("raw/lane1_Undetermined_L001_R{r}_001.fastq", r=(1,2))
+	output: "merged/{dataset}.fastq.gz"
+	input: expand("reads/{{dataset}}.{r}.fastq", r=(1,2))
 	resources: time=60
 	threads: 8
 	shell:
 		# -M: maximal overlap (2x300, 420-450bp expected fragment size)
 		"flash -t {threads} -c -M 100 {input} | pigz > {output}"
 
+
 rule read_length_histogram:
+	# TODO on which data should this be created?
 	output:
-		txt="stats/persson-merged-readlengthhisto.txt",
-		pdf="stats/persson-merged-readlengthhisto.pdf"
+		txt="stats/{dataset}.readlengthhisto.txt",
+		pdf="stats/{dataset}.readlengthhisto.pdf"
 	input:
-		"data/persson-merged.fastq.gz"
+		fastq="merged/{dataset}.fastq.gz"
 	shell:
 		"sqt-fastqhisto --plot {output.pdf} {input}  > {output.txt}"
+
 
 rule demultiplex:
 	# TODO
 	# This isn’t doing real demultiplexing right now since the data
 	# isn’t actually multiplexed.
-	output:	fastq="data/persson-demultiplexed.fastq.gz"
-	input: fastq="data/persson-merged.fastq.gz"
+	output:	fastq="demultiplexed/{dataset}.fastq.gz"
+	input: fastq="merged/{dataset}.fastq.gz"
 	resources: time=60
 	shell:
 		# This is the forward primer. The reverse primer is: GTAGTCCTTGACCAGGCAGCCCAG
 		"cutadapt -g ^GCCCAGGTGAAACTGCCTCGAG --discard-untrimmed -o {output.fastq} {input.fastq}"
 
+
 rule fastqc:
 	output:
-		zip='fastqc/{dataset}_fastqc.zip',
-		png='fastqc/{dataset}/Images/per_base_quality.png'
-	input: fastq='raw/{dataset}.fastq'
+		zip='fastqc/{file}.zip',
+		png='fastqc/{file}/Images/per_base_quality.png'
+	input: fastq='reads/{file}.fastq'
 	shell:
 		r"""fastqc -o fastqc {input} && \
+		mv fastqc/{wildcards.file}_fastq.zip {output.zip} && \
 		unzip -o -d fastqc/ {output.zip} && \
-		mv fastqc/{wildcards.dataset}_fastqc/* fastqc/{wildcards.dataset}/ && \
-		rmdir fastqc/{wildcards.dataset}_fastqc
+		mv fastqc/{wildcards.file}_fastqc/* fastqc/{wildcards.file}/ && \
+		rmdir fastqc/{wildcards.file}_fastqc
 		"""
 
+
 rule usearch_fastq_to_fasta:
-	output: fasta="data/{dataset}-merged.fasta"
-	input: fastq="data/{dataset}-merged.fastq"
+	"""
+	Convert from FASTQ to FASTA; remove low-quality sequences;
+	discard too short sequences.
+	"""
+	output: fasta="filtered/{dataset}.fasta"
+	input: fastq="demultiplexed/{dataset}.fastq"
 	shell:
 		"{USEARCH} -fastq_filter {input.fastq} -fastq_minlen 400 -fastq_maxee 1 -fastaout {output.fasta}"
+
 
 rule usearch_derep_fulllength:
 	"""Dereplication with usearch"""
 	output: fasta="unique/{dataset}.fasta"
-	input: fasta="data/{dataset}-merged.fasta"
+	input: fasta="filtered/{dataset}.fasta"
 	shell:
 		"""{USEARCH} -derep_fulllength {input.fasta} -output {output.fasta} -sizeout"""
+
 
 rule ungzip:
 	output: "{file}.fastq"
