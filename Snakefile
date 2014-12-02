@@ -3,6 +3,7 @@
 Required modules:
 
 module purge
+module load gcc
 module load bioinfo-tools
 # module load usearch  # unused, we need the 64 bit version
 module load cutadapt
@@ -66,7 +67,7 @@ rule fastqc:
 	input: fastq='reads/{file}.fastq'
 	shell:
 		r"""fastqc -o fastqc {input} && \
-		mv fastqc/{wildcards.file}_fastq.zip {output.zip} && \
+		mv fastqc/{wildcards.file}_fastqc.zip {output.zip} && \
 		unzip -o -d fastqc/ {output.zip} && \
 		mv fastqc/{wildcards.file}_fastqc/* fastqc/{wildcards.file}/ && \
 		rmdir fastqc/{wildcards.file}_fastqc
