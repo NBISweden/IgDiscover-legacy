@@ -14,6 +14,14 @@ module load snakemake
 module load flash
 
 To run this, create symlinks in the reads/ directory that point to your raw data.
+
+Each stage of the pipeline is in a different directory. They are:
+
+1. reads/ -- raw reads
+2. merged/ -- paired-end reads merged into single reads
+3. demultiplexed/ -- demultiplexed and without adapters
+4. filtered/ -- FASTQ converted to FASTA with low-quality reads removed
+5. unique/ -- duplicate reads collapsed into one
 """
 USEARCH = '/proj/b2011210/dlbin/usearch7.0.1001_i86linux64'
 
