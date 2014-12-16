@@ -138,6 +138,25 @@ rule usearch_derep_fulllength:
 		"""{USEARCH} -derep_fulllength {input.fasta} -output {output.fasta} -sizeout"""
 
 
+rule usearch_cluster:
+	"""
+	TODO Daniel ran this three times (at 99%, 98% and 97% identity) in order to
+	avoid a specific type of misclustering.
+	"""
+	output:
+		fasta="clustered/{dataset}.fasta",  # centroids
+		uc="clustered/{dataset}.uc"
+	input: fasta="unique/{dataset}.fasta"
+	resources: time=12*60
+	#threads: 1
+	shell:
+		# TODO -idprefix 5?
+		# TODO even with -threads {threads}, it uses only 1 thread
+		r"""
+		{USEARCH} -cluster_fast {input.fasta} -id 0.97 -uc {output.uc} \
+			-idprefix 5 --centroids {output.fasta} -sizeout
+		"""
+
 rule ungzip:
 	output: "{file}.fastq"
 	input: "{file}.fastq.gz"
