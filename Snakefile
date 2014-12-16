@@ -22,27 +22,63 @@ Each stage of the pipeline is in a different directory. They are:
 3. demultiplexed/ -- demultiplexed and without adapters
 4. filtered/ -- FASTQ converted to FASTA with low-quality reads removed
 5. unique/ -- duplicate reads collapsed into one
+6. clustered/ -- clustered into groups of similar sequences
 """
+
+MERGE_PROGRAM = 'pear'  # either 'pear' or 'flash'
+
+FORWARD_PRIMER = 'GCCCAGGTGAAACTGCCTCGAG'
+# The reverse primer is: GTAGTCCTTGACCAGGCAGCCCAG
 USEARCH = '/proj/b2011210/dlbin/usearch7.0.1001_i86linux64'
 
-DATASETS = [ 'persson' ]
+# Other configuration options:
+# - species
+# - which chain (heavy/light) to analyze
+
+DATASETS = [ 'persson', 'small' ]
+
+# This command is run before every shell command and helps to catch errors early
+shell.prefix("set -euo pipefail;")
 
 rule all:
 	input:
 		expand("fastqc/{dataset}.{r}.zip", r=(1, 2), dataset=DATASETS),
 		expand("stats/{dataset}.readlengthhisto.pdf", dataset=DATASETS),
-		expand("unique/{dataset}.fasta", dataset=DATASETS),
+		expand("clustered/{dataset}.fasta", dataset=DATASETS),
 
 
-rule flash_merge:
-	"""Use FLASH to merge paired-end reads"""
-	output: "merged/{dataset}.fastq.gz"
-	input: expand("reads/{{dataset}}.{r}.fastq", r=(1,2))
-	resources: time=60
-	threads: 8
+rule create_persson_small:
+	"Create a subset of the 20M Persson reads"
+	output: fastq="reads/small.{r}.fastq"
+	input: fastq="reads/persson.{r}.fastq"
 	shell:
-		# -M: maximal overlap (2x300, 420-450bp expected fragment size)
-		"flash -t {threads} -c -M 100 {input} | pigz > {output}"
+		"head -n 44000000 {input} | tail -n 4000000 > {output}"
+
+
+if MERGE_PROGRAM == 'flash':
+	rule flash_merge:
+		"""Use FLASH to merge paired-end reads"""
+		output: "merged/{dataset}.fastq.gz"
+		input: expand("reads/{{dataset}}.{r}.fastq", r=(1,2))
+		resources: time=60
+		threads: 8
+		shell:
+			# -M: maximal overlap (2x300, 420-450bp expected fragment size)
+			"flash -t {threads} -c -M 100 {input} | pigz > {output}"
+elif MERGE_PROGRAM == 'pear':
+	rule pear_merge:
+		"""Use pear to merge paired-end reads"""
+		output: fastq="merged/{dataset}.fastq"
+		input: expand("reads/{{dataset}}.{r}.fastq", r=(1,2))
+		resources: time=60
+		threads: 8
+		shell:
+			r"""
+			pear -f {input[0]} -r {input[1]} -o {wildcards.dataset} && \
+			mv {wildcards.dataset}.assembled.fastq {output.fastq}
+			"""
+else:
+	sys.exit("MERGE_PROGRAM not recognized")
 
 
 rule read_length_histogram:
@@ -64,8 +100,7 @@ rule demultiplex:
 	input: fastq="merged/{dataset}.fastq.gz"
 	resources: time=60
 	shell:
-		# This is the forward primer. The reverse primer is: GTAGTCCTTGACCAGGCAGCCCAG
-		"cutadapt -g ^GCCCAGGTGAAACTGCCTCGAG --discard-untrimmed -o {output.fastq} {input.fastq}"
+		"cutadapt -g ^{FORWARD_PRIMER} --discard-untrimmed -o {output.fastq} {input.fastq}"
 
 
 rule fastqc:
