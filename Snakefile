@@ -106,14 +106,16 @@ rule demultiplex:
 rule fastqc:
 	output:
 		zip='fastqc/{file}.zip',
-		png='fastqc/{file}/Images/per_base_quality.png'
+		png='fastqc/{file}/Images/per_base_quality.png',
+		html='fastqc/{file}_fastqc.html'
 	input: fastq='reads/{file}.fastq'
 	shell:
-		r"""fastqc -o fastqc {input} && \
+		r"""
+		rm -rf fastqc/{wildcards.file}/ fastqc/{wildcards.file}_fastqc/ && \
+		fastqc -o fastqc {input} && \
 		mv fastqc/{wildcards.file}_fastqc.zip {output.zip} && \
 		unzip -o -d fastqc/ {output.zip} && \
-		mv fastqc/{wildcards.file}_fastqc/* fastqc/{wildcards.file}/ && \
-		rmdir fastqc/{wildcards.file}_fastqc
+		mv fastqc/{wildcards.file}_fastqc/ fastqc/{wildcards.file}
 		"""
 
 
