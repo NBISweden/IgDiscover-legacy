@@ -3,15 +3,12 @@
 Required modules:
 
 module purge
-module load gcc
-module load bioinfo-tools
-# module load usearch  # unused, we need the 64 bit version
-module load cutadapt
-module load FastQC
+module load gcc bioinfo-tools
+module use /proj/b2013006/sw/modules  # Load this first to avoid the broken Uppmax cutadapt and python modules.
+module load FastQC cutadapt snakemake flash pear
+# later: igblastwrp
 
-module use /proj/b2013006/sw/modules
-module load snakemake
-module load flash
+# module load usearch  # unused, we need the 64 bit version
 
 To run this, create symlinks in the reads/ directory that point to your raw data.
 
@@ -23,19 +20,49 @@ Each stage of the pipeline is in a different directory. They are:
 4. filtered/ -- FASTQ converted to FASTA with low-quality reads removed
 5. unique/ -- duplicate reads collapsed into one
 6. clustered/ -- clustered into groups of similar sequences
+7. assigned/ -- IgBLAST assignment
 """
 
-MERGE_PROGRAM = 'pear'  # either 'pear' or 'flash'
+# Configuration
+# either 'pear' or 'flash'
+MERGE_PROGRAM = 'flash'
 
-FORWARD_PRIMER = 'GCCCAGGTGAAACTGCCTCGAG'
+# Maximum overlap (-M) for the flash read merger
+FLASH_MAXIMUM_OVERLAP = 100
+
+FORWARD_PRIMERS = [
+	'AGCTACAGAGTCCCAGGTCCA',
+	'ACAGGYGCCCACTCYSAG',
+	'TTGCTMTTTTAARAGGTGTCCAGTGTG',
+	'CTCCCAGATGGGTCCTGTC',
+	'ACCGTCCYGGGTCTTGTC'
+	'CTGTTCTCCAAGGGWGTCTSTG',
+	'CATGGGGTGTCCTGTCACA'
+]
+
+REVERSE_PRIMERS = [
+	#'GCAGGCCTTTTTGGCCNNNNNGCCGATGGGCCCTTGGTGGAGGCTGA'
+	'TCAGCCTCCACCAAGGGCCCATCGGCNNNNNGGCCAAAAAGGCCTGC'  # revcomp of seq. above
+]
+
+#FORWARD_PRIMER = 'GCCCAGGTGAAACTGCCTCGAG'
 # The reverse primer is: GTAGTCCTTGACCAGGCAGCCCAG
+
+# Which receptor chain to analyze (passed to igblastwrp).
+# One of TRA, TRB, TRG, TRD, IGH, IGL, IGK
+RECEPTOR_CHAIN = 'IGH'
+
+# One of human, mouse, rhesus_monkey
+SPECIES = 'rhesus_monkey'
+
 USEARCH = '/proj/b2011210/dlbin/usearch7.0.1001_i86linux64'
 
 # Other configuration options:
 # - species
 # - which chain (heavy/light) to analyze
 
-DATASETS = [ 'persson', 'small' ]
+DATASETS = [ 'post-IgG' ]
+#, 'persson', 'small' ]
 
 # This command is run before every shell command and helps to catch errors early
 shell.prefix("set -euo pipefail;")
@@ -55,6 +82,13 @@ rule create_persson_small:
 		"head -n 44000000 {input} | tail -n 4000000 > {output}"
 
 
+#rule uncompress_reads:
+	#input: "reads/{file}.fastq.gz"
+	#output: "reads/{file}.fastq"
+	#shell:
+		#"zcat {input} > {output}"
+
+
 if MERGE_PROGRAM == 'flash':
 	rule flash_merge:
 		"""Use FLASH to merge paired-end reads"""
@@ -64,7 +98,7 @@ if MERGE_PROGRAM == 'flash':
 		threads: 8
 		shell:
 			# -M: maximal overlap (2x300, 420-450bp expected fragment size)
-			"flash -t {threads} -c -M 100 {input} | pigz > {output}"
+			"flash -t {threads} -c -M {FLASH_MAXIMUM_OVERLAP} {input} | pigz > {output}"
 elif MERGE_PROGRAM == 'pear':
 	rule pear_merge:
 		"""Use pear to merge paired-end reads"""
@@ -100,7 +134,7 @@ rule demultiplex:
 	input: fastq="merged/{dataset}.fastq.gz"
 	resources: time=60
 	shell:
-		"cutadapt -g ^{FORWARD_PRIMER} --discard-untrimmed -o {output.fastq} {input.fastq}"
+		"cutadapt -n 2 -g ^{FORWARD_PRIMERS[3]} -a {REVERSE_PRIMERS[0]} --discard-untrimmed -o {output.fastq} {input.fastq}"
 
 
 rule fastqc:
@@ -147,15 +181,25 @@ rule usearch_cluster:
 		fasta="clustered/{dataset}.fasta",  # centroids
 		uc="clustered/{dataset}.uc"
 	input: fasta="unique/{dataset}.fasta"
-	resources: time=12*60
-	#threads: 1
+	resources: time=36*60, mem=32000
+	threads: 4
 	shell:
 		# TODO -idprefix 5?
-		# TODO even with -threads {threads}, it uses only 1 thread
+		# TODO uses only 1 thread
 		r"""
-		{USEARCH} -cluster_fast {input.fasta} -id 0.97 -uc {output.uc} \
+		{USEARCH} -threads {threads} -cluster_fast {input.fasta} -id 0.97 -uc {output.uc} \
 			-idprefix 5 --centroids {output.fasta} -sizeout
 		"""
+
+rule igblast:
+	"""TODO run it on clustered sequences, not on dereplicated ones"""
+	output: "igblast/{dataset}.L0.txt"
+	input: "unique/{dataset}.fasta"
+	#resources: time=??
+	threads: 8
+	shell:
+		"igblastwrp -R {RECEPTOR_CHAIN} -S {SPECIES} -p {threads} {input} igblast/{wildcards.dataset}"
+
 
 rule ungzip:
 	output: "{file}.fastq"
