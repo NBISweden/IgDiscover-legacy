@@ -5,8 +5,7 @@ Required modules:
 module purge
 module load gcc bioinfo-tools
 module use /proj/b2013006/sw/modules  # Load this first to avoid the broken Uppmax cutadapt and python modules.
-module load FastQC cutadapt snakemake flash pear
-# later: igblastwrp
+module load FastQC cutadapt snakemake flash pear igblastwrp
 
 # module load usearch  # unused, we need the 64 bit version
 
@@ -23,46 +22,8 @@ Each stage of the pipeline is in a different directory. They are:
 7. assigned/ -- IgBLAST assignment
 """
 
-# Configuration
-# either 'pear' or 'flash'
-MERGE_PROGRAM = 'flash'
+include: "pipeline.conf"
 
-# Maximum overlap (-M) for the flash read merger
-FLASH_MAXIMUM_OVERLAP = 100
-
-FORWARD_PRIMERS = [
-	'AGCTACAGAGTCCCAGGTCCA',
-	'ACAGGYGCCCACTCYSAG',
-	'TTGCTMTTTTAARAGGTGTCCAGTGTG',
-	'CTCCCAGATGGGTCCTGTC',
-	'ACCGTCCYGGGTCTTGTC'
-	'CTGTTCTCCAAGGGWGTCTSTG',
-	'CATGGGGTGTCCTGTCACA'
-]
-
-REVERSE_PRIMERS = [
-	#'GCAGGCCTTTTTGGCCNNNNNGCCGATGGGCCCTTGGTGGAGGCTGA'
-	'TCAGCCTCCACCAAGGGCCCATCGGCNNNNNGGCCAAAAAGGCCTGC'  # revcomp of seq. above
-]
-
-#FORWARD_PRIMER = 'GCCCAGGTGAAACTGCCTCGAG'
-# The reverse primer is: GTAGTCCTTGACCAGGCAGCCCAG
-
-# Which receptor chain to analyze (passed to igblastwrp).
-# One of TRA, TRB, TRG, TRD, IGH, IGL, IGK
-RECEPTOR_CHAIN = 'IGH'
-
-# One of human, mouse, rhesus_monkey
-SPECIES = 'rhesus_monkey'
-
-USEARCH = '/proj/b2011210/dlbin/usearch7.0.1001_i86linux64'
-
-# Other configuration options:
-# - species
-# - which chain (heavy/light) to analyze
-
-DATASETS = [ 'post-IgG' ]
-#, 'persson', 'small' ]
 
 # This command is run before every shell command and helps to catch errors early
 shell.prefix("set -euo pipefail;")
@@ -72,6 +33,7 @@ rule all:
 		expand("fastqc/{dataset}.{r}.zip", r=(1, 2), dataset=DATASETS),
 		expand("stats/{dataset}.readlengthhisto.pdf", dataset=DATASETS),
 		expand("clustered/{dataset}.fasta", dataset=DATASETS),
+		expand("igblast/{dataset}.L0.txt", dataset=DATASETS),
 
 
 rule create_persson_small:
