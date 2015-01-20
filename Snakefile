@@ -15,7 +15,7 @@ Each stage of the pipeline is in a different directory. They are:
 
 1. reads/ -- raw reads
 2. merged/ -- paired-end reads merged into single reads
-3. demultiplexed/ -- demultiplexed and without adapters
+3. trimmed/ -- adapters removed
 4. filtered/ -- FASTQ converted to FASTA with low-quality reads removed
 5. unique/ -- duplicate reads collapsed into one
 6. clustered/ -- clustered into groups of similar sequences
@@ -88,16 +88,18 @@ rule read_length_histogram:
 		"sqt-fastqhisto --plot {output.pdf} {input}  > {output.txt}"
 
 
-rule demultiplex:
-	# TODO
-	# This isn’t doing real demultiplexing right now since the data
-	# isn’t actually multiplexed.
-	output:	fastq="demultiplexed/{dataset}.fastq.gz"
+rule trim_primers:
+	output: fastq="trimmed/{dataset}.fastq.gz"
 	input: fastq="merged/{dataset}.fastq.gz"
 	resources: time=60
+	params:
+		five_p=" ".join("-g ^{}".format(seq) for seq in FIVE_PRIME_PRIMERS),
+		three_p=" ".join("-a {}".format(seq) for seq in THREE_PRIME_PRIMERS)
 	shell:
-		"cutadapt -n 2 -g ^{FORWARD_PRIMERS[3]} -a {REVERSE_PRIMERS[0]} --discard-untrimmed -o {output.fastq} {input.fastq}"
-
+		r"""
+		cutadapt --discard-untrimmed {params.five_p} {input.fastq} | \
+		cutadapt --discard-untrimmed {params.three_p} -o {output.fastq} -
+		"""
 
 rule fastqc:
 	output:
@@ -121,7 +123,7 @@ rule usearch_fastq_to_fasta:
 	discard too short sequences.
 	"""
 	output: fasta="filtered/{dataset}.fasta"
-	input: fastq="demultiplexed/{dataset}.fastq"
+	input: fastq="trimmed/{dataset}.fastq"
 	shell:
 		"{USEARCH} -fastq_filter {input.fastq} -fastq_minlen 400 -fastq_maxee 1 -fastaout {output.fasta}"
 
