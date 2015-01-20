@@ -33,15 +33,7 @@ rule all:
 		expand("fastqc/{dataset}.{r}.zip", r=(1, 2), dataset=DATASETS),
 		expand("stats/{dataset}.readlengthhisto.pdf", dataset=DATASETS),
 		expand("clustered/{dataset}.fasta", dataset=DATASETS),
-		expand("igblast/{dataset}.L0.txt", dataset=DATASETS),
-
-
-rule create_persson_small:
-	"Create a subset of the 20M Persson reads"
-	output: fastq="reads/small.{r}.fastq"
-	input: fastq="reads/persson.{r}.fastq"
-	shell:
-		"head -n 44000000 {input} | tail -n 4000000 > {output}"
+		expand("igblast/{dataset}.L2.txt", dataset=DATASETS),
 
 
 #rule uncompress_reads:
@@ -155,11 +147,12 @@ rule usearch_cluster:
 			-idprefix 5 --centroids {output.fasta} -sizeout
 		"""
 
+
 rule igblast:
-	"""TODO run it on clustered sequences, not on dereplicated ones"""
-	output: "igblast/{dataset}.L0.txt"
-	input: "unique/{dataset}.fasta"
-	#resources: time=??
+	"""TODO run it on clustered sequences, not on dereplicated ones (?)"""
+	output: "igblast/{dataset}.L2.txt"
+	input: "filtered/{dataset}.fasta"
+	resources: time=60
 	threads: 8
 	shell:
 		"igblastwrp -R {RECEPTOR_CHAIN} -S {SPECIES} -p {threads} {input} igblast/{wildcards.dataset}"
