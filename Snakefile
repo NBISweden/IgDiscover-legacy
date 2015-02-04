@@ -5,9 +5,7 @@ Required modules:
 module purge
 module load gcc bioinfo-tools
 module use /proj/b2013006/sw/modules  # Load this first to avoid the broken Uppmax cutadapt and python modules.
-module load FastQC cutadapt snakemake flash pear igblastwrp
-
-# module load usearch  # unused, we need the 64 bit version
+module load FastQC cutadapt snakemake flash pear igblastwrp vsearch
 
 To run this, create symlinks in the reads/ directory that point to your raw data.
 
@@ -92,6 +90,7 @@ rule trim_primers:
 		cutadapt --discard-untrimmed {params.five_p} {input.fastq} | \
 		cutadapt --discard-untrimmed {params.three_p} -o {output.fastq} -
 		"""
+
 
 rule fastqc:
 	output:
