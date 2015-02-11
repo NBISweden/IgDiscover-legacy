@@ -28,10 +28,10 @@ shell.prefix("set -euo pipefail;")
 
 rule all:
 	input:
-		expand("fastqc/{dataset}.{r}.zip", r=(1, 2), dataset=DATASETS),
-		expand("stats/{dataset}.readlengthhisto.pdf", dataset=DATASETS),
-		expand("clustered/{dataset}.fasta", dataset=DATASETS),
-		expand("igblast/{dataset}.L2.txt", dataset=DATASETS),
+		expand("fastqc/reads.{r}.zip", r=(1, 2)),
+		"stats/readlengthhisto.pdf",
+		"clustered.fasta",
+		"igblast.L2.txt",
 
 
 #rule uncompress_reads:
@@ -44,8 +44,8 @@ rule all:
 if MERGE_PROGRAM == 'flash':
 	rule flash_merge:
 		"""Use FLASH to merge paired-end reads"""
-		output: "merged/{dataset}.fastq.gz"
-		input: expand("reads/{{dataset}}.{r}.fastq", r=(1,2))
+		output: "merged.fastq.gz"
+		input: "reads.1.fastq", "reads.2.fastq"
 		resources: time=60
 		threads: 8
 		shell:
@@ -54,14 +54,14 @@ if MERGE_PROGRAM == 'flash':
 elif MERGE_PROGRAM == 'pear':
 	rule pear_merge:
 		"""Use pear to merge paired-end reads"""
-		output: fastq="merged/{dataset}.fastq"
-		input: expand("reads/{{dataset}}.{r}.fastq", r=(1,2))
+		output: fastq="merged.fastq"
+		input: "reads.1.fastq", "reads.2.fastq"
 		resources: time=60
 		threads: 8
 		shell:
 			r"""
-			pear -f {input[0]} -r {input[1]} -o {wildcards.dataset} && \
-			mv {wildcards.dataset}.assembled.fastq {output.fastq}
+			pear -f {input[0]} -r {input[1]} -o pear && \
+			mv pear.assembled.fastq {output.fastq}
 			"""
 else:
 	sys.exit("MERGE_PROGRAM not recognized")
@@ -70,17 +70,17 @@ else:
 rule read_length_histogram:
 	# TODO on which data should this be created?
 	output:
-		txt="stats/{dataset}.readlengthhisto.txt",
-		pdf="stats/{dataset}.readlengthhisto.pdf"
+		txt="stats/readlengthhisto.txt",
+		pdf="stats/readlengthhisto.pdf"
 	input:
-		fastq="merged/{dataset}.fastq.gz"
+		fastq="merged.fastq.gz"
 	shell:
 		"sqt-fastqhisto --plot {output.pdf} {input}  > {output.txt}"
 
 
 rule trim_primers:
-	output: fastq="trimmed/{dataset}.fastq.gz"
-	input: fastq="merged/{dataset}.fastq.gz"
+	output: fastq="trimmed.fastq.gz"
+	input: fastq="merged.fastq.gz"
 	resources: time=60
 	params:
 		five_p=" ".join("-g ^{}".format(seq) for seq in FIVE_PRIME_PRIMERS),
@@ -97,7 +97,7 @@ rule fastqc:
 		zip='fastqc/{file}.zip',
 		png='fastqc/{file}/Images/per_base_quality.png',
 		html='fastqc/{file}_fastqc.html'
-	input: fastq='reads/{file}.fastq'
+	input: fastq='{file}.fastq'
 	shell:
 		r"""
 		rm -rf fastqc/{wildcards.file}/ fastqc/{wildcards.file}_fastqc/ && \
@@ -113,8 +113,8 @@ rule usearch_fastq_to_fasta:
 	Convert from FASTQ to FASTA; remove low-quality sequences;
 	discard too short sequences.
 	"""
-	output: fasta="filtered/{dataset}.fasta"
-	input: fastq="trimmed/{dataset}.fastq"
+	output: fasta="filtered.fasta"
+	input: fastq="trimmed.fastq"
 	shell:
 		"{USEARCH} -fastq_filter {input.fastq} -fastq_minlen 400 -fastq_maxee 1 -fastaout {output.fasta}"
 		# alternatively, this should work:
@@ -123,8 +123,8 @@ rule usearch_fastq_to_fasta:
 
 rule usearch_derep_fulllength:
 	"""Dereplication with usearch"""
-	output: fasta="unique/{dataset}.fasta"
-	input: fasta="filtered/{dataset}.fasta"
+	output: fasta="unique.fasta"
+	input: fasta="filtered.fasta"
 	shell:
 		"""{USEARCH} -derep_fulllength {input.fasta} -output {output.fasta} -sizeout"""
 
@@ -135,9 +135,9 @@ rule usearch_cluster:
 	avoid a specific type of misclustering.
 	"""
 	output:
-		fasta="clustered/{dataset}.fasta",  # centroids
-		uc="clustered/{dataset}.uc"
-	input: fasta="unique/{dataset}.fasta"
+		fasta="clustered.fasta",  # centroids
+		uc="clustered.uc"
+	input: fasta="unique.fasta"
 	resources: time=36*60, mem=32000
 	threads: 4
 	shell:
@@ -151,12 +151,12 @@ rule usearch_cluster:
 
 rule igblast:
 	"""TODO run it on clustered sequences, not on dereplicated ones (?)"""
-	output: "igblast/{dataset}.L2.txt"
-	input: "filtered/{dataset}.fasta"
+	output: "igblast.L2.txt"
+	input: "filtered.fasta"
 	resources: time=60
 	threads: 8
 	shell:
-		"igblastwrp --data-dir igblastdb/ -R {RECEPTOR_CHAIN} -S {SPECIES} -p {threads} {input} igblast/{wildcards.dataset}"
+		"igblastwrp -R {RECEPTOR_CHAIN} -S {SPECIES} -p {threads} {input} igblast"
 
 
 rule ungzip:
