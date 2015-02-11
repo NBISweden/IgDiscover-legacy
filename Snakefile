@@ -117,6 +117,8 @@ rule usearch_fastq_to_fasta:
 	input: fastq="trimmed/{dataset}.fastq"
 	shell:
 		"{USEARCH} -fastq_filter {input.fastq} -fastq_minlen 400 -fastq_maxee 1 -fastaout {output.fasta}"
+		# alternatively, this should work:
+		# "sqt-fastqmod --max-errors 1.0 --minimum-length 400 --fasta {input.fastq} > {output.fasta}"
 
 
 rule usearch_derep_fulllength:
@@ -154,7 +156,7 @@ rule igblast:
 	resources: time=60
 	threads: 8
 	shell:
-		"igblastwrp -R {RECEPTOR_CHAIN} -S {SPECIES} -p {threads} {input} igblast/{wildcards.dataset}"
+		"igblastwrp --data-dir igblastdb/ -R {RECEPTOR_CHAIN} -S {SPECIES} -p {threads} {input} igblast/{wildcards.dataset}"
 
 
 rule ungzip:
