@@ -31,7 +31,7 @@ rule all:
 		expand("fastqc/reads.{r}.zip", r=(1, 2)),
 		"stats/readlengthhisto.pdf",
 		"clustered.fasta",
-		"igblast.L2.txt",
+		"igblast-table.L2.txt",
 
 
 #rule uncompress_reads:
@@ -151,12 +151,14 @@ rule usearch_cluster:
 
 rule igblast:
 	"""TODO run it on clustered sequences, not on dereplicated ones (?)"""
-	output: "igblast.L2.txt"
+	output: table="igblast-table.L2.txt", igblast="igblast.txt"
 	input: "filtered.fasta"
 	resources: time=60
 	threads: 8
 	shell:
-		"igblastwrp -R {RECEPTOR_CHAIN} -S {SPECIES} -p {threads} {input} igblast"
+		r"""
+		igblastwrp --debug -R {RECEPTOR_CHAIN} -S {SPECIES} -p {threads} {input} igblast-table > {output.igblast}
+		"""
 
 
 rule ungzip:
