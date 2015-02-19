@@ -116,9 +116,9 @@ rule usearch_fastq_to_fasta:
 	output: fasta="filtered.fasta"
 	input: fastq="trimmed.fastq"
 	shell:
-		"{USEARCH} -fastq_filter {input.fastq} -fastq_minlen 400 -fastq_maxee 1 -fastaout {output.fasta}"
+		"{USEARCH} -fastq_filter {input.fastq} -fastq_minlen 400 -fastq_maxee {MAXIMUM_EXPECTED_ERRORS} -fastaout {output.fasta}"
 		# alternatively, this should work:
-		# "sqt-fastqmod --max-errors 1.0 --minimum-length 400 --fasta {input.fastq} > {output.fasta}"
+		# "sqt-fastqmod --max-errors {MAXIMUM_EXPECTED_ERRORS} --minimum-length 400 --fasta {input.fastq} > {output.fasta}"
 
 
 rule usearch_derep_fulllength:
