@@ -54,14 +54,14 @@ if MERGE_PROGRAM == 'flash':
 elif MERGE_PROGRAM == 'pear':
 	rule pear_merge:
 		"""Use pear to merge paired-end reads"""
-		output: fastq="merged.fastq"
+		output: fastq="merged.fastq.gz"
 		input: "reads.1.fastq", "reads.2.fastq"
 		resources: time=60
 		threads: 8
 		shell:
 			r"""
 			pear -f {input[0]} -r {input[1]} -o pear && \
-			mv pear.assembled.fastq {output.fastq}
+			gzip < pear.assembled.fastq > {output.fastq} && rm pear.assembled.fastq
 			"""
 else:
 	sys.exit("MERGE_PROGRAM not recognized")
