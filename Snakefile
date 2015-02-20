@@ -149,10 +149,9 @@ rule cluster:
 	threads: 4
 	shell:
 		# TODO -idprefix 5?
-		# TODO uses only 1 thread
 		r"""
-		{USEARCH} -threads {threads} -cluster_fast {input.fasta} -id 0.97 -uc {output.uc} \
-			-idprefix 5 --centroids {output.fasta} -sizeout
+		{CLUSTER_PROGRAM} -threads {threads} -cluster_fast {input.fasta} -id 0.97 -uc {output.uc} \
+			-idprefix 5 -sizeout --centroids {output.fasta}
 		"""
 
 
