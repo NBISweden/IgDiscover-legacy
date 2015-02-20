@@ -2,12 +2,8 @@
 """
 Required modules:
 
-module purge
-module load gcc bioinfo-tools
-module use /proj/b2013006/sw/modules  # Load this first to avoid the broken Uppmax cutadapt and python modules.
-module load FastQC cutadapt snakemake flash pear igblastwrp vsearch
-
-To run this, create symlinks in the reads/ directory that point to your raw data.
+module use /proj/b2014342/sw/modules
+module load abpipe
 
 Each stage of the pipeline is in a different directory. They are:
 
