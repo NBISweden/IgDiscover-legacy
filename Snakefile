@@ -27,7 +27,7 @@ rule all:
 		expand("fastqc/reads.{r}.zip", r=(1, 2)),
 		"stats/readlengthhisto.pdf",
 		"clustered.fasta",
-		"igblast-table.L2.txt",
+		"igblastwrp-table.L2.txt",
 
 
 #rule uncompress_reads:
@@ -75,8 +75,8 @@ rule read_length_histogram:
 
 
 # Adjust the primer sequences so they are correctly reverse-complemented.
-# If we have a forward primer fwd and a reverse primer rev, then we need to
-# search for
+# When a forward primer fwd and a reverse primer rev are given, then we need to
+# search for:
 # * fwd in the beginning, revcomp(rev) in the end
 # * rev in the beginning, revcomp(fwd) in the end
 PRIMERS = [
@@ -115,7 +115,7 @@ rule fastqc:
 		"""
 
 
-rule usearch_fastq_to_fasta:
+rule fastq_to_fasta:
 	"""
 	* Convert from FASTQ to FASTA
 	* Remove low-quality sequences
@@ -135,7 +135,7 @@ rule dereplicate:
 		"""vsearch --derep_fulllength {input.fasta} --strand both --output {output.fasta} --sizeout"""
 
 
-rule usearch_cluster:
+rule cluster:
 	"""
 	TODO Daniel ran this three times (at 99%, 98% and 97% identity) in order to
 	avoid a specific type of misclustering.
