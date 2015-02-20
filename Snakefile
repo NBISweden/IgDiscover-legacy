@@ -15,9 +15,9 @@ Each stage of the pipeline is in a different directory. They are:
 6. clustered/ -- clustered into groups of similar sequences
 7. assigned/ -- IgBLAST assignment
 """
+from sqt.dna import reverse_complement
 
 include: "pipeline.conf"
-
 
 # This command is run before every shell command and helps to catch errors early
 shell.prefix("set -euo pipefail;")
@@ -74,13 +74,24 @@ rule read_length_histogram:
 		"sqt-fastqhisto --plot {output.pdf} {input}  > {output.txt}"
 
 
+# Adjust the primer sequences so they are correctly reverse-complemented.
+# If we have a forward primer fwd and a reverse primer rev, then we need to
+# search for
+# * fwd in the beginning, revcomp(rev) in the end
+# * rev in the beginning, revcomp(fwd) in the end
+PRIMERS = [
+	FORWARD_PRIMERS[:], [reverse_complement(seq) for seq in REVERSE_PRIMERS]
+]
+PRIMERS[0].extend(REVERSE_PRIMERS)
+PRIMERS[1].extend(reverse_complement(seq) for seq in FORWARD_PRIMERS)
+
 rule trim_primers:
 	output: fastq="trimmed.fastq.gz"
 	input: fastq="merged.fastq.gz"
 	resources: time=60
 	params:
-		five_p=" ".join("-g ^{}".format(seq) for seq in FIVE_PRIME_PRIMERS),
-		three_p=" ".join("-a {}".format(seq) for seq in THREE_PRIME_PRIMERS)
+		five_p=" ".join("-g ^{}".format(seq) for seq in PRIMERS[0]),
+		three_p=" ".join("-a {}".format(seq) for seq in PRIMERS[1])
 	shell:
 		r"""
 		cutadapt --discard-untrimmed {params.five_p} {input.fastq} | \
@@ -144,15 +155,15 @@ rule usearch_cluster:
 		"""
 
 
-rule igblast:
+rule igblastwrp:
 	"""TODO run it on clustered sequences, not on dereplicated ones (?)"""
-	output: table="igblast-table.L2.txt", igblast="igblast.txt"
+	output: table="igblastwrp-table.L2.txt"
 	input: "filtered.fasta"
 	resources: time=60
 	threads: 8
 	shell:
 		r"""
-		igblastwrp --debug -R {RECEPTOR_CHAIN} -S {SPECIES} -p {threads} {input} igblast-table > {output.igblast}
+		igblastwrp -R {RECEPTOR_CHAIN} -S {SPECIES} -p {threads} {input} igblast-table
 		"""
 
 
