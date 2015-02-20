@@ -106,15 +106,14 @@ rule fastqc:
 
 rule usearch_fastq_to_fasta:
 	"""
-	Convert from FASTQ to FASTA; remove low-quality sequences;
-	discard too short sequences.
+	* Convert from FASTQ to FASTA
+	* Remove low-quality sequences
+	* Discard too short sequences
 	"""
 	output: fasta="filtered.fasta"
 	input: fastq="trimmed.fastq"
 	shell:
-		"{USEARCH} -fastq_filter {input.fastq} -fastq_minlen 400 -fastq_maxee {MAXIMUM_EXPECTED_ERRORS} -fastaout {output.fasta}"
-		# alternatively, this should work:
-		# "sqt-fastqmod --max-errors {MAXIMUM_EXPECTED_ERRORS} --minimum-length 400 --fasta {input.fastq} > {output.fasta}"
+		"sqt-fastqmod --max-errors {MAXIMUM_EXPECTED_ERRORS} --minimum-length {MINIMUM_MERGED_READ_LENGTH} --fasta {input.fastq} > {output.fasta}"
 
 
 rule usearch_derep_fulllength:
