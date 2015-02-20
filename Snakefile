@@ -122,9 +122,10 @@ rule fastq_to_fasta:
 	* Discard too short sequences
 	"""
 	output: fasta="filtered.fasta"
-	input: fastq="trimmed.fastq"
+	input: fastq="trimmed.fastq.gz"
+	params: max_errors="--max-errors {MAXIMUM_EXPECTED_ERRORS}" if MAXIMUM_EXPECTED_ERRORS is not None else ""
 	shell:
-		"sqt-fastqmod --max-errors {MAXIMUM_EXPECTED_ERRORS} --minimum-length {MINIMUM_MERGED_READ_LENGTH} --fasta {input.fastq} > {output.fasta}"
+		"sqt-fastqmod {params.max_errors} --minimum-length {MINIMUM_MERGED_READ_LENGTH} --fasta {input.fastq} > {output.fasta}"
 
 
 rule dereplicate:
