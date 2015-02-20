@@ -116,12 +116,12 @@ rule usearch_fastq_to_fasta:
 		"sqt-fastqmod --max-errors {MAXIMUM_EXPECTED_ERRORS} --minimum-length {MINIMUM_MERGED_READ_LENGTH} --fasta {input.fastq} > {output.fasta}"
 
 
-rule usearch_derep_fulllength:
+rule dereplicate:
 	"""Dereplication with usearch"""
 	output: fasta="unique.fasta"
 	input: fasta="filtered.fasta"
 	shell:
-		"""{USEARCH} -derep_fulllength {input.fasta} -output {output.fasta} -sizeout"""
+		"""vsearch --derep_fulllength {input.fasta} --strand both --output {output.fasta} --sizeout"""
 
 
 rule usearch_cluster:
