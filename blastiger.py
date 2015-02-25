@@ -18,12 +18,13 @@ from collections import namedtuple
 __author__ = "Marcel Martin"
 
 
-IgblastRecord = namedtuple('IgblastRecord', 'query_name vdj cdr3_start hits')
+IgblastRecord = namedtuple('IgblastRecord',
+	'query_name cdr3_start hits v_gene d_gene j_gene chain has_stop in_frame is_productive strand')
 Hit = namedtuple('Hit', 'query_id query_start query_sequence subject_start subject_sequence')
 
 
 def run_igblast():
-	"igblastn -germline_db_V $IGDATA/database/rhesus_monkey_IG_H_V -germline_db_J $IGDATA/database/rhesus_monkey_IG_H_J -germline_db_D $IGDATA/database/rhesus_monkey_IG_H_D -auxiliary_data $IGDATA/optional_file/rhesus_monkey_gl.aux -organism rhesus_monkey -ig_seqtype Ig -num_threads 16 -domain_system imgt -num_alignments_V 1 -num_alignments_D 1 -num_alignments_J 1 -out result3.txt -query head.fasta -outfmt '7 qseqid qstart qseq sstart sseq'"
+	"igblastn -germline_db_V $IGDATA/database/rhesus_monkey_IG_H_V -germline_db_J $IGDATA/database/rhesus_monkey_IG_H_J -germline_db_D $IGDATA/database/rhesus_monkey_IG_H_D -auxiliary_data $IGDATA/optional_file/rhesus_monkey_gl.aux -organism rhesus_monkey -ig_seqtype Ig -num_threads 16 -domain_system imgt -num_alignments_V 1 -num_alignments_D 1 -num_alignments_J 1 -out result3.txt -query head.fasta -outfmt '7 qseqid qstart qseq sstart sseq pident'"
 
 
 
@@ -54,6 +55,80 @@ def split_by_section(it, section_starts):
 			lines.append(line)
 	if header is not None:
 		yield (header, lines)
+
+
+def parse_igblast_record(record_lines):
+	BOOL = { 'Yes': True, 'No': False, 'N/A': None }
+	FRAME = { 'In-frame': True, 'Out-of-frame': False, 'N/A': None }
+	SECTIONS = set([
+		'# Query:',
+		'# V-(D)-J rearrangement summary',
+		'# Alignment summary',
+		'# Hit table',
+	])
+	hits = dict()
+	# All of the sections are optional, so we need to set default values here.
+	query_name = None
+	cdr3_start = None
+	v_gene, d_gene, j_gene, chain, has_stop, in_frame, is_productive, strand = [None] * 8
+	for section, lines in split_by_section(record_lines, SECTIONS):
+		if section.startswith('# Query: '):
+			query_name = section.split(': ')[1]
+		elif section.startswith('# V-(D)-J rearrangement summary'):
+			fields = lines[0].split('\t')
+			if len(fields) == 7:
+				# No D assignment
+				v_gene, j_gene, chain, has_stop, in_frame, is_productive, strand = fields
+				d_gene = None
+			else:
+				v_gene, d_gene, j_gene, chain, has_stop, in_frame, is_productive, strand = fields
+			v_gene = None if v_gene == 'N/A' else v_gene
+			d_gene = None if d_gene == 'N/A' else d_gene
+			j_gene = None if j_gene == 'N/A' else j_gene
+			assert chain != 'N/A'
+			has_stop = BOOL[has_stop]
+			in_frame = FRAME[in_frame]
+			is_productive = BOOL[is_productive]
+			strand = strand if strand in '+-' else None
+		elif section.startswith('# Alignment summary'):
+			# This section is optional
+			for line in lines:
+				if line.startswith('CDR3-IMGT (germline)'):
+					cdr3_start = int(line.split('\t')[1]) - 1
+					break
+		elif section.startswith('# Hit table'):
+			for line in lines:
+				if not line or line.startswith('#'):
+					continue
+				# TODO pident (last column)
+				gene, query_id, query_start, query_sequence, subject_start, subject_sequence = line.split('\t')
+				query_start = int(query_start) - 1
+				subject_start = int(subject_start) - 1
+				assert gene in ('V', 'D', 'J')
+				assert gene not in hits, "Two hits for same gene found"
+				hits[gene] = Hit(query_id, query_start, query_sequence, subject_start, subject_sequence)
+
+	if __debug__:
+		for gene, hit in hits.items():
+			# IgBLAST removes the trailing semicolon (why, oh why??)
+			qname = query_name[:-1] if query_name.endswith(';') else query_name
+			qid = hit.query_id
+			qid = qid[len('reversed|'):] if qid.startswith('reversed|') else qid
+			assert hit.query_id.startswith('reversed|') == (strand == '-')
+			assert qid == qname, (qid, qname)
+			assert chain in (None, 'VL', 'VH', 'VK', 'NON'), chain
+	return IgblastRecord(
+		query_name=query_name,
+		cdr3_start=cdr3_start,
+		v_gene=v_gene,
+		d_gene=d_gene,
+		j_gene=j_gene,
+		chain=chain,
+		has_stop=has_stop,
+		in_frame=in_frame,
+		is_productive=is_productive,
+		strand=strand,
+		hits=hits)
 
 
 def parse_igblast(path):
@@ -90,55 +165,10 @@ J   M00559:99:000000000-ACGRF:1:1101:5380:6946;size=515 412 CTTTGACTTGTGGGGCCAGG
 	last line in file:
 	# BLAST processed 14 queries
 	"""
-	query_name = None
-	state = None
 	with open(path) as f:
 		for record_header, record_lines in split_by_section(f, ['# IGBLASTN']):
 			assert record_header == '# IGBLASTN 2.2.29+'
-			query_name = None
-			vdj = None
-			cdr3_start = None
-			hits = dict()
-
-			SECTIONS = set([
-				'# Query:',
-				'# V-(D)-J rearrangement summary',
-				'# Alignment summary',
-				'# Hit table',
-			])
-			for section, lines in split_by_section(record_lines, SECTIONS):
-				if section.startswith('# Query: '):
-					query_name = section.split(': ')[1]
-				elif section.startswith('# V-(D)-J rearrangement summary'):
-					vdj = lines[0].split('\t')
-				elif section.startswith('# Alignment summary'):
-					for line in lines:
-						if line.startswith('CDR3-IMGT (germline)'):
-							cdr3_start = int(line.split('\t')[1]) - 1
-							break
-					else:
-						cdr3_start = None
-				elif section.startswith('# Hit table'):
-					for line in lines:
-						if not line or line.startswith('#'):
-							continue
-						gene, query_id, query_start, query_sequence, subject_start, subject_sequence = line.split('\t')
-						query_start = int(query_start) - 1
-						subject_start = int(subject_start) - 1
-						assert gene in ('V', 'D', 'J')
-						assert gene not in hits, "Two hits for same gene found"
-						hits[gene] = Hit(query_id, query_start, query_sequence, subject_start, subject_sequence)
-
-			for gene, hit in hits.items():
-				# IgBLAST removes the trailing semicolon (why, oh why??)
-				qname = query_name[:-1] if query_name.endswith(';') else query_name
-				qid = hit.query_id
-				qid = qid[len('reversed|'):] if qid.startswith('reversed|') else qid
-				strand = vdj[-1]
-				print(strand, hit)
-				assert hit.query_id.startswith('reversed|') == (strand == '-')
-				assert qid == qname, (qid, qname)
-			yield IgblastRecord(query_name=query_name, vdj=vdj, cdr3_start=cdr3_start, hits=hits)
+			yield parse_igblast_record(record_lines)
 
 
 def get_argument_parser():
@@ -150,11 +180,12 @@ def get_argument_parser():
 def main():
 	parser = get_argument_parser()
 	args = parser.parse_args()
-	records = list(parse_igblast(args.igblastout))
-	for r in records:
-		print(r)
+	n = 0
+	for record in parse_igblast(args.igblastout):
+		n += 1
+		print(record)
 		print()
-	print(len(records), 'records')
+	print(n, 'records')
 
 if __name__ == '__main__':
 	main()
