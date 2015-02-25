@@ -18,16 +18,47 @@ from collections import namedtuple
 __author__ = "Marcel Martin"
 
 
-IgblastRecord = namedtuple('IgblastRecord', 'query_name vdj')
+IgblastRecord = namedtuple('IgblastRecord', 'query_name vdj cdr3_start hits')
+Hit = namedtuple('Hit', 'query_id query_start query_sequence subject_start subject_sequence')
+
 
 def run_igblast():
 	"igblastn -germline_db_V $IGDATA/database/rhesus_monkey_IG_H_V -germline_db_J $IGDATA/database/rhesus_monkey_IG_H_J -germline_db_D $IGDATA/database/rhesus_monkey_IG_H_D -auxiliary_data $IGDATA/optional_file/rhesus_monkey_gl.aux -organism rhesus_monkey -ig_seqtype Ig -num_threads 16 -domain_system imgt -num_alignments_V 1 -num_alignments_D 1 -num_alignments_J 1 -out result3.txt -query head.fasta -outfmt '7 qseqid qstart qseq sstart sseq'"
 
 
 
+def split_by_section(it, section_starts):
+	"""
+	Parse a stream of lines into chunks of sections. When one of the lines
+	starts with a string given in section_starts, a new section is started, and
+	a tuple (head, lines) is returned where head is the matching line and lines
+	contains a list of the lines following the section header, up to (but
+	excluding) the next section header.
+
+	Works a bit like str.split(), but on lines.
+	"""
+	lines = None
+	header = None
+	for line in it:
+		line = line.strip()
+		for start in section_starts:
+			if line.startswith(start):
+				if header is not None:
+					yield (header, lines)
+				header = line
+				lines = []
+				break
+		else:
+			if header is None:
+				raise ParseError("Expected a line starting with one of {}".format(', '.join(section_starts)))
+			lines.append(line)
+	if header is not None:
+		yield (header, lines)
+
+
 def parse_igblast(path):
 	"""
-	This is how an IgBLAST "record" looks like:
+	This is how an IgBLAST "record" looks like (using -outfmt '7 qseqid qstart qseq sstart sseq'):
 	# IGBLASTN 2.2.29+
 # Query: M00559:99:000000000-ACGRF:1:1101:5380:6946;size=515;
 # Database: /proj/b2013006/sw/apps/igblastwrp-0.6/data/database/rhesus_monkey_IG_H_V /proj/b2013006/sw/apps/igblastwrp-0.6/data/database/rhesus_monkey_IG_H_D /proj/b2013006/sw/apps/igblastwrp
@@ -59,34 +90,55 @@ J   M00559:99:000000000-ACGRF:1:1101:5380:6946;size=515 412 CTTTGACTTGTGGGGCCAGG
 	last line in file:
 	# BLAST processed 14 queries
 	"""
-	n = 0
-	state = 'start'
 	query_name = None
+	state = None
 	with open(path) as f:
-		for line in f:
-			line = line.strip()
-			print('state:', state, line)
-			if state == 'start':
-				if line.startswith('# IGBLASTN') or line.startswith('# BLAST processed'):
-					if line.startswith('# IGBLASTN'):
-						assert line == '# IGBLASTN 2.2.29+'
-					if query_name is not None:
-						yield IgblastRecord(query_name=query_name, vdj=vdj)
-					else:
-						assert not line.startswith('# BLAST processed')
-					state = 'query'
-			elif state == 'query':
-				if line.startswith('# Query: '):
-					query_name = line.split(': ')[1]
-					print('found query name:', query_name)
-					state = 'vdjheader'
-			elif state == 'vdjheader':
-				if line.startswith('# V-(D)-J rearrangement summary'):
-					state = 'vdj'
-			elif state == 'vdj':
-				vdj = line
-				state = 'start'
+		for record_header, record_lines in split_by_section(f, ['# IGBLASTN']):
+			assert record_header == '# IGBLASTN 2.2.29+'
+			query_name = None
+			vdj = None
+			cdr3_start = None
+			hits = dict()
 
+			SECTIONS = set([
+				'# Query:',
+				'# V-(D)-J rearrangement summary',
+				'# Alignment summary',
+				'# Hit table',
+			])
+			for section, lines in split_by_section(record_lines, SECTIONS):
+				if section.startswith('# Query: '):
+					query_name = section.split(': ')[1]
+				elif section.startswith('# V-(D)-J rearrangement summary'):
+					vdj = lines[0].split('\t')
+				elif section.startswith('# Alignment summary'):
+					for line in lines:
+						if line.startswith('CDR3-IMGT (germline)'):
+							cdr3_start = int(line.split('\t')[1]) - 1
+							break
+					else:
+						cdr3_start = None
+				elif section.startswith('# Hit table'):
+					for line in lines:
+						if not line or line.startswith('#'):
+							continue
+						gene, query_id, query_start, query_sequence, subject_start, subject_sequence = line.split('\t')
+						query_start = int(query_start) - 1
+						subject_start = int(subject_start) - 1
+						assert gene in ('V', 'D', 'J')
+						assert gene not in hits, "Two hits for same gene found"
+						hits[gene] = Hit(query_id, query_start, query_sequence, subject_start, subject_sequence)
+
+			for gene, hit in hits.items():
+				# IgBLAST removes the trailing semicolon (why, oh why??)
+				qname = query_name[:-1] if query_name.endswith(';') else query_name
+				qid = hit.query_id
+				qid = qid[len('reversed|'):] if qid.startswith('reversed|') else qid
+				strand = vdj[-1]
+				print(strand, hit)
+				assert hit.query_id.startswith('reversed|') == (strand == '-')
+				assert qid == qname, (qid, qname)
+			yield IgblastRecord(query_name=query_name, vdj=vdj, cdr3_start=cdr3_start, hits=hits)
 
 
 def get_argument_parser():
@@ -101,6 +153,7 @@ def main():
 	records = list(parse_igblast(args.igblastout))
 	for r in records:
 		print(r)
+		print()
 	print(len(records), 'records')
 
 if __name__ == '__main__':
