@@ -12,10 +12,12 @@ Desired output is a table with the following columns:
 import subprocess
 import sys
 import os
+import re
 from collections import namedtuple
 from sqt import HelpfulArgumentParser
 from sqt import SequenceReader
-from sqt.dna import GENETIC_CODE
+from sqt.dna import GENETIC_CODE, reverse_complement
+from sqt.ansicolor import red, blue
 
 __author__ = "Marcel Martin"
 
@@ -64,7 +66,7 @@ def split_by_section(it, section_starts):
 		yield (header, lines)
 
 
-def parse_igblast_record(record_lines):
+def parse_igblast_record(record_lines, fasta_record):
 	BOOL = { 'Yes': True, 'No': False, 'N/A': None }
 	FRAME = { 'In-frame': True, 'Out-of-frame': False, 'N/A': None }
 	SECTIONS = set([
@@ -73,6 +75,7 @@ def parse_igblast_record(record_lines):
 		'# Alignment summary',
 		'# Hit table',
 	])
+	CDR3REGEX = re.compile('(TT[TC]|TA[CT])(TT[CT]|TA[TC]|CA[TC]|GT[AGCT]|TGG)(TG[TC])(([GA][AGCT])|TC|CG)[AGCT]([ACGT]{3}){5,32}TGGG[GCT][GCTA]')
 	hits = dict()
 	# All of the sections are optional, so we need to set default values here.
 	query_name = None
@@ -113,10 +116,24 @@ def parse_igblast_record(record_lines):
 				subject_start = int(subject_start) - 1
 				assert gene in ('V', 'D', 'J')
 				assert gene not in hits, "Two hits for same gene found"
-				hits[gene] = Hit(query_id, query_start, query_sequence, subject_start, subject_sequence)
+				hits[gene] = Hit(query_id, query_start, query_sequence.replace('-', ''), subject_start, subject_sequence)
 
 	if __debug__:
-		for gene, hit in hits.items():
+		assert fasta_record.name == query_name
+		full_sequence = fasta_record.sequence
+		if strand == '-':
+			full_sequence = reverse_complement(full_sequence)
+
+
+		for gene in ('V', 'D', 'J'):
+			if gene not in hits:
+				continue
+			hit = hits[gene]
+
+			qsequence = hit.query_sequence
+			print(gene, hit.query_start, '-', hit.query_start + len(qsequence), end=' ')
+
+
 			# IgBLAST removes the trailing semicolon (why, oh why??)
 			qname = query_name[:-1] if query_name.endswith(';') else query_name
 			qid = hit.query_id
@@ -124,6 +141,33 @@ def parse_igblast_record(record_lines):
 			assert hit.query_id.startswith('reversed|') == (strand == '-')
 			assert qid == qname, (qid, qname)
 			assert chain in (None, 'VL', 'VH', 'VK', 'NON'), chain
+			assert qsequence == full_sequence[hit.query_start:hit.query_start+len(qsequence)]
+		print(len(full_sequence))
+		if 'V' in hits and 'J' in hits:
+			vdj_start = hits['V'].query_start
+			vdj_stop = hits['J'].query_start + len(hits['J'].query_sequence)
+			print('vdjstartstop', vdj_start, vdj_stop)
+			vdj_sequence = full_sequence[vdj_start:vdj_stop]
+			print('leenvdj', len(vdj_sequence))
+			m = CDR3REGEX.search(vdj_sequence)
+			if m:
+				regex_cdr3_start = m.start() + 9
+				regex_cdr3_end = m.end() - 6
+				assert regex_cdr3_start < regex_cdr3_end
+				# make sure that the match starts within V and ends within J
+				if not (regex_cdr3_start <= len(hits['V'].query_sequence) and regex_cdr3_end >= hits['J'].query_start - hits['V'].query_start):
+					print('CDR3 match outside V/J')
+				else:
+					print('CDR3 match found', regex_cdr3_start, '-', regex_cdr3_end, 'IgBLAST-determined CDR3 start',
+						cdr3_start - hits['V'].query_start if cdr3_start is not None else 'not given')
+					if cdr3_start is not None:
+						if cdr3_start - hits['V'].query_start != regex_cdr3_start:
+							print('IgBLAST and Regex do not match')
+					print('VDJ', vdj_sequence[0:regex_cdr3_start], red(vdj_sequence[regex_cdr3_start:regex_cdr3_end]), vdj_sequence[regex_cdr3_end:])
+			else:
+				print('CDR3 match not found')
+				print('VDJ', vdj_sequence)
+
 	return IgblastRecord(
 		query_name=query_name,
 		cdr3_start=cdr3_start,
@@ -138,16 +182,17 @@ def parse_igblast_record(record_lines):
 		hits=hits)
 
 
-def parse_igblast(path):
+def parse_igblast(path, fasta_path):
 	"""
 	Parse IgBLAST output, created with option -outfmt "7 qseqid qstart qseq sstart sseq"
 
 	TODO add pident column
 	"""
-	with open(path) as f:
-		for record_header, record_lines in split_by_section(f, ['# IGBLASTN']):
-			assert record_header == '# IGBLASTN 2.2.29+'
-			yield parse_igblast_record(record_lines)
+	with SequenceReader(fasta_path) as fasta:
+		with open(path) as f:
+			for fasta_record, (record_header, record_lines) in zip(fasta, split_by_section(f, ['# IGBLASTN'])):
+				assert record_header == '# IGBLASTN 2.2.29+'
+				yield parse_igblast_record(record_lines, fasta_record)
 
 
 def get_argument_parser():
@@ -161,7 +206,7 @@ def main():
 	parser = get_argument_parser()
 	args = parser.parse_args()
 	n = 0
-	for record in parse_igblast(args.igblastout):
+	for record in parse_igblast(args.igblastout, args.fasta):
 		n += 1
 		print(record)
 		print()
