@@ -22,14 +22,68 @@ from sqt.ansicolor import red, blue
 __author__ = "Marcel Martin"
 
 
-IgblastRecord = namedtuple('IgblastRecord',
-	'query_name cdr3_start hits v_gene d_gene j_gene chain has_stop in_frame is_productive strand')
+IgblastRecordNT = namedtuple('IgblastRecord',
+	'full_sequence query_name cdr3_start hits v_gene d_gene j_gene chain has_stop in_frame is_productive strand')
 Hit = namedtuple('Hit', 'query_id query_start query_sequence subject_start subject_sequence')
+
+
+class IgblastRecord(IgblastRecordNT):
+	# TODO move computation of cdr3_span, cdr3_sequence, vdj_sequence into constructor
+	# TODO maybe make all coordinates relative to full sequence
+
+	cdr3regex = re.compile('(TT[TC]|TA[CT])(TT[CT]|TA[TC]|CA[TC]|GT[AGCT]|TGG)(TG[TC])(([GA][AGCT])|TC|CG)[AGCT]([ACGT]{3}){5,32}TGGG[GCT][GCTA]')
+
+	@property
+	def vdj_sequence(self):
+		if 'V' not in self.hits or 'J' not in self.hits:
+			return None
+		hit_v = self.hits['V']
+		hit_j = self.hits['J']
+		vdj_start = hit_v.query_start
+		vdj_stop = hit_j.query_start + len(hit_j.query_sequence)
+		return self.full_sequence[vdj_start:vdj_stop]
+
+	def cdr3_span(self):
+		"""
+		Return (start, end) of CDR3 *relative to VDJ*.
+		"""
+		if 'V' not in self.hits or 'J' not in self.hits:
+			return None
+		hit_v = self.hits['V']
+		hit_j = self.hits['J']
+
+		match = self.cdr3regex.search(self.vdj_sequence)
+		if not match:
+			return None
+		# The first three and the last two codons are not part of the CDR3.
+		start = match.start() + 9
+		end = match.end() - 6
+		assert start < end
+		# Make sure that the match starts within V and ends within J.
+		if not (start <= len(hit_v.query_sequence) and end >= hit_j.query_start - hit_v.query_start):
+			return None
+		return (start, end)
+
+	@property
+	def cdr3_sequence(self):
+		span = self.cdr3_span()
+		if span is None:
+			return None
+		return self.vdj_sequence[span[0]:span[1]]
+
+	def igblast_matches_regex(self):
+		if self.cdr3_start is None:
+			return True
+		span = self.cdr3_span()
+		if span is None:
+			return True
+		start, end = span
+		return self.cdr3_start - self.hits['V'].query_start == start
 
 
 def nt_to_aa(s):
 	"""Translate nucleotide sequence to amino acid sequence"""
-	return ''.join(GENETIC_CODE[s[i:i+3]] for i in range(0, len(s), 3))
+	return ''.join(GENETIC_CODE.get(s[i:i+3], '*') for i in range(0, len(s), 3))
 
 
 def run_igblast():
@@ -75,7 +129,6 @@ def parse_igblast_record(record_lines, fasta_record):
 		'# Alignment summary',
 		'# Hit table',
 	])
-	CDR3REGEX = re.compile('(TT[TC]|TA[CT])(TT[CT]|TA[TC]|CA[TC]|GT[AGCT]|TGG)(TG[TC])(([GA][AGCT])|TC|CG)[AGCT]([ACGT]{3}){5,32}TGGG[GCT][GCTA]')
 	hits = dict()
 	# All of the sections are optional, so we need to set default values here.
 	query_name = None
@@ -118,21 +171,19 @@ def parse_igblast_record(record_lines, fasta_record):
 				assert gene not in hits, "Two hits for same gene found"
 				hits[gene] = Hit(query_id, query_start, query_sequence.replace('-', ''), subject_start, subject_sequence)
 
+	assert fasta_record.name == query_name
+	full_sequence = fasta_record.sequence
+	if strand == '-':
+		full_sequence = reverse_complement(full_sequence)
+
 	if __debug__:
-		assert fasta_record.name == query_name
-		full_sequence = fasta_record.sequence
-		if strand == '-':
-			full_sequence = reverse_complement(full_sequence)
-
-
 		for gene in ('V', 'D', 'J'):
 			if gene not in hits:
 				continue
 			hit = hits[gene]
 
 			qsequence = hit.query_sequence
-			print(gene, hit.query_start, '-', hit.query_start + len(qsequence), end=' ')
-
+			#print(gene, hit.query_start, '-', hit.query_start + len(qsequence), end=' ')
 
 			# IgBLAST removes the trailing semicolon (why, oh why??)
 			qname = query_name[:-1] if query_name.endswith(';') else query_name
@@ -142,31 +193,7 @@ def parse_igblast_record(record_lines, fasta_record):
 			assert qid == qname, (qid, qname)
 			assert chain in (None, 'VL', 'VH', 'VK', 'NON'), chain
 			assert qsequence == full_sequence[hit.query_start:hit.query_start+len(qsequence)]
-		print(len(full_sequence))
-		if 'V' in hits and 'J' in hits:
-			vdj_start = hits['V'].query_start
-			vdj_stop = hits['J'].query_start + len(hits['J'].query_sequence)
-			print('vdjstartstop', vdj_start, vdj_stop)
-			vdj_sequence = full_sequence[vdj_start:vdj_stop]
-			print('leenvdj', len(vdj_sequence))
-			m = CDR3REGEX.search(vdj_sequence)
-			if m:
-				regex_cdr3_start = m.start() + 9
-				regex_cdr3_end = m.end() - 6
-				assert regex_cdr3_start < regex_cdr3_end
-				# make sure that the match starts within V and ends within J
-				if not (regex_cdr3_start <= len(hits['V'].query_sequence) and regex_cdr3_end >= hits['J'].query_start - hits['V'].query_start):
-					print('CDR3 match outside V/J')
-				else:
-					print('CDR3 match found', regex_cdr3_start, '-', regex_cdr3_end, 'IgBLAST-determined CDR3 start',
-						cdr3_start - hits['V'].query_start if cdr3_start is not None else 'not given')
-					if cdr3_start is not None:
-						if cdr3_start - hits['V'].query_start != regex_cdr3_start:
-							print('IgBLAST and Regex do not match')
-					print('VDJ', vdj_sequence[0:regex_cdr3_start], red(vdj_sequence[regex_cdr3_start:regex_cdr3_end]), vdj_sequence[regex_cdr3_end:])
-			else:
-				print('CDR3 match not found')
-				print('VDJ', vdj_sequence)
+		#print(len(full_sequence))
 
 	return IgblastRecord(
 		query_name=query_name,
@@ -179,7 +206,8 @@ def parse_igblast_record(record_lines, fasta_record):
 		in_frame=in_frame,
 		is_productive=is_productive,
 		strand=strand,
-		hits=hits)
+		hits=hits,
+		full_sequence=full_sequence)
 
 
 def parse_igblast(path, fasta_path):
@@ -195,6 +223,31 @@ def parse_igblast(path, fasta_path):
 				yield parse_igblast_record(record_lines, fasta_record)
 
 
+def highlight(s, span):
+	"""Highlight part of a string in red"""
+	if span is None:
+		return s
+	start, stop = span
+	return s[0:start] + red(s[start:stop]) + s[stop:]
+
+
+def print_row(record):
+	"""Print one tab-separated row
+	# TODO use csv writer
+	"""
+	cdr3nt = record.cdr3_sequence
+	cdr3aa = nt_to_aa(cdr3nt) if cdr3nt else None
+	print(
+		record.v_gene,
+		record.d_gene,
+		record.j_gene,
+		record.query_name,
+		cdr3nt,
+		cdr3aa,
+		sep='\t'
+	)
+
+
 def get_argument_parser():
 	parser = HelpfulArgumentParser(description=__doc__)
 	parser.add_argument('igblastout', help='output file of igblastn')
@@ -208,8 +261,18 @@ def main():
 	n = 0
 	for record in parse_igblast(args.igblastout, args.fasta):
 		n += 1
-		print(record)
-		print()
+		print_row(record)
+
+		#print(record)
+		#print('CDR3:', highlight(record.vdj_sequence, record.cdr3_span()))
+		#cdr3s = record.cdr3_sequence
+		#if cdr3s is not None:
+			#aa = nt_to_aa(cdr3s)
+			#print(cdr3s, aa)
+			##assert ('*' in aa) == record.has_stop
+		#else:
+			#print('', '')
+		#print()
 	print(n, 'records')
 
 if __name__ == '__main__':
