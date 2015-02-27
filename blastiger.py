@@ -9,10 +9,13 @@ Desired output is a table with the following columns:
 * J gene
 * CDR3 sequence
 """
+import csv
 import subprocess
 import sys
 import os
 import re
+import logging
+import errno
 from collections import namedtuple
 from sqt import HelpfulArgumentParser
 from sqt import SequenceReader
@@ -21,6 +24,7 @@ from sqt.ansicolor import red, blue
 
 __author__ = "Marcel Martin"
 
+logger = logging.getLogger(__name__)
 
 IgblastRecordNT = namedtuple('IgblastRecord',
 	'full_sequence query_name cdr3_start hits v_gene d_gene j_gene chain has_stop in_frame is_productive strand')
@@ -262,49 +266,57 @@ def highlight(s, span):
 	return s[0:start] + red(s[start:stop]) + s[stop:]
 
 
-def print_row(record):
-	"""Print one tab-separated row
-	# TODO use csv writer
-	"""
-	cdr3nt = record.cdr3_sequence
-	cdr3aa = nt_to_aa(cdr3nt) if cdr3nt else None
-	print(
-		record.v_gene,
-		record.d_gene,
-		record.j_gene,
-		record.query_name,
-		cdr3nt,
-		cdr3aa,
-		sep='\t'
-	)
+class TableWriter:
+	def __init__(self, file):
+		self._file = file
+		self._writer = csv.writer(file, delimiter='\t')
+		self._writer.writerow([
+			"# V gene",
+			"D gene",
+			"J gene",
+			"V %identity",
+			"stop",
+			"CDR3 nt",
+			"CDR3 aa",
+			"name",
+			"sequence",
+		])
 
-
-def get_argument_parser():
-	parser = HelpfulArgumentParser(description=__doc__)
-	parser.add_argument('igblastout', help='output file of igblastn')
-	parser.add_argument('fasta', help='File with original reads')
-	return parser
+	def write(self, record):
+		cdr3nt = record.cdr3_sequence
+		cdr3aa = nt_to_aa(cdr3nt) if cdr3nt else None
+		v_percent_identity = record.hits['V'].percent_identity if 'V' in record.hits else None
+		self._writer.writerow([
+			record.v_gene,
+			record.d_gene,
+			record.j_gene,
+			v_percent_identity,
+			"yes" if record.has_stop else "no",
+			cdr3nt,
+			cdr3aa,
+			record.query_name,
+			record.full_sequence,
+		])
 
 
 def main():
-	parser = get_argument_parser()
+	logging.basicConfig(level=logging.DEBUG, format='%(levelname)s: %(message)s')
+	parser = HelpfulArgumentParser(description=__doc__)
+	parser.add_argument('igblastout', help='output file of igblastn')
+	parser.add_argument('fasta', help='File with original reads')
 	args = parser.parse_args()
 	n = 0
+	writer = TableWriter(sys.stdout)
 	for record in parse_igblast(args.igblastout, args.fasta):
 		n += 1
-		print_row(record)
-
-		#print(record)
+		try:
+			writer.write(record)
+		except IOError as e:
+			if e.errno == errno.EPIPE:
+				sys.exit(1)
+			raise
 		#print('CDR3:', highlight(record.vdj_sequence, record.cdr3_span()))
-		#cdr3s = record.cdr3_sequence
-		#if cdr3s is not None:
-			#aa = nt_to_aa(cdr3s)
-			#print(cdr3s, aa)
-			##assert ('*' in aa) == record.has_stop
-		#else:
-			#print('', '')
-		#print()
-	print(n, 'records')
+	logger.info('%d records parsed and written', n)
 
 if __name__ == '__main__':
 	main()
