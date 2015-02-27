@@ -91,7 +91,7 @@ rule trim_primers:
 	resources: time=60
 	params:
 		five_p=" ".join("-g ^{}".format(seq) for seq in PRIMERS[0]),
-		three_p=" ".join("-a {}".format(seq) for seq in PRIMERS[1])
+		three_p=" ".join("-a {}$".format(seq) for seq in PRIMERS[1])
 	shell:
 		r"""
 		cutadapt --discard-untrimmed {params.five_p} {input.fastq} | \
