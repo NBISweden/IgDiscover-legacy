@@ -170,9 +170,9 @@ rule igblast:
 		txt="igblast.txt"
 	input:
 		fasta="unique.fasta",
-		db_v="database/{SPECIES}_V.nhr",
-		db_d="database/{SPECIES}_D.nhr",
-		db_j="database/{SPECIES}_J.nhr",
+		db_v="database/{species}_V.nhr".format(species=SPECIES),
+		db_d="database/{species}_D.nhr".format(species=SPECIES),
+		db_j="database/{species}_J.nhr".format(species=SPECIES)
 	shell:
 		#-auxiliary_data $IGDATA/optional_file/{SPECIES}_gl.aux
 		r"""
