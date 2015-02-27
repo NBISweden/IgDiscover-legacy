@@ -24,7 +24,7 @@ __author__ = "Marcel Martin"
 
 IgblastRecordNT = namedtuple('IgblastRecord',
 	'full_sequence query_name cdr3_start hits v_gene d_gene j_gene chain has_stop in_frame is_productive strand')
-Hit = namedtuple('Hit', 'query_id query_start query_sequence subject_start subject_sequence')
+Hit = namedtuple('Hit', 'query_id query_start query_sequence subject_start subject_sequence percent_identity')
 
 
 class IgblastRecord(IgblastRecordNT):
@@ -163,13 +163,13 @@ def parse_igblast_record(record_lines, fasta_record):
 			for line in lines:
 				if not line or line.startswith('#'):
 					continue
-				# TODO pident (last column)
-				gene, query_id, query_start, query_sequence, subject_start, subject_sequence = line.split('\t')
+				gene, query_id, query_start, query_sequence, subject_start, subject_sequence, percent_identity = line.split('\t')
 				query_start = int(query_start) - 1
 				subject_start = int(subject_start) - 1
+				percent_identity = float(percent_identity)
 				assert gene in ('V', 'D', 'J')
 				assert gene not in hits, "Two hits for same gene found"
-				hits[gene] = Hit(query_id, query_start, query_sequence.replace('-', ''), subject_start, subject_sequence)
+				hits[gene] = Hit(query_id, query_start, query_sequence.replace('-', ''), subject_start, subject_sequence, percent_identity)
 
 	assert fasta_record.name == query_name
 	full_sequence = fasta_record.sequence
@@ -212,9 +212,7 @@ def parse_igblast_record(record_lines, fasta_record):
 
 def parse_igblast(path, fasta_path):
 	"""
-	Parse IgBLAST output, created with option -outfmt "7 qseqid qstart qseq sstart sseq"
-
-	TODO add pident column
+	Parse IgBLAST output created with option -outfmt "7 qseqid qstart qseq sstart sseq pident"
 	"""
 	with SequenceReader(fasta_path) as fasta:
 		with open(path) as f:
