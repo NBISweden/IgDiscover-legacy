@@ -10,7 +10,6 @@ Desired output is a table with the following columns:
 * CDR3 sequence
 """
 import csv
-import subprocess
 import sys
 import os
 import re
@@ -88,44 +87,6 @@ class IgblastRecord(IgblastRecordNT):
 def nt_to_aa(s):
 	"""Translate nucleotide sequence to amino acid sequence"""
 	return ''.join(GENETIC_CODE.get(s[i:i+3], '*') for i in range(0, len(s), 3))
-
-
-def run_igblast(fasta, database, organism='rhesus_monkey'):
-	"""
-	fasta -- path to input FASTA file
-	database -- directory that contains IgBLAST databases. Files in that
-	directory must be databases created by the makeblastdb program and have
-	names organism_gene, such as "rhesus_monkey_V".
-	"""
-	"""
-	TODO
-	Igblastwrapper has the databases in files named like this:
-	$IGDATA/database/rhesus_monkey_IG_H_J
-	Should we also include the _IG_H part?
-
-	TODO
-	When running igblastn, the IGDATA environment variable needs to point to
-	the directory that contains the internal_data/ directory.
-	Either require IGDATA to be set or set it here.
-	"""
-
-	arguments = ['igblastn']
-	for gene in 'V', 'D', 'J':
-		arguments += ['-germline_db_{gene}'.format(gene),
-			'{database}/{organism}_{gene}'.format(database, organism, gene)]
-	arguments += [
-		#TODO '-auxiliary_data', '$IGDATA/optional_file/{organism}_gl.aux',
-		'-organism', organism,
-		'-ig_seqtype', 'Ig',
-		'-num_threads' , '1',
-		'-domain_system', 'imgt',
-		'-num_alignments_V', '1',
-		'-num_alignments_D', '1',
-		'-num_alignments_J', '1',
-		'-outfmt', "'7 qseqid qstart qseq sstart sseq pident'",
-		'-out', 'result3.txt',
-		'-query', fasta,
-	]
 
 
 def split_by_section(it, section_starts):
@@ -317,6 +278,7 @@ def main():
 			raise
 		#print('CDR3:', highlight(record.vdj_sequence, record.cdr3_span()))
 	logger.info('%d records parsed and written', n)
+
 
 if __name__ == '__main__':
 	main()
