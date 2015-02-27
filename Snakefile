@@ -27,7 +27,7 @@ rule all:
 		expand("fastqc/reads.{r}.zip", r=(1, 2)),
 		"stats/readlengthhisto.pdf",
 		"clustered.fasta",
-		"igblastwrp-table.L2.txt",
+		"igblast.txt",
 
 
 #rule uncompress_reads:
@@ -152,6 +152,44 @@ rule cluster:
 		r"""
 		{CLUSTER_PROGRAM} -threads {threads} -cluster_fast {input.fasta} -id 0.97 -uc {output.uc} \
 			-idprefix 5 -sizeout --centroids {output.fasta}
+		"""
+
+
+rule makeblastdb:
+	input: fasta="database/{organism}_{gene}.fasta"
+	output: "database/{organism}_{gene}.nhr" # and nin nog nsd nsi nsq
+	params: dbname="database/{organism}_{gene}"
+	shell:
+		r"""
+		makeblastdb -parse_seqids -dbtype nucl -in {input.fasta} -out {params.dbname}
+		"""
+
+
+rule igblast:
+	output:
+		txt="igblast.txt"
+	input:
+		fasta="unique.fasta",
+		db_v="database/{SPECIES}_V.nhr",
+		db_d="database/{SPECIES}_D.nhr",
+		db_j="database/{SPECIES}_J.nhr",
+	shell:
+		#-auxiliary_data $IGDATA/optional_file/{SPECIES}_gl.aux
+		r"""
+		igblastn \
+			-germline_db_V database/{SPECIES}_V \
+			-germline_db_D database/{SPECIES}_D \
+			-germline_db_J database/{SPECIES}_J \
+			-organism {SPECIES} \
+			-ig_seqtype Ig \
+			-num_threads 1 \
+			-domain_system imgt \
+			-num_alignments_V 1 \
+			-num_alignments_D 1 \
+			-num_alignments_J 1 \
+			-out {output.txt} \
+			-query {input.fasta} \
+			-outfmt '7 qseqid qstart qseq sstart sseq pident'
 		"""
 
 
