@@ -194,6 +194,11 @@ def split_by_section(it, section_starts):
 		yield (header, lines)
 
 
+def none_if_na(s):
+	"""Return None if s == 'N/A', and s otherwise"""
+	return None if s == 'N/A' else s
+
+
 def parse_igblast_record(record_lines, fasta_record):
 	BOOL = { 'Yes': True, 'No': False, 'N/A': None }
 	FRAME = { 'In-frame': True, 'Out-of-frame': False, 'N/A': None }
@@ -219,10 +224,10 @@ def parse_igblast_record(record_lines, fasta_record):
 				d_gene = None
 			else:
 				v_gene, d_gene, j_gene, chain, has_stop, in_frame, is_productive, strand = fields
-			v_gene = None if v_gene == 'N/A' else v_gene
-			d_gene = None if d_gene == 'N/A' else d_gene
-			j_gene = None if j_gene == 'N/A' else j_gene
-			assert chain != 'N/A'
+			v_gene = none_if_na(v_gene)
+			d_gene = none_if_na(d_gene)
+			j_gene = none_if_na(j_gene)
+			chain = none_if_na(chain)
 			has_stop = BOOL[has_stop]
 			in_frame = FRAME[in_frame]
 			is_productive = BOOL[is_productive]
