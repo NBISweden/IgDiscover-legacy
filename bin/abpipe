@@ -96,8 +96,10 @@ class Runner:
 
 
 IgblastRecordNT = namedtuple('IgblastRecord',
-	'full_sequence query_name cdr3_start hits v_gene d_gene j_gene chain has_stop in_frame is_productive strand size')
+	'full_sequence query_name cdr3_start hits v_gene d_gene j_gene chain has_stop in_frame is_productive strand size junction')
 Hit = namedtuple('Hit', 'query_id query_start query_sequence subject_start subject_sequence percent_identity')
+JunctionVDJ = namedtuple('JunctionVDJ', 'v_end vd_junction d_region dj_junction j_start')
+JunctionVJ = namedtuple('JunctionVJ', 'v_end vj_junction j_start')
 
 sizeregex = re.compile('(.*);size=(\d+);$')  # TODO move into class below
 
@@ -200,6 +202,7 @@ def parse_igblast_record(record_lines, fasta_record):
 	SECTIONS = set([
 		'# Query:',
 		'# V-(D)-J rearrangement summary',
+		'# V-(D)-J junction details',
 		'# Alignment summary',
 		'# Hit table',
 	])
@@ -207,6 +210,7 @@ def parse_igblast_record(record_lines, fasta_record):
 	# All of the sections are optional, so we need to set default values here.
 	query_name = None
 	cdr3_start = None
+	junction = None
 	v_gene, d_gene, j_gene, chain, has_stop, in_frame, is_productive, strand = [None] * 8
 	for section, lines in split_by_section(record_lines, SECTIONS):
 		if section.startswith('# Query: '):
@@ -227,6 +231,21 @@ def parse_igblast_record(record_lines, fasta_record):
 			in_frame = FRAME[in_frame]
 			is_productive = BOOL[is_productive]
 			strand = strand if strand in '+-' else None
+		elif section.startswith('# V-(D)-J junction details'):
+			fields = lines[0].split('\t')
+			if len(fields) == 5:
+				junction = JunctionVDJ(
+					v_end=fields[0],
+					vd_junction=fields[1],
+					d_region=fields[2],
+					dj_junction=fields[3],
+					j_start=fields[4]
+				)
+			else:
+				junction = JunctionVJ(
+					v_end=fields[0],
+					vj_junction=fields[1],
+					j_start=fields[2])
 		elif section.startswith('# Alignment summary'):
 			# This section is optional
 			for line in lines:
@@ -288,7 +307,8 @@ def parse_igblast_record(record_lines, fasta_record):
 		strand=strand,
 		hits=hits,
 		full_sequence=full_sequence,
-		size=size)
+		size=size,
+		junction=junction)
 
 
 def parse_igblast(path, fasta_path):
@@ -323,6 +343,11 @@ class TableWriter:
 			"stop",
 			"CDR3_nt",
 			"CDR3_aa",
+			"v_end",
+			"vd_junction",
+			"d_region",
+			"dj_junction",
+			"j_start",
 			"name",
 			"sequence",
 		])
@@ -331,6 +356,11 @@ class TableWriter:
 		cdr3nt = record.cdr3_sequence
 		cdr3aa = nt_to_aa(cdr3nt) if cdr3nt else None
 		v_percent_identity = record.hits['V'].percent_identity if 'V' in record.hits else None
+		v_end = getattr(record.junction, 'v_end', None)
+		vd_junction = getattr(record.junction, 'vd_junction', None)
+		d_region = getattr(record.junction, 'd_region', None)
+		dj_junction = getattr(record.junction, 'dj_junction', None)
+		j_start = getattr(record.junction, 'j_start', None)
 		self._writer.writerow([
 			record.size,
 			record.v_gene,
@@ -340,6 +370,11 @@ class TableWriter:
 			"yes" if record.has_stop else "no",
 			cdr3nt,
 			cdr3aa,
+			v_end,
+			vd_junction,
+			d_region,
+			dj_junction,
+			j_start,
 			record.query_name,
 			record.full_sequence,
 		])
