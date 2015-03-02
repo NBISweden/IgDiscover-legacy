@@ -2,6 +2,7 @@
 """
 Run IgBLAST in parallel.
 """
+import os
 import sys
 import subprocess
 import multiprocessing
@@ -17,10 +18,11 @@ def run_igblast(fasta, database, organism='rhesus_monkey'):
 	directory must be databases created by the makeblastdb program and have
 	names organism_gene, such as "rhesus_monkey_V".
 
-	Only one of fasta_data and fasta_path may be given.
-
 	Return IgBLAST’s output as a string.
 	"""
+	if not 'IGDATA' in os.environ:
+		raise ValueError("The IGDATA environment variable needs to be set")
+
 	"""
 	TODO
 	Igblastwrapper has the databases in files named like this:
