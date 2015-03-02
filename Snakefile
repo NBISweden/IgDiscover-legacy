@@ -177,7 +177,7 @@ rule abpipe_igblast:
 	shell:
 		#-auxiliary_data $IGDATA/optional_file/{SPECIES}_gl.aux
 		r"""
-		abpipe igblast --threads {threads} --limit 1000 --species {SPECIES} database/ {input.fasta} > {output.txt}
+		abpipe igblast --threads {threads} --species {SPECIES} database/ {input.fasta} > {output.txt}
 		"""
 
 # The old command line:
