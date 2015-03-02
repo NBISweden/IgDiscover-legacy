@@ -339,10 +339,11 @@ class TableWriter:
 			"V_gene",
 			"D_gene",
 			"J_gene",
-			"V_%identity",
 			"stop",
 			"CDR3_nt",
 			"CDR3_aa",
+			"V_%identity",
+			"V_aa",
 			"v_end",
 			"vd_junction",
 			"d_region",
@@ -355,7 +356,12 @@ class TableWriter:
 	def write(self, record):
 		cdr3nt = record.cdr3_sequence
 		cdr3aa = nt_to_aa(cdr3nt) if cdr3nt else None
-		v_percent_identity = record.hits['V'].percent_identity if 'V' in record.hits else None
+		if 'V' in record.hits:
+			v_aa = nt_to_aa(record.hits['V'].query_sequence)
+			v_percent_identity = record.hits['V'].percent_identity
+		else:
+			v_aa = None
+			v_percent_identity = None
 		v_end = getattr(record.junction, 'v_end', None)
 		vd_junction = getattr(record.junction, 'vd_junction', None)
 		d_region = getattr(record.junction, 'd_region', None)
@@ -366,10 +372,11 @@ class TableWriter:
 			record.v_gene,
 			record.d_gene,
 			record.j_gene,
-			v_percent_identity,
 			"yes" if record.has_stop else "no",
 			cdr3nt,
 			cdr3aa,
+			v_percent_identity,
+			v_aa,
 			v_end,
 			vd_junction,
 			d_region,
