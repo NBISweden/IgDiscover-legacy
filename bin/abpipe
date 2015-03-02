@@ -350,15 +350,16 @@ class TableWriter:
 			"J_gene",
 			"stop",
 			"productive",
+			"before_V",
 			"CDR3_nt",
 			"CDR3_aa",
 			"V_%identity",
 			"V_aa",
-			"v_end",
-			"vd_junction",
-			"d_region",
-			"dj_junction",
-			"j_start",
+			"V_end",
+			"VD_junction",
+			"D_region",
+			"DJ_junction",
+			"J_start",
 			"name",
 			"sequence",
 		])
@@ -369,9 +370,11 @@ class TableWriter:
 		if 'V' in record.hits:
 			v_aa = nt_to_aa(record.hits['V'].query_sequence)
 			v_percent_identity = record.hits['V'].percent_identity
+			before_v = record.full_sequence[:record.hits['V'].query_start]
 		else:
 			v_aa = None
 			v_percent_identity = None
+			before_v = None
 		v_end = getattr(record.junction, 'v_end', None)
 		vd_junction = getattr(record.junction, 'vd_junction', None)
 		d_region = getattr(record.junction, 'd_region', None)
@@ -384,6 +387,7 @@ class TableWriter:
 			record.j_gene,
 			yesno(record.has_stop),
 			yesno(record.is_productive),
+			before_v,
 			cdr3nt,
 			cdr3aa,
 			v_percent_identity,
