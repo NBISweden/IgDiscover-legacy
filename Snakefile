@@ -27,7 +27,7 @@ rule all:
 		#expand("fastqc/reads.{r}.zip", r=(1, 2)),
 		"stats/readlengthhisto.pdf",
 		"clustered.fasta",
-		"igblast.txt",
+		"table.txt",
 
 
 #rule uncompress_reads:
@@ -165,7 +165,7 @@ rule makeblastdb:
 		"""
 
 
-rule igblast:
+rule abpipe_igblast:
 	output:
 		txt="igblast.txt"
 	input:
@@ -173,37 +173,39 @@ rule igblast:
 		db_v="database/{species}_V.nhr".format(species=SPECIES),
 		db_d="database/{species}_D.nhr".format(species=SPECIES),
 		db_j="database/{species}_J.nhr".format(species=SPECIES)
+	threads: 16
 	shell:
 		#-auxiliary_data $IGDATA/optional_file/{SPECIES}_gl.aux
 		r"""
-		igblastn \
-			-germline_db_V database/{SPECIES}_V \
-			-germline_db_D database/{SPECIES}_D \
-			-germline_db_J database/{SPECIES}_J \
-			-organism {SPECIES} \
-			-ig_seqtype Ig \
-			-num_threads 1 \
-			-domain_system imgt \
-			-num_alignments_V 1 \
-			-num_alignments_D 1 \
-			-num_alignments_J 1 \
-			-out {output.txt} \
-			-query {input.fasta} \
-			-outfmt '7 qseqid qstart qseq sstart sseq pident'
+		abpipe igblast --threads {threads} --limit 1000 --species {SPECIES} database/ {input.fasta} > {output.txt}
 		"""
 
+# The old command line:
+"""
+igblastn \
+	-germline_db_V database/{SPECIES}_V \
+	-germline_db_D database/{SPECIES}_D \
+	-germline_db_J database/{SPECIES}_J \
+	-organism {SPECIES} \
+	-ig_seqtype Ig \
+	-num_threads 1 \
+	-domain_system imgt \
+	-num_alignments_V 1 \
+	-num_alignments_D 1 \
+	-num_alignments_J 1 \
+	-out {output.txt} \
+	-query {input.fasta} \
+	-outfmt '7 qseqid qstart qseq sstart sseq pident'
+"""
 
-rule igblastwrp:
-	"""TODO run it on clustered sequences, not on dereplicated ones (?)"""
-	output: table="igblastwrp-table.L2.txt"
-	input: "filtered.fasta"
-	resources: time=60
-	threads: 8
+rule parse_igblast:
+	output:
+		txt="table.txt"
+	input:
+		txt="igblast.txt",
+		fasta=rules.abpipe_igblast.input.fasta
 	shell:
-		r"""
-		igblastwrp -R {RECEPTOR_CHAIN} -S {SPECIES} -p {threads} {input} igblast-table
-		"""
-
+		"abpipe parse {input.txt} {input.fasta} > {output.txt}"
 
 rule ungzip:
 	output: "{file}.fastq"
