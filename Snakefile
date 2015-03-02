@@ -24,7 +24,7 @@ shell.prefix("set -euo pipefail;")
 
 rule all:
 	input:
-		expand("fastqc/reads.{r}.zip", r=(1, 2)),
+		#expand("fastqc/reads.{r}.zip", r=(1, 2)),
 		"stats/readlengthhisto.pdf",
 		"clustered.fasta",
 		"igblast.txt",
