@@ -26,9 +26,10 @@ __author__ = "Marcel Martin"
 logger = logging.getLogger(__name__)
 
 IgblastRecordNT = namedtuple('IgblastRecord',
-	'full_sequence query_name cdr3_start hits v_gene d_gene j_gene chain has_stop in_frame is_productive strand')
+	'full_sequence query_name cdr3_start hits v_gene d_gene j_gene chain has_stop in_frame is_productive strand size')
 Hit = namedtuple('Hit', 'query_id query_start query_sequence subject_start subject_sequence percent_identity')
 
+sizeregex = re.compile('(.*);size=(\d+);$')  # TODO move into class below
 
 class IgblastRecord(IgblastRecordNT):
 	# TODO move computation of cdr3_span, cdr3_sequence, vdj_sequence into constructor
@@ -193,6 +194,12 @@ def parse_igblast_record(record_lines, fasta_record):
 			assert qsequence == full_sequence[hit.query_start:hit.query_start+len(qsequence)]
 		#print(len(full_sequence))
 
+	m = sizeregex.match(query_name)
+	if m:
+		query_name = m.group(1)
+		size = int(m.group(2))
+	else:
+		size = None
 	return IgblastRecord(
 		query_name=query_name,
 		cdr3_start=cdr3_start,
@@ -205,7 +212,8 @@ def parse_igblast_record(record_lines, fasta_record):
 		is_productive=is_productive,
 		strand=strand,
 		hits=hits,
-		full_sequence=full_sequence)
+		full_sequence=full_sequence,
+		size=size)
 
 
 def parse_igblast(path, fasta_path):
@@ -232,13 +240,14 @@ class TableWriter:
 		self._file = file
 		self._writer = csv.writer(file, delimiter='\t')
 		self._writer.writerow([
-			"# V gene",
-			"D gene",
-			"J gene",
-			"V %identity",
+			"# count",
+			"V_gene",
+			"D_gene",
+			"J_gene",
+			"V_%identity",
 			"stop",
-			"CDR3 nt",
-			"CDR3 aa",
+			"CDR3_nt",
+			"CDR3_aa",
 			"name",
 			"sequence",
 		])
@@ -248,6 +257,7 @@ class TableWriter:
 		cdr3aa = nt_to_aa(cdr3nt) if cdr3nt else None
 		v_percent_identity = record.hits['V'].percent_identity if 'V' in record.hits else None
 		self._writer.writerow([
+			record.size,
 			record.v_gene,
 			record.d_gene,
 			record.j_gene,
