@@ -1,13 +1,7 @@
 #!/usr/bin/env python3
 """
-An IgBLAST wrapper. Heavily inspired by igblastwrapper.
-
-Desired output is a table with the following columns:
-* read name
-* V gene
-* D gene
-* J gene
-* CDR3 sequence
+An IgBLAST wrapper inspired by igblastwrp. Can run IgBLAST in parallel and
+parse the output.
 """
 import csv
 import sys
@@ -16,6 +10,10 @@ import re
 import logging
 import errno
 from collections import namedtuple
+import multiprocessing
+import subprocess
+from itertools import islice
+from tempfile import NamedTemporaryFile
 from sqt import HelpfulArgumentParser
 from sqt import SequenceReader
 from sqt.dna import GENETIC_CODE, reverse_complement
@@ -24,6 +22,83 @@ from sqt.ansicolor import red, blue
 __author__ = "Marcel Martin"
 
 logger = logging.getLogger(__name__)
+
+
+def run_igblast(fasta, database, organism='rhesus_monkey'):
+	"""
+	fasta -- path to a FASTA file or data in FASTA format as a string
+	database -- directory that contains IgBLAST databases. Files in that
+	directory must be databases created by the makeblastdb program and have
+	names organism_gene, such as "rhesus_monkey_V".
+
+	Return IgBLAST’s output as a string.
+	"""
+	if not 'IGDATA' in os.environ:
+		raise ValueError("The IGDATA environment variable needs to be set")
+
+	"""
+	TODO
+	Igblastwrapper has the databases in files named like this:
+	$IGDATA/database/rhesus_monkey_IG_H_J
+	Should we also include the _IG_H part?
+
+	TODO
+	When running igblastn, the IGDATA environment variable needs to point to
+	the directory that contains the internal_data/ directory.
+	Either require IGDATA to be set or set it here.
+	"""
+	if fasta.startswith('>'):
+		fasta_input = '-'
+	else:
+		fasta_input = fasta
+	arguments = ['igblastn']
+	for gene in 'V', 'D', 'J':
+		arguments += ['-germline_db_{gene}'.format(gene=gene),
+			'{database}/{organism}_{gene}'.format(database=database, organism=organism, gene=gene)]
+	arguments += [
+		#TODO '-auxiliary_data', '$IGDATA/optional_file/{organism}_gl.aux',
+		'-organism', organism,
+		'-ig_seqtype', 'Ig',
+		'-num_threads' , '1',
+		'-domain_system', 'imgt',
+		'-num_alignments_V', '1',
+		'-num_alignments_D', '1',
+		'-num_alignments_J', '1',
+		'-outfmt', "7 qseqid qstart qseq sstart sseq pident",
+		'-query', fasta_input,
+		'-out', '-',  # write to stdout
+	]
+	result = subprocess.check_output(arguments, input=fasta if fasta_input == '-' else None, universal_newlines=True)
+	return result
+
+
+def chunked_fasta(path, chunksize=500):
+	"""
+	Split a FASTA file into chunks that contain at most chunksize records.
+	"""
+	def buf_to_fasta(b):
+		return ''.join(">{}\n{}\n".format(r.name, r.sequence) for r in b)
+	sr = SequenceReader(path)
+	buf = []
+	for record in sr:
+		buf.append(record)
+		if len(buf) == chunksize:
+			yield buf_to_fasta(buf)
+			buf = []
+	if len(buf) > 0:
+		yield buf_to_fasta(buf)
+	sr.close()
+
+
+class Runner:
+	"""nested functions cannot be pickled"""
+	def __init__(self, dbpath):
+		self.dbpath = dbpath
+
+	def __call__(self, s):
+		return run_igblast(s, self.dbpath)
+
+
 
 IgblastRecordNT = namedtuple('IgblastRecord',
 	'full_sequence query_name cdr3_start hits v_gene d_gene j_gene chain has_stop in_frame is_productive strand size')
@@ -270,15 +345,24 @@ class TableWriter:
 		])
 
 
-def main():
-	logging.basicConfig(level=logging.DEBUG, format='%(levelname)s: %(message)s')
-	parser = HelpfulArgumentParser(description=__doc__)
-	parser.add_argument('igblastout', help='output file of igblastn')
-	parser.add_argument('fasta', help='File with original reads')
-	args = parser.parse_args()
+def igblast_command(args):
+	"""
+	Run IgBLAST in parallel
+	"""
+	chunks = islice(chunked_fasta(args.fasta), 0, args.limit)
+	runner = Runner(args.database)
+	with multiprocessing.Pool(args.threads) as pool:
+		for result in pool.map(runner, chunks):
+			f.write(result)
+
+
+def parse_command(args):
+	"""
+	Parse IgBLAST output
+	"""
 	n = 0
 	writer = TableWriter(sys.stdout)
-	for record in parse_igblast(args.igblastout, args.fasta):
+	for record in parse_igblast(args.igblast, args.fasta):
 		n += 1
 		try:
 			writer.write(record)
@@ -288,6 +372,28 @@ def main():
 			raise
 		#print('CDR3:', highlight(record.vdj_sequence, record.cdr3_span()))
 	logger.info('%d records parsed and written', n)
+
+
+def main():
+	logging.basicConfig(level=logging.DEBUG, format='%(levelname)s: %(message)s')
+	parser = HelpfulArgumentParser(description=__doc__)
+
+	subparsers = parser.add_subparsers(help='sub-command help')
+	subparser = subparsers.add_parser('igblast', help='igblast help')
+	subparser.add_argument('--threads', '-t', type=int, default=1,
+		help='Number of threads (default: %(default)s)')
+	subparser.add_argument('--limit', type=int, metavar='N',
+		help='Limit processing to first N records')
+	subparser.add_argument('database', help='path to database')
+	subparser.add_argument('fasta', help='File with original reads')
+	subparser.set_defaults(func=igblast_command)
+
+	subparser = subparsers.add_parser('parse', help='parse help')
+	subparser.add_argument('igblast', help='IgBLAST output')
+	subparser.add_argument('fasta', help='File with original reads')
+
+	args = parser.parse_args()
+	args.func(args)
 
 
 if __name__ == '__main__':
