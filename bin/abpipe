@@ -396,6 +396,7 @@ def main():
 	subparser = subparsers.add_parser('parse', help='parse help')
 	subparser.add_argument('igblast', help='IgBLAST output')
 	subparser.add_argument('fasta', help='File with original reads')
+	subparser.set_defaults(func=parse_command)
 
 	args = parser.parse_args()
 	args.func(args)
