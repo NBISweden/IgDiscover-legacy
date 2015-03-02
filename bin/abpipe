@@ -33,19 +33,12 @@ def run_igblast(fasta, database, species='rhesus_monkey'):
 
 	Return IgBLAST’s output as a string.
 	"""
-	if not 'IGDATA' in os.environ:
-		raise ValueError("The IGDATA environment variable needs to be set")
 
 	"""
 	TODO
 	Igblastwrapper has the databases in files named like this:
 	$IGDATA/database/rhesus_monkey_IG_H_J
 	Should we also include the _IG_H part?
-
-	TODO
-	When running igblastn, the IGDATA environment variable needs to point to
-	the directory that contains the internal_data/ directory.
-	Either require IGDATA to be set or set it here.
 	"""
 	if fasta.startswith('>'):
 		fasta_input = '-'
@@ -73,15 +66,16 @@ def run_igblast(fasta, database, species='rhesus_monkey'):
 	return result
 
 
-def chunked_fasta(path, chunksize=500):
+def chunked_fasta(path, chunksize=500, limit=None):
 	"""
 	Split a FASTA file into chunks that contain at most chunksize records.
+	Take only the first 'limit' records, or all if limit is None.
 	"""
 	def buf_to_fasta(b):
 		return ''.join(">{}\n{}\n".format(r.name, r.sequence) for r in b)
 	sr = SequenceReader(path)
 	buf = []
-	for record in sr:
+	for record in islice(sr, 0, limit):
 		buf.append(record)
 		if len(buf) == chunksize:
 			yield buf_to_fasta(buf)
@@ -355,11 +349,14 @@ def igblast_command(args):
 	"""
 	Run IgBLAST in parallel
 	"""
-	chunks = islice(chunked_fasta(args.fasta), 0, args.limit)
+	if not 'IGDATA' in os.environ:
+		raise ValueError("The IGDATA environment variable needs to be set")
+
+	chunks = chunked_fasta(args.fasta, limit=args.limit)
 	runner = Runner(args.database)
 	with multiprocessing.Pool(args.threads) as pool:
 		for result in pool.map(runner, chunks):
-			f.write(result)
+			sys.stdout.write(result)
 
 
 def parse_command(args):
