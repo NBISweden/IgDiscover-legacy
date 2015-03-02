@@ -330,6 +330,15 @@ def highlight(s, span):
 	return s[0:start] + red(s[start:stop]) + s[stop:]
 
 
+def yesno(v):
+	"""
+	Return "yes", "no" or None for boolean value v, which may also be None.
+	"""
+	if v is None:
+		return None
+	return ["no", "yes"][v]
+
+
 class TableWriter:
 	def __init__(self, file):
 		self._file = file
@@ -340,6 +349,7 @@ class TableWriter:
 			"D_gene",
 			"J_gene",
 			"stop",
+			"productive",
 			"CDR3_nt",
 			"CDR3_aa",
 			"V_%identity",
@@ -372,7 +382,8 @@ class TableWriter:
 			record.v_gene,
 			record.d_gene,
 			record.j_gene,
-			"yes" if record.has_stop else "no",
+			yesno(record.has_stop),
+			yesno(record.is_productive),
 			cdr3nt,
 			cdr3aa,
 			v_percent_identity,
