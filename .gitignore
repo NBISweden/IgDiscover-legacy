@@ -1,1 +1,5 @@
 *~
+*.kate-swp
+.ipynb_checkpoints/
+raw/
+tmp/
