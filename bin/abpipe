@@ -47,7 +47,7 @@ def run_igblast(fasta, database, species='rhesus_monkey'):
 	arguments = ['igblastn']
 	for gene in 'V', 'D', 'J':
 		arguments += ['-germline_db_{gene}'.format(gene=gene),
-			'{database}/{species}_{gene}'.format(database=database, species=species, gene=gene)]
+			os.path.join(database, '{species}_{gene}'.format(species=species, gene=gene))]
 	arguments += [
 		#TODO '-auxiliary_data', '$IGDATA/optional_file/{species}_gl.aux',
 		#'-auxiliary_data', '/dev/null',
@@ -92,7 +92,6 @@ class Runner:
 
 	def __call__(self, s):
 		return run_igblast(s, self.dbpath)
-
 
 
 IgblastRecordNT = namedtuple('IgblastRecord',
