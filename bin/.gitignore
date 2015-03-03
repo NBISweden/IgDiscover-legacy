@@ -1,0 +1,11 @@
+sqt-*
+vsearch
+flash
+makeblastdb
+igblastn
+igblastp
+pip*
+python*
+easy_install*
+cutadapt
+activate*
