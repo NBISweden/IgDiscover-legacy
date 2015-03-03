@@ -411,7 +411,7 @@ def igblast_command(args):
 	chunks = chunked_fasta(args.fasta, limit=args.limit)
 	runner = Runner(args.database)
 	with multiprocessing.Pool(args.threads) as pool:
-		for result in pool.map(runner, chunks):
+		for result in pool.imap(runner, chunks, chunksize=1):
 			sys.stdout.write(result)
 
 
