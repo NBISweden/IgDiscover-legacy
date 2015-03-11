@@ -56,7 +56,7 @@ elif MERGE_PROGRAM == 'pear':
 		threads: 8
 		shell:
 			r"""
-			pear -f {input[0]} -r {input[1]} -o pear && \
+			pear -j {threads} -f {input[0]} -r {input[1]} -o pear && \
 			gzip < pear.assembled.fastq > {output.fastq} && rm pear.assembled.fastq
 			"""
 else:
