@@ -203,7 +203,7 @@ rule parse_igblast:
 		txt="table.txt"
 	input:
 		txt="igblast.txt",
-		fasta=rules.abpipe_igblast.input.fasta
+		fasta="unique.fasta"
 	shell:
 		"abpipe parse {input.txt} {input.fasta} > {output.txt}"
 
