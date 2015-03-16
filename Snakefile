@@ -27,7 +27,7 @@ rule all:
 		#expand("fastqc/reads.{r}.zip", r=(1, 2)),
 		"stats/readlengthhisto.pdf",
 		"clustered.fasta",
-		"table.txt",
+		"table.tab",
 
 
 #rule uncompress_reads:
@@ -200,12 +200,12 @@ igblastn \
 
 rule parse_igblast:
 	output:
-		txt="table.txt"
+		tab="table.tab"
 	input:
 		txt="igblast.txt",
 		fasta="unique.fasta"
 	shell:
-		"abpipe parse {input.txt} {input.fasta} > {output.txt}"
+		"abpipe parse {input.txt} {input.fasta} > {output.tab}"
 
 rule ungzip:
 	output: "{file}.fastq"
