@@ -82,17 +82,29 @@ PRIMERS = [
 PRIMERS[0].extend(REVERSE_PRIMERS)
 PRIMERS[1].extend(reverse_complement(seq) for seq in FORWARD_PRIMERS)
 
-rule trim_primers:
-	output: fastq="trimmed.fastq.gz"
+rule trim_primers_fivep:
+	output: fastq="trimmed-fivep.fastq.gz"
 	input: fastq="merged.fastq.gz"
 	resources: time=60
+	log: 'cutadapt-fiveprime.log'
 	params:
-		five_p=" ".join("-g ^{}".format(seq) for seq in PRIMERS[0]),
+		five_p=" ".join("-g ^{}".format(seq) for seq in PRIMERS[0])
+	shell:
+		r"""
+		cutadapt --discard-untrimmed {params.five_p} -o {output.fastq} {input.fastq} | tee {log}
+		"""
+
+
+rule trim_primers_threep:
+	output: fastq="trimmed.fastq.gz"
+	input: fastq="trimmed-fivep.fastq.gz"
+	resources: time=60
+	log: 'cutadapt-threeprime.log'
+	params:
 		three_p=" ".join("-a {}$".format(seq) for seq in PRIMERS[1])
 	shell:
 		r"""
-		cutadapt --discard-untrimmed {params.five_p} {input.fastq} | \
-		cutadapt --discard-untrimmed {params.three_p} -o {output.fastq} -
+		cutadapt --discard-untrimmed {params.three_p} -o {output.fastq} {input.fastq} | tee {log}
 		"""
 
 
@@ -126,7 +138,7 @@ rule fastq_to_fasta:
 
 
 rule dereplicate:
-	"""Dereplication with usearch"""
+	"""Collapse identical sequences with VSEARCH"""
 	output: fasta="unique.fasta"
 	input: fasta="filtered.fasta"
 	shell:
@@ -174,26 +186,9 @@ rule abpipe_igblast:
 	shell:
 		#-auxiliary_data $IGDATA/optional_file/{SPECIES}_gl.aux
 		r"""
-		abpipe igblast --threads {threads} --species {SPECIES} database/ {input.fasta} > {output.txt}
+		abpipe igblast --threads {threads} --limit 1000 --species {SPECIES} database/ {input.fasta} > {output.txt}
 		"""
 
-# The old command line:
-"""
-igblastn \
-	-germline_db_V database/{SPECIES}_V \
-	-germline_db_D database/{SPECIES}_D \
-	-germline_db_J database/{SPECIES}_J \
-	-organism {SPECIES} \
-	-ig_seqtype Ig \
-	-num_threads 1 \
-	-domain_system imgt \
-	-num_alignments_V 1 \
-	-num_alignments_D 1 \
-	-num_alignments_J 1 \
-	-out {output.txt} \
-	-query {input.fasta} \
-	-outfmt '7 qseqid qstart qseq sstart sseq pident'
-"""
 
 rule parse_igblast:
 	output:
