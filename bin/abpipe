@@ -380,7 +380,7 @@ class TableWriter:
 		d_region = getattr(record.junction, 'd_region', None)
 		dj_junction = getattr(record.junction, 'dj_junction', None)
 		j_start = getattr(record.junction, 'j_start', None)
-		name = "read{}".format(self.read_number)  # instead of record.query_name
+		name = "seq{}".format(self.read_number)  # instead of record.query_name
 		self.read_number += 1
 		self._writer.writerow([
 			record.size,
