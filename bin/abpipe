@@ -282,7 +282,7 @@ def parse_igblast_record(record_lines, fasta_record):
 			qid = hit.query_id
 			qid = qid[len('reversed|'):] if qid.startswith('reversed|') else qid
 			assert hit.query_id.startswith('reversed|') == (strand == '-')
-			assert qid == qname, (qid, qname)
+			assert qid == qname.partition(" ")[0], (qid, qname)
 			assert chain in (None, 'VL', 'VH', 'VK', 'NON'), chain
 			assert qsequence == full_sequence[hit.query_start:hit.query_start+len(qsequence)]
 		#print(len(full_sequence))
