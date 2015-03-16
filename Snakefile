@@ -17,6 +17,22 @@ table.tab -- result of parsing IgBLAST output
 """
 from sqt.dna import reverse_complement
 
+# Set defaults for some configurable values.
+
+# Limit processing to this number of reads. Set to None to process all.
+LIMIT = None
+
+# Which program to use for clustering. This can be either a path to the
+# usearch binary or vsearch.
+CLUSTER_PROGRAM = 'vsearch'
+
+# Filter out reads that have more than this number of expected errors.
+# Set to None to disable.
+MAXIMUM_EXPECTED_ERRORS = None
+
+# Whether to trim primers. Can be set to True or False.
+TRIM_PRIMERS = True
+
 try:
 	include: "pipeline.conf"
 except WorkflowError:
@@ -131,7 +147,7 @@ rule fastq_to_fasta:
 	* Discard too short sequences
 	"""
 	output: fasta="filtered.fasta"
-	input: fastq="trimmed.fastq.gz"
+	input: fastq="trimmed.fastq.gz" if TRIM_PRIMERS else "merged.fastq.gz"
 	params: max_errors="--max-errors {MAXIMUM_EXPECTED_ERRORS}" if MAXIMUM_EXPECTED_ERRORS is not None else ""
 	shell:
 		"sqt-fastqmod {params.max_errors} --minimum-length {MINIMUM_MERGED_READ_LENGTH} --fasta {input.fastq} > {output.fasta}"
