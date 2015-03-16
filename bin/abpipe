@@ -339,7 +339,11 @@ def yesno(v):
 
 
 class TableWriter:
-	def __init__(self, file):
+	def __init__(self, file, rename=None):
+		"""
+		If rename is not None, rename reads to {rename}seq{number}, where
+		{number} is a sequential number starting from 1.
+		"""
 		self._file = file
 		self._writer = csv.writer(file, delimiter='\t')
 		self._writer.writerow([
@@ -363,6 +367,7 @@ class TableWriter:
 			"sequence",
 		])
 		self.read_number = 1
+		self.rename = rename
 
 	def write(self, record):
 		cdr3nt = record.cdr3_sequence
@@ -380,7 +385,10 @@ class TableWriter:
 		d_region = getattr(record.junction, 'd_region', None)
 		dj_junction = getattr(record.junction, 'dj_junction', None)
 		j_start = getattr(record.junction, 'j_start', None)
-		name = "seq{}".format(self.read_number)  # instead of record.query_name
+		if self.rename is not None:
+			name = "{}seq{}".format(self.rename, self.read_number)
+		else:
+			name = record.query_name
 		self.read_number += 1
 		self._writer.writerow([
 			record.size,
@@ -423,7 +431,7 @@ def parse_command(args):
 	Parse IgBLAST output
 	"""
 	n = 0
-	writer = TableWriter(sys.stdout)
+	writer = TableWriter(sys.stdout, args.rename)
 	for record in parse_igblast(args.igblast, args.fasta):
 		n += 1
 		try:
@@ -453,6 +461,8 @@ def main():
 	subparser.set_defaults(func=igblast_command)
 
 	subparser = subparsers.add_parser('parse', help='parse help')
+	subparser.add_argument('--rename', default=None, metavar='PREFIX',
+		help='Rename reads to PREFIXseqN (where N is a number starting at 1)')
 	subparser.add_argument('igblast', help='IgBLAST output')
 	subparser.add_argument('fasta', help='File with original reads')
 	subparser.set_defaults(func=parse_command)

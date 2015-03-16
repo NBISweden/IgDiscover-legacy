@@ -201,8 +201,11 @@ rule parse_igblast:
 	input:
 		txt="igblast.txt",
 		fasta="unique.fasta"
+	params:
+		dirname=os.path.basename(os.getcwd())
 	shell:
-		"abpipe parse {input.txt} {input.fasta} > {output.tab}"
+		"abpipe parse --rename {params.dirname}_ {input.txt} {input.fasta} > {output.tab}"
+
 
 rule ungzip:
 	output: "{file}.fastq"
