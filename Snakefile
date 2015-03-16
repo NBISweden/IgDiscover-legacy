@@ -5,19 +5,22 @@ Required modules:
 module use /proj/b2014342/sw/modules
 module load abpipe
 
-Each stage of the pipeline is in a different directory. They are:
+These are the main files that the pipeline creates, in the order in which they
+are created:
 
-1. reads/ -- raw reads
-2. merged/ -- paired-end reads merged into single reads
-3. trimmed/ -- adapters removed
-4. filtered/ -- FASTQ converted to FASTA with low-quality reads removed
-5. unique/ -- duplicate reads collapsed into one
-6. clustered/ -- clustered into groups of similar sequences
-7. assigned/ -- IgBLAST assignment
+merged.fastq.gz -- merged reads
+trimmed.fastq.gz -- primers removed from merged reads
+filtered.fasta  -- too short sequences removed, converted to FASTA
+unique.fasta -- collapsed sequences
+igblast.txt -- raw IgBLAST output
+table.tab -- result of parsing IgBLAST output
 """
 from sqt.dna import reverse_complement
 
-include: "pipeline.conf"
+try:
+	include: "pipeline.conf"
+except WorkflowError:
+	sys.exit("Pipeline configuration file 'pipeline.conf' not found. Please create it!")
 
 # This command is run before every shell command and helps to catch errors early
 shell.prefix("set -euo pipefail;")
@@ -28,13 +31,6 @@ rule all:
 		"stats/readlengthhisto.pdf",
 		"clustered.fasta",
 		"table.tab",
-
-
-#rule uncompress_reads:
-	#input: "reads/{file}.fastq.gz"
-	#output: "reads/{file}.fastq"
-	#shell:
-		#"zcat {input} > {output}"
 
 
 if MERGE_PROGRAM == 'flash':
