@@ -40,9 +40,10 @@ if MERGE_PROGRAM == 'flash':
 		input: "reads.1.fastq", "reads.2.fastq"
 		resources: time=60
 		threads: 8
+		log: 'flash.log'
 		shell:
 			# -M: maximal overlap (2x300, 420-450bp expected fragment size)
-			"flash -t {threads} -c -M {FLASH_MAXIMUM_OVERLAP} {input} | pigz > {output}"
+			"flash -t {threads} -c -M {FLASH_MAXIMUM_OVERLAP} {input} 2> >(tee {log} >&2) | pigz > {output}"
 elif MERGE_PROGRAM == 'pear':
 	rule pear_merge:
 		"""Use pear to merge paired-end reads"""
