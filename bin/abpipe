@@ -347,7 +347,7 @@ class TableWriter:
 		self._file = file
 		self._writer = csv.writer(file, delimiter='\t')
 		self._writer.writerow([
-			"# count",
+			"count",
 			"V_gene",
 			"D_gene",
 			"J_gene",
