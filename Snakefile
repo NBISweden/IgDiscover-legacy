@@ -226,6 +226,16 @@ rule parse_igblast:
 		"abpipe parse --rename {params.dirname}_ {input.txt} {input.fasta} > {output.tab}"
 
 
+rule count_and_plot:
+	output:
+		plot="v_usage.pdf",
+		counts="v_usage.tab"
+	input:
+		tab="table.tab"
+	shell:
+		"abpipe count {input.tab} {output.plot} > {output.counts}"
+
+
 rule ungzip:
 	output: "{file}.fastq"
 	input: "{file}.fastq.gz"

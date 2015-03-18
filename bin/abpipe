@@ -444,6 +444,45 @@ def parse_command(args):
 	logger.info('%d records parsed and written', n)
 
 
+
+def natural_sort_key(s, _nsre=re.compile('([0-9]+)')):
+# from http://stackoverflow.com/a/16090640/715090
+	return [int(text) if text.isdigit() else text.lower()
+		for text in re.split(_nsre, s)]
+
+
+def count_command(args):
+	import matplotlib.pyplot as plt
+	import matplotlib
+	import pandas as pd
+	import numpy as np
+
+	d = pd.read_csv(args.table, sep='\t')
+	v_genes = list(sorted(set(d.V_gene.dropna()), key=natural_sort_key))
+	d['V_gene'] = pd.Categorical(d['V_gene'], categories=v_genes)
+	counts = d.groupby('V_gene').size()
+
+	print(counts.to_csv(None, sep='\t'))
+	logging.info("Wrote CSV")
+
+	if not args.plot:
+		return
+	fig = plt.figure(figsize=(3*297/25.4, 210/25.4))
+	matplotlib.rcParams.update({'font.size': 14, 'font.family': 'Arial'})
+	ax = fig.gca()
+	ax.set_title('V gene usage')
+	ax.set_xlabel('V gene')
+	ax.set_ylabel('Count')
+	ax.set_xticks(np.arange(len(counts)) + 0.5)
+	ax.set_xticklabels(counts.index, rotation='vertical')
+	ax.grid(axis='x')
+	ax.set_xlim((-0.5, None))
+	ax.bar(np.arange(len(counts)), counts)
+	fig.tight_layout()
+	fig.savefig(args.plot)
+	logging.info("Wrote %s", args.plot)
+
+
 def main():
 	logging.basicConfig(level=logging.DEBUG, format='%(levelname)s: %(message)s')
 	parser = HelpfulArgumentParser(description=__doc__)
@@ -466,6 +505,11 @@ def main():
 	subparser.add_argument('igblast', help='IgBLAST output')
 	subparser.add_argument('fasta', help='File with original reads')
 	subparser.set_defaults(func=parse_command)
+
+	subparser = subparsers.add_parser('count', help='Count and plot V gene usage')
+	subparser.add_argument('table', help='Table with parsed IgBLAST results.')
+	subparser.add_argument('plot', nargs='?', help='Plot file (png or pdf).')
+	subparser.set_defaults(func=count_command)
 
 	args = parser.parse_args()
 	args.func(args)
