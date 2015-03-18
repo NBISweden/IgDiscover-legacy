@@ -187,9 +187,12 @@ rule makeblastdb:
 	input: fasta="database/{organism}_{gene}.fasta"
 	output: "database/{organism}_{gene}.nhr" # and nin nog nsd nsi nsq
 	params: dbname="database/{organism}_{gene}"
+	log: 'database/{organism}_{gene}.log'
+	threads: 100  # force to run as only job
 	shell:
 		r"""
-		makeblastdb -parse_seqids -dbtype nucl -in {input.fasta} -out {params.dbname}
+		makeblastdb -parse_seqids -dbtype nucl -in {input.fasta} -out {params.dbname} >& {log}
+		grep '^Error:' {log} && {{ echo "makeblastdb failed when creating {params.dbname}"; false; }} || true
 		"""
 
 
