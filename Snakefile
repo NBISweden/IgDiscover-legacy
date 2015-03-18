@@ -38,6 +38,9 @@ try:
 except WorkflowError:
 	sys.exit("Pipeline configuration file 'pipeline.conf' not found. Please create it!")
 
+if not REVERSE_PRIMERS:
+	sys.exit("The list of REVERSE_PRIMERS is empty. This will currently not work correctly.")
+
 # This command is run before every shell command and helps to catch errors early
 shell.prefix("set -euo pipefail;")
 
