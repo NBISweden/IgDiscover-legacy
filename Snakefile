@@ -50,6 +50,8 @@ rule all:
 		"stats/readlengthhisto.pdf",
 		"clustered.fasta",
 		"table.tab",
+		"v_usage.tab",
+		"v_usage.pdf"
 
 
 if MERGE_PROGRAM == 'flash':
