@@ -33,6 +33,9 @@ MAXIMUM_EXPECTED_ERRORS = None
 # Whether to trim primers. Can be set to True or False.
 TRIM_PRIMERS = True
 
+# IgBLAST mismatch penalty (can be -1, -2, -3, -4 or None)
+MISMATCH_PENALTY = None
+
 try:
 	include: "pipeline.conf"
 except WorkflowError:
@@ -40,6 +43,9 @@ except WorkflowError:
 
 if not REVERSE_PRIMERS:
 	sys.exit("The list of REVERSE_PRIMERS is empty. This will currently not work correctly.")
+
+if not FORWARD_PRIMERS:
+	sys.exit("The list of FORWARD_PRIMERS is empty. This will currently not work correctly.")
 
 # This command is run before every shell command and helps to catch errors early
 shell.prefix("set -euo pipefail;")
@@ -207,12 +213,13 @@ rule abpipe_igblast:
 		db_d="database/{species}_D.nhr".format(species=SPECIES),
 		db_j="database/{species}_J.nhr".format(species=SPECIES)
 	params:
-		limit='--limit {}'.format(LIMIT) if LIMIT else ''
+		limit='--limit {}'.format(LIMIT) if LIMIT else '',
+		penalty='--penalty {}'.format(MISMATCH_PENALTY) if MISMATCH_PENALTY is not None else ''
 	threads: 16
 	shell:
 		#-auxiliary_data $IGDATA/optional_file/{SPECIES}_gl.aux
 		r"""
-		abpipe igblast --threads {threads} {params.limit} --species {SPECIES} database/ {input.fasta} > {output.txt}
+		abpipe igblast --threads {threads} {params.limit} {params.penalty} --species {SPECIES} database/ {input.fasta} > {output.txt}
 		"""
 
 
