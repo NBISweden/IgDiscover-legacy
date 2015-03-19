@@ -24,7 +24,7 @@ __author__ = "Marcel Martin"
 logger = logging.getLogger(__name__)
 
 
-def run_igblast(fasta, database, species='rhesus_monkey'):
+def run_igblast(fasta, database, species, penalty=None):
 	"""
 	fasta -- path to a FASTA file or data in FASTA format as a string
 	database -- directory that contains IgBLAST databases. Files in that
@@ -48,6 +48,8 @@ def run_igblast(fasta, database, species='rhesus_monkey'):
 	for gene in 'V', 'D', 'J':
 		arguments += ['-germline_db_{gene}'.format(gene=gene),
 			os.path.join(database, '{species}_{gene}'.format(species=species, gene=gene))]
+	if penalty is not None:
+		arguments += ['-penalty', str(penalty)]
 	arguments += [
 		#TODO '-auxiliary_data', '$IGDATA/optional_file/{species}_gl.aux',
 		#'-auxiliary_data', '/dev/null',
@@ -87,11 +89,13 @@ def chunked_fasta(path, chunksize=500, limit=None):
 
 class Runner:
 	"""nested functions cannot be pickled"""
-	def __init__(self, dbpath):
+	def __init__(self, dbpath, species, penalty):
 		self.dbpath = dbpath
+		self.species = species
+		self.penalty = penalty
 
 	def __call__(self, s):
-		return run_igblast(s, self.dbpath)
+		return run_igblast(s, self.dbpath, self.species, self.penalty)
 
 
 IgblastRecordNT = namedtuple('IgblastRecord',
@@ -420,7 +424,7 @@ def igblast_command(args):
 		raise ValueError("The IGDATA environment variable needs to be set")
 
 	chunks = chunked_fasta(args.fasta, limit=args.limit)
-	runner = Runner(args.database)
+	runner = Runner(args.database, args.species, args.penalty)
 	with multiprocessing.Pool(args.threads) as pool:
 		for result in pool.imap(runner, chunks, chunksize=1):
 			sys.stdout.write(result)
@@ -493,6 +497,8 @@ def main():
 	subparser = subparsers.add_parser('igblast', help='igblast help')
 	subparser.add_argument('--threads', '-t', type=int, default=1,
 		help='Number of threads (default: %(default)s)')
+	subparser.add_argument('--penalty', type=int, choices=(-1, -2, -3, -4), default=None,
+		help='BLAST mismatch penalty (default: -1)')
 	subparser.add_argument('--species', default='rhesus_monkey',
 		help='Which species (default: %(default)s)')
 	subparser.add_argument('--limit', type=int, metavar='N',
