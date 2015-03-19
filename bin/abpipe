@@ -106,7 +106,7 @@ class IgblastRecord(IgblastRecordNT):
 	# TODO move computation of cdr3_span, cdr3_sequence, vdj_sequence into constructor
 	# TODO maybe make all coordinates relative to full sequence
 
-	cdr3regex = re.compile('(TT[TC]|TA[CT])(TT[CT]|TA[TC]|CA[TC]|GT[AGCT]|TGG)(TG[TC])(([GA][AGCT])|TC|CG)[AGCT]([ACGT]{3}){5,32}TGGG[GCT][GCTA]')
+	cdr3regex = re.compile('(TT[TC]|TA[CT])(TT[CT]|TA[TC]|CA[TC]|GT[AGCT]|TGG)(TG[TC])(([GA][AGCT])|TC|CG)[AGCT]([ACGT]{3}){5,31}TGGG[GCT][GCTA]')
 
 	@property
 	def vdj_sequence(self):
