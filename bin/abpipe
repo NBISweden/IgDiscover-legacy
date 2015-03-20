@@ -99,7 +99,10 @@ class Runner:
 
 
 IgblastRecordNT = namedtuple('IgblastRecord',
-	'full_sequence query_name cdr3_start hits v_gene d_gene j_gene chain has_stop in_frame is_productive strand size junction')
+	'full_sequence query_name ' \
+	'cdr1_start cdr1_stop cdr2_start cdr2_stop cdr3_start ' \
+	'hits v_gene d_gene j_gene chain has_stop in_frame is_productive ' \
+	'strand size junction')
 Hit = namedtuple('Hit', 'query_id query_start query_sequence subject_start subject_sequence percent_identity')
 JunctionVDJ = namedtuple('JunctionVDJ', 'v_end vd_junction d_region dj_junction j_start')
 JunctionVJ = namedtuple('JunctionVJ', 'v_end vj_junction j_start')
@@ -110,6 +113,9 @@ class IgblastRecord(IgblastRecordNT):
 	# TODO move computation of cdr3_span, cdr3_sequence, vdj_sequence into constructor
 	# TODO maybe make all coordinates relative to full sequence
 
+	# This is a slightly improved version of the regular expression by
+	# D’Angelo et al.: The antibody mining toolbox.
+	# http://dx.doi.org/10.4161/mabs.27105
 	cdr3regex = re.compile('(TT[TC]|TA[CT])(TT[CT]|TA[TC]|CA[TC]|GT[AGCT]|TGG)(TG[TC])(([GA][AGCT])|TC|CG)[AGCT]([ACGT]{3}){5,31}TGGG[GCT][GCTA]')
 
 	@property
@@ -124,7 +130,8 @@ class IgblastRecord(IgblastRecordNT):
 
 	def cdr3_span(self):
 		"""
-		Return (start, end) of CDR3 *relative to VDJ*.
+		Return (start, end) of CDR3 *relative to VDJ*. The CDR3 is detected
+		using a regular expression.
 		"""
 		if 'V' not in self.hits or 'J' not in self.hits:
 			return None
@@ -144,11 +151,24 @@ class IgblastRecord(IgblastRecordNT):
 		return (start, end)
 
 	@property
+	def cdr1_sequence(self):
+		if self.cdr1_start is None or self.cdr1_stop is None:
+			return None
+		return self.full_sequence[self.cdr1_start:self.cdr1_stop]
+
+	@property
+	def cdr2_sequence(self):
+		if self.cdr2_start is None or self.cdr2_stop is None:
+			return None
+		return self.full_sequence[self.cdr2_start:self.cdr2_stop]
+
+	@property
 	def cdr3_sequence(self):
 		span = self.cdr3_span()
 		if span is None:
 			return None
 		return self.vdj_sequence[span[0]:span[1]]
+
 
 	def igblast_matches_regex(self):
 		if self.cdr3_start is None:
@@ -212,6 +232,10 @@ def parse_igblast_record(record_lines, fasta_record):
 	hits = dict()
 	# All of the sections are optional, so we need to set default values here.
 	query_name = None
+	cdr1_start = None
+	cdr1_stop = None
+	cdr2_start = None
+	cdr2_stop = None
 	cdr3_start = None
 	junction = None
 	v_gene, d_gene, j_gene, chain, has_stop, in_frame, is_productive, strand = [None] * 8
@@ -250,11 +274,15 @@ def parse_igblast_record(record_lines, fasta_record):
 					vj_junction=fields[1],
 					j_start=fields[2])
 		elif section.startswith('# Alignment summary'):
-			# This section is optional
 			for line in lines:
-				if line.startswith('CDR3-IMGT (germline)'):
+				if line.startswith('CDR1-IMGT'):
+					cdr1_start = int(line.split('\t')[1]) - 1
+					cdr1_stop = int(line.split('\t')[2])
+				elif line.startswith('CDR2-IMGT'):
+					cdr2_start =int(line.split('\t')[1]) - 1
+					cdr2_stop = int(line.split('\t')[2])
+				elif line.startswith('CDR3-IMGT (germline)'):
 					cdr3_start = int(line.split('\t')[1]) - 1
-					break
 		elif section.startswith('# Hit table'):
 			for line in lines:
 				if not line or line.startswith('#'):
@@ -299,6 +327,10 @@ def parse_igblast_record(record_lines, fasta_record):
 		size = None
 	return IgblastRecord(
 		query_name=query_name,
+		cdr1_start=cdr1_start,
+		cdr1_stop=cdr1_stop,
+		cdr2_start=cdr2_start,
+		cdr2_stop=cdr2_stop,
 		cdr3_start=cdr3_start,
 		v_gene=v_gene,
 		d_gene=d_gene,
@@ -358,6 +390,10 @@ class TableWriter:
 			"stop",
 			"productive",
 			"before_V",
+			"CDR1_nt",
+			"CDR1_aa",
+			"CDR2_nt",
+			"CDR2_aa",
 			"CDR3_nt",
 			"CDR3_aa",
 			"V_%identity",
@@ -374,6 +410,10 @@ class TableWriter:
 		self.rename = rename
 
 	def write(self, record):
+		cdr1nt = record.cdr1_sequence
+		cdr1aa = nt_to_aa(cdr1nt) if cdr1nt else None
+		cdr2nt = record.cdr2_sequence
+		cdr2aa = nt_to_aa(cdr2nt) if cdr2nt else None
 		cdr3nt = record.cdr3_sequence
 		cdr3aa = nt_to_aa(cdr3nt) if cdr3nt else None
 		if 'V' in record.hits:
@@ -402,6 +442,10 @@ class TableWriter:
 			yesno(record.has_stop),
 			yesno(record.is_productive),
 			before_v,
+			cdr1nt,
+			cdr1aa,
+			cdr2nt,
+			cdr2aa,
 			cdr3nt,
 			cdr3aa,
 			v_percent_identity,
