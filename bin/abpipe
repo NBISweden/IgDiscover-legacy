@@ -411,8 +411,8 @@ class TableWriter:
 			"FR2%SHM",
 			"CDR2%SHM",
 			"FR3%SHM",
-			"CDR3%SHM",
 			"V%SHM",
+			"J%SHM",
 			"CDR1_nt",
 			"CDR1_aa",
 			"CDR2_nt",
@@ -450,12 +450,16 @@ class TableWriter:
 
 		if 'V' in record.hits:
 			v_aa = nt_to_aa(record.hits['V'].query_sequence)
-			v_percent_identity = record.hits['V'].percent_identity
+			v_shm = '{:.1f}'.format(100.0 - record.hits['V'].percent_identity)
 			before_v = record.full_sequence[:record.hits['V'].query_start]
 		else:
 			v_aa = None
-			v_percent_identity = None
+			v_shm = None
 			before_v = None
+		if 'J' in record.hits:
+			j_shm = '{:1.1f}'.format(100.0 - record.hits['J'].percent_identity)
+		else:
+			j_shm = None
 		v_end = getattr(record.junction, 'v_end', None)
 		vd_junction = getattr(record.junction, 'vd_junction', None)
 		d_region = getattr(record.junction, 'd_region', None)
@@ -479,8 +483,8 @@ class TableWriter:
 			shm('FR2'),
 			shm('CDR2'),
 			shm('FR3'),
-			shm('CDR3'),
-			v_percent_identity,
+			v_shm,
+			j_shm,
 			cdr1nt,
 			cdr1aa,
 			cdr2nt,
