@@ -60,7 +60,7 @@ def run_igblast(fasta, database, species, penalty=None):
 		'-num_alignments_V', '1',
 		'-num_alignments_D', '1',
 		'-num_alignments_J', '1',
-		'-outfmt', "7 sseqid qstart qseq sstart sseq pident",
+		'-outfmt', "7 sseqid qstart qseq sstart sseq pident slen",
 		'-query', fasta_input,
 		'-out', '-',  # write to stdout
 	]
@@ -103,9 +103,19 @@ IgblastRecordNT = namedtuple('IgblastRecordNT',
 	'hits v_gene d_gene j_gene chain has_stop in_frame is_productive ' \
 	'strand size junction')
 AlignmentSummary = namedtuple('AlignmentSummary', 'start stop length matches mismatches gaps percent_identity')
-Hit = namedtuple('Hit', 'subject_id query_start query_sequence subject_start subject_sequence percent_identity')
 JunctionVDJ = namedtuple('JunctionVDJ', 'v_end vd_junction d_region dj_junction j_start')
 JunctionVJ = namedtuple('JunctionVJ', 'v_end vj_junction j_start')
+
+
+HitNT = namedtuple('HitNT', 'subject_id query_start query_sequence subject_start subject_sequence subject_length percent_identity')
+class Hit(HitNT):
+	def covered(self):
+		"""
+		Return fraction of bases in the original subject sequence that are
+		covered by this hit.
+		"""
+		return len(self.subject_sequence) / self.subject_length
+
 
 sizeregex = re.compile('(.*);size=(\d+);$')  # TODO move into class below
 
@@ -309,13 +319,20 @@ def parse_igblast_record(record_lines, fasta_record):
 			for line in lines:
 				if not line or line.startswith('#'):
 					continue
-				gene, subject_id, query_start, query_sequence, subject_start, subject_sequence, percent_identity = line.split('\t')
+				gene, subject_id, query_start, query_sequence, subject_start, subject_sequence, percent_identity, subject_length = line.split('\t')
+				# subject_sequence and query_sequence describe the alignment:
+				# They contain '-' characters for insertions and deletions.
+				assert len(subject_sequence) == len(query_sequence)
+				query_sequence = query_sequence.replace('-', '')
+				subject_sequence = subject_sequence.replace('-', '')
 				query_start = int(query_start) - 1
 				subject_start = int(subject_start) - 1
+				subject_length = int(subject_length)  # Length of original subject sequence
+				#subject_end = subject_start + len(subject_sequence)
 				percent_identity = float(percent_identity)
 				assert gene in ('V', 'D', 'J')
 				assert gene not in hits, "Two hits for same gene found"
-				hits[gene] = Hit(subject_id, query_start, query_sequence.replace('-', ''), subject_start, subject_sequence, percent_identity)
+				hits[gene] = Hit(subject_id, query_start, query_sequence, subject_start, subject_sequence, subject_length, percent_identity)
 
 	assert fasta_record.name == query_name
 	full_sequence = fasta_record.sequence
@@ -362,7 +379,7 @@ def parse_igblast_record(record_lines, fasta_record):
 
 def parse_igblast(path, fasta_path):
 	"""
-	Parse IgBLAST output created with option -outfmt "7 sseqid qstart qseq sstart sseq pident"
+	Parse IgBLAST output created with option -outfmt "7 sseqid qstart qseq sstart sseq pident slen"
 	"""
 	with SequenceReader(fasta_path) as fasta:
 		with open(path) as f:
@@ -404,6 +421,9 @@ class TableWriter:
 			"stop",
 			"productive",
 			"before_V",
+			"V_covered",
+			"D_covered",
+			"J_covered",
 			"FR1%SHM",
 			"CDR1%SHM",
 			"FR2%SHM",
@@ -450,14 +470,22 @@ class TableWriter:
 			v_aa = nt_to_aa(record.hits['V'].query_sequence)
 			v_shm = '{:.1f}'.format(100.0 - record.hits['V'].percent_identity)
 			before_v = record.full_sequence[:record.hits['V'].query_start]
+			v_covered = '{:.1f}'.format(100*record.hits['V'].covered())
 		else:
 			v_aa = None
 			v_shm = None
 			before_v = None
+			v_covered = None
+		if 'D' in record.hits:
+			d_covered = '{:.1f}'.format(100*record.hits['D'].covered())
+		else:
+			d_covered = None
 		if 'J' in record.hits:
 			j_shm = '{:1.1f}'.format(100.0 - record.hits['J'].percent_identity)
+			j_covered = '{:.1f}'.format(100*record.hits['J'].covered())
 		else:
 			j_shm = None
+			j_covered = None
 		v_end = getattr(record.junction, 'v_end', None)
 		vd_junction = getattr(record.junction, 'vd_junction', None)
 		d_region = getattr(record.junction, 'd_region', None)
@@ -476,6 +504,9 @@ class TableWriter:
 			yesno(record.has_stop),
 			yesno(record.is_productive),
 			before_v,
+			v_covered,
+			d_covered,
+			j_covered,
 			shm('FR1'),
 			shm('CDR1'),
 			shm('FR2'),
