@@ -585,8 +585,7 @@ def count_command(args):
 
 	if not args.plot:
 		return
-	# For plotting, remove genes with abundance < 0.1%
-	counts = counts[counts >= counts.sum() / 1000]
+
 	fig = plt.figure(figsize=((50 + len(counts) * 5) / 25.4, 210/25.4))
 	matplotlib.rcParams.update({'font.size': 14, 'font.family': 'Arial'})
 	ax = fig.gca()
