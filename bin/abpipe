@@ -587,7 +587,7 @@ def count_command(args):
 		return
 
 	fig = plt.figure(figsize=((50 + len(counts) * 5) / 25.4, 210/25.4))
-	matplotlib.rcParams.update({'font.size': 14, 'font.family': 'Arial'})
+	matplotlib.rcParams.update({'font.size': 14})
 	ax = fig.gca()
 	ax.set_title('V gene usage')
 	ax.set_xlabel('V gene')
