@@ -576,13 +576,17 @@ def count_command(args):
 	import numpy as np
 
 	d = pd.read_csv(args.table, sep='\t')
-	logger.info("%s rows in input table", len(d))
+	logger.info('%s rows in input table', len(d))
 	v_genes = list(sorted(set(d.V_gene.dropna()), key=natural_sort_key))
 
 	# Both V and J must be assigned
 	filtered = d.dropna(subset=('V_gene', 'J_gene'))[:]
-	logger.info("%s rows have both V and J assignment", len(filtered))
+	logger.info('%s rows have both V and J assignment', len(filtered))
 	filtered['V_gene'] = pd.Categorical(filtered['V_gene'], categories=v_genes)
+
+	# Filter out sequences that have a stop codon
+	filtered = filtered[filtered.stop == 'no']
+	logger.info('%s of those do not have a stop codon', len(filtered))
 	counts = filtered.groupby('V_gene').size()
 
 	print(counts.to_csv(None, sep='\t'))
