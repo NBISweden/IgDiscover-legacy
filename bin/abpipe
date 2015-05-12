@@ -24,6 +24,11 @@ __author__ = "Marcel Martin"
 logger = logging.getLogger(__name__)
 
 
+# Thresholds for filtering
+V_GENE_COVERAGE = 90
+J_GENE_COVERAGE = 60
+
+
 def run_igblast(fasta, database, species, penalty=None):
 	"""
 	fasta -- path to a FASTA file or data in FASTA format as a string
@@ -587,6 +592,15 @@ def count_command(args):
 	# Filter out sequences that have a stop codon
 	filtered = filtered[filtered.stop == 'no']
 	logger.info('%s of those do not have a stop codon', len(filtered))
+
+	# Filter out sequences with too low V gene coverage
+	filtered = filtered[filtered.V_covered >= V_GENE_COVERAGE]
+	logger.info('%s of those cover the V gene by at least %s%%', len(filtered), V_GENE_COVERAGE)
+
+	# Filter out sequences with too low J gene coverage
+	filtered = filtered[filtered.J_covered >= J_GENE_COVERAGE]
+	logger.info('%s of those cover the J gene by at least %s%%', len(filtered), J_GENE_COVERAGE)
+
 	counts = filtered.groupby('V_gene').size()
 
 	print(counts.to_csv(None, sep='\t'))
