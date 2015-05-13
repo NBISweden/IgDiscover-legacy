@@ -440,6 +440,9 @@ class TableWriter:
 			"V_covered",
 			"D_covered",
 			"J_covered",
+			"V_evalue",
+			"D_evalue",
+			"J_evalue",
 			"FR1%SHM",
 			"CDR1%SHM",
 			"FR2%SHM",
@@ -487,21 +490,27 @@ class TableWriter:
 			v_shm = '{:.1f}'.format(100.0 - record.hits['V'].percent_identity)
 			before_v = record.full_sequence[:record.hits['V'].query_start]
 			v_covered = '{:.1f}'.format(100*record.hits['V'].covered())
+			v_evalue = '{:G}'.format(record.hits['V'].evalue)
 		else:
 			v_aa = None
 			v_shm = None
 			before_v = None
 			v_covered = None
+			v_evalue = None
 		if 'D' in record.hits:
 			d_covered = '{:.1f}'.format(100*record.hits['D'].covered())
+			d_evalue = '{:G}'.format(record.hits['D'].evalue)
 		else:
 			d_covered = None
+			d_evalue = None
 		if 'J' in record.hits:
 			j_shm = '{:1.1f}'.format(100.0 - record.hits['J'].percent_identity)
 			j_covered = '{:.1f}'.format(100*record.hits['J'].covered())
+			j_evalue = '{:G}'.format(record.hits['J'].evalue)
 		else:
 			j_shm = None
 			j_covered = None
+			j_evalue = None
 		v_end = getattr(record.junction, 'v_end', None)
 		vd_junction = getattr(record.junction, 'vd_junction', None)
 		d_region = getattr(record.junction, 'd_region', None)
@@ -523,6 +532,9 @@ class TableWriter:
 			v_covered,
 			d_covered,
 			j_covered,
+			v_evalue,
+			d_evalue,
+			j_evalue,
 			shm('FR1'),
 			shm('CDR1'),
 			shm('FR2'),
