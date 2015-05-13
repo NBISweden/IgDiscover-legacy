@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 # Thresholds for filtering
 V_GENE_COVERAGE = 90
 J_GENE_COVERAGE = 60
+V_GENE_EVALUE = 1E-3
 
 
 def run_igblast(fasta, database, species, penalty=None):
@@ -615,6 +616,10 @@ def count_command(args):
 	# Filter out sequences that have a stop codon
 	filtered = filtered[filtered.stop == 'no']
 	logger.info('%s of those do not have a stop codon', len(filtered))
+
+	# Filter out sequences with a too low V gene hit E-value
+	filtered = filtered[filtered.V_evalue < V_GENE_EVALUE]
+	logger.info('%s of those have an E-value of at most %s', len(filtered), V_GENE_EVALUE)
 
 	# Filter out sequences with too low V gene coverage
 	filtered = filtered[filtered.V_covered >= V_GENE_COVERAGE]
