@@ -65,7 +65,7 @@ def run_igblast(fasta, database, species, penalty=None):
 		'-num_alignments_V', '1',
 		'-num_alignments_D', '1',
 		'-num_alignments_J', '1',
-		'-outfmt', "7 sseqid qstart qseq sstart sseq pident slen",
+		'-outfmt', "7 sseqid qstart qseq sstart sseq pident slen evalue",
 		'-query', fasta_input,
 		'-out', '-',  # write to stdout
 	]
@@ -112,7 +112,7 @@ JunctionVDJ = namedtuple('JunctionVDJ', 'v_end vd_junction d_region dj_junction 
 JunctionVJ = namedtuple('JunctionVJ', 'v_end vj_junction j_start')
 
 
-HitNT = namedtuple('HitNT', 'subject_id query_start query_sequence subject_start subject_sequence subject_length percent_identity')
+HitNT = namedtuple('HitNT', 'subject_id query_start query_sequence subject_start subject_sequence subject_length percent_identity evalue')
 class Hit(HitNT):
 	def covered(self):
 		"""
@@ -262,6 +262,27 @@ def parse_alignment_summary(fields):
 	)
 
 
+def parse_hit(line):
+	"""
+	Parse a line of the "Hit table" section and return a tuple (hit, gene) where
+	hit is a Hit object.
+	"""
+	gene, subject_id, query_start, query_sequence, subject_start, subject_sequence, percent_identity, subject_length, evalue = line.split('\t')
+	# subject_sequence and query_sequence describe the alignment:
+	# They contain '-' characters for insertions and deletions.
+	assert len(subject_sequence) == len(query_sequence)
+	query_sequence = query_sequence.replace('-', '')
+	subject_sequence = subject_sequence.replace('-', '')
+	query_start = int(query_start) - 1
+	subject_start = int(subject_start) - 1
+	subject_length = int(subject_length)  # Length of original subject sequence
+	#subject_end = subject_start + len(subject_sequence)
+	percent_identity = float(percent_identity)
+	evalue = float(evalue)
+	hit = Hit(subject_id, query_start, query_sequence, subject_start, subject_sequence, subject_length, percent_identity, evalue)
+	return hit, gene
+
+
 def parse_igblast_record(record_lines, fasta_record):
 	BOOL = { 'Yes': True, 'No': False, 'N/A': None }
 	FRAME = { 'In-frame': True, 'Out-of-frame': False, 'N/A': None }
@@ -324,20 +345,10 @@ def parse_igblast_record(record_lines, fasta_record):
 			for line in lines:
 				if not line or line.startswith('#'):
 					continue
-				gene, subject_id, query_start, query_sequence, subject_start, subject_sequence, percent_identity, subject_length = line.split('\t')
-				# subject_sequence and query_sequence describe the alignment:
-				# They contain '-' characters for insertions and deletions.
-				assert len(subject_sequence) == len(query_sequence)
-				query_sequence = query_sequence.replace('-', '')
-				subject_sequence = subject_sequence.replace('-', '')
-				query_start = int(query_start) - 1
-				subject_start = int(subject_start) - 1
-				subject_length = int(subject_length)  # Length of original subject sequence
-				#subject_end = subject_start + len(subject_sequence)
-				percent_identity = float(percent_identity)
+				hit, gene = parse_hit(line)
 				assert gene in ('V', 'D', 'J')
 				assert gene not in hits, "Two hits for same gene found"
-				hits[gene] = Hit(subject_id, query_start, query_sequence, subject_start, subject_sequence, subject_length, percent_identity)
+				hits[gene] = hit
 
 	assert fasta_record.name == query_name
 	full_sequence = fasta_record.sequence
