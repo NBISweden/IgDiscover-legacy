@@ -9,7 +9,7 @@ import os
 import re
 import logging
 import errno
-from collections import namedtuple
+from collections import namedtuple, Counter
 import multiprocessing
 import subprocess
 from itertools import islice
@@ -608,33 +608,39 @@ def natural_sort_key(s, _nsre=re.compile('([0-9]+)')):
 		for text in re.split(_nsre, s)]
 
 
-def count_command(args):
-	d = pd.read_csv(args.table, sep='\t')
-	logger.info('%s rows in input table', len(d))
+def read_table_and_filter(path, log=False):
+	d = pd.read_csv(path, sep='\t')
+	if log: logger.info('%s rows in input table', len(d))
+
 	v_genes = list(sorted(set(d.V_gene.dropna()), key=natural_sort_key))
 
 	# Both V and J must be assigned
 	filtered = d.dropna(subset=('V_gene', 'J_gene'))[:]
-	logger.info('%s rows have both V and J assignment', len(filtered))
+	if log: logger.info('%s rows have both V and J assignment', len(filtered))
 	filtered['V_gene'] = pd.Categorical(filtered['V_gene'], categories=v_genes)
 
 	# Filter out sequences that have a stop codon
 	filtered = filtered[filtered.stop == 'no']
-	logger.info('%s of those do not have a stop codon', len(filtered))
+	if log: logger.info('%s of those do not have a stop codon', len(filtered))
 
 	# Filter out sequences with a too low V gene hit E-value
 	filtered = filtered[filtered.V_evalue <= V_GENE_EVALUE]
-	logger.info('%s of those have an E-value of at most %s', len(filtered), V_GENE_EVALUE)
+	if log: logger.info('%s of those have an E-value of at most %s', len(filtered), V_GENE_EVALUE)
 
 	# Filter out sequences with too low V gene coverage
 	filtered = filtered[filtered.V_covered >= V_GENE_COVERAGE]
-	logger.info('%s of those cover the V gene by at least %s%%', len(filtered), V_GENE_COVERAGE)
+	if log: logger.info('%s of those cover the V gene by at least %s%%', len(filtered), V_GENE_COVERAGE)
 
 	# Filter out sequences with too low J gene coverage
 	filtered = filtered[filtered.J_covered >= J_GENE_COVERAGE]
-	logger.info('%s of those cover the J gene by at least %s%%', len(filtered), J_GENE_COVERAGE)
+	if log: logger.info('%s of those cover the J gene by at least %s%%', len(filtered), J_GENE_COVERAGE)
 
-	counts = filtered.groupby('V_gene').size()
+	return filtered
+
+
+def count_command(args):
+	d = read_table_and_filter(args.table, log=True)
+	counts = d.groupby('V_gene').size()
 
 	print(counts.to_csv(None, sep='\t'))
 	logger.info("Wrote CSV")
@@ -656,6 +662,34 @@ def count_command(args):
 	fig.tight_layout()
 	fig.savefig(args.plot)
 	logger.info("Wrote %s", args.plot)
+
+
+def discover_command(args):
+	if args.minimum_frequency is None:
+		minimum_frequency = (len(args.table) + 1) // 2
+	else:
+		minimum_frequency = args.minimum_frequency
+	logger.info('Minimum frequency set to %s', minimum_frequency)
+	tables = []
+	for path in args.table:
+		table = read_table_and_filter(path)
+		table = table.loc[:,['V_gene', 'V%SHM', 'V_nt']]
+		tables.append(table)
+	counter = Counter()
+	for table in tables:
+		counter.update(set(table.V_nt))
+	for sequence, frequency in counter.most_common():
+		if frequency < minimum_frequency:
+			break
+		for table in tables:
+			matching_rows = table[table.V_nt == sequence]
+			if matching_rows.empty:
+				continue
+			row = matching_rows.iloc[0]
+			gene = row['V_gene']
+			shm = row['V%SHM']
+			break
+		print(frequency, gene, shm, sequence, sep='\t')
 
 
 def main():
@@ -687,6 +721,13 @@ def main():
 	subparser.add_argument('table', help='Table with parsed IgBLAST results.')
 	subparser.add_argument('plot', nargs='?', help='Plot file (png or pdf).')
 	subparser.set_defaults(func=count_command)
+
+	subparser = subparsers.add_parser('discover', help='Find common V genes')
+	subparser.add_argument('--minimum-frequency', '-n', type=int, metavar='N',
+		default=None,
+		help='Minimum number of datasets in which sequence must occur (default is no. of files divided by two)')
+	subparser.add_argument('table', help='Table with parsed IgBLAST results (give at least two)', nargs='+')
+	subparser.set_defaults(func=discover_command)
 
 	args = parser.parse_args()
 	args.func(args)
