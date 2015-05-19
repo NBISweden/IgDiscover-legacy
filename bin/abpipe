@@ -18,6 +18,12 @@ from sqt import SequenceReader, HelpfulArgumentParser
 from sqt.align import edit_distance
 from sqt.dna import GENETIC_CODE, reverse_complement
 from sqt.ansicolor import red, blue
+import matplotlib
+matplotlib.use('pdf')
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+
 
 __author__ = "Marcel Martin"
 
@@ -599,11 +605,6 @@ def natural_sort_key(s, _nsre=re.compile('([0-9]+)')):
 
 
 def count_command(args):
-	import matplotlib.pyplot as plt
-	import matplotlib
-	import pandas as pd
-	import numpy as np
-
 	d = pd.read_csv(args.table, sep='\t')
 	logger.info('%s rows in input table', len(d))
 	v_genes = list(sorted(set(d.V_gene.dropna()), key=natural_sort_key))
