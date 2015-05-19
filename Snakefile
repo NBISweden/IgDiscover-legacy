@@ -95,7 +95,7 @@ rule read_length_histogram:
 	input:
 		fastq="merged.fastq.gz"
 	shell:
-		"sqt-fastqhisto --plot {output.pdf} {input}  > {output.txt}"
+		"sqt-readlenhisto --plot {output.pdf} {input}  > {output.txt}"
 
 
 # Adjust the primer sequences so they are correctly reverse-complemented.
