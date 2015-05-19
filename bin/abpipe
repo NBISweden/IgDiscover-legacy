@@ -678,6 +678,7 @@ def discover_command(args):
 	counter = Counter()
 	for table in tables:
 		counter.update(set(table.V_nt))
+	print('Frequency', 'Gene', '%SHM', 'Sequence', sep='\t')
 	for sequence, frequency in counter.most_common():
 		if frequency < minimum_frequency:
 			break
