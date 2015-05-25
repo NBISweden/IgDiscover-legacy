@@ -54,6 +54,7 @@ rule all:
 	input:
 		#expand("fastqc/reads.{r}.zip", r=(1, 2)),
 		"stats/readlengthhisto.pdf",
+		"stats/barcodes.txt",
 		"clustered.fasta",
 		"table.tab",
 		"v_usage.tab",
@@ -97,6 +98,19 @@ rule read_length_histogram:
 	shell:
 		"sqt-readlenhisto --plot {output.pdf} {input}  > {output.txt}"
 
+
+rule barcodes:
+	"""Print out number of random barcodes in the library
+	TODO
+	- run this only if random barcodes are actually used
+	- make sure that a stranded protocol is used
+	"""
+	output: txt="stats/barcodes.txt"
+	input: fastq="merged.fastq.gz"
+	shell:
+		"""
+		zcat {input} | awk 'NR%4==2 {{print substr($1,1,12)}}' | grep -v N | sort -u | wc -l > {output}
+		"""
 
 # Adjust the primer sequences so they are correctly reverse-complemented.
 # When a forward primer fwd and a reverse primer rev are given, then we need to
@@ -242,7 +256,7 @@ rule count_and_plot:
 	input:
 		tab="table.tab"
 	shell:
-		"abpipe count {input.tab} {output.plot} > {output.counts}"
+		"abpipe count --barcode-length {BARCODE_LENGTH} {input.tab} {output.plot} > {output.counts}"
 
 
 rule ungzip:
