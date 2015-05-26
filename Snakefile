@@ -237,7 +237,7 @@ rule abpipe_igblast:
 		"""
 
 
-rule parse_igblast:
+rule abpipe_parse:
 	output:
 		tab="table.tab"
 	input:
@@ -247,6 +247,16 @@ rule parse_igblast:
 		dirname=os.path.basename(os.getcwd())
 	shell:
 		"abpipe parse --rename {params.dirname}_ {input.txt} {input.fasta} > {output.tab}"
+
+
+rule abpipe_group:
+	"""Group by barcode"""
+	output:
+		tab="groups.tab"
+	input:
+		tab="table.tab"
+	shell:
+		"abpipe group {input.tab} > {output.tab}"
 
 
 rule count_and_plot:
