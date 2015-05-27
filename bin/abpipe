@@ -15,7 +15,7 @@ import multiprocessing
 import subprocess
 from itertools import islice
 from tempfile import NamedTemporaryFile
-from sqt import SequenceReader, HelpfulArgumentParser, clustalo
+from sqt import SequenceReader, HelpfulArgumentParser  #, clustalo
 from sqt.align import edit_distance
 from sqt.dna import GENETIC_CODE, reverse_complement
 from sqt.ansicolor import red, blue, bgblue, bgreen
@@ -139,6 +139,8 @@ class IgblastRecord(IgblastRecordNT):
 	# This is a slightly improved version of the regular expression by
 	# D’Angelo et al.: The antibody mining toolbox.
 	# http://dx.doi.org/10.4161/mabs.27105
+	# The amino-acid version of the expression is:
+	# [FY][FWVHY]C[ETNGASDRIKVM]X{5,32}W[GAV]
 	cdr3regex = re.compile('(TT[TC]|TA[CT])(TT[CT]|TA[TC]|CA[TC]|GT[AGCT]|TGG)(TG[TC])(([GA][AGCT])|TC|CG)[AGCT]([ACGT]{3}){5,31}TGGG[GCT][GCTA]')
 
 	def __init__(self, *args, **kwargs):
@@ -685,11 +687,7 @@ def group_command(args):
 	groups = d.groupby(('barcode', 'V_gene', 'J_gene'))
 
 	for (barcode, v_gene, j_gene), group in groups:
-		TODO how do we pick one representative sequence?
-
-
-
-
+		pass # TODO how do we pick one representative sequence?
 
 	if False:
 		for name, group in groups:
