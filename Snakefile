@@ -36,6 +36,8 @@ TRIM_PRIMERS = True
 # IgBLAST mismatch penalty (can be -1, -2, -3, -4 or None)
 MISMATCH_PENALTY = None
 
+BARCODE_LENGTH = 0
+
 try:
 	include: "pipeline.conf"
 except WorkflowError:
