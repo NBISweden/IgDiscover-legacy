@@ -114,6 +114,36 @@ rule barcodes:
 		zcat {input} | awk 'NR%4==2 {{print substr($1,1,12)}}' | grep -v N | sort -u | wc -l > {output}
 		"""
 
+rule stats_numbers:
+	output: txt="stats/counts.txt"
+	input:
+		reads="reads.1.fastq.gz",
+		merged="merged.fastq.gz",
+		unique="unique.fasta"
+	shell:
+		"""
+		echo -n "Number of paired-end reads: " > {output}
+		zcat {input.reads} | awk 'END {{ print NR/4 }}' >> {output}
+		echo -n "Number of barcodes (looking at 1st read in pair): " >> {output}
+		zcat {input.reads} | awk 'NR % 4 == 2 {{ print substr($1, 1, 12) }}' | sort -u | grep -v N | wc -l >> {output}
+
+
+		echo -n "Number of merged sequences: " >> {output}
+		zcat {input.merged} | awk 'END {{ print NR/4 }}' >> {output}
+		echo -n "Number of barcodes in merged sequences: " >> {output}
+		zcat {input.merged} | awk 'NR % 4 == 2 {{ print substr($1, 1, 12) }}' | sort -u | grep -v N | wc -l >> {output}
+
+		echo -n "Number of unique sequences: " >> {output}
+		grep -c '^>' unique.fasta >> {output}
+		echo -n "Number of barcodes in unique sequences: " >> {output}
+		grep -A 1 '^>' {input.unique} | awk '!/^>/ && $1 != "--" {{ print substr($1,1,12) }}' | sort -u | grep -v N | wc -l >> {output}
+
+		echo -n "Number of barcodes in table: " >> {output}
+		cut -f35 {input.table} | sed 1d | awk '{{print substr($1, 1, 12) }}' | sort -u | grep -v N | wc -l >>  {output}
+		"""
+
+
+
 # Adjust the primer sequences so they are correctly reverse-complemented.
 # When a forward primer fwd and a reverse primer rev are given, then we need to
 # search for:
