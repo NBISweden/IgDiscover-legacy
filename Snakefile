@@ -57,7 +57,7 @@ rule all:
 		#expand("fastqc/reads.{r}.zip", r=(1, 2)),
 		"stats/readlengthhisto.pdf",
 		"stats/barcodes.txt",
-		"clustered.fasta",
+		#"clustered.fasta",
 		"table.tab",
 		"v_usage.tab",
 		"v_usage.pdf"
