@@ -667,7 +667,7 @@ def count_command(args):
 	logger.info("Wrote %s", args.plot)
 
 
-def diff(seq, reference):
+def colored_diff(seq, reference):
 	"""
 	Return a color-coded string of seq where the differences to refseq are highlighted.
 	"""
@@ -678,16 +678,58 @@ def diff(seq, reference):
 	return colored
 
 
+def write_groups(groups, path, limit=None):
+	with open(path, 'w') as f:
+		header = True
+		for _, group in islice(groups, limit):
+			group.to_csv(f, sep='\t', header=header, index=False)
+			header = False
+			print(file=f)
+
+
 def group_command(args):
 	d = read_table_and_filter(args.table, log=True)
 	barcode_length = args.barcode_length
 	assert barcode_length is not None
 	lengths = Counter()
-	d['barcode'] = [ s[:barcode_length] for s in d['sequence'] ]
+	d['barcode'] = [ s[:barcode_length] for s in d.sequence ]
+	d['sequence'] = [ s[barcode_length:] for s in d.sequence ]
 	groups = d.groupby(('barcode', 'V_gene', 'J_gene'))
+	if args.group_output:
+		write_groups(groups, args.group_output)
+
+
+
+	fig = plt.figure()#figsize=((50 + len(counts) * 5) / 25.4, 210/25.4))
+	matplotlib.rcParams.update({'font.size': 14})
+	ax = fig.gca()
+	#ax.set_title('V gene usage')
+	#ax.set_xlabel('V gene')
+	#ax.set_ylabel('Count')
+	#ax.set_xticks(np.arange(len(counts)) + 0.5)
+	#ax.set_xticklabels(counts.index, rotation='vertical')
+	#ax.grid(axis='x')
+	#ax.set_xlim((-0.5, None))
+	ax.bar(np.arange(len(counts)), counts)
+	fig.tight_layout()
+	fig.savefig(args.plot)
+
+
+	for x in groups.size():
+		print(x)
+
 
 	for (barcode, v_gene, j_gene), group in groups:
 		pass # TODO how do we pick one representative sequence?
+
+
+
+
+	print('Group sizes:')
+	for size, count in lengths.items():
+		print(size if size < 10 else '10+', count)
+	print('Number of groups:', len(groups))
+	return
 
 	if False:
 		for name, group in groups:
@@ -704,13 +746,9 @@ def group_command(args):
 					print('{:3} x {}'.format(n, seq))
 					refseq = seq
 				else:
-					print('{:3} x {}'.format(n, diff(seq, refseq)))
+					print('{:3} x {}'.format(n, colored_diff(seq, refseq)))
 			print()
 
-		print('Group sizes:')
-		for size, count in lengths.items():
-			print(size if size < 10 else '10+', count)
-		print('Number of groups:', len(groups))
 
 
 
@@ -774,6 +812,8 @@ def main():
 	subparser.set_defaults(func=count_command)
 
 	subparser = subparsers.add_parser('group', help='Group table, making sure there is one row for each template molecule')
+	subparser.add_argument('--group-output', metavar='FILE', default=None,
+		help='Write tab-separated table with grouped sequences to FILE')
 	subparser.add_argument('--barcode-length', type=int, default=None)
 	subparser.add_argument('table', help='Table with parsed IgBLAST results.')
 	subparser.set_defaults(func=group_command)

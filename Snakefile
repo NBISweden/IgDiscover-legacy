@@ -288,7 +288,7 @@ rule abpipe_group:
 	input:
 		tab="table.tab"
 	shell:
-		"abpipe group --barcode-length {BARCODE_LENGTH} {input.tab} > {output.tab}"
+		"abpipe group --barcode-length {BARCODE_LENGTH} --groups-output {output.tab} {input.tab}"
 
 
 rule count_and_plot:
