@@ -694,60 +694,57 @@ def group_command(args):
 	lengths = Counter()
 	d['barcode'] = [ s[:barcode_length] for s in d.sequence ]
 	d['sequence'] = [ s[barcode_length:] for s in d.sequence ]
+
+	# Group by barcode, V- and J gene assignment
 	groups = d.groupby(('barcode', 'V_gene', 'J_gene'))
+	sizes = groups.size()
+	print('Total no. of groups:', len(groups))
+	for s in [1, 2, 3]:
+		print('Groups of size {}: {}'.format(s, sum(1 for size in sizes if size == s)))
+
 	if args.group_output:
 		write_groups(groups, args.group_output)
+		logger.info('Groups written to %r', args.group_output)
 
+	# Plot group sizes if requested
+	if args.plot_sizes:
+		matplotlib.rcParams.update({'font.size': 14})
+		fig = plt.figure()
+		ax = fig.gca()
+		v, _, _ = ax.hist(sizes, bins=100)
+		ax.set_ylim(0, v[1:].max()*1.1)
+		ax.set_xlabel('Group size')
+		ax.set_ylabel('Frequency')
+		ax.set_title('Histogram of group sizes (>1)')
+		ax.grid(axis='x')
+		ax.tick_params(direction="outward", top=False, right=False)
+		fig.tight_layout()
+		fig.savefig(args.plot_sizes)
 
+	return
 
-	fig = plt.figure()#figsize=((50 + len(counts) * 5) / 25.4, 210/25.4))
-	matplotlib.rcParams.update({'font.size': 14})
-	ax = fig.gca()
-	#ax.set_title('V gene usage')
-	#ax.set_xlabel('V gene')
-	#ax.set_ylabel('Count')
-	#ax.set_xticks(np.arange(len(counts)) + 0.5)
-	#ax.set_xticklabels(counts.index, rotation='vertical')
-	#ax.grid(axis='x')
-	#ax.set_xlim((-0.5, None))
-	ax.bar(np.arange(len(counts)), counts)
-	fig.tight_layout()
-	fig.savefig(args.plot)
-
-
-	for x in groups.size():
-		print(x)
-
+	# TODO Compute consensus within each group
 
 	for (barcode, v_gene, j_gene), group in groups:
 		pass # TODO how do we pick one representative sequence?
 
 
-
-
-	print('Group sizes:')
-	for size, count in lengths.items():
-		print(size if size < 10 else '10+', count)
-	print('Number of groups:', len(groups))
-	return
-
-	if False:
-		for name, group in groups:
-			s = Counter(group.CDR3_nt)
-			assert len(group) == sum(s.values())
-			lengths[min(len(group), 10)] += 1
-			if len(s) == 1:
-				continue
-			mc = s.most_common(1)[0][1]
-			print(name[0], name[1], name[2], len(group), mc, "{:.2%}".format(mc/len(group)))
-			refseq = None
-			for seq, n in s.most_common():
-				if refseq is None:
-					print('{:3} x {}'.format(n, seq))
-					refseq = seq
-				else:
-					print('{:3} x {}'.format(n, colored_diff(seq, refseq)))
-			print()
+	for name, group in groups:
+		s = Counter(group.CDR3_nt)
+		assert len(group) == sum(s.values())
+		lengths[min(len(group), 10)] += 1
+		if len(s) == 1:
+			continue
+		mc = s.most_common(1)[0][1]
+		print(name[0], name[1], name[2], len(group), mc, "{:.2%}".format(mc/len(group)))
+		refseq = None
+		for seq, n in s.most_common():
+			if refseq is None:
+				print('{:3} x {}'.format(n, seq))
+				refseq = seq
+			else:
+				print('{:3} x {}'.format(n, colored_diff(seq, refseq)))
+		print()
 
 
 
@@ -811,9 +808,12 @@ def main():
 	subparser.add_argument('plot', nargs='?', help='Plot file (png or pdf).')
 	subparser.set_defaults(func=count_command)
 
-	subparser = subparsers.add_parser('group', help='Group table, making sure there is one row for each template molecule')
+	subparser = subparsers.add_parser('group',
+		help='Group sequences such that there is one row for each template molecule')
 	subparser.add_argument('--group-output', metavar='FILE', default=None,
-		help='Write tab-separated table with grouped sequences to FILE')
+		help='Write tab-separated table with groups to FILE')
+	subparser.add_argument('--plot-sizes', metavar='FILE', default=None,
+		help='Plot group sizes to FILE (.png or .pdf)')
 	subparser.add_argument('--barcode-length', type=int, default=None)
 	subparser.add_argument('table', help='Table with parsed IgBLAST results.')
 	subparser.set_defaults(func=group_command)

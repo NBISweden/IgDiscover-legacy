@@ -284,11 +284,12 @@ rule abpipe_parse:
 rule abpipe_group:
 	"""Group by barcode"""
 	output:
+		pdf="stats/groupsizes.pdf",
 		tab="groups.tab"
 	input:
 		tab="table.tab"
 	shell:
-		"abpipe group --barcode-length {BARCODE_LENGTH} --groups-output {output.tab} {input.tab}"
+		"abpipe group --barcode-length {BARCODE_LENGTH} --plot-sizes {output.pdf} --groups-output {output.tab} {input.tab}"
 
 
 rule count_and_plot:
