@@ -703,9 +703,9 @@ def group_command(args):
 	for s in [1, 2, 3]:
 		logger.info('Groups of size %s: %s', s, sum(1 for size in sizes if size == s))
 
-	if args.group_output:
-		write_groups(groups, args.group_output)
-		logger.info('Groups written to %r', args.group_output)
+	if args.groups_output:
+		write_groups(groups, args.groups_output)
+		logger.info('Groups written to %r', args.groups_output)
 
 	# Plot group sizes if requested
 	if args.plot_sizes:
@@ -806,8 +806,8 @@ def main():
 	subparser.set_defaults(func=count_command)
 
 	subparser = subparsers.add_parser('group',
-		help='Group sequences such that there is one row for each template molecule')
-	subparser.add_argument('--group-output', metavar='FILE', default=None,
+		help='Group sequences by barcode and V/J assignment and print each group’s consensus')
+	subparser.add_argument('--groups-output', metavar='FILE', default=None,
 		help='Write tab-separated table with groups to FILE')
 	subparser.add_argument('--plot-sizes', metavar='FILE', default=None,
 		help='Plot group sizes to FILE (.png or .pdf)')
