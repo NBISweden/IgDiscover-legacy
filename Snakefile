@@ -304,9 +304,10 @@ rule count_and_plot:
 		plot="{base}.v_usage.pdf",
 		counts="{base}.v_usage.tab"
 	input:
+		v_reference="database/{SPECIES}_V.fasta".format(SPECIES=SPECIES),
 		tab="{base}.table.tab"
 	shell:
-		"abpipe count {input.tab} {output.plot} > {output.counts}"
+		"abpipe count --reference {input.v_reference} {input.tab} {output.plot} > {output.counts}"
 
 
 rule ungzip:

@@ -15,7 +15,7 @@ import multiprocessing
 import subprocess
 from itertools import islice
 from tempfile import NamedTemporaryFile
-from sqt import SequenceReader, HelpfulArgumentParser  #, clustalo
+from sqt import FastaReader, SequenceReader, HelpfulArgumentParser  #, clustalo
 from sqt.align import edit_distance, multialign, consensus
 from sqt.dna import GENETIC_CODE, reverse_complement
 from sqt.ansicolor import red, blue, bgblue, bgreen
@@ -615,12 +615,10 @@ def read_table_and_filter(path, log=False):
 	d = pd.read_csv(path, sep='\t')
 	if log: logger.info('%s rows in input table', len(d))
 
-	v_genes = list(sorted(set(d.V_gene.dropna()), key=natural_sort_key))
-
 	# Both V and J must be assigned
 	filtered = d.dropna(subset=('V_gene', 'J_gene'))[:]
 	if log: logger.info('%s rows have both V and J assignment', len(filtered))
-	filtered['V_gene'] = pd.Categorical(filtered['V_gene'], categories=v_genes)
+	filtered['V_gene'] = pd.Categorical(filtered['V_gene'])
 
 	# Filter out sequences that have a stop codon
 	filtered = filtered[filtered.stop == 'no']
@@ -642,8 +640,18 @@ def read_table_and_filter(path, log=False):
 
 
 def count_command(args):
+	if args.reference:
+		with FastaReader(args.reference) as fr:
+			gene_names = [ record.name for record in fr ]
+		gene_names.sort(key=natural_sort_key)
+	else:
+		gene_names = None
 	d = read_table_and_filter(args.table, log=True)
 	counts = d.groupby('V_gene').size()
+
+	# Make sure that always all gene names are listed, even if expression is 0.
+	if gene_names:
+		counts = counts.reindex(gene_names, fill_value=0)
 
 	print(counts.to_csv(None, sep='\t'))
 	logger.info("Wrote CSV")
@@ -801,6 +809,8 @@ def main():
 	subparser.set_defaults(func=parse_command)
 
 	subparser = subparsers.add_parser('count', help='Count and plot V gene usage')
+	subparser.add_argument('--reference', metavar='FASTA',
+		help='FASTA file with V gene sequences. The names are used to ensure all names appear in the plot')
 	subparser.add_argument('table', help='Table with parsed IgBLAST results.')
 	subparser.add_argument('plot', nargs='?', help='Plot file (png or pdf).')
 	subparser.set_defaults(func=count_command)
