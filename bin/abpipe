@@ -16,7 +16,7 @@ import subprocess
 from itertools import islice
 from tempfile import NamedTemporaryFile
 from sqt import SequenceReader, HelpfulArgumentParser  #, clustalo
-from sqt.align import edit_distance
+from sqt.align import edit_distance, multialign, consensus
 from sqt.dna import GENETIC_CODE, reverse_complement
 from sqt.ansicolor import red, blue, bgblue, bgreen
 import matplotlib
@@ -690,6 +690,7 @@ def write_groups(groups, path, limit=None):
 def group_command(args):
 	d = read_table_and_filter(args.table, log=True)
 	barcode_length = args.barcode_length
+	program = args.program
 	assert barcode_length is not None
 	lengths = Counter()
 	d['barcode'] = [ s[:barcode_length] for s in d.sequence ]
@@ -698,9 +699,9 @@ def group_command(args):
 	# Group by barcode, V- and J gene assignment
 	groups = d.groupby(('barcode', 'V_gene', 'J_gene'))
 	sizes = groups['count'].sum()
-	print('Total no. of groups:', len(groups))
+	logger.info('Total no. of groups: %s', len(groups))
 	for s in [1, 2, 3]:
-		print('Groups of size {}: {}'.format(s, sum(1 for size in sizes if size == s)))
+		logger.info('Groups of size %s: %s', s, sum(1 for size in sizes if size == s))
 
 	if args.group_output:
 		write_groups(groups, args.group_output)
@@ -721,32 +722,28 @@ def group_command(args):
 		fig.tight_layout()
 		fig.savefig(args.plot_sizes)
 
-	return
-
-	# TODO Compute consensus within each group
-
+	# Compute consensus within each group
+	n = 1
 	for (barcode, v_gene, j_gene), group in groups:
-		pass # TODO how do we pick one representative sequence?
-
-
-	for name, group in groups:
-		s = Counter(group.CDR3_nt)
-		assert len(group) == sum(s.values())
-		lengths[min(len(group), 10)] += 1
-		if len(s) == 1:
-			continue
-		mc = s.most_common(1)[0][1]
-		print(name[0], name[1], name[2], len(group), mc, "{:.2%}".format(mc/len(group)))
-		refseq = None
-		for seq, n in s.most_common():
-			if refseq is None:
-				print('{:3} x {}'.format(n, seq))
-				refseq = seq
-			else:
-				print('{:3} x {}'.format(n, colored_diff(seq, refseq)))
+		#print(barcode, v_gene, j_gene)
+		if len(group) == 1:
+			cons = group['sequence'].iloc[0]
+		else:
+			sequences = dict()
+			for i, sequence in enumerate(group['sequence']):
+				sequences[str(i)] = sequence
+			aligned = multialign(sequences, program=program)
+			cons = consensus(aligned, threshold=0.65)
+		size = group['count'].sum()
+		print('>consensus{};barcode={};size={};\n{}'.format(n, barcode, size, cons))
+		n += 1
+		"""
+		cons = consensus(aligned, keep_gaps=True, threshold=0.65)
+		print(cons)
+		for sequence in aligned.values():
+			print(colored_diff(sequence, cons))
 		print()
-
-
+		"""
 
 
 def discover_command(args):
@@ -815,6 +812,9 @@ def main():
 	subparser.add_argument('--plot-sizes', metavar='FILE', default=None,
 		help='Plot group sizes to FILE (.png or .pdf)')
 	subparser.add_argument('--barcode-length', type=int, default=None)
+	subparser.add_argument('--program', choices=('clustalo', 'muscle', 'muscle-fast', 'mafft'),
+		default='muscle-fast',
+		help='Program to use for computing the multiple alignment')
 	subparser.add_argument('table', help='Table with parsed IgBLAST results.')
 	subparser.set_defaults(func=group_command)
 
