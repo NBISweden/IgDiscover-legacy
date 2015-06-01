@@ -12,8 +12,12 @@ merged.fastq.gz -- merged reads
 trimmed.fastq.gz -- primers removed from merged reads
 filtered.fasta  -- too short sequences removed, converted to FASTA
 unique.fasta -- collapsed sequences
-igblast.txt -- raw IgBLAST output
-table.tab -- result of parsing IgBLAST output
+unique.igblast.txt -- raw IgBLAST output
+unique.table.tab -- result of parsing IgBLAST output
+groups.tab -- sequences grouped by barcode
+consensus.fasta -- contains one consensus sequence for each group
+consensus.igblast.txt -- consensus sequences sent through IgBLAST
+consensus.table.tab -- result of parsing IgBLAST output
 """
 from sqt.dna import reverse_complement
 
@@ -57,10 +61,12 @@ rule all:
 		#expand("fastqc/reads.{r}.zip", r=(1, 2)),
 		"stats/readlengthhisto.pdf",
 		"stats/barcodes.txt",
-		#"clustered.fasta",
-		"table.tab",
-		"v_usage.tab",
-		"v_usage.pdf"
+		"unique.table.tab",
+		"consensus.table.tab",
+		"unique.v_usage.tab",
+		"unique.v_usage.pdf",
+		"consensus.v_usage.tab",
+		"consensus.v_usage.pdf"
 
 
 if MERGE_PROGRAM == 'flash':
@@ -252,9 +258,9 @@ rule makeblastdb:
 
 rule abpipe_igblast:
 	output:
-		txt="igblast.txt"
+		txt="{base}.igblast.txt"
 	input:
-		fasta="unique.fasta",
+		fasta="{base}.fasta",
 		db_v="database/{species}_V.nhr".format(species=SPECIES),
 		db_d="database/{species}_D.nhr".format(species=SPECIES),
 		db_j="database/{species}_J.nhr".format(species=SPECIES)
@@ -271,10 +277,10 @@ rule abpipe_igblast:
 
 rule abpipe_parse:
 	output:
-		tab="table.tab"
+		tab="{base}.table.tab"
 	input:
-		txt="igblast.txt",
-		fasta="unique.fasta"
+		txt="{base}.igblast.txt",
+		fasta="{base}.fasta"
 	params:
 		dirname=os.path.basename(os.getcwd())
 	shell:
@@ -285,19 +291,20 @@ rule abpipe_group:
 	"""Group by barcode"""
 	output:
 		pdf="stats/groupsizes.pdf",
-		tab="groups.tab"
+		tab="groups.tab",
+		fasta="consensus.fasta"
 	input:
-		tab="table.tab"
+		tab="unique.table.tab"
 	shell:
-		"abpipe group --barcode-length {BARCODE_LENGTH} --plot-sizes {output.pdf} --groups-output {output.tab} {input.tab}"
+		"abpipe group --barcode-length {BARCODE_LENGTH} --plot-sizes {output.pdf} --groups-output {output.tab} {input.tab} > {output.fasta}"
 
 
 rule count_and_plot:
 	output:
-		plot="v_usage.pdf",
-		counts="v_usage.tab"
+		plot="{base}.v_usage.pdf",
+		counts="{base}.v_usage.tab"
 	input:
-		tab="table.tab"
+		tab="{base}.table.tab"
 	shell:
 		"abpipe count {input.tab} {output.plot} > {output.counts}"
 
