@@ -30,6 +30,8 @@ LIMIT = None
 # usearch binary or vsearch.
 CLUSTER_PROGRAM = 'vsearch'
 
+MULTIALIGN_PROGRAM = 'muscle-fast'
+
 # Filter out reads that have more than this number of expected errors.
 # Set to None to disable.
 MAXIMUM_EXPECTED_ERRORS = None
@@ -296,7 +298,7 @@ rule abpipe_group:
 	input:
 		tab="unique.table.tab"
 	shell:
-		"abpipe group --barcode-length {BARCODE_LENGTH} --plot-sizes {output.pdf} --groups-output {output.tab} {input.tab} > {output.fasta}"
+		"abpipe group --program={MULTIALIGN_PROGRAM} --barcode-length {BARCODE_LENGTH} --plot-sizes {output.pdf} --groups-output {output.tab} {input.tab} > {output.fasta}"
 
 
 rule count_and_plot:
