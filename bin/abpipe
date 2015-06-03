@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """
-An IgBLAST wrapper inspired by igblastwrp. Can run IgBLAST in parallel and
-parse the output.
+Antibody pipeline helper script. It can:
+
+- Run IgBLAST in parallel (wrapper inspired by igblastwrp).
+- Parse IgBLAST output into a tab-separated table
+- Group sequences by barcode
+- Plot V gene usage
 """
 import csv
 import errno
@@ -836,7 +840,10 @@ def main():
 	subparser.set_defaults(func=discover_command)
 
 	args = parser.parse_args()
-	args.func(args)
+	if not hasattr(args, 'func'):
+		parser.error("Please give a command")
+	else:
+		args.func(args)
 
 
 if __name__ == '__main__':
