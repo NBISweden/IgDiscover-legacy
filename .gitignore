@@ -3,3 +3,5 @@
 .ipynb_checkpoints/
 raw/
 tmp/
+__pycache__/
+databases/*/*.log
