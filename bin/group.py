@@ -8,6 +8,7 @@ import matplotlib
 matplotlib.use('pdf')
 import matplotlib.pyplot as plt
 from sqt.ansicolor import bggreen
+from sqt.align import multialign, consensus
 from table import read_table_and_filter
 
 logger = logging.getLogger(__name__)
