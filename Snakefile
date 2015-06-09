@@ -71,11 +71,32 @@ rule all:
 		"consensus.v_usage.pdf"
 
 
+if LIMIT:
+	READS1 = 'reads-{}.1.fastq'.format(LIMIT)
+	READS2 = 'reads-{}.2.fastq'.format(LIMIT)
+else:
+	READS1 = 'reads.1.fastq'
+	READS2 = 'reads.2.fastq'
+
+
+if LIMIT:
+	rule limit_reads:
+		output: 'reads-{}.{{nr}}.fastq'.format(LIMIT)
+		input: 'reads.{nr}.fastq.gz'
+		shell:
+			'sqt-fastqmod --limit {LIMIT} {input} > {output}'
+else:
+	rule ungzip:
+		output: "{file}.fastq"
+		input: "{file}.fastq.gz"
+		shell: "zcat {input} > {output}"
+
+
 if MERGE_PROGRAM == 'flash':
 	rule flash_merge:
 		"""Use FLASH to merge paired-end reads"""
 		output: "merged.fastq.gz"
-		input: "reads.1.fastq", "reads.2.fastq"
+		input: READS1, READS2
 		resources: time=60
 		threads: 8
 		log: 'flash.log'
@@ -85,8 +106,8 @@ if MERGE_PROGRAM == 'flash':
 elif MERGE_PROGRAM == 'pear':
 	rule pear_merge:
 		"""Use pear to merge paired-end reads"""
-		output: fastq="merged.fastq.gz"
-		input: "reads.1.fastq", "reads.2.fastq"
+		output: 'pear.unassembled.forward.fastq', 'pear.unassembled.reverse.fastq', 'pear.discarded.fastq', fastq="merged.fastq.gz"
+		input: READS1, READS2
 		resources: time=60
 		threads: 8
 		shell:
@@ -125,15 +146,15 @@ rule barcodes:
 rule stats_numbers:
 	output: txt="stats/counts.txt"
 	input:
-		reads="reads.1.fastq.gz",
+		reads=READS1,
 		merged="merged.fastq.gz",
 		unique="unique.fasta"
 	shell:
 		"""
 		echo -n "Number of paired-end reads: " > {output}
-		zcat {input.reads} | awk 'END {{ print NR/4 }}' >> {output}
+		awk 'END {{ print NR/4 }}' {input.reads} >> {output}
 		echo -n "Number of barcodes (looking at 1st read in pair): " >> {output}
-		zcat {input.reads} | awk 'NR % 4 == 2 {{ print substr($1, 1, 12) }}' | sort -u | grep -v N | wc -l >> {output}
+		awk 'NR % 4 == 2 {{ print substr($1, 1, 12) }}' {input.reads} | sort -u | grep -v N | wc -l >> {output}
 
 
 		echo -n "Number of merged sequences: " >> {output}
@@ -267,13 +288,12 @@ rule abpipe_igblast:
 		db_d="database/{species}_D.nhr".format(species=SPECIES),
 		db_j="database/{species}_J.nhr".format(species=SPECIES)
 	params:
-		limit='--limit {}'.format(LIMIT) if LIMIT else '',
 		penalty='--penalty {}'.format(MISMATCH_PENALTY) if MISMATCH_PENALTY is not None else ''
 	threads: 16
 	shell:
 		#-auxiliary_data $IGDATA/optional_file/{SPECIES}_gl.aux
 		r"""
-		abpipe igblast --threads {threads} {params.limit} {params.penalty} --species {SPECIES} database/ {input.fasta} > {output.txt}
+		abpipe igblast --threads {threads} {params.penalty} --species {SPECIES} database/ {input.fasta} > {output.txt}
 		"""
 
 
@@ -311,8 +331,3 @@ rule count_and_plot:
 	shell:
 		"abpipe count --reference {input.v_reference} {input.tab} {output.plot} > {output.counts}"
 
-
-rule ungzip:
-	output: "{file}.fastq"
-	input: "{file}.fastq.gz"
-	shell: "zcat {input} > {output}"
