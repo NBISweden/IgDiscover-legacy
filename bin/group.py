@@ -58,7 +58,7 @@ def group_command(args):
 	d['sequence'] = [ s[barcode_length:] for s in d.sequence ]
 
 	# Group by barcode, V- and J gene assignment
-	groups = d.groupby(('barcode', 'V_gene', 'J_gene'))
+	groups = d.groupby(('barcode', 'V_gene', 'J_gene', 'CDR3_nt'))
 	sizes = groups['count'].sum()
 	logger.info('Total no. of groups: %s', len(groups))
 	for s in [1, 2, 3]:
@@ -85,8 +85,7 @@ def group_command(args):
 
 	# Compute consensus within each group
 	n = 1
-	for (barcode, v_gene, j_gene), group in groups:
-		#print(barcode, v_gene, j_gene)
+	for (barcode, v_gene, j_gene, cdr3_nt), group in groups:
 		if len(group) == 1:
 			cons = group['sequence'].iloc[0]
 		else:
