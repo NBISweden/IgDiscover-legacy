@@ -93,7 +93,7 @@ def group_command(args):
 			for i, sequence in enumerate(group['sequence']):
 				sequences[str(i)] = sequence
 			aligned = multialign(sequences, program=program)
-			cons = consensus(aligned, threshold=0.65)
+			cons = consensus(aligned, threshold=0.5)
 		size = group['count'].sum()
 		print('>consensus{};barcode={};size={};\n{}'.format(n, barcode, size, cons))
 		n += 1
