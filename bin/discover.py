@@ -1,5 +1,5 @@
 """
-Find common V genes
+Find common V genes between two different antibody libraries.
 """
 import logging
 from collections import Counter
@@ -21,18 +21,25 @@ def add_subcommand(subparsers):
 
 def discover_command(args):
 	if args.minimum_frequency is None:
-		minimum_frequency = (len(args.table) + 1) // 2
+		# args.table is a list of file names
+		minimum_frequency = max((len(args.table) + 1) // 2, 2)
 	else:
 		minimum_frequency = args.minimum_frequency
 	logger.info('Minimum frequency set to %s', minimum_frequency)
+
+	# Read in tables
 	tables = []
 	for path in args.table:
 		table = read_table_and_filter(path)
 		table = table.loc[:,['V_gene', 'V%SHM', 'V_nt']]
 		tables.append(table)
+
+	# Count V sequence occurrences
 	counter = Counter()
 	for table in tables:
 		counter.update(set(table.V_nt))
+
+	# Find most frequent occurrences and print result
 	print('Frequency', 'Gene', '%SHM', 'Sequence', sep='\t')
 	for sequence, frequency in counter.most_common():
 		if frequency < minimum_frequency:
