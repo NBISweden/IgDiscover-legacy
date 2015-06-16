@@ -31,7 +31,7 @@ def discover_command(args):
 	tables = []
 	for path in args.table:
 		table = read_table_and_filter(path)
-		table = table.loc[:,['V_gene', 'V%SHM', 'V_nt']]
+		table = table.loc[:,['V_gene', 'V%SHM', 'V_nt', 'name']]
 		tables.append(table)
 
 	# Count V sequence occurrences
@@ -44,12 +44,15 @@ def discover_command(args):
 	for sequence, frequency in counter.most_common():
 		if frequency < minimum_frequency:
 			break
+		names = []
+		gene = None
 		for table in tables:
 			matching_rows = table[table.V_nt == sequence]
 			if matching_rows.empty:
 				continue
-			row = matching_rows.iloc[0]
-			gene = row['V_gene']
-			shm = row['V%SHM']
-			break
-		print(frequency, gene, shm, sequence, sep='\t')
+			names.extend(matching_rows.name)
+			if gene is None:
+				row = matching_rows.iloc[0]
+				gene = row['V_gene']
+				shm = row['V%SHM']
+		print(frequency, gene, shm, sequence, *names, sep='\t')
