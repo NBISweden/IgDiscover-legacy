@@ -60,25 +60,27 @@ if not FORWARD_PRIMERS:
 # This command is run before every shell command and helps to catch errors early
 shell.prefix("set -euo pipefail;")
 
-rule all:
-	input:
-		#expand("fastqc/reads.{r}.zip", r=(1, 2)),
-		"stats/readlengthhisto.pdf",
-		"stats/barcodes.txt",
-		"unique.table.tab",
-		"consensus.table.tab",
-		"unique.v_usage.tab",
-		"unique.v_usage.pdf",
-		"consensus.v_usage.tab",
-		"consensus.v_usage.pdf"
-
-
 if LIMIT:
 	READS1 = 'reads-{}.1.fastq'.format(LIMIT)
 	READS2 = 'reads-{}.2.fastq'.format(LIMIT)
 else:
 	READS1 = 'reads.1.fastq'
 	READS2 = 'reads.2.fastq'
+
+
+rule all:
+	input:
+		READS1, READS2,
+		#expand("fastqc/reads.{r}.zip", r=(1, 2)),
+		"stats/readlengthhisto.pdf",
+		"stats/barcodes.txt",
+		"stats/counts.txt",
+		"unique.table.tab",
+		"consensus.table.tab",
+		"unique.v_usage.tab",
+		"unique.v_usage.pdf",
+		"consensus.v_usage.tab",
+		"consensus.v_usage.pdf"
 
 
 if LIMIT:
@@ -150,29 +152,28 @@ rule stats_numbers:
 	input:
 		reads=READS1,
 		merged="merged.fastq.gz",
-		unique="unique.fasta"
+		unique="unique.fasta",
+		unique_table="unique.table.tab",
+		consensus_table="consensus.table.tab",
 	shell:
 		"""
 		echo -n "Number of paired-end reads: " > {output}
 		awk 'END {{ print NR/4 }}' {input.reads} >> {output}
 		echo -n "Number of barcodes (looking at 1st read in pair): " >> {output}
 		awk 'NR % 4 == 2 {{ print substr($1, 1, 12) }}' {input.reads} | sort -u | grep -v N | wc -l >> {output}
-
-
 		echo -n "Number of merged sequences: " >> {output}
 		zcat {input.merged} | awk 'END {{ print NR/4 }}' >> {output}
 		echo -n "Number of barcodes in merged sequences: " >> {output}
 		zcat {input.merged} | awk 'NR % 4 == 2 {{ print substr($1, 1, 12) }}' | sort -u | grep -v N | wc -l >> {output}
-
 		echo -n "Number of unique sequences: " >> {output}
 		grep -c '^>' unique.fasta >> {output}
 		echo -n "Number of barcodes in unique sequences: " >> {output}
 		grep -A 1 '^>' {input.unique} | awk '!/^>/ && $1 != "--" {{ print substr($1,1,12) }}' | sort -u | grep -v N | wc -l >> {output}
-
-		echo -n "Number of barcodes in table: " >> {output}
-		cut -f35 {input.table} | sed 1d | awk '{{print substr($1, 1, 12) }}' | sort -u | grep -v N | wc -l >>  {output}
+		echo -n "Number of barcodes in unique table: " >> {output}
+		cut -f35 {input.unique_table} | sed 1d | awk '{{print substr($1, 1, 12) }}' | sort -u | grep -v N | wc -l >>  {output}
+		echo -n "Number of sequences in final consensus table: " >> {output}
+		sed 1d {input.consensus_table} | wc -l >> {output}
 		"""
-
 
 
 # Adjust the primer sequences so they are correctly reverse-complemented.
