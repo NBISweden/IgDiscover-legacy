@@ -23,6 +23,8 @@ from sqt.dna import reverse_complement
 
 # Set defaults for some configurable values.
 
+MERGE_PROGRAM = 'pear'
+
 # Limit processing to this number of reads. Set to None to process all.
 LIMIT = None
 
