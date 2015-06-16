@@ -39,7 +39,7 @@ MULTIALIGN_PROGRAM = 'muscle-fast'
 MAXIMUM_EXPECTED_ERRORS = None
 
 # Whether to trim primers. Can be set to True or False.
-TRIM_PRIMERS = True
+TRIM_PRIMERS = False
 
 # IgBLAST mismatch penalty (can be -1, -2, -3, -4 or None)
 MISMATCH_PENALTY = None
