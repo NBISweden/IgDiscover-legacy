@@ -4,7 +4,7 @@ Find common V genes between two different antibody libraries.
 import logging
 from collections import Counter
 
-from table import read_table_and_filter
+from .table import read_table_and_filter
 
 logger = logging.getLogger(__name__)
 

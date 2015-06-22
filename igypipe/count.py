@@ -9,7 +9,7 @@ import matplotlib
 matplotlib.use('pdf')
 import matplotlib.pyplot as plt
 from sqt import FastaReader
-from table import read_table_and_filter
+from .table import read_table_and_filter
 
 logger = logging.getLogger(__name__)
 
