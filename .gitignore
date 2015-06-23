@@ -5,3 +5,5 @@ raw/
 tmp/
 __pycache__/
 databases/*/*.log
+wiki/
+runs/
