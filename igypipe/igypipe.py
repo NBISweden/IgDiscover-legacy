@@ -13,7 +13,7 @@ __author__ = "Marcel Martin"
 import logging
 from sqt import HelpfulArgumentParser
 
-from . import igblast, parse, count, group, discover, __version__
+from . import igblast, parse, count, group, discover, singledisco, __version__
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +29,7 @@ def main():
 	count.add_subcommand(subparsers)
 	group.add_subcommand(subparsers)
 	discover.add_subcommand(subparsers)
+	singledisco.add_subcommand(subparsers)
 
 	args = parser.parse_args()
 	if not hasattr(args, 'func'):
