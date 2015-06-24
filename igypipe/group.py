@@ -4,11 +4,13 @@ Group sequences by barcode and V/J assignment and print each group’s consensus
 from collections import Counter
 import logging
 from itertools import islice
+
 import matplotlib
 matplotlib.use('pdf')
 import matplotlib.pyplot as plt
 from sqt.ansicolor import bggreen
 from sqt.align import multialign, consensus
+
 from .table import read_table_and_filter
 
 logger = logging.getLogger(__name__)

@@ -3,12 +3,14 @@ Count and plot V gene usage
 """
 import re
 import logging
+
 import numpy as np
 import pandas as pd
 import matplotlib
 matplotlib.use('pdf')
 import matplotlib.pyplot as plt
 from sqt import FastaReader
+
 from .table import read_table_and_filter
 
 logger = logging.getLogger(__name__)
