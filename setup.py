@@ -1,6 +1,8 @@
 import sys
 from setuptools import setup
-from igypipe import __version__
+
+# set __version__
+exec(next(open('igypipe/__init__.py')))
 
 if sys.version_info < (3, 3):
 	sys.stdout.write("At least Python 3.3 is required.\n")
