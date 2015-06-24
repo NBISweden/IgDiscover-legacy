@@ -32,7 +32,7 @@ LIMIT = None
 # usearch binary or vsearch.
 CLUSTER_PROGRAM = 'vsearch'
 
-MULTIALIGN_PROGRAM = 'muscle-fast'
+MULTIALIGN_PROGRAM = 'muscle-medium'
 
 # Filter out reads that have more than this number of expected errors.
 # Set to None to disable.
