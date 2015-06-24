@@ -3,7 +3,7 @@
 Required modules:
 
 module use /proj/b2014342/sw/modules
-module load abpipe
+module load igypipe
 
 These are the main files that the pipeline creates, in the order in which they
 are created:
@@ -282,7 +282,7 @@ rule makeblastdb:
 		"""
 
 
-rule abpipe_igblast:
+rule igypipe_igblast:
 	output:
 		txt="{base}.igblast.txt"
 	input:
@@ -296,11 +296,11 @@ rule abpipe_igblast:
 	shell:
 		#-auxiliary_data $IGDATA/optional_file/{SPECIES}_gl.aux
 		r"""
-		abpipe igblast --threads {threads} {params.penalty} --species {SPECIES} database/ {input.fasta} > {output.txt}
+		igypipe igblast --threads {threads} {params.penalty} --species {SPECIES} database/ {input.fasta} > {output.txt}
 		"""
 
 
-rule abpipe_parse:
+rule igypipe_parse:
 	output:
 		tab="{base}.table.tab"
 	input:
@@ -309,10 +309,10 @@ rule abpipe_parse:
 	params:
 		dirname=os.path.basename(os.getcwd())
 	shell:
-		"abpipe parse --rename {params.dirname}_ {input.txt} {input.fasta} > {output.tab}"
+		"igypipe parse --rename {params.dirname}_ {input.txt} {input.fasta} > {output.tab}"
 
 
-rule abpipe_group:
+rule igypipe_group:
 	"""Group by barcode"""
 	output:
 		pdf="stats/groupsizes.pdf",
@@ -321,7 +321,7 @@ rule abpipe_group:
 	input:
 		tab="unique.table.tab"
 	shell:
-		"abpipe group --program={MULTIALIGN_PROGRAM} --barcode-length {BARCODE_LENGTH} --plot-sizes {output.pdf} --groups-output {output.tab} {input.tab} > {output.fasta}"
+		"igypipe group --program={MULTIALIGN_PROGRAM} --barcode-length {BARCODE_LENGTH} --plot-sizes {output.pdf} --groups-output {output.tab} {input.tab} > {output.fasta}"
 
 
 rule count_and_plot:
@@ -332,5 +332,5 @@ rule count_and_plot:
 		v_reference="database/{SPECIES}_V.fasta".format(SPECIES=SPECIES),
 		tab="{base}.table.tab"
 	shell:
-		"abpipe count --reference {input.v_reference} {input.tab} {output.plot} > {output.counts}"
+		"igypipe count --reference {input.v_reference} {input.tab} {output.plot} > {output.counts}"
 
