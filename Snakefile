@@ -19,7 +19,11 @@ consensus.fasta -- contains one consensus sequence for each group
 consensus.igblast.txt -- consensus sequences sent through IgBLAST
 consensus.table.tab -- result of parsing IgBLAST output
 """
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_pdf import FigureCanvasPdf
+
 from sqt.dna import reverse_complement
+import igypipe
 
 # Set defaults for some configurable values.
 
@@ -75,6 +79,8 @@ rule all:
 		"stats/readlengthhisto.pdf",
 		"stats/barcodes.txt",
 		"stats/counts.txt",
+		"stats/unique.correlationVJ.pdf",
+		"stats/consensus.correlationVJ.pdf",
 		"unique.table.tab",
 		"consensus.table.tab",
 		"unique.v_usage.tab",
@@ -174,6 +180,24 @@ rule stats_numbers:
 		echo -n "Number of sequences in final consensus table: " >> {output}
 		sed 1d {input.consensus_table} | wc -l >> {output}
 		"""
+
+
+rule stats_correlation_V_J:
+	output:
+		pdf="stats/{base}.correlationVJ.pdf"
+	input:
+		table="{base}.table.tab"
+	run:
+		table = igypipe.read_table(input.table)
+		fig = Figure(figsize=(30/2.54, 21/2.54))
+		ax = fig.gca()
+		ax.set_xlabel('V%SHM')
+		ax.set_ylabel('J%SHM')
+		ax.scatter(table['V%SHM'], table['J%SHM'])
+		ax.set_xlim(left=-0.5)
+		ax.set_ylim(bottom=-0.5)
+		ax.set_title('Correlation between V%SHM and J%SHM')
+		FigureCanvasPdf(fig).print_figure(output.pdf)
 
 
 # Adjust the primer sequences so they are correctly reverse-complemented.
