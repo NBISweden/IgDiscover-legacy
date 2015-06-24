@@ -11,7 +11,7 @@ matplotlib.use('pdf')
 import matplotlib.pyplot as plt
 from sqt import FastaReader
 
-from .table import read_table_and_filter
+from .table import read_table
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ def count_command(args):
 		gene_names.sort(key=natural_sort_key)
 	else:
 		gene_names = None
-	d = read_table_and_filter(args.table, log=True)
+	d = read_table(args.table, log=True)
 	counts = d.groupby('V_gene').size()
 
 	# Make sure that always all gene names are listed, even if expression is 0.

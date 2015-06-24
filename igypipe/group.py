@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from sqt.ansicolor import bggreen
 from sqt.align import multialign, consensus
 
-from .table import read_table_and_filter
+from .table import read_table
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +51,7 @@ def colored_diff(seq, reference):
 
 
 def group_command(args):
-	d = read_table_and_filter(args.table, log=True)
+	d = read_table(args.table, log=True)
 	barcode_length = args.barcode_length
 	program = args.program
 	assert barcode_length is not None

@@ -12,9 +12,21 @@ J_GENE_COVERAGE = 60  # at least
 V_GENE_EVALUE = 1E-3  # at most
 
 
-def read_table_and_filter(path, log=False):
+def read_table(path, filter=True, log=False):
+	"""
+	Read in the table created by the parse subcommand. Discard following rows
+	if filter is True:
+	- no J assigned
+	- stop codon found
+	- V gene coverage too low
+	- J gene coverage too low
+	- V gene E-value too high
+	"""
 	d = pd.read_csv(path, sep='\t')
 	if log: logger.info('%s rows in input table', len(d))
+
+	if not filter:
+		return d
 
 	# Both V and J must be assigned
 	filtered = d.dropna(subset=('V_gene', 'J_gene'))[:]
