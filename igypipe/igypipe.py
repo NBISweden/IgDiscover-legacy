@@ -13,7 +13,7 @@ __author__ = "Marcel Martin"
 import logging
 from sqt import HelpfulArgumentParser
 
-from . import igblast, parse, count, group, discover
+from . import igblast, parse, count, group, discover, __version__
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 def main():
 	logging.basicConfig(level=logging.DEBUG, format='%(levelname)s: %(message)s')
 	parser = HelpfulArgumentParser(description=__doc__, prog='igypipe')
+	parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
 
 	subparsers = parser.add_subparsers()
 	igblast.add_subcommand(subparsers)
