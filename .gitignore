@@ -8,3 +8,4 @@ databases/*/*.log
 wiki/
 runs/
 venv/
+build/
