@@ -19,7 +19,7 @@ setup(
 	packages = ['igypipe'],
 	scripts = ['bin/igypipe'],
 	install_requires = [
-		'sqt>=0.4.4',
+		'sqt>=0.4.5',
 		'pandas>=0.16.2',
 		'numpy',
 		'matplotlib',
