@@ -81,6 +81,8 @@ rule all:
 		"stats/counts.txt",
 		"stats/unique.correlationVJ.pdf",
 		"stats/consensus.correlationVJ.pdf",
+		'stats/unique.shmhistograms.pdf',
+		'stats/consensus.shmhistograms.pdf',
 		"unique.table.tab",
 		"consensus.table.tab",
 		"unique.v_usage.tab",
@@ -194,10 +196,19 @@ rule stats_correlation_V_J:
 		ax.set_xlabel('V%SHM')
 		ax.set_ylabel('J%SHM')
 		ax.scatter(table['V%SHM'], table['J%SHM'])
-		ax.set_xlim(left=-0.5)
-		ax.set_ylim(bottom=-0.5)
+		ax.set_xlim(left=-0.1)
+		ax.set_ylim(bottom=-0.1)
 		ax.set_title('Correlation between V%SHM and J%SHM')
 		FigureCanvasPdf(fig).print_figure(output.pdf)
+
+
+rule stats_plot_shmhistograms:
+	output:
+		pdf='stats/{base}.shmhistograms.pdf',
+	input:
+		table='{base}.table.tab'
+	shell:
+		'igypipe singledisco --plot {output.pdf} {input.table}'
 
 
 # Adjust the primer sequences so they are correctly reverse-complemented.

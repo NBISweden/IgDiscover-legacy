@@ -5,6 +5,8 @@ import logging
 from collections import Counter
 from matplotlib.backends.backend_pdf import FigureCanvasPdf, PdfPages
 from matplotlib.figure import Figure
+import seaborn as sns
+import numpy as np
 from .table import read_table
 
 logger = logging.getLogger(__name__)
@@ -22,20 +24,25 @@ def add_subcommand(subparsers):
 
 
 
-def plot_shms(table, v_gene, bins=80):
+def plot_shms(table, v_gene, bins=np.arange(20)):
 	"""
 	Plot error frequency distribution for a specific V gene.
 
 	v_gene -- name of the gene
 	"""
-	shms = table[table.V_gene == v_gene]['V%SHM']
+	shms = list(table[table.V_gene == v_gene]['V%SHM'])
 	if len(shms) < 200:
 		return None
+	#mean = np.mean(shms)
+	z = shms.count(0)
 	fig = Figure(figsize=(297/25.4, 210/25.4))
 	ax = fig.gca()
 	ax.set_xlabel('%SHM')
 	ax.set_ylabel('Frequency')
-	ax.set_title('Gene ' + v_gene)
+	ax.set_title('Gene ' + v_gene, fontsize=18)
+	ax.text(0.95, 0.95, 'zero differences: {} times'.format(z), transform=ax.transAxes, fontsize=15, ha='right', va='top')
+
+	#ax.axvline(mean, color='darkred')
 	_ = ax.hist(list(shms), bins=bins)
 	return fig
 
@@ -54,7 +61,7 @@ def discover_command(args):
 		n = 0
 		with PdfPages(args.plot) as pages:
 			for gene in set(table.V_gene):
-				fig = plot_shms(table, gene, bins=200)
+				fig = plot_shms(table, gene)
 				if fig is None:
 					continue
 				n += 1
