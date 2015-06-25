@@ -23,7 +23,7 @@ def add_subcommand(subparsers):
 	subparser.add_argument('--plot-sizes', metavar='FILE', default=None,
 		help='Plot group sizes to FILE (.png or .pdf)')
 	subparser.add_argument('--barcode-length', type=int, default=None)
-	subparser.add_argument('--program', choices=('clustalo', 'muscle', 'muscle-fast', 'mafft'),
+	subparser.add_argument('--program', choices=('clustalo', 'muscle', 'muscle-medium', 'muscle-fast', 'mafft'),
 		default='muscle-fast',
 		help='Program to use for computing the multiple alignment')
 	subparser.add_argument('table', help='Table with parsed IgBLAST results.')
