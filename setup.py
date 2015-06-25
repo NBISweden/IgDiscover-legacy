@@ -24,7 +24,8 @@ setup(
 		'numpy',
 		'matplotlib',
 		'snakemake',
-		'cutadapt'
+		'cutadapt',
+		'seaborn'
 	],
 	classifiers = [
 		"Development Status :: 2 - Pre-Alpha",

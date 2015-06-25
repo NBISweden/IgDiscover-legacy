@@ -21,7 +21,7 @@ consensus.table.tab -- result of parsing IgBLAST output
 """
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_pdf import FigureCanvasPdf
-
+import seaborn as sns
 from sqt.dna import reverse_complement
 import igypipe
 
