@@ -20,7 +20,7 @@ setup(
 	scripts = ['bin/igypipe'],
 	install_requires = [
 		'sqt>=0.4.4',
-		'pandas',
+		'pandas>=0.16.2',
 		'numpy',
 		'matplotlib',
 		'snakemake',
