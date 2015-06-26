@@ -82,7 +82,6 @@ rule all:
 		"stats/unique.correlationVJ.pdf",
 		"stats/consensus.correlationVJ.pdf",
 		'stats/unique.shmhistograms.pdf',
-		'stats/consensus.shmhistograms.pdf',
 		"unique.table.tab",
 		"consensus.table.tab",
 		"unique.v_usage.tab",
