@@ -6,6 +6,7 @@ import re
 import sys
 import csv
 import logging
+import errno
 
 from sqt import SequenceReader
 from sqt.dna import GENETIC_CODE, reverse_complement
