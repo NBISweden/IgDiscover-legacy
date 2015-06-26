@@ -51,6 +51,8 @@ class Hit(HitNT):
 		return len(self.subject_sequence) / self.subject_length
 
 
+
+
 sizeregex = re.compile('(.*);size=(\d+);$')  # TODO move into class below
 
 class IgblastRecord(IgblastRecordNT):
@@ -67,6 +69,7 @@ class IgblastRecord(IgblastRecordNT):
 	def __init__(self, *args, **kwargs):
 		if 'CDR3' in self.alignments:
 			self.alignments['CDR3'] = self._fixed_cdr3_alignment()
+		self.utr, self.leader = self._utr_leader()
 
 	@property
 	def vdj_sequence(self):
@@ -77,6 +80,21 @@ class IgblastRecord(IgblastRecordNT):
 		vdj_start = hit_v.query_start
 		vdj_stop = hit_j.query_start + len(hit_j.query_sequence)
 		return self.full_sequence[vdj_start:vdj_stop]
+
+	def _utr_leader(self):
+		"""
+		Split the sequence before the V gene match into UTR and leader.
+		"""
+		if 'V' not in self.hits:
+			return None, None
+		before_v = self.full_sequence[:self.hits['V'].query_start]
+
+		# Search for the start codon
+		for offset in (0, 1, 2):
+			for i in range(66, 42, -3):
+				if before_v[-i + offset : -i + 3 + offset] == 'ATG':
+					return before_v[:-i + offset], before_v[-i + offset:]
+		return None, None
 
 	def _fixed_cdr3_alignment(self):
 		"""
@@ -359,7 +377,8 @@ class TableWriter:
 			"J_gene",
 			"stop",
 			"productive",
-			"before_V",
+			"UTR",
+			"leader",
 			"V_covered",
 			"D_covered",
 			"J_covered",
@@ -413,14 +432,12 @@ class TableWriter:
 			v_nt = record.hits['V'].query_sequence
 			v_aa = nt_to_aa(v_nt)
 			v_shm = '{:.1f}'.format(100.0 - record.hits['V'].percent_identity)
-			before_v = record.full_sequence[:record.hits['V'].query_start]
 			v_covered = '{:.1f}'.format(100*record.hits['V'].covered())
 			v_evalue = '{:G}'.format(record.hits['V'].evalue)
 		else:
 			v_nt = None
 			v_aa = None
 			v_shm = None
-			before_v = None
 			v_covered = None
 			v_evalue = None
 		if 'D' in record.hits:
@@ -454,7 +471,8 @@ class TableWriter:
 			record.j_gene,
 			yesno(record.has_stop),
 			yesno(record.is_productive),
-			before_v,
+			record.utr,
+			record.leader,
 			v_covered,
 			d_covered,
 			j_covered,
