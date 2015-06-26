@@ -1,7 +1,9 @@
 """
 Function for reading the table created by the 'parse' subcommand.
 """
+import os.path
 import logging
+import sqlite3
 import pandas as pd
 
 logger = logging.getLogger(__name__)
@@ -22,7 +24,27 @@ def read_table(path, filter=True, log=False):
 	- J gene coverage too low
 	- V gene E-value too high
 	"""
-	d = pd.read_csv(path, sep='\t')
+	base, ext = os.path.splitext(path)
+	sdb = base + '.sdb'
+	if not os.path.exists(sdb) or os.path.getmtime(path) > os.path.getmtime(sdb):
+		# SQLite3 file missing or out of date
+		logger.info('(Re-)Creating table cache %s', sdb)
+		df = pd.read_csv(path, sep='\t')
+		# Delete the file if it exists. This is faster than using
+		# if_exists='replace' in the to_sql call below.
+		try:
+			os.remove(sdb)
+		except FileNotFoundError:
+			pass
+		connection = sqlite3.connect(sdb)
+		df.to_sql('data', connection)
+		del df
+		connection.commit()
+	else:
+		connection = sqlite3.connect(sdb)
+
+	d = pd.read_sql('SELECT * FROM data', connection)
+
 	if log: logger.info('%s rows in input table', len(d))
 
 	# Allow old-style %SHM column headers
