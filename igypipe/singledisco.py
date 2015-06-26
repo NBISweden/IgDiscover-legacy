@@ -18,7 +18,7 @@ def add_subcommand(subparsers):
 	subparser.set_defaults(func=discover_command)
 	subparser.add_argument('--plot', help='Plot error frequency histograms to this file', default=None)
 	subparser.add_argument('--gene', '-g', action='append', help='Compute consensus for this gene. Can be given multiple times. Use "all" to compute for all genes.')
-	subparser.add_argument('--threshold', help='Compute consensus from those sequences that have at least this %%SHM (default: %(default)s)', default=0)
+	subparser.add_argument('--threshold', type=float, help='Compute consensus from those sequences that have at least this %%SHM BLA (default: %(default)s)', default=0)
 
 	#subparser.add_argument('--minimum-frequency', '-n', type=int, metavar='N',
 		#default=None,
