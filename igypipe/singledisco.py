@@ -12,6 +12,9 @@ from .table import read_table
 
 logger = logging.getLogger(__name__)
 
+MINGROUPSIZE_PLOT = 200
+MINGROUPSIZE_CONSENSUS = 10
+
 
 def add_subcommand(subparsers):
 	subparser = subparsers.add_parser('singledisco', help=__doc__)
@@ -19,14 +22,12 @@ def add_subcommand(subparsers):
 	subparser.add_argument('--plot', help='Plot error frequency histograms to this file', default=None)
 	subparser.add_argument('--gene', '-g', action='append', default=[],
 		help='Compute consensus for this gene. Can be given multiple times. Use "all" to compute for all genes.')
-	subparser.add_argument('--threshold', type=float, help='Compute consensus from those sequences that have at least this %%SHM (default: %(default)s)', default=0)
-
-	#subparser.add_argument('--minimum-frequency', '-n', type=int, metavar='N',
-		#default=None,
-		#help='Minimum number of datasets in which sequence must occur (default is no. of files divided by two)')
+	subparser.add_argument('--left', '-l', type=float, metavar='%SHM',
+		help='For consensus, include only sequences that have at least this %%SHM (default: %(default)s)', default=0)
+	subparser.add_argument('--right', '-r', type=float, metavar='%SHM',
+		help='For consensus, include only sequences that have at most this %%SHM (default: %(default)s)', default=100)
 	subparser.add_argument('table', help='Table with parsed IgBLAST results')  # nargs='+'
 	return subparser
-
 
 
 def plot_shms(group, v_gene, bins=np.arange(20)):
@@ -50,7 +51,7 @@ def plot_shms(group, v_gene, bins=np.arange(20)):
 	return fig
 
 
-def sister_sequence(group, shm_threshold, program='muscle-medium'):
+def sister_sequence(group, min_shm, max_shm, program='muscle-medium'):
 	"""
 
 	"""
@@ -58,8 +59,9 @@ def sister_sequence(group, shm_threshold, program='muscle-medium'):
 	# TODO Perhaps create the dict in such a way that those with the most
 	# abundant no. of errors are put in first.
 	for _, row in group.iterrows():
-		if row.V_SHM >= shm_threshold:
+		if min_shm <= row.V_SHM <= max_shm:
 			sequences[row.name] = row.V_nt
+	logger.info('Computing consensus from %s sequences', len(sequences))
 	aligned = multialign(sequences, program=program)
 	return consensus(aligned, threshold=0.6)
 
@@ -78,7 +80,7 @@ def discover_command(args):
 		n = 0
 		with PdfPages(args.plot) as pages:
 			for gene, group in table.groupby('V_gene'):
-				if len(group) < 200:
+				if len(group) < MINGROUPSIZE_PLOT:
 					continue
 				fig = plot_shms(group, gene)
 				n += 1
@@ -90,9 +92,14 @@ def discover_command(args):
 	for gene, group in table.groupby('V_gene'):
 		if not ('all' in genes or gene in genes):
 			continue
-		if len(group) < 10:
+		if len(group) < MINGROUPSIZE_CONSENSUS:
+			logger.info('Skipping %s as the number of sequences is too small (%s)', gene, len(group))
 			continue
-		s = sister_sequence(group, args.threshold)
+		s = sister_sequence(group, min_shm=args.left, max_shm=args.right)
 		print('>{}_sister\n{}'.format(gene, s))
+		n_count = s.count('N')
+		exact_count = sum(group.V_nt == s)
+		logger.info('Consensus for %s has %s “N” bases and occurs %s times exactly in all input sequences.', gene, n_count, exact_count)
 		n += 1
-	logger.info('%s consensus sequences computed', n)
+	if genes and n > 1:
+		logger.info('%s consensus sequences computed', n)
