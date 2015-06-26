@@ -31,7 +31,7 @@ def discover_command(args):
 	tables = []
 	for path in args.table:
 		table = read_table(path)
-		table = table.loc[:,['V_gene', 'V%SHM', 'V_nt', 'name']]
+		table = table.loc[:,['V_gene', 'V_SHM', 'V_nt', 'name']]
 		tables.append(table)
 
 	# Count V sequence occurrences
@@ -54,5 +54,5 @@ def discover_command(args):
 			if gene is None:
 				row = matching_rows.iloc[0]
 				gene = row['V_gene']
-				shm = row['V%SHM']
+				shm = row['V_SHM']
 		print(frequency, gene, shm, sequence, *names, sep='\t')

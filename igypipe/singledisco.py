@@ -34,7 +34,7 @@ def plot_shms(group, v_gene, bins=np.arange(20)):
 
 	v_gene -- name of the gene
 	"""
-	shms = list(group['V%SHM'])
+	shms = list(group.V_SHM)
 	#mean = np.mean(shms)
 	z = shms.count(0)
 	fig = Figure(figsize=(297/25.4, 210/25.4))
@@ -57,7 +57,7 @@ def sister_sequence(group, shm_threshold, program='muscle-medium'):
 	# TODO Perhaps create the dict in such a way that those with the most
 	# abundant no. of errors are put in first.
 	for _, row in group.iterrows():
-		if row['V%SHM'] >= shm_threshold:
+		if row.V_SHM >= shm_threshold:
 			sequences[row.name] = row.V_nt
 	aligned = multialign(sequences, program=program)
 	return consensus(aligned, threshold=0.6)
@@ -70,7 +70,7 @@ def discover_command(args):
 
 	# Discard rows with any mutation within J at all
 	logger.info('%s rows read (filtered)', len(table))
-	table = table[table['J%SHM'] == 0][:]
+	table = table[table.J_SHM == 0][:]
 	logger.info('%s rows remain after discarding J%%SHM > 0', len(table))
 
 	if args.plot:

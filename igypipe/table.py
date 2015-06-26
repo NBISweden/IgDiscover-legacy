@@ -25,6 +25,8 @@ def read_table(path, filter=True, log=False):
 	d = pd.read_csv(path, sep='\t')
 	if log: logger.info('%s rows in input table', len(d))
 
+	# Allow old-style %SHM column headers
+	d.rename(columns=lambda x: x.replace('%SHM', '_SHM'), inplace=True)
 	if not filter:
 		return d
 

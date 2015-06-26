@@ -195,7 +195,7 @@ rule stats_correlation_V_J:
 		ax = fig.gca()
 		ax.set_xlabel('V%SHM')
 		ax.set_ylabel('J%SHM')
-		ax.scatter(table['V%SHM'], table['J%SHM'])
+		ax.scatter(table['V_SHM'], table['J_SHM'])
 		ax.set_xlim(left=-0.1)
 		ax.set_ylim(bottom=-0.1)
 		ax.set_title('Correlation between V%SHM and J%SHM')
