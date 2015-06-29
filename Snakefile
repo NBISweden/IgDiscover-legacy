@@ -346,7 +346,7 @@ rule igypipe_parse:
 	params:
 		dirname=os.path.basename(os.getcwd())
 	shell:
-		"igypipe parse --rename {params.dirname}_ {input.txt} {input.fasta} > {output.tab}"
+		"igypipe parse --barcode-length {BARCODE_LENGTH} --rename {params.dirname}_ {input.txt} {input.fasta} > {output.tab}"
 
 
 rule igypipe_group:

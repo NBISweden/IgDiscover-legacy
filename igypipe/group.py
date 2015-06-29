@@ -50,14 +50,27 @@ def colored_diff(seq, reference):
 	return colored
 
 
+def g_prefix_len(s):
+	for i, base in enumerate(s):
+		if base != 'G':
+			return i
+	return i
+
+
 def group_command(args):
 	d = read_table(args.table, log=True)
-	barcode_length = args.barcode_length
 	program = args.program
-	assert barcode_length is not None
 	lengths = Counter()
-	d['barcode'] = [ s[:barcode_length] for s in d.sequence ]
-	d['sequence'] = [ s[barcode_length:] for s in d.sequence ]
+	if 'genomic_sequence' not in d:
+		logger.info('Old-style table format found')
+		# For backwards compatibility with older tables, support tables that only
+		# have a 'sequence' column (which is not split into barcode and race_g).
+		barcode_length = args.barcode_length
+		assert barcode_length is not None
+		d['barcode'] = [ s[:barcode_length] for s in d.sequence ]
+		d['race_g'] = [ 'G' * g_prefix_len(s) for s in d.sequence ]
+		d['genomic_sequence'] = [ s[barcode_length:].lstrip('G') for s in d.sequence ]
+		del d['sequence']
 
 	# Group by barcode, V- and J gene assignment
 	groups = d.groupby(('barcode', 'V_gene', 'J_gene', 'CDR3_nt'))
@@ -89,10 +102,10 @@ def group_command(args):
 	n = 1
 	for (barcode, v_gene, j_gene, cdr3_nt), group in groups:
 		if len(group) == 1:
-			cons = group['sequence'].iloc[0]
+			cons = group['genomic_sequence'].iloc[0]
 		else:
 			sequences = dict()
-			for i, sequence in enumerate(group['sequence']):
+			for i, sequence in enumerate(group['genomic_sequence']):
 				sequences[str(i)] = sequence
 			aligned = multialign(sequences, program=program)
 			cons = consensus(aligned, threshold=0.501)

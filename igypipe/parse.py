@@ -1,5 +1,15 @@
 """
-Parse IgBLAST output and write out a tab-separated table
+Parse IgBLAST output and write out a tab-separated table.
+
+A few extra things are done that are not strictly parsing:
+- The CDR3 is detected by using a regular expression
+- The leader is detected within the sequence before the found V gene (by
+  searching for the start codon).
+- The RACE-specific run of G in the beginning of the sequence is detected.
+"""
+"""
+TODO
+- barcode_length should not be an attribute of IgblastRecord
 """
 from collections import namedtuple
 import re
@@ -19,6 +29,7 @@ def add_subcommand(subparsers):
 	subparser.set_defaults(func=parse_command)
 	subparser.add_argument('--rename', default=None, metavar='PREFIX',
 		help='Rename reads to PREFIXseqN (where N is a number starting at 1)')
+	subparser.add_argument('--barcode-length', type=int, default=None)
 	subparser.add_argument('igblast', help='IgBLAST output')
 	subparser.add_argument('fasta', help='File with original reads')
 	return subparser
@@ -35,7 +46,7 @@ def highlight(s, span):
 IgblastRecordNT = namedtuple('IgblastRecordNT',
 	'full_sequence query_name alignments ' \
 	'hits v_gene d_gene j_gene chain has_stop in_frame is_productive ' \
-	'strand size junction')
+	'strand size junction barcode_length')
 AlignmentSummary = namedtuple('AlignmentSummary', 'start stop length matches mismatches gaps percent_identity')
 JunctionVDJ = namedtuple('JunctionVDJ', 'v_end vd_junction d_region dj_junction j_start')
 JunctionVJ = namedtuple('JunctionVJ', 'v_end vj_junction j_start')
@@ -49,8 +60,6 @@ class Hit(HitNT):
 		covered by this hit.
 		"""
 		return len(self.subject_sequence) / self.subject_length
-
-
 
 
 sizeregex = re.compile('(.*);size=(\d+);$')  # TODO move into class below
@@ -67,9 +76,10 @@ class IgblastRecord(IgblastRecordNT):
 	cdr3regex = re.compile('(TT[TC]|TA[CT])(TT[CT]|TA[TC]|CA[TC]|GT[AGCT]|TGG)(TG[TC])(([GA][AGCT])|TC|CG)[AGCT]([ACGT]{3}){5,31}TGGG[GCT][GCTA]')
 
 	def __init__(self, *args, **kwargs):
+		self.barcode, self.race_g, self.genomic_sequence = self._split_barcode()
+		self.utr, self.leader = self._utr_leader()
 		if 'CDR3' in self.alignments:
 			self.alignments['CDR3'] = self._fixed_cdr3_alignment()
-		self.utr, self.leader = self._utr_leader()
 
 	@property
 	def vdj_sequence(self):
@@ -81,13 +91,30 @@ class IgblastRecord(IgblastRecordNT):
 		vdj_stop = hit_j.query_start + len(hit_j.query_sequence)
 		return self.full_sequence[vdj_start:vdj_stop]
 
+	def _split_barcode(self):
+		"""
+		Split the full sequence into barcode, RACE-specific run of G nucleotides,
+		and genomic sequence.
+		"""
+		# The RACE protocol leads to a run of non-template Gs in the beginning
+		# of the sequence, after the barcode.
+		barcode = self.full_sequence[:self.barcode_length]
+		rest_with_g = self.full_sequence[self.barcode_length:]
+		for i, base in enumerate(rest_with_g):
+			if base != 'G':
+				break
+		race_g = rest_with_g[:i]
+		genomic = rest_with_g[i:]
+		assert race_g.count('G') == len(race_g)
+		return barcode, race_g, genomic
+
 	def _utr_leader(self):
 		"""
 		Split the sequence before the V gene match into UTR and leader.
 		"""
 		if 'V' not in self.hits:
 			return None, None
-		before_v = self.full_sequence[:self.hits['V'].query_start]
+		before_v = self.full_sequence[len(self.barcode) + len(self.race_g):self.hits['V'].query_start]
 
 		# Search for the start codon
 		for offset in (0, 1, 2):
@@ -232,7 +259,7 @@ def parse_hit(line):
 	return hit, gene
 
 
-def parse_igblast_record(record_lines, fasta_record):
+def parse_igblast_record(record_lines, fasta_record, barcode_length):
 	BOOL = { 'Yes': True, 'No': False, 'N/A': None }
 	FRAME = { 'In-frame': True, 'Out-of-frame': False, 'N/A': None }
 	SECTIONS = set([
@@ -317,7 +344,6 @@ def parse_igblast_record(record_lines, fasta_record):
 			qname = query_name[:-1] if query_name.endswith(';') else query_name
 			assert chain in (None, 'VL', 'VH', 'VK', 'NON'), chain
 			assert qsequence == full_sequence[hit.query_start:hit.query_start+len(qsequence)]
-		#print(len(full_sequence))
 
 	m = sizeregex.match(query_name)
 	if m:
@@ -339,10 +365,11 @@ def parse_igblast_record(record_lines, fasta_record):
 		hits=hits,
 		full_sequence=full_sequence,
 		size=size,
-		junction=junction)
+		junction=junction,
+		barcode_length=barcode_length)
 
 
-def parse_igblast(path, fasta_path):
+def parse_igblast(path, fasta_path, barcode_length):
 	"""
 	Parse IgBLAST output created with option -outfmt "7 sseqid qstart qseq sstart sseq pident slen"
 	"""
@@ -350,7 +377,7 @@ def parse_igblast(path, fasta_path):
 		with open(path) as f:
 			for fasta_record, (record_header, record_lines) in zip(fasta, split_by_section(f, ['# IGBLASTN'])):
 				assert record_header == '# IGBLASTN 2.2.29+'
-				yield parse_igblast_record(record_lines, fasta_record)
+				yield parse_igblast_record(record_lines, fasta_record, barcode_length)
 
 
 def yesno(v):
@@ -406,7 +433,9 @@ class TableWriter:
 			"DJ_junction",
 			"J_start",
 			"name",
-			"sequence",
+			"barcode",
+			"race_G",
+			"genomic_sequence",
 		])
 		self.read_number = 1
 		self.rename = rename
@@ -463,6 +492,7 @@ class TableWriter:
 			name = "{}seq{}".format(self.rename, self.read_number)
 		else:
 			name = record.query_name
+
 		self.read_number += 1
 		self._writer.writerow([
 			record.size,
@@ -500,7 +530,9 @@ class TableWriter:
 			dj_junction,
 			j_start,
 			name,
-			record.full_sequence,
+			record.barcode,
+			record.race_g,
+			record.genomic_sequence,
 		])
 
 
@@ -510,7 +542,7 @@ def parse_command(args):
 	"""
 	n = 0
 	writer = TableWriter(sys.stdout, args.rename)
-	for record in parse_igblast(args.igblast, args.fasta):
+	for record in parse_igblast(args.igblast, args.fasta, args.barcode_length):
 		n += 1
 		try:
 			writer.write(record)
