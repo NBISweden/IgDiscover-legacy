@@ -45,7 +45,10 @@ MAXIMUM_EXPECTED_ERRORS = None
 # Whether to trim primers. Can be set to True or False.
 TRIM_PRIMERS = False
 
-# IgBLAST mismatch penalty (can be -1, -2, -3, -4 or None)
+# Mismatch penalty for IgBLAST. The default is -1, which can lead to
+# misassignements when the reference database contains incomplete sequences.
+# Setting it to -2, -3 or -4 reduces misassignments of long sequences, but
+# makes the alignment less sensitive.
 MISMATCH_PENALTY = None
 
 BARCODE_LENGTH = 0
