@@ -7,7 +7,7 @@ from matplotlib.backends.backend_pdf import FigureCanvasPdf, PdfPages
 from matplotlib.figure import Figure
 import seaborn as sns
 import numpy as np
-from sqt.align import multialign, consensus
+from sqt.align import multialign, consensus, edit_distance
 from .table import read_table
 
 logger = logging.getLogger(__name__)
@@ -99,7 +99,12 @@ def discover_command(args):
 		print('>{}_sister\n{}'.format(gene, s))
 		n_count = s.count('N')
 		exact_count = sum(group.V_nt == s)
-		logger.info('Consensus for %s has %s “N” bases and occurs %s times exactly in all input sequences.', gene, n_count, exact_count)
+		distances = [ edit_distance(v_nt, s) for v_nt in group.V_nt ]
+		less_than_one = sum(d <= len(s) * 0.01 for d in distances)
+		logger.info('Consensus for %s has %s “N” bases', gene, n_count)
+		logger.info('There are %s exact occurrences in all input sequences', exact_count)
+		logger.info('There are %s (%.1f%%) occurrences with at most 1%% differences',
+			  less_than_one, less_than_one / len(distances) * 100)
 		n += 1
 	if genes and n > 1:
 		logger.info('%s consensus sequences computed', n)
