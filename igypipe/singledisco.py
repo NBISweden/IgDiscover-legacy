@@ -30,7 +30,7 @@ def add_subcommand(subparsers):
 	return subparser
 
 
-def plot_shms(group, v_gene, bins=np.arange(20)):
+def plot_shms(group, v_gene, bins=np.arange(20.1)):
 	"""
 	Plot error frequency distribution for a specific V gene.
 
