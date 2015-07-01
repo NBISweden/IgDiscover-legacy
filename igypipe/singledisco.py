@@ -52,7 +52,7 @@ def plot_shms(group, v_gene, bins=np.arange(20.1)):
 	return fig
 
 
-def sister_sequence(group, min_shm, max_shm, program='muscle-medium'):
+def sister_sequence(group, program='muscle-medium'):
 	"""
 
 	"""
@@ -60,8 +60,7 @@ def sister_sequence(group, min_shm, max_shm, program='muscle-medium'):
 	# TODO Perhaps create the dict in such a way that those with the most
 	# abundant no. of errors are put in first.
 	for _, row in group.iterrows():
-		if min_shm <= row.V_SHM <= max_shm:
-			sequences[row.name] = row.V_nt
+		sequences[row.name] = row.V_nt
 	logger.info('Computing consensus from %s sequences', len(sequences))
 	aligned = multialign(sequences, program=program)
 	return consensus(aligned, threshold=0.6)
@@ -96,12 +95,14 @@ def discover_command(args):
 		if len(group) < MINGROUPSIZE_CONSENSUS:
 			logger.info('Skipping %s as the number of sequences is too small (%s)', gene, len(group))
 			continue
-		s = sister_sequence(group, min_shm=args.left, max_shm=args.right)
+		group_subset = group[(group.V_SHM >= args.left) & (group.V_SHM <= args.right)]
+		s = sister_sequence(group_subset)
 		print('>{}_sister\n{}'.format(gene, s))
 		n_count = s.count('N')
 		exact_count = sum(group.V_nt == s)
 		distances = [ edit_distance(v_nt, s) for v_nt in group.V_nt ]
 		less_than_one = sum(d <= len(s) * 0.01 for d in distances)
+		logger.info('In this subset of the data, %s different J genes are used', len(set(group_subset.J_gene)))
 		logger.info('Consensus for %s has %s “N” bases', gene, n_count)
 		logger.info('There are %s exact occurrences in all input sequences', exact_count)
 		logger.info('There are %s (%.1f%%) occurrences with at most 1%% differences',
