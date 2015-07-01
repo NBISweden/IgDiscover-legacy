@@ -44,7 +44,8 @@ def plot_shms(group, v_gene, bins=np.arange(20)):
 	ax.set_xlabel('%SHM')
 	ax.set_ylabel('Frequency')
 	ax.set_title('Gene ' + v_gene, fontsize=18)
-	ax.text(0.95, 0.95, 'zero differences: {} times'.format(z), transform=ax.transAxes, fontsize=15, ha='right', va='top')
+	ax.text(0.95, 0.95, '{} sequences with zero differences'.format(z), transform=ax.transAxes, fontsize=15, ha='right', va='top')
+	ax.text(0.95, 0.90, '{} different J genes used'.format(len(set(group.J_gene))), transform=ax.transAxes, fontsize=15, ha='right', va='top')
 
 	#ax.axvline(mean, color='darkred')
 	_ = ax.hist(shms, bins=bins)
