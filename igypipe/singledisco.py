@@ -20,6 +20,8 @@ def add_subcommand(subparsers):
 	subparser = subparsers.add_parser('singledisco', help=__doc__)
 	subparser.set_defaults(func=discover_command)
 	subparser.add_argument('--plot', help='Plot error frequency histograms to this file', default=None)
+	subparser.add_argument('--error-rate', metavar='PERCENT', type=float, default=1,
+		help='When finding approximate V gene matches, allow PERCENT errors (default: %(default)s)')
 	subparser.add_argument('--gene', '-g', action='append', default=[],
 		help='Compute consensus for this gene. Can be given multiple times. Use "all" to compute for all genes.')
 	subparser.add_argument('--left', '-l', type=float, metavar='%SHM',
@@ -67,6 +69,8 @@ def sister_sequence(group, program='muscle-medium'):
 
 
 def discover_command(args):
+	v_error_rate = args.error_rate / 100
+	assert 0 <= v_error_rate <= 1
 	table = read_table(args.table)
 	#table = table.loc[:,['V_gene', 'V%SHM', 'V_nt', 'name']]
 	#t = table.loc[:,('name', 'V_gene', 'V_nt', 'V%SHM')]
@@ -95,18 +99,26 @@ def discover_command(args):
 		if len(group) < MINGROUPSIZE_CONSENSUS:
 			logger.info('Skipping %s as the number of sequences is too small (%s)', gene, len(group))
 			continue
-		group_subset = group[(group.V_SHM >= args.left) & (group.V_SHM <= args.right)]
-		s = sister_sequence(group_subset)
+
+		# Create various subsets of the full group
+		group_in_shm_range = group[(group.V_SHM >= args.left) & (group.V_SHM <= args.right)]
+		s = sister_sequence(group_in_shm_range)
+		logger.info('Consensus for %s has %s “N” bases', gene, s.count('N'))
+		group_exact_V = group[group.V_nt == s]
+		group_approximate_V = group[list(edit_distance(v_nt, s) <= len(s) * v_error_rate for v_nt in group.V_nt)]
+
+		for description, g in (
+				('sequences in total', group),
+				('sequences are within the given %SHM range', group_in_shm_range),
+				('sequences match the consensus exactly', group_exact_V),
+				('sequences match the consens approximately', group_approximate_V)):
+			logger.info('%s %s (%.1f%%):', len(g), description, len(g) / len(group) * 100)
+			logger.info('   %s different J genes', len(set(g.J_gene)))
+			logger.info('   %s different CDR3 sequences', len(set(g.CDR3_nt)))
+
+		# Print this last so it doesn’t mess up output too bad in case stdout
+		# isn’t redirected anywhere.
 		print('>{}_sister\n{}'.format(gene, s))
-		n_count = s.count('N')
-		exact_count = sum(group.V_nt == s)
-		distances = [ edit_distance(v_nt, s) for v_nt in group.V_nt ]
-		less_than_one = sum(d <= len(s) * 0.01 for d in distances)
-		logger.info('In this subset of the data, %s different J genes are used', len(set(group_subset.J_gene)))
-		logger.info('Consensus for %s has %s “N” bases', gene, n_count)
-		logger.info('There are %s exact occurrences in all input sequences', exact_count)
-		logger.info('There are %s (%.1f%%) occurrences with at most 1%% differences',
-			  less_than_one, less_than_one / len(distances) * 100)
 		n += 1
 	if genes and n > 1:
 		logger.info('%s consensus sequences computed', n)
