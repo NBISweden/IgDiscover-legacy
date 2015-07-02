@@ -63,7 +63,6 @@ def sister_sequence(group, program='muscle-medium'):
 	# abundant no. of errors are put in first.
 	for _, row in group.iterrows():
 		sequences[row.name] = row.V_nt
-	logger.info('Computing consensus from %s sequences', len(sequences))
 	aligned = multialign(sequences, program=program)
 	return consensus(aligned, threshold=0.6)
 
@@ -93,28 +92,32 @@ def discover_command(args):
 
 	genes = set(args.gene)
 	n = 0
+	logger.info('Using a %%SHM window of %.1f%% to %.1f%%', args.left, args.right)
+	logger.info('Approximate comparisons between V gene sequence and consensus allow %.1f%% errors.', v_error_rate*100)
 	for gene, group in table.groupby('V_gene'):
 		if not ('all' in genes or gene in genes):
 			continue
 		if len(group) < MINGROUPSIZE_CONSENSUS:
 			logger.info('Skipping %s as the number of sequences is too small (%s)', gene, len(group))
 			continue
+		logger.info('Working on gene %s', gene)
 
 		# Create various subsets of the full group
 		group_in_shm_range = group[(group.V_SHM >= args.left) & (group.V_SHM <= args.right)]
 		s = sister_sequence(group_in_shm_range)
-		logger.info('Consensus for %s has %s “N” bases', gene, s.count('N'))
+
 		group_exact_V = group[group.V_nt == s]
 		group_approximate_V = group[list(edit_distance(v_nt, s) <= len(s) * v_error_rate for v_nt in group.V_nt)]
 
 		for description, g in (
-				('sequences in total', group),
-				('sequences are within the given %SHM range', group_in_shm_range),
+				('sequences in total were assigned to this gene', group),
+				('sequences are within the %SHM window (consensus was computed from these)', group_in_shm_range),
 				('sequences match the consensus exactly', group_exact_V),
-				('sequences match the consens approximately', group_approximate_V)):
+				('sequences match the consensus approximately', group_approximate_V)):
 			logger.info('%s %s (%.1f%%):', len(g), description, len(g) / len(group) * 100)
-			logger.info('   %s different J genes', len(set(g.J_gene)))
-			logger.info('   %s different CDR3 sequences', len(set(g.CDR3_nt)))
+			logger.info('   %s unique J genes used', len(set(g.J_gene)))
+			logger.info('   %s unique CDR3 sequences used', len(set(g.CDR3_nt)))
+		logger.info('Consensus computed from sequences within %%SHM window has %s “N” bases', s.count('N'))
 
 		# Print this last so it doesn’t mess up output too bad in case stdout
 		# isn’t redirected anywhere.
