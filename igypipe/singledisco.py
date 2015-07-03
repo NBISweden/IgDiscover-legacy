@@ -28,6 +28,8 @@ def add_subcommand(subparsers):
 		help='For consensus, include only sequences that have at least this %%SHM (default: %(default)s)', default=0)
 	subparser.add_argument('--right', '-r', type=float, metavar='%SHM',
 		help='For consensus, include only sequences that have at most this %%SHM (default: %(default)s)', default=100)
+	subparser.add_argument('-o', '--table-output', metavar='FILE.TAB',
+		help='Output table')
 	subparser.add_argument('table', help='Table with parsed IgBLAST results')  # nargs='+'
 	return subparser
 
@@ -106,8 +108,10 @@ def discover_command(args):
 		group_in_shm_range = group[(group.V_SHM >= args.left) & (group.V_SHM <= args.right)]
 		s = sister_sequence(group_in_shm_range)
 
+		#group = group[:]
+		group['consensus_diff'] = [ edit_distance(v_nt, s) for v_nt in group.V_nt ]
 		group_exact_V = group[group.V_nt == s]
-		group_approximate_V = group[list(edit_distance(v_nt, s) <= len(s) * v_error_rate for v_nt in group.V_nt)]
+		group_approximate_V = group[group.consensus_diff <= len(s) * v_error_rate]
 
 		for description, g in (
 				('sequences in total were assigned to this gene', group),
@@ -122,6 +126,10 @@ def discover_command(args):
 		# Print this last so it doesn’t mess up output too bad in case stdout
 		# isn’t redirected anywhere.
 		print('>{}_sister\n{}'.format(gene, s))
+
+		if args.table_output:
+			group_approximate_V.sort('consensus_diff').to_csv(args.table_output, sep='\t')
+
 		n += 1
 	if genes and n > 1:
 		logger.info('%s consensus sequences computed', n)
