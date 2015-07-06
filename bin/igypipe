@@ -6,5 +6,5 @@ try:
 except ImportError:
 	pass
 
-from igypipe import igypipe
-igypipe.main()
+from igypipe.__main__ import main
+main()
