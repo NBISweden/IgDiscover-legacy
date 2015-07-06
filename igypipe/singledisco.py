@@ -2,6 +2,7 @@
 Discover new V genes within a single antibody library.
 """
 import logging
+import os.path
 from collections import Counter, OrderedDict
 from matplotlib.backends.backend_pdf import FigureCanvasPdf, PdfPages
 from matplotlib.figure import Figure
@@ -28,8 +29,9 @@ def add_subcommand(subparsers):
 		help='For consensus, include only sequences that have at least this %%SHM (default: %(default)s)', default=0)
 	subparser.add_argument('--right', '-r', type=float, metavar='%SHM',
 		help='For consensus, include only sequences that have at most this %%SHM (default: %(default)s)', default=100)
-	subparser.add_argument('-o', '--table-output', metavar='FILE.TAB',
-		help='Output table')
+	subparser.add_argument('--table-output', '-o', metavar='DIRECTORY',
+		help='Output tables for all analyzed genes to DIRECTORY. '
+			'Files will be named <GENE>.tab.')
 	subparser.add_argument('table', help='Table with parsed IgBLAST results')  # nargs='+'
 	return subparser
 
@@ -128,8 +130,12 @@ def discover_command(args):
 		# isn’t redirected anywhere.
 		print('>{}_sister\n{}'.format(gene, s))
 
-		if args.table_output:
-			group_approximate_V.sort('consensus_diff').to_csv(args.table_output, sep='\t')
+		if args.table_output and len(group_approximate_V) > 0:
+			if not os.path.exists(args.table_output):
+				os.mkdir(args.table_output)
+			path = os.path.join(args.table_output, gene + '.tab')
+			group_approximate_V.sort('consensus_diff').to_csv(path, sep='\t')
+			logger.info('Wrote %s', path)
 
 		n += 1
 	if genes and n > 1:
