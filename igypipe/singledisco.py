@@ -66,7 +66,8 @@ def sister_sequence(group, program='muscle-medium'):
 	for _, row in group.iterrows():
 		sequences[row.name] = row.V_nt
 	aligned = multialign(sequences, program=program)
-	return consensus(aligned, threshold=0.6)
+	cons = consensus(aligned, threshold=0.6)
+	return cons.strip('N')
 
 
 def discover_command(args):
