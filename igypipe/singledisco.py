@@ -109,7 +109,7 @@ def discover_command(args):
 		group_in_shm_range = group[(group.V_SHM >= args.left) & (group.V_SHM <= args.right)]
 		s = sister_sequence(group_in_shm_range)
 
-		#group = group[:]
+		group = group.copy()
 		group['consensus_diff'] = [ edit_distance(v_nt, s) for v_nt in group.V_nt ]
 		group_exact_V = group[group.V_nt == s]
 		group_approximate_V = group[group.consensus_diff <= len(s) * v_error_rate]
