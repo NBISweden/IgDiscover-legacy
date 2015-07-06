@@ -18,6 +18,7 @@ setup(
 	#license = 'MIT',
 	packages = ['igypipe'],
 	scripts = ['bin/igypipe'],
+	package_data = {'igypipe': ['pipeline.conf', 'Snakefile']},
 	install_requires = [
 		'sqt>=0.4.5',
 		'pandas>=0.16.2',

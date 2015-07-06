@@ -13,7 +13,7 @@ __author__ = "Marcel Martin"
 import logging
 from sqt import HelpfulArgumentParser
 
-from . import igblast, parse, count, group, discover, singledisco, __version__
+from . import igblast, parse, count, group, discover, singledisco, init, __version__
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +24,7 @@ def main():
 	parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
 
 	subparsers = parser.add_subparsers()
+	init.add_subcommand(subparsers)
 	igblast.add_subcommand(subparsers)
 	parse.add_subcommand(subparsers)
 	count.add_subcommand(subparsers)
