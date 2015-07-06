@@ -7,27 +7,22 @@ import os
 import os.path
 import sys
 import shutil
+import subprocess
 import pkg_resources
 
 logger = logging.getLogger(__name__)
 
 
+PIPELINE_CONF = 'pipeline.conf'
+
+
 def add_subcommand(subparsers):
 	subparser = subparsers.add_parser('init', help=__doc__)
 	subparser.set_defaults(func=init_command)
-	#subparser.add_argument('--plot', help='Plot error frequency histograms to this file', default=None)
-	#subparser.add_argument('--error-rate', metavar='PERCENT', type=float, default=1,
-		#help='When finding approximate V gene matches, allow PERCENT errors (default: %(default)s)')
-	#subparser.add_argument('--gene', '-g', action='append', default=[],
-		#help='Compute consensus for this gene. Can be given multiple times. Use "all" to compute for all genes.')
-	#subparser.add_argument('--left', '-l', type=float, metavar='%SHM',
-		#help='For consensus, include only sequences that have at least this %%SHM (default: %(default)s)', default=0)
-	#subparser.add_argument('--right', '-r', type=float, metavar='%SHM',
-		#help='For consensus, include only sequences that have at most this %%SHM (default: %(default)s)', default=100)
 	subparser.add_argument('--database', '--db', metavar='PATH', default=None,
-		help='Path to directory with IgBLAST database files. If not given, a dialog is shown.')
+		help='Directory with IgBLAST database files. If not given, a dialog is shown.')
 	subparser.add_argument('directory', help='New pipeline directory to create')
-	subparser.add_argument('reads1', nargs='?', default=None,
+	subparser.add_argument('--reads1', default=None,
 		help='File with paired-end reads (first file only). If not given, a dialog is shown.')
 	return subparser
 
@@ -38,7 +33,7 @@ def tkinter_reads_path(directory=False):
 	from tkinter import filedialog
 	root = tk.Tk()
 	root.withdraw()
-	path = filedialog.askopenfilename(title="Open first reads file",
+	path = filedialog.askopenfilename(title="Choose first reads file",
 		filetypes=[
 			("Reads", "*.fasta *.fastq *.fastq.gz *.fasta.gz"),
 			("Any file", "*")])
@@ -52,9 +47,18 @@ def tkinter_database_path(initialdir):
 	from tkinter import filedialog
 	root = tk.Tk()
 	root.withdraw()
-	path = filedialog.askdirectory(title="Database directory to use", mustexist=True, initialdir=initialdir)
+	path = filedialog.askdirectory(title="Choose IgBLAST database directory", mustexist=True, initialdir=initialdir)
 	# messagebox.showinfo('Chosen file', repr(path))
 	return path
+
+
+def yesno(title, question):
+	import tkinter as tk
+	from tkinter import messagebox
+	from tkinter import filedialog
+	root = tk.Tk()
+	root.withdraw()
+	return messagebox.askyesno(title, question)
 
 
 """
@@ -99,9 +103,11 @@ def guess_paired_end_second_file(path):
 
 
 def init_command(args):
+	gui = False
 	if args.reads1 is not None:
 		reads1 = args.reads1
 	else:
+		gui = True
 		reads1 = tkinter_reads_path()
 	if reads1 == '':
 		logger.error('Cancelled')
@@ -114,6 +120,7 @@ def init_command(args):
 	if args.database is not None:
 		dbpath = args.database
 	else:
+		gui = True
 		databases_path = pkg_resources.resource_filename('igypipe', 'databases')
 		dbpath = tkinter_database_path(databases_path)
 		if dbpath == '':
@@ -121,14 +128,12 @@ def init_command(args):
 			sys.exit(2)
 
 	# Create the directory
-	logger.info('Creating directory %s', args.directory)
 	try:
 		os.mkdir(args.directory)
 	except OSError as e:
 		logger.error(e)
 		sys.exit(1)
 
-	logger.info('Creating symlinks')
 	def create_symlink(readspath, dirname, target):
 		gz = '.gz' if readspath.endswith('.gz') else ''
 		rel = os.path.relpath(readspath, dirname)
@@ -141,8 +146,8 @@ def init_command(args):
 	os.symlink(os.path.relpath(snakepath, args.directory), os.path.join(args.directory, 'Snakefile'))
 
 	# Write the pipeline configuration
-	configuration = pkg_resources.resource_string('igypipe', 'pipeline.conf')
-	with open(os.path.join(args.directory, 'pipeline.conf'), 'wb') as f:
+	configuration = pkg_resources.resource_string('igypipe', PIPELINE_CONF)
+	with open(os.path.join(args.directory, PIPELINE_CONF), 'wb') as f:
 		f.write(configuration)
 
 	# Copy database
@@ -155,4 +160,10 @@ def init_command(args):
 	if n == 0:
 		logger.error('No FASTA files in database directory. Have you selected the correct directory?')
 		sys.exit(2)
-	logger.info('Directory %s initialized. Run "cd %s && snakemake -j" to start the pipeline', args.directory, args.directory)
+	if gui:
+		# Only suggest to edit the config file if at least one GUI dialog has been shown
+		if yesno('Directory initialized', 'Do you want to edit the configuration file now?'):
+			subprocess.call(["xdg-open", os.path.join(args.directory, PIPELINE_CONF)])
+	else:
+		logger.info('Directory %s initialized.', args.directory)
+	logger.info('Edit %s/pipeline.conf, then run "cd %s && snakemake -j" to start the pipeline', args.directory, args.directory)
