@@ -6,6 +6,7 @@ import logging
 import os
 import os.path
 import sys
+import shutil
 import pkg_resources
 
 logger = logging.getLogger(__name__)
@@ -23,14 +24,15 @@ def add_subcommand(subparsers):
 		#help='For consensus, include only sequences that have at least this %%SHM (default: %(default)s)', default=0)
 	#subparser.add_argument('--right', '-r', type=float, metavar='%SHM',
 		#help='For consensus, include only sequences that have at most this %%SHM (default: %(default)s)', default=100)
-
+	subparser.add_argument('--database', '--db', metavar='PATH', default=None,
+		help='Path to directory with IgBLAST database files. If not given, a dialog is shown.')
 	subparser.add_argument('directory', help='New pipeline directory to create')
 	subparser.add_argument('reads1', nargs='?', default=None,
-		help='File with paired-end reads (first file only). If not given, a dialog is shown to select the file.')
+		help='File with paired-end reads (first file only). If not given, a dialog is shown.')
 	return subparser
 
 
-def tkinter_path():
+def tkinter_reads_path(directory=False):
 	import tkinter as tk
 	from tkinter import messagebox
 	from tkinter import filedialog
@@ -40,6 +42,17 @@ def tkinter_path():
 		filetypes=[
 			("Reads", "*.fasta *.fastq *.fastq.gz *.fasta.gz"),
 			("Any file", "*")])
+	# messagebox.showinfo('Chosen file', repr(path))
+	return path
+
+
+def tkinter_database_path(initialdir):
+	import tkinter as tk
+	from tkinter import messagebox
+	from tkinter import filedialog
+	root = tk.Tk()
+	root.withdraw()
+	path = filedialog.askdirectory(title="Database directory to use", mustexist=True, initialdir=initialdir)
 	# messagebox.showinfo('Chosen file', repr(path))
 	return path
 
@@ -86,11 +99,10 @@ def guess_paired_end_second_file(path):
 
 
 def init_command(args):
-
 	if args.reads1 is not None:
 		reads1 = args.reads1
 	else:
-		reads1 = tkinter_path()
+		reads1 = tkinter_reads_path()
 	if reads1 == '':
 		logger.error('Cancelled')
 		sys.exit(2)
@@ -98,6 +110,15 @@ def init_command(args):
 	if reads2 is None:
 		logger.error('Could not determine second file of paired-end reads')
 		sys.exit(1)
+
+	if args.database is not None:
+		dbpath = args.database
+	else:
+		databases_path = pkg_resources.resource_filename('igypipe', 'databases')
+		dbpath = tkinter_database_path(databases_path)
+		if dbpath == '':
+			logger.error('Cancelled')
+			sys.exit(2)
 
 	# Create the directory
 	logger.info('Creating directory %s', args.directory)
@@ -124,3 +145,14 @@ def init_command(args):
 	with open(os.path.join(args.directory, 'pipeline.conf'), 'wb') as f:
 		f.write(configuration)
 
+	# Copy database
+	os.mkdir(os.path.join(args.directory, 'database'))
+	n = 0
+	for f in os.listdir(dbpath):
+		if f.endswith('.fasta'):
+			shutil.copyfile(os.path.join(dbpath, f), os.path.join(args.directory, 'database', f))
+			n += 1
+	if n == 0:
+		logger.error('No FASTA files in database directory. Have you selected the correct directory?')
+		sys.exit(2)
+	logger.info('Directory %s initialized. Run "cd %s && snakemake -j" to start the pipeline', args.directory, args.directory)
