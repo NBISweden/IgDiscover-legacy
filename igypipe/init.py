@@ -79,7 +79,24 @@ def qt_path():
 """
 
 
-def guess_paired_end_second_file(path):
+def is_1_2(s, t):
+	"""
+	Determine whether s and t are identical except for a single character at
+	which one of them is '1' and the other is '2'.
+	"""
+	differences = 0
+	one_two = {'1', '2'}
+	for c1, c2 in zip(s, t):
+		if c1 != c2:
+			differences += 1
+			if differences == 2:
+				return False
+			if set([c1, c2]) != one_two:
+				return False
+	return differences == 1
+
+
+def guess_paired_path(path):
 	"""
 	Given the path to a file that contains the sequences for the first read in a
 	pair, return the file that contains the sequences for the second read in a
@@ -88,18 +105,15 @@ def guess_paired_end_second_file(path):
 
 	Return None if no second file was found or if there are too many candidates.
 
-	>>> find_paired_end_second('file.1.fastq.gz')
+	>>> guess_paired_path('file.1.fastq.gz')
 	file.2.fastq.gz  # if that file exists
-
-	TODO
-	Will currently not work if files have multiple positions at which one has a
-	'1' and the other a '2'.
 	"""
-	paths = set(glob.glob(path.replace('1', '?')))
-	paths.remove(path)
+	base, name = os.path.split(path)
+	glob_pattern = os.path.join(base, name.replace('1', '?'))
+	paths = [ p for p in glob.glob(glob_pattern) if is_1_2(p, path) and '_R1_' not in p ]
 	if len(paths) != 1:
 		return None
-	return paths.pop()
+	return paths[0]
 
 
 def init_command(args):
@@ -112,7 +126,7 @@ def init_command(args):
 	if reads1 == '':
 		logger.error('Cancelled')
 		sys.exit(2)
-	reads2 = guess_paired_end_second_file(reads1)
+	reads2 = guess_paired_path(reads1)
 	if reads2 is None:
 		logger.error('Could not determine second file of paired-end reads')
 		sys.exit(1)
