@@ -17,10 +17,8 @@ from . import igblast, parse, count, group, discover, singledisco, init, __versi
 
 logger = logging.getLogger(__name__)
 
-import os
-
 def main():
-	logging.basicConfig(level=logging.DEBUG, format='{} %(levelname)s: %(message)s'.format(os.getpid()))
+	logging.basicConfig(level=logging.DEBUG, format='%(levelname)s: %(message)s')
 	parser = HelpfulArgumentParser(description=__doc__, prog='igypipe')
 	parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
 

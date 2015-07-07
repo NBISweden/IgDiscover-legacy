@@ -5,6 +5,7 @@ import os.path
 import logging
 import sqlite3
 import pandas as pd
+from tempfile import TemporaryDirectory
 
 logger = logging.getLogger(__name__)
 
@@ -24,45 +25,29 @@ def read_table(path, filter=True, log=False):
 	- J gene coverage too low
 	- V gene E-value too high
 	"""
-	tab_timestamp = os.path.getmtime(path)
 	base, ext = os.path.splitext(path)
 	sdb = base + '.sdb'
-	# Long timeout since another process may just be creating the table
-	logger.info('Trying to connect...')
-	connection = sqlite3.connect(sdb, isolation_level='exclusive', timeout=120)
-	connection.set_trace_callback(logger.info)
-	logger.info('Connected successfully')
-	connection.execute('BEGIN EXCLUSIVE TRANSACTION')
-	logger.info('started exclusive transaction')
 
-	try:
-		rows = list(connection.execute('SELECT stamp FROM timestamps'))
-		logger.info('successfully read from timestamps')
-		out_of_date = len(rows) < 1 or rows[0][0] < tab_timestamp
-		logger.info('timestamp in tab: %s. of file: %s. outofdate: %s', rows[0][0], tab_timestamp, out_of_date)
-	except sqlite3.OperationalError:
-		# Table missing
-		logger.info('table missing')
-		out_of_date = True
-	if out_of_date:
+	if not os.path.exists(sdb) or os.path.getmtime(path) > os.path.getmtime(sdb):
 		logger.info('(Re-)Creating table cache %s', sdb)
-		import time; time.sleep(10)
-		logger.info('sleeping done')
-		connection.execute('CREATE TABLE IF NOT EXISTS timestamps (stamp FLOAT)')
-		connection.execute('DELETE FROM timestamps')
-		connection.execute('INSERT INTO timestamps VALUES (?)', (tab_timestamp,))
-		logger.info('pd.read_csv')
-		df = pd.read_csv(path, sep='\t')
-		logger.info('df.to_sql')
-		df.to_sql('data', connection, if_exists='replace')
-		logger.info('connection.commit')
-		connection.execute('COMMIT')#commit()
-		del df
-	else:
-		logger.info('table cache up to date')
+		# Two or more processes may try to re-create the table at the same time.
+		# We therefore write the table into a temporary file first and then move
+		# it atomically. This could also be solved by using SQLite3’s locking
+		# mechanisms, which would also avoid the problem of processes doing the
+		# same work twice, but unfortunately pandas’ to_sql function issues
+		# COMMITs where it should not.
+		with TemporaryDirectory(dir=os.path.dirname(sdb)) as tempdir:
+			temp_db = os.path.join(tempdir, 'db')
+			connection = sqlite3.connect(temp_db)
+			df = pd.read_csv(path, sep='\t')
+			df.to_sql('data', connection)
+			connection.commit()
+			connection.close()
+			os.rename(temp_db, sdb)
+
+	connection = sqlite3.connect(sdb)
 	d = pd.read_sql('SELECT * FROM data', connection)
 	connection.close()
-
 	assert len(d) > 0
 
 	if log: logger.info('%s rows in input table', len(d))
