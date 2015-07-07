@@ -178,6 +178,5 @@ def init_command(args):
 		# Only suggest to edit the config file if at least one GUI dialog has been shown
 		if yesno('Directory initialized', 'Do you want to edit the configuration file now?'):
 			subprocess.call(["xdg-open", os.path.join(args.directory, PIPELINE_CONF)])
-	else:
-		logger.info('Directory %s initialized.', args.directory)
+	logger.info('Directory %s initialized.', args.directory)
 	logger.info('Edit %s/pipeline.conf, then run "cd %s && snakemake -j" to start the pipeline', args.directory, args.directory)
