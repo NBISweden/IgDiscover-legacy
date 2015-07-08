@@ -84,7 +84,7 @@ rule all:
 		"stats/counts.txt",
 		"stats/unique.correlationVJ.pdf",
 		"stats/consensus.correlationVJ.pdf",
-		'stats/unique.shmhistograms.pdf',
+		'stats/unique.errorhistograms.pdf',
 		"unique.table.tab",
 		"consensus.table.tab",
 		"unique.v_usage.tab",
@@ -204,9 +204,9 @@ rule stats_correlation_V_J:
 		FigureCanvasPdf(fig).print_figure(output.pdf)
 
 
-rule stats_plot_shmhistograms:
+rule stats_plot_errorhistograms:
 	output:
-		pdf='stats/{base}.shmhistograms.pdf',
+		pdf='stats/{base}.errorhistograms.pdf',
 	input:
 		table='{base}.table.tab'
 	shell:
