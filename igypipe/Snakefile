@@ -210,7 +210,7 @@ rule stats_plot_shmhistograms:
 	input:
 		table='{base}.table.tab'
 	shell:
-		'igypipe singledisco --plot {output.pdf} {input.table}'
+		'igypipe errorplot {input.table} {output.pdf}'
 
 
 # Adjust the primer sequences so they are correctly reverse-complemented.

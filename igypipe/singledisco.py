@@ -4,23 +4,18 @@ Discover new V genes within a single antibody library.
 import logging
 import os.path
 from collections import Counter, OrderedDict
-from matplotlib.backends.backend_pdf import FigureCanvasPdf, PdfPages
-from matplotlib.figure import Figure
-import seaborn as sns
 import numpy as np
 from sqt.align import multialign, consensus, edit_distance
 from .table import read_table
 
 logger = logging.getLogger(__name__)
 
-MINGROUPSIZE_PLOT = 200
 MINGROUPSIZE_CONSENSUS = 10
 
 
 def add_subcommand(subparsers):
 	subparser = subparsers.add_parser('singledisco', help=__doc__)
 	subparser.set_defaults(func=discover_command)
-	subparser.add_argument('--plot', help='Plot error frequency histograms to this file', default=None)
 	subparser.add_argument('--error-rate', metavar='PERCENT', type=float, default=1,
 		help='When finding approximate V gene matches, allow PERCENT errors (default: %(default)s)')
 	subparser.add_argument('--gene', '-g', action='append', default=[],
@@ -34,28 +29,6 @@ def add_subcommand(subparsers):
 			'Files will be named <GENE>.tab.')
 	subparser.add_argument('table', help='Table with parsed IgBLAST results')  # nargs='+'
 	return subparser
-
-
-def plot_shms(group, v_gene, bins=np.arange(20.1)):
-	"""
-	Plot error frequency distribution for a specific V gene.
-
-	v_gene -- name of the gene
-	"""
-	shms = list(group.V_SHM)
-	#mean = np.mean(shms)
-	z = shms.count(0)
-	fig = Figure(figsize=(297/25.4, 210/25.4))
-	ax = fig.gca()
-	ax.set_xlabel('%SHM')
-	ax.set_ylabel('Frequency')
-	ax.set_title('Gene ' + v_gene, fontsize=18)
-	ax.text(0.95, 0.95, '{} sequences with zero differences'.format(z), transform=ax.transAxes, fontsize=15, ha='right', va='top')
-	ax.text(0.95, 0.90, '{} different J genes used'.format(len(set(group.J_gene))), transform=ax.transAxes, fontsize=15, ha='right', va='top')
-
-	#ax.axvline(mean, color='darkred')
-	_ = ax.hist(shms, bins=bins)
-	return fig
 
 
 def sister_sequence(group, program='muscle-medium'):
@@ -83,17 +56,6 @@ def discover_command(args):
 	logger.info('%s rows read (filtered)', len(table))
 	table = table[table.J_SHM == 0][:]
 	logger.info('%s rows remain after discarding J%%SHM > 0', len(table))
-
-	if args.plot:
-		n = 0
-		with PdfPages(args.plot) as pages:
-			for gene, group in table.groupby('V_gene'):
-				if len(group) < MINGROUPSIZE_PLOT:
-					continue
-				fig = plot_shms(group, gene)
-				n += 1
-				FigureCanvasPdf(fig).print_figure(pages)
-		logger.info('%s plots created (rest had too few sequences)', n)
 
 	genes = set(args.gene)
 	n = 0
