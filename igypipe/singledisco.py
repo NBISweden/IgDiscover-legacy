@@ -86,7 +86,7 @@ def discover_command(args):
 				('sequences match the consensus approximately', group_approximate_V)):
 			logger.info('%s %s (%.1f%%):', len(g), description, len(g) / len(group) * 100)
 			logger.info('   %s unique J genes used', len(set(g.J_gene)))
-			logger.info('   %s unique CDR3 sequences used', len(set(g.CDR3_nt)))
+			logger.info('   %s unique CDR3 sequences used', len(set(s for s in g.CDR3_nt if s)))
 		logger.info('Consensus computed from sequences within error rate window has %s “N” bases', sister.count('N'))
 
 		# Print this last so it doesn’t mess up output too bad in case stdout
