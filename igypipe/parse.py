@@ -78,8 +78,7 @@ class IgblastRecord(IgblastRecordNT):
 	def __init__(self, *args, **kwargs):
 		self.barcode, self.race_g, self.genomic_sequence = self._split_barcode()
 		self.utr, self.leader = self._utr_leader()
-		if 'CDR3' in self.alignments:
-			self.alignments['CDR3'] = self._fixed_cdr3_alignment()
+		self.alignments['CDR3'] = self._fixed_cdr3_alignment()
 
 	@property
 	def vdj_sequence(self):
