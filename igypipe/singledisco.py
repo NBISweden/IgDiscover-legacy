@@ -1,5 +1,7 @@
 """
-Discover new V genes within a single antibody library.
+Discover new V genes within a single antibody library. Existing V sequences are
+grouped by their V gene assignment and within each group, consensus sequences
+are computed.
 """
 import logging
 import os.path
@@ -19,11 +21,11 @@ def add_subcommand(subparsers):
 	subparser.add_argument('--error-rate', metavar='PERCENT', type=float, default=1,
 		help='When finding approximate V gene matches, allow PERCENT errors (default: %(default)s)')
 	subparser.add_argument('--gene', '-g', action='append', default=[],
-		help='Compute consensus for this gene. Can be given multiple times. Use "all" to compute for all genes.')
+		help='Compute consensus for this gene. Can be given multiple times. Default: Compute for all genes.')
 	subparser.add_argument('--left', '-l', type=float, metavar='ERROR-RATE',
-		help='For consensus, include only sequences that have at least this error rate (in percent) (default: %(default)s)', default=0)
+		help='For consensus, include only sequences that have at least this error rate (in percent). Default: %(default)s', default=0)
 	subparser.add_argument('--right', '-r', type=float, metavar='ERROR-RATE',
-		help='For consensus, include only sequences that have at most this error rate (in percent) (default: %(default)s)', default=100)
+		help='For consensus, include only sequences that have at most this error rate (in percent). Default: %(default)s', default=100)
 	subparser.add_argument('--table-output', '-o', metavar='DIRECTORY',
 		help='Output tables for all analyzed genes to DIRECTORY. '
 			'Files will be named <GENE>.tab.')
@@ -63,7 +65,7 @@ def discover_command(args):
 	logger.info('Approximate comparisons between V gene sequence and consensus allow %.1f%% errors.', v_error_rate*100)
 
 	for gene, group in table.groupby('V_gene'):
-		if not ('all' in genes or gene in genes):
+		if not ('all' in genes or len(genes) == 0 or gene in genes):
 			continue
 		if len(group) < MINGROUPSIZE_CONSENSUS:
 			logger.info('Skipping %s as the number of sequences is too small (%s)', gene, len(group))
