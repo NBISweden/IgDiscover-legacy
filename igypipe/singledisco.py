@@ -20,10 +20,10 @@ def add_subcommand(subparsers):
 		help='When finding approximate V gene matches, allow PERCENT errors (default: %(default)s)')
 	subparser.add_argument('--gene', '-g', action='append', default=[],
 		help='Compute consensus for this gene. Can be given multiple times. Use "all" to compute for all genes.')
-	subparser.add_argument('--left', '-l', type=float, metavar='%SHM',
-		help='For consensus, include only sequences that have at least this %%SHM (default: %(default)s)', default=0)
-	subparser.add_argument('--right', '-r', type=float, metavar='%SHM',
-		help='For consensus, include only sequences that have at most this %%SHM (default: %(default)s)', default=100)
+	subparser.add_argument('--left', '-l', type=float, metavar='ERROR-RATE',
+		help='For consensus, include only sequences that have at least this error rate (in percent) (default: %(default)s)', default=0)
+	subparser.add_argument('--right', '-r', type=float, metavar='ERROR-RATE',
+		help='For consensus, include only sequences that have at most this error rate (in percent) (default: %(default)s)', default=100)
 	subparser.add_argument('--table-output', '-o', metavar='DIRECTORY',
 		help='Output tables for all analyzed genes to DIRECTORY. '
 			'Files will be named <GENE>.tab.')
@@ -59,7 +59,7 @@ def discover_command(args):
 
 	genes = set(args.gene)
 	n = 0
-	logger.info('Using a %%SHM window of %.1f%% to %.1f%%', args.left, args.right)
+	logger.info('Using an error rate window of %.1f%% to %.1f%%', args.left, args.right)
 	logger.info('Approximate comparisons between V gene sequence and consensus allow %.1f%% errors.', v_error_rate*100)
 	for gene, group in table.groupby('V_gene'):
 		if not ('all' in genes or gene in genes):
@@ -80,13 +80,13 @@ def discover_command(args):
 
 		for description, g in (
 				('sequences in total were assigned to this gene', group),
-				('sequences are within the %SHM window (consensus was computed from these)', group_in_shm_range),
+				('sequences are within the error rate window (consensus was computed from these)', group_in_shm_range),
 				('sequences match the consensus exactly', group_exact_V),
 				('sequences match the consensus approximately', group_approximate_V)):
 			logger.info('%s %s (%.1f%%):', len(g), description, len(g) / len(group) * 100)
 			logger.info('   %s unique J genes used', len(set(g.J_gene)))
 			logger.info('   %s unique CDR3 sequences used', len(set(g.CDR3_nt)))
-		logger.info('Consensus computed from sequences within %%SHM window has %s “N” bases', s.count('N'))
+		logger.info('Consensus computed from sequences within error rate window has %s “N” bases', s.count('N'))
 
 		# Print this last so it doesn’t mess up output too bad in case stdout
 		# isn’t redirected anywhere.
