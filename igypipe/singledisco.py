@@ -61,6 +61,7 @@ def discover_command(args):
 	n = 0
 	logger.info('Using an error rate window of %.1f%% to %.1f%%', args.left, args.right)
 	logger.info('Approximate comparisons between V gene sequence and consensus allow %.1f%% errors.', v_error_rate*100)
+
 	for gene, group in table.groupby('V_gene'):
 		if not ('all' in genes or gene in genes):
 			continue
@@ -71,12 +72,12 @@ def discover_command(args):
 
 		# Create various subsets of the full group
 		group_in_shm_range = group[(group.V_SHM >= args.left) & (group.V_SHM <= args.right)]
-		s = sister_sequence(group_in_shm_range)
+		sister = sister_sequence(group_in_shm_range)
 
 		group = group.copy()
-		group['consensus_diff'] = [ edit_distance(v_nt, s) for v_nt in group.V_nt ]
-		group_exact_V = group[group.V_nt == s]
-		group_approximate_V = group[group.consensus_diff <= len(s) * v_error_rate]
+		group['consensus_diff'] = [ edit_distance(v_nt, sister) for v_nt in group.V_nt ]
+		group_exact_V = group[group.V_nt == sister]
+		group_approximate_V = group[group.consensus_diff <= len(sister) * v_error_rate]
 
 		for description, g in (
 				('sequences in total were assigned to this gene', group),
@@ -86,11 +87,11 @@ def discover_command(args):
 			logger.info('%s %s (%.1f%%):', len(g), description, len(g) / len(group) * 100)
 			logger.info('   %s unique J genes used', len(set(g.J_gene)))
 			logger.info('   %s unique CDR3 sequences used', len(set(g.CDR3_nt)))
-		logger.info('Consensus computed from sequences within error rate window has %s “N” bases', s.count('N'))
+		logger.info('Consensus computed from sequences within error rate window has %s “N” bases', sister.count('N'))
 
 		# Print this last so it doesn’t mess up output too bad in case stdout
 		# isn’t redirected anywhere.
-		print('>{}_sister\n{}'.format(gene, s))
+		print('>{}_sister\n{}'.format(gene, sister))
 
 		if args.table_output and len(group_approximate_V) > 0:
 			if not os.path.exists(args.table_output):
