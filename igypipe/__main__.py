@@ -13,7 +13,7 @@ __author__ = "Marcel Martin"
 import logging
 from sqt import HelpfulArgumentParser
 
-from . import (igblast, parse, count, group, discover, singledisco, init,
+from . import (commonv, igblast, parse, count, group, discover, singledisco, init,
 	errorplot, __version__)
 
 logger = logging.getLogger(__name__)
@@ -30,6 +30,7 @@ def main():
 	count.add_subcommand(subparsers)
 	group.add_subcommand(subparsers)
 	discover.add_subcommand(subparsers)
+	commonv.add_subcommand(subparsers)
 	errorplot.add_subcommand(subparsers)
 	singledisco.add_subcommand(subparsers)
 

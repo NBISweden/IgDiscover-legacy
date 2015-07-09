@@ -139,6 +139,7 @@ def discover_command(args):
 		if consensus_output:
 			print('>{}_sister\n{}'.format(gene, sister), file=consensus_output)
 
+		# If requested, write the 'approx' subset to a separate file
 		if args.table_output and len(group_approximate_V) > 0:
 			if not os.path.exists(args.table_output):
 				os.mkdir(args.table_output)
@@ -146,6 +147,7 @@ def discover_command(args):
 			group_approximate_V.sort('consensus_diff').to_csv(path, sep='\t')
 			logger.info('Wrote %s', path)
 
+		# Build the row for the output table
 		row = [gene]
 		for key in ('total', 'window', 'exact', 'approx'):
 			row.extend([info[key].count, info[key].unique_J, info[key].unique_CDR3])

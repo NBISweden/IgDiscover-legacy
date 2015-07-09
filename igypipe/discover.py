@@ -1,10 +1,11 @@
 """
-Find common V genes between two different antibody libraries.
+Find V gene sister sequences shared by multiple libraries.
 """
 import logging
 from collections import Counter
+import pandas as pd
 
-from .table import read_table
+#from .table import read_table
 
 logger = logging.getLogger(__name__)
 
@@ -15,44 +16,48 @@ def add_subcommand(subparsers):
 	subparser.add_argument('--minimum-frequency', '-n', type=int, metavar='N',
 		default=None,
 		help='Minimum number of datasets in which sequence must occur (default is no. of files divided by two)')
-	subparser.add_argument('table', help='Table with parsed IgBLAST results (give at least two)', nargs='+')
+	subparser.add_argument('--minimum-db-diff', '-b', type=int, metavar='DIST', default=1,
+		help='Use only sequences that have at least DIST differences to the database sequence. Default: %(default)s')
+	subparser.add_argument('tables', metavar='DISCOVER.TAB',
+		help='Table created by the "singledisco" command (give at least two)', nargs='+')
 	return subparser
 
 
 def discover_command(args):
 	if args.minimum_frequency is None:
-		# args.table is a list of file names
-		minimum_frequency = max((len(args.table) + 1) // 2, 2)
+		minimum_frequency = max((len(args.tables) + 1) // 2, 2)
 	else:
 		minimum_frequency = args.minimum_frequency
 	logger.info('Minimum frequency set to %s', minimum_frequency)
 
 	# Read in tables
 	tables = []
-	for path in args.table:
-		table = read_table(path)
-		table = table.loc[:,['V_gene', 'V_SHM', 'V_nt', 'name']]
+	for path in args.tables:
+		table = pd.read_csv(path, sep='\t')
+		table = table[table.database_diff >= args.minimum_db_diff]
+		table = table.dropna()
 		tables.append(table)
 
 	# Count V sequence occurrences
 	counter = Counter()
 	for table in tables:
-		counter.update(set(table.V_nt))
+		counter.update(set(table.consensus))
 
 	# Find most frequent occurrences and print result
-	print('Frequency', 'Gene', '%SHM', 'Sequence', sep='\t')
+	print('Frequency', 'Gene', 'Sequence', sep='\t')
 	for sequence, frequency in counter.most_common():
 		if frequency < minimum_frequency:
 			break
-		names = []
+		#names = []
 		gene = None
 		for table in tables:
-			matching_rows = table[table.V_nt == sequence]
+			matching_rows = table[table.consensus == sequence]
 			if matching_rows.empty:
 				continue
-			names.extend(matching_rows.name)
+			#names.extend(matching_rows.name)
 			if gene is None:
 				row = matching_rows.iloc[0]
-				gene = row['V_gene']
-				shm = row['V_SHM']
-		print(frequency, gene, shm, sequence, *names, sep='\t')
+				gene = row.gene
+				#shm = row['V_SHM']
+		#print(frequency, gene, shm, sequence, *names, sep='\t')
+		print(frequency, gene, sequence, sep='\t')
