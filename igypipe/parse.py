@@ -124,7 +124,7 @@ class IgblastRecord(IgblastRecordNT):
 
 	def _fixed_cdr3_alignment(self):
 		"""
-		Return a repaired AlignmentSummary object for the CDR3 region, which
+		Return a repaired AlignmentSummary object for the CDR3 region which
 		does not use IgBLAST’s coordinates. IgBLAST does not determine the end
 		of the CDR3 correctly.
 		"""
@@ -153,8 +153,10 @@ class IgblastRecord(IgblastRecordNT):
 		end = match.end() - 6
 		assert start < end
 		# Make sure that the match starts within V and ends within J.
-		if not (start <= len(hit_v.query_sequence) and end >= hit_j.query_start - hit_v.query_start):
-			return None
+		# This check is disabled for now
+		if False:
+			if not (start <= len(hit_v.query_sequence) and end >= hit_j.query_start - hit_v.query_start):
+				return None
 		# Make coordinates relative to query
 		return (start + hit_v.query_start, end + hit_v.query_start)
 
