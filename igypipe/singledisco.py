@@ -46,7 +46,7 @@ def add_subcommand(subparsers):
 	return subparser
 
 
-def sister_sequence(group, program='muscle-medium', threshold=0.4):
+def sister_sequence(group, program='muscle-medium', threshold=0.6):
 	"""
 
 	"""
