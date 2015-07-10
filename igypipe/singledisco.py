@@ -118,7 +118,9 @@ def discover_command(args):
 		sister = sister_sequence(group_in_shm_range)
 
 		group = group.copy()
-		group['consensus_diff'] = [ edit_distance(v_nt, sister) for v_nt in group.V_nt ]
+		dists = [ edit_distance(v_nt, sister) for v_nt in group.V_nt ]
+		assert len(dists) == len(group)
+		group['consensus_diff'] = dists
 		group_exact_V = group[group.V_nt == sister]
 		group_approximate_V = group[group.consensus_diff <= len(sister) * v_error_rate]
 
@@ -135,6 +137,7 @@ def discover_command(args):
 		if gene in database:
 			database_diff = edit_distance(sister, database[gene])
 		else:
+			logger.warn('Gene %s not found in database', gene)
 			database_diff = None
 		if consensus_output:
 			print('>{}_sister\n{}'.format(gene, sister), file=consensus_output)
