@@ -27,6 +27,11 @@ def add_subcommand(subparsers):
 	subparser.set_defaults(func=discover_command)
 	subparser.add_argument('--error-rate', metavar='PERCENT', type=float, default=1,
 		help='When finding approximate V gene matches, allow PERCENT errors. Default: %(default)s.')
+	subparser.add_argument('--consensus-threshold', '-t', metavar='PERCENT', type=float, default=60,
+		help='Threshold for consensus computation. Default: %(default)s%%.')
+	subparser.add_argument('--prefix', default='', metavar='PREFIX',
+		help='Add PREFIX before sequence names')
+	subparser.add_argument('--barcode-length', type=int, default=None)
 	subparser.add_argument('--gene', '-g', action='append', default=[],
 		help='Compute consensus for this gene. Can be given multiple times. Default: Compute for all genes.')
 	subparser.add_argument('--left', '-l', type=float, metavar='ERROR-RATE',
@@ -139,7 +144,7 @@ def discover_command(args):
 			group_in_window = group[(left <= group.V_SHM) & (group.V_SHM < right)]
 			if len(group_in_window) < MINGROUPSIZE_CONSENSUS:
 				continue
-			sister = sister_sequence(group_in_window)
+			sister = sister_sequence(group_in_window, threshold=args.consensus_threshold/100)
 			if sister in sisters:
 				sisters[sister].append((left, right, group_in_window))
 			else:
@@ -177,7 +182,7 @@ def discover_command(args):
 				database_diff = None
 			n_bases = sister.count('N')
 			window_str = ';'.join('{}-{}'.format(l, r) for l, r in sister_windows)
-			sequence_id = '{}_sister_window{}_id{}'.format(gene, window_str, sequence_hash(sister))
+			sequence_id = '{}{}_sister_window{}_id{}'.format(args.prefix, gene, window_str, sequence_hash(sister))
 
 			# Build the row for the output table
 			row = [gene, window_str]
