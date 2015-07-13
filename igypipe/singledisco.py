@@ -66,8 +66,8 @@ def sister_sequence(group, program='muscle-medium', threshold=0.6):
 
 
 def sequence_hash(s):
-	"""Return a three-digit hash of a string (000 to 999)"""
-	return '{:03}'.format(abs(hash(s)) % 1000)
+	"""Return a four-digit hash of a string (000 to 999)"""
+	return 'S{:03}'.format(abs(hash(s)) % 1000)
 
 
 def discover_command(args):
@@ -182,7 +182,7 @@ def discover_command(args):
 				database_diff = None
 			n_bases = sister.count('N')
 			window_str = ';'.join('{}-{}'.format(l, r) for l, r in sister_windows)
-			sequence_id = '{}{}_sister_window{}_id{}'.format(args.prefix, gene, window_str, sequence_hash(sister))
+			sequence_id = '{}{}_{}'.format(args.prefix, gene, sequence_hash(sister))
 
 			# Build the row for the output table
 			row = [gene, window_str]
@@ -192,7 +192,7 @@ def discover_command(args):
 
 			writer.writerow(row)
 			if consensus_output:
-				print('>{}\n{}'.format(sequence_id, sister), file=consensus_output)
+				print('>{} window:{}\n{}'.format(sequence_id, window_str, sister), file=consensus_output)
 			n_consensus += 1
 
 			# If a window was requested via --left/--right, write the 'approx'
@@ -203,7 +203,7 @@ def discover_command(args):
 					os.mkdir(args.table_output)
 				path = os.path.join(args.table_output, gene + '.tab')
 				group_approximate_V.sort('consensus_diff').to_csv(path, sep='\t')
-				logger.info('Wrote %s for window %s-%s', path, left, right)
+				logger.info('Wrote %s for window %s-%s', path, args.left, args.right)
 
 
 		sys.stdout.flush()
