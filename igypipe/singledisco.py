@@ -9,6 +9,7 @@ import sys
 import os.path
 from collections import Counter, OrderedDict, namedtuple
 import numpy as np
+import pandas as pd
 from sqt import SequenceReader
 from sqt.align import multialign, consensus, edit_distance
 from .table import read_table
@@ -19,7 +20,6 @@ MINGROUPSIZE_CONSENSUS = 10
 
 
 Groupinfo = namedtuple('Groupinfo', 'count unique_J unique_CDR3')
-Sisterinfo = namedtuple('Sisterinfo', 'windows info n_bases database_diff')
 
 
 def add_subcommand(subparsers):
@@ -58,6 +58,11 @@ def sister_sequence(group, program='muscle-medium', threshold=0.6):
 	aligned = multialign(sequences, program=program)
 	cons = consensus(aligned, threshold=threshold)
 	return cons.strip('N')
+
+
+def sequence_hash(s):
+	"""Return a three-digit hash of a string (000 to 999)"""
+	return '{:03}'.format(abs(hash(s)) % 1000)
 
 
 def discover_command(args):
@@ -102,6 +107,7 @@ def discover_command(args):
 		'approx_unique_CDR3',
 		'N_bases',
 		'database_diff',
+		'name',
 		'consensus'
 	])
 	genes = set(args.gene)
@@ -130,15 +136,16 @@ def discover_command(args):
 				left = int(left)
 			if right == int(right):
 				right = int(right)
-			# Create various subsets of the full group
 			group_in_window = group[(left <= group.V_SHM) & (group.V_SHM < right)]
 			if len(group_in_window) < MINGROUPSIZE_CONSENSUS:
 				continue
 			sister = sister_sequence(group_in_window)
 			if sister in sisters:
-				sisters[sister].windows.append((left, right))
-				continue
+				sisters[sister].append((left, right, group_in_window))
+			else:
+				sisters[sister] = [(left, right, group_in_window)]
 
+		for sister, sister_info in sisters.items():
 			dists = [ edit_distance(v_nt, sister) for v_nt in group.V_nt ]
 			assert len(dists) == len(group)
 
@@ -146,46 +153,56 @@ def discover_command(args):
 			group_exact_V = group[group.V_nt == sister]
 			group_approximate_V = group[group.consensus_diff <= len(sister) * v_error_rate]
 
+
+			# Instead of concatenating, the groups should be unioned, but not
+			# sure how to do this in pandas.
+			sister_windows = [(w[0], w[1]) for w in sister_info]
+			group_in_window = pd.concat(w[2] for w in sister_info)
+
 			info = dict()
 			for key, g in (
-					('total', group),
+					('total', group),  # TODO re-done for every sister
 					('window', group_in_window),
 					('exact', group_exact_V),
 					('approx', group_approximate_V)):
 				unique_J = len(set(g.J_gene))
 				unique_CDR3 = len(set(s for s in g.CDR3_nt if s))
-				info[key] = Groupinfo(count=len(g), unique_J=unique_J, unique_CDR3=unique_CDR3)
-
+				# Correct for concatenated dataframes by taking the set of indices.
+				count = len(set(g.index))
+				info[key] = Groupinfo(count=count, unique_J=unique_J, unique_CDR3=unique_CDR3)
 			if gene in database:
 				database_diff = edit_distance(sister, database[gene])
 			else:
 				logger.warn('Gene %r not found in database', gene)
 				database_diff = None
+			n_bases = sister.count('N')
+			window_str = ';'.join('{}-{}'.format(l, r) for l, r in sister_windows)
+			sequence_id = '{}_sister_window{}_id{}'.format(gene, window_str, sequence_hash(sister))
 
-			sisters[sister] = Sisterinfo(windows=[(left, right)], info=info, n_bases=sister.count('N'), database_diff=database_diff)
+			# Build the row for the output table
+			row = [gene, window_str]
+			for key in ('total', 'window', 'exact', 'approx'):
+				row.extend([info[key].count, info[key].unique_J, info[key].unique_CDR3])
+			row.extend([n_bases, database_diff, sequence_id, sister])
 
-			# If requested, write the 'approx' subset to a separate file, but only
-			# for the window requested via --left/--right
-			if args.table_output and args.left == left and args.right == right and len(group_approximate_V) > 0:
+			writer.writerow(row)
+			if consensus_output:
+				print('>{}\n{}'.format(sequence_id, sister), file=consensus_output)
+			n_consensus += 1
+
+			# If a window was requested via --left/--right, write the 'approx'
+			# subset to a separate file.
+
+			if args.table_output and (args.left, args.right) in sister_windows and len(group_approximate_V) > 0:
 				if not os.path.exists(args.table_output):
 					os.mkdir(args.table_output)
 				path = os.path.join(args.table_output, gene + '.tab')
 				group_approximate_V.sort('consensus_diff').to_csv(path, sep='\t')
 				logger.info('Wrote %s for window %s-%s', path, left, right)
-		for sister, sisterinfo in sisters.items():
-			# Build the row for the output table
-			row = [gene]
-			row.append(';'.join('{}-{}'.format(l, r) for l, r in sisterinfo.windows))
-			info = sisterinfo.info
-			for key in ('total', 'window', 'exact', 'approx'):
-				row.extend([info[key].count, info[key].unique_J, info[key].unique_CDR3])
-			row.extend([sisterinfo.n_bases, sisterinfo.database_diff, sister])
-			writer.writerow(row)
-			if consensus_output:
-				print('>{}_sister_window{}\n{}'.format(gene, row[1], sister), file=consensus_output)
-			n_consensus += 1
+
+
 		sys.stdout.flush()
 		n_genes += 1
 	if consensus_output:
 		consensus_output.close()
-	logger.info('%s consensus sequences for %s genes computed', n_consensus, n_genes)
+	logger.info('%s consensus sequences for %s gene(s) computed', n_consensus, n_genes)
