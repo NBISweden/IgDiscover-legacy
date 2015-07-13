@@ -31,7 +31,6 @@ def add_subcommand(subparsers):
 		help='Threshold for consensus computation. Default: %(default)s%%.')
 	subparser.add_argument('--prefix', default='', metavar='PREFIX',
 		help='Add PREFIX before sequence names')
-	subparser.add_argument('--barcode-length', type=int, default=None)
 	subparser.add_argument('--gene', '-g', action='append', default=[],
 		help='Compute consensus for this gene. Can be given multiple times. Default: Compute for all genes.')
 	subparser.add_argument('--left', '-l', type=float, metavar='ERROR-RATE',
@@ -197,7 +196,6 @@ def discover_command(args):
 
 			# If a window was requested via --left/--right, write the 'approx'
 			# subset to a separate file.
-
 			if args.table_output and (args.left, args.right) in sister_windows and len(group_approximate_V) > 0:
 				if not os.path.exists(args.table_output):
 					os.mkdir(args.table_output)
