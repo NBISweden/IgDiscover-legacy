@@ -230,7 +230,7 @@ def discover_command(args):
 			if consensus_output:
 				for row in rows:
 					print('>{} window:{}\n{}'.format(row[-2], row[1], row[-1]), file=consensus_output)
-				n_consensus += 1
+			n_consensus += len(rows)
 	if consensus_output:
 		consensus_output.close()
 	logger.info('%s consensus sequences for %s gene(s) computed', n_consensus, len(groups))
