@@ -37,6 +37,8 @@ def discover_command(args):
 		table = table[table.database_diff >= args.minimum_db_diff]
 		table = table.dropna()
 		tables.append(table)
+		if len(table) == 0:
+			logger.warn('Table read from %r is empty after filtering out sequences with database diff >= %s.', path, args.minimum_db_diff)
 
 	# Count V sequence occurrences
 	counter = Counter()
