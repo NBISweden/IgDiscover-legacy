@@ -10,6 +10,7 @@ import os.path
 from collections import Counter, OrderedDict, namedtuple
 import multiprocessing
 import hashlib
+import random
 import numpy as np
 import pandas as pd
 from sqt import SequenceReader
@@ -18,6 +19,8 @@ from sqt.utils import available_cpu_count
 from .table import read_table
 
 logger = logging.getLogger(__name__)
+
+random.seed(123)
 
 MINGROUPSIZE_CONSENSUS = 10
 
@@ -33,6 +36,8 @@ def add_subcommand(subparsers):
 		help='When finding approximate V gene matches, allow PERCENT errors. Default: %(default)s.')
 	subparser.add_argument('--consensus-threshold', '-t', metavar='PERCENT', type=float, default=60,
 		help='Threshold for consensus computation. Default: %(default)s%%.')
+	subparser.add_argument('--downsample', metavar='N', type=int, default=1000,
+		help='Before computing a consensus, downsample to N sequences. Default: %(default)s')
 	subparser.add_argument('--prefix', default='', metavar='PREFIX',
 		help='Add PREFIX before sequence names')
 	subparser.add_argument('--gene', '-g', action='append', default=[],
@@ -54,15 +59,29 @@ def add_subcommand(subparsers):
 	return subparser
 
 
-def sister_sequence(group, program='muscle-medium', threshold=0.6):
+def downsampled(population, size):
 	"""
+	Return a random subsample of the population.
 
+	Uses reservoir sampling. See https://en.wikipedia.org/wiki/Reservoir_sampling
 	"""
-	sequences = OrderedDict()
-	# TODO Perhaps create the dict in such a way that those with the most
-	# abundant no. of errors are put in first.
-	for _, row in group.iterrows():
-		sequences[row.name] = row.V_nt
+	sample = population[:size]
+	for index in range(size, len(population)):
+		r = random.randint(0, index)
+		if r < size:
+			sample[r] = population[index]
+	return sample
+
+
+def sister_sequence(group, program='muscle-medium', threshold=0.6, downsample_to=1000):
+	"""
+	For a given group, compute a consensus sequence over the V gene sequences
+	in that group.
+	"""
+	sequences = [ (row.name, row.V_nt) for _, row in group.iterrows() ]
+	if len(sequences) > downsample_to:
+		sequences = downsampled(sequences, downsample_to)
+	sequences = OrderedDict(sequences)
 	aligned = multialign(sequences, program=program)
 	cons = consensus(aligned, threshold=threshold)
 	return cons.strip('N')
@@ -78,7 +97,7 @@ class Discoverer:
 	"""
 	Discover candidates for novel V genes.
 	"""
-	def __init__(self, database, windows, left, right, table_output, prefix, consensus_threshold, v_error_rate):
+	def __init__(self, database, windows, left, right, table_output, prefix, consensus_threshold, v_error_rate, downsample_to):
 		self.database = database
 		self.windows = windows
 		self.left = left
@@ -87,6 +106,7 @@ class Discoverer:
 		self.prefix = prefix
 		self.consensus_threshold = consensus_threshold
 		self.v_error_rate = v_error_rate
+		self.downsample_to = downsample_to
 
 	def __call__(self, args):
 		gene, group = args
@@ -103,7 +123,7 @@ class Discoverer:
 			group_in_window = group[(left <= group.V_SHM) & (group.V_SHM < right)]
 			if len(group_in_window) < MINGROUPSIZE_CONSENSUS:
 				continue
-			sister = sister_sequence(group_in_window, threshold=self.consensus_threshold/100)
+			sister = sister_sequence(group_in_window, threshold=self.consensus_threshold/100, downsample_to=self.downsample_to)
 			if sister in sisters:
 				sisters[sister].append((left, right, group_in_window))
 			else:
@@ -223,7 +243,7 @@ def discover_command(args):
 		groups.append((gene, group))
 
 	discoverer = Discoverer(database, windows, args.left, args.right,
-		args.table_output, args.prefix, args.consensus_threshold, v_error_rate)
+		args.table_output, args.prefix, args.consensus_threshold, v_error_rate, args.downsample)
 	n_consensus = 0
 	with multiprocessing.Pool(args.threads) as pool:
 		for rows in pool.imap(discoverer, groups, chunksize=1):
