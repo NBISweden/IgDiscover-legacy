@@ -58,6 +58,6 @@ def discover_command(args):
 			if gene is None:
 				row = matching_rows.iloc[0]
 				gene = row.gene
-				consensus_diff = row.database_diff
+				database_diff = row.database_diff
 				#shm = row['V_SHM']
 		print(frequency, gene, database_diff, sequence, *names, sep='\t')
