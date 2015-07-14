@@ -8,14 +8,14 @@ import subprocess
 from itertools import islice
 
 from sqt import SequenceReader
-
+from sqt.utils import available_cpu_count
 
 def add_subcommand(subparsers):
 	subparser = subparsers.add_parser('igblast', help=__doc__)
 	subparser.set_defaults(func=igblast_command)
 	add = subparser.add_argument
-	add('--threads', '-t', '-j', type=int, default=1,
-		help='Number of threads (default: %(default)s)')
+	add('--threads', '-t', '-j', type=int, default=available_cpu_count(),
+		help='Number of threads. Default: no. of available CPUs (%(default)s)')
 	add('--penalty', type=int, choices=(-1, -2, -3, -4), default=None,
 		help='BLAST mismatch penalty (default: -1)')
 	add('--species', default='rhesus_monkey',
