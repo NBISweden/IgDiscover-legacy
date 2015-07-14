@@ -44,20 +44,20 @@ def discover_command(args):
 		counter.update(set(table.consensus))
 
 	# Find most frequent occurrences and print result
-	print('Frequency', 'Gene', 'Sequence', sep='\t')
+	print('count', 'gene', 'database_diff', 'sequence', 'names', sep='\t')
 	for sequence, frequency in counter.most_common():
 		if frequency < minimum_frequency:
 			break
-		#names = []
+		names = []
 		gene = None
 		for table in tables:
 			matching_rows = table[table.consensus == sequence]
 			if matching_rows.empty:
 				continue
-			#names.extend(matching_rows.name)
+			names.extend(matching_rows.name)
 			if gene is None:
 				row = matching_rows.iloc[0]
 				gene = row.gene
+				consensus_diff = row.database_diff
 				#shm = row['V_SHM']
-		#print(frequency, gene, shm, sequence, *names, sep='\t')
-		print(frequency, gene, sequence, sep='\t')
+		print(frequency, gene, database_diff, sequence, *names, sep='\t')
