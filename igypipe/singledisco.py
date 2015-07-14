@@ -36,7 +36,7 @@ def add_subcommand(subparsers):
 		help='When finding approximate V gene matches, allow PERCENT errors. Default: %(default)s.')
 	subparser.add_argument('--consensus-threshold', '-t', metavar='PERCENT', type=float, default=60,
 		help='Threshold for consensus computation. Default: %(default)s%%.')
-	subparser.add_argument('--downsample', metavar='N', type=int, default=1000,
+	subparser.add_argument('--downsample', metavar='N', type=int, default=1600,
 		help='Before computing a consensus, downsample to N sequences. Default: %(default)s')
 	subparser.add_argument('--prefix', default='', metavar='PREFIX',
 		help='Add PREFIX before sequence names')
@@ -73,18 +73,29 @@ def downsampled(population, size):
 	return sample
 
 
-def sister_sequence(group, program='muscle-medium', threshold=0.6, downsample_to=1000):
+def sister_sequence(group, program='muscle-medium', threshold=0.6, downsample_to=1600):
 	"""
 	For a given group, compute a consensus sequence over the V gene sequences
 	in that group.
 	"""
-	sequences = [ (row.name, row.V_nt) for _, row in group.iterrows() ]
-	if len(sequences) > downsample_to:
-		sequences = downsampled(sequences, downsample_to)
-	sequences = OrderedDict(sequences)
-	aligned = multialign(sequences, program=program)
-	cons = consensus(aligned, threshold=threshold)
-	return cons.strip('N')
+	all_sequences = [ (row.name, row.V_nt) for _, row in group.iterrows() ]
+	# First, try to compute consensus from a small subsample. If there are 'N'
+	# bases, increase subsample size and repeat.
+	subsample_size = 200
+	while True:
+		sequences = downsampled(all_sequences, subsample_size)
+		aligned = multialign(OrderedDict(sequences), program=program)
+		cons = consensus(aligned, threshold=threshold).strip('N')
+		if 'N' not in cons:
+			# This consensus is good enough
+			break
+		if len(all_sequences) <= subsample_size:
+			# We have already used all the sequences that are available
+			break
+		subsample_size *= 2
+		if subsample_size > downsample_to:
+			break
+	return cons
 
 
 def sequence_hash(s):
