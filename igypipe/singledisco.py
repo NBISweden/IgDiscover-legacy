@@ -26,8 +26,8 @@ Groupinfo = namedtuple('Groupinfo', 'count unique_J unique_CDR3')
 def add_subcommand(subparsers):
 	subparser = subparsers.add_parser('singledisco', help=__doc__)
 	subparser.set_defaults(func=discover_command)
-	subparser.add_argument('--threads', '-j', type=int, default=available_cpu_count(),
-		help='Number of threads. Default: no. of available CPUs (%(default)s)')
+	subparser.add_argument('--threads', '-j', type=int, default=min(4, available_cpu_count()),
+		help='Number of threads. Default: no. of available CPUs, but at most 4')
 	subparser.add_argument('--error-rate', metavar='PERCENT', type=float, default=1,
 		help='When finding approximate V gene matches, allow PERCENT errors. Default: %(default)s.')
 	subparser.add_argument('--consensus-threshold', '-t', metavar='PERCENT', type=float, default=60,
