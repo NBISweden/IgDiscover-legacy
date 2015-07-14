@@ -170,6 +170,7 @@ def discover_command(args):
 		database = dict()
 
 	table = read_table(args.table)
+	table = table.loc[:,('name', 'V_gene', 'J_gene', 'V_nt', 'CDR3_nt', 'V_SHM', 'J_SHM')].copy()
 
 	# Discard rows with any mutation within J at all
 	logger.info('%s rows read (filtered)', len(table))
