@@ -9,6 +9,7 @@ import sys
 import os.path
 from collections import Counter, OrderedDict, namedtuple
 import multiprocessing
+import hashlib
 import numpy as np
 import pandas as pd
 from sqt import SequenceReader
@@ -68,8 +69,9 @@ def sister_sequence(group, program='muscle-medium', threshold=0.6):
 
 
 def sequence_hash(s):
-	"""Return a four-digit hash of a string (S000 to S999)"""
-	return 'S{:03}'.format(abs(hash(s)) % 1000)
+	"""Return a hash of a string that looks like 'S123' (S is fixed)"""
+	h = int(hashlib.md5(s.encode()).hexdigest()[-4:], base=16)
+	return 'S{:03}'.format(h % 1000)
 
 
 class Discoverer:
