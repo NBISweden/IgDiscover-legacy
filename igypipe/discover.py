@@ -48,7 +48,6 @@ def discover_command(args):
 	# Find most frequent occurrences and print result
 	print('count', 'gene', 'database_diff', 'sequence', 'names', sep='\t')
 	for sequence, frequency in counter.most_common():
-		print('seq, frequ', sequence, frequency)
 		if frequency < minimum_frequency:
 			break
 		names = []
