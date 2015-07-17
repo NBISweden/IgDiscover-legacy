@@ -17,6 +17,7 @@ from sqt import SequenceReader
 from sqt.align import multialign, consensus, edit_distance
 from sqt.utils import available_cpu_count
 from .table import read_table
+from .utils import downsampled
 
 logger = logging.getLogger(__name__)
 
@@ -57,20 +58,6 @@ def add_subcommand(subparsers):
 		help='Output consensus sequences in FASTA format to this file.')
 	subparser.add_argument('table', help='Table with parsed IgBLAST results')  # nargs='+'
 	return subparser
-
-
-def downsampled(population, size):
-	"""
-	Return a random subsample of the population.
-
-	Uses reservoir sampling. See https://en.wikipedia.org/wiki/Reservoir_sampling
-	"""
-	sample = population[:size]
-	for index in range(size, len(population)):
-		r = random.randint(0, index)
-		if r < size:
-			sample[r] = population[index]
-	return sample
 
 
 def sister_sequence(group, program='muscle-medium', threshold=0.6, downsample_to=1600):
