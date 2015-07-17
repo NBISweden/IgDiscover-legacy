@@ -8,14 +8,11 @@ from matplotlib.figure import Figure
 import pandas as pd
 import seaborn as sns
 import numpy as np
-import fastcluster
 from scipy.spatial import distance
 from scipy.cluster import hierarchy
 from sqt.align import edit_distance
-from sqt.utils import available_cpu_count
 from .table import read_table
 from .utils import downsampled
-from concurrent.futures import ProcessPoolExecutor
 
 logger = logging.getLogger(__name__)
 
@@ -23,8 +20,6 @@ logger = logging.getLogger(__name__)
 def add_subcommand(subparsers):
 	subparser = subparsers.add_parser('clusterplot', help=__doc__)
 	subparser.set_defaults(func=command)
-	subparser.add_argument('--threads', '-j', type=int, default=min(4, available_cpu_count()),
-		help='Number of threads. Default: no. of available CPUs, but at most 4')
 	subparser.add_argument('--minimum-group-size', '-m', metavar='N', default=200,
 		help='Do not plot if there are less than N sequences for a gene (default: %(default)s)')
 	subparser.add_argument('table', help='Table with parsed IgBLAST results')
@@ -66,9 +61,12 @@ def collect_ids(tree):
 	return collect_ids(tree.left) + collect_ids(tree.right)
 
 
-def plot_clustermap(group):
+def plot_clustermap(group, v_gene):
 	"""
-	Plot a clustermap for a specific V gene.
+	Plot a clustermap
+	for a specific V gene.
+
+	v_gene -- name of the gene
 	"""
 	sequences = list(group.V_nt)
 	sequences = downsampled(sequences, 300)
@@ -105,17 +103,17 @@ def command(args):
 	table = table[table.J_SHM == 0][:]
 	logger.info('%s rows remain after discarding J%%SHM > 0', len(table))
 
-	genes, groups = zip(*[(gene, group) for (gene, group) in table.groupby('V_gene') if len(group) >= args.minimum_group_size])
-
 	n = 0
 	try:
 		with PdfPages(args.pdf) as pages:
-			with ProcessPoolExecutor(max_workers=args.threads) as executor:
-				for gene, group, fig in zip(genes, groups, executor.map(plot_clustermap, groups)):
-					logger.info('Working on %s with %s sequences', gene, len(group))
-					fig.suptitle(gene)
-					FigureCanvasPdf(fig).print_figure(pages)
-					n += 1
+			for gene, group in table.groupby('V_gene'):
+				if len(group) < args.minimum_group_size:
+					continue
+				logger.info('Working on %s with %s sequences', gene, len(group))
+				fig = plot_clustermap(group, gene)
+				fig.suptitle(gene)
+				FigureCanvasPdf(fig).print_figure(pages)
+				n += 1
 	except KeyboardInterrupt:
 		logger.warn('Cancelled')
 		sys.exit(130)
