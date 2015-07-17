@@ -90,7 +90,8 @@ rule all:
 		"unique.v_usage.tab",
 		"unique.v_usage.pdf",
 		"consensus.v_usage.tab",
-		"consensus.v_usage.pdf"
+		"consensus.v_usage.pdf",
+		"clusterplots/done"
 
 
 if LIMIT:
@@ -371,3 +372,11 @@ rule count_and_plot:
 	shell:
 		"igypipe count --reference {input.v_reference} {input.tab} {output.plot} > {output.counts}"
 
+
+rule igypipe_clusterplot:
+	output:
+		done="clusterplots/done"
+	input:
+		tab="unique.table.tab"
+	shell:
+		"igypipe clusterplot {input.tab} clusterplots/ && touch {output.done}"
