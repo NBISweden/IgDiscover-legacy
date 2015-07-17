@@ -1,15 +1,16 @@
 """
-For each V gene, plot a clustermap ...
+For each V gene, plot a clustermap of the sequences assigned to it.
 """
 import sys
+import os.path
 import logging
-from matplotlib.backends.backend_pdf import FigureCanvasPdf, PdfPages
-from matplotlib.figure import Figure
+from concurrent.futures import ProcessPoolExecutor, as_completed
 import pandas as pd
 import seaborn as sns
 import numpy as np
 from scipy.spatial import distance
 from scipy.cluster import hierarchy
+from sqt.utils import available_cpu_count
 from sqt.align import edit_distance
 from .table import read_table
 from .utils import downsampled
@@ -20,10 +21,12 @@ logger = logging.getLogger(__name__)
 def add_subcommand(subparsers):
 	subparser = subparsers.add_parser('clusterplot', help=__doc__)
 	subparser.set_defaults(func=command)
+	subparser.add_argument('--threads', '-j', type=int, default=min(4, available_cpu_count()),
+		help='Number of threads. Default: no. of available CPUs, but at most 4')
 	subparser.add_argument('--minimum-group-size', '-m', metavar='N', default=200,
 		help='Do not plot if there are less than N sequences for a gene (default: %(default)s)')
 	subparser.add_argument('table', help='Table with parsed IgBLAST results')
-	subparser.add_argument('pdf', help='Plot clustermaps to this PDF file', default=None)
+	subparser.add_argument('directory', help='Save clustermaps as PNG into this directory', default=None)
 	return subparser
 
 
@@ -61,12 +64,11 @@ def collect_ids(tree):
 	return collect_ids(tree.left) + collect_ids(tree.right)
 
 
-def plot_clustermap(group, v_gene):
+def plot_clustermap(group, gene, pdfpath):
 	"""
-	Plot a clustermap
-	for a specific V gene.
+	Plot a clustermap for a specific V gene.
 
-	v_gene -- name of the gene
+	gene -- gene name (only used to plot the title)
 	"""
 	sequences = list(group.V_nt)
 	sequences = downsampled(sequences, 300)
@@ -82,7 +84,6 @@ def plot_clustermap(group, v_gene):
 	n = find_best(hierarchy.to_tree(linkage))
 	if n is not None:
 		left_ids, right_ids = collect_ids(n.left), collect_ids(n.right)
-		#print(n.id, n.left.count, n.right.count)
 	else:
 		left_ids, right_ids = [], []
 	row_colors = [palette[0] if i in left_ids else palette[1] if i in right_ids else palette[2] for i in range(len(d))]
@@ -92,10 +93,15 @@ def plot_clustermap(group, v_gene):
 			col_linkage=linkage,
 			linewidths=0, linecolor='none', figsize=(210/25.4, 210/25.4), cmap='Blues',
 			xticklabels=False, yticklabels=False)
-	return cm.fig
+	cm.fig.suptitle(gene)
+	cm.savefig(pdfpath, dpi=200)
+	return gene
 
 
 def command(args):
+	if not os.path.exists(args.directory):
+		os.mkdir(args.directory)
+
 	table = read_table(args.table)
 
 	# Discard rows with any mutation within J at all
@@ -104,17 +110,15 @@ def command(args):
 	logger.info('%s rows remain after discarding J%%SHM > 0', len(table))
 
 	n = 0
-	try:
-		with PdfPages(args.pdf) as pages:
-			for gene, group in table.groupby('V_gene'):
-				if len(group) < args.minimum_group_size:
-					continue
-				logger.info('Working on %s with %s sequences', gene, len(group))
-				fig = plot_clustermap(group, gene)
-				fig.suptitle(gene)
-				FigureCanvasPdf(fig).print_figure(pages)
-				n += 1
-	except KeyboardInterrupt:
-		logger.warn('Cancelled')
-		sys.exit(130)
+	with ProcessPoolExecutor(max_workers=args.threads) as executor:
+		futures = []
+		for gene, group in table.groupby('V_gene'):
+			if len(group) < args.minimum_group_size:
+				continue
+			futures.append(executor.submit(plot_clustermap, group, gene, os.path.join(args.directory, gene + '.png')))
+			n += 1
+		for future in as_completed(futures):
+			gene = future.result()
+			logger.info('Plotted %r', gene)
+
 	logger.info('%s plots created (rest had too few sequences)', n)
