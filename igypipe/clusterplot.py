@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 def add_subcommand(subparsers):
 	subparser = subparsers.add_parser('clusterplot', help=__doc__)
 	subparser.set_defaults(func=command)
-	subparser.add_argument('--threads', '-j', type=int, default=min(4, available_cpu_count()),
+	subparser.add_argument('--threads', '-j', type=int, default=min(2, available_cpu_count()),
 		help='Number of threads. Default: no. of available CPUs, but at most 4')
 	subparser.add_argument('--minimum-group-size', '-m', metavar='N', default=200,
 		help='Do not plot if there are less than N sequences for a gene (default: %(default)s)')
