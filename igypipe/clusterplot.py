@@ -46,22 +46,53 @@ def distances(sequences, band=0.2):
 	return m
 
 
-def find_best(tree):
-	if tree.count == 1:
+def inner_nodes(root):
+	"""
+	Return a list of all inner nodes of the tree
+	"""
+	if root.is_leaf():
+		return []
+	return inner_nodes(root.left) + [root] + inner_nodes(root.right)
+
+
+def find_separating_node_old(root):
+	if root.count == 1:
 		return None
-	if tree.left.count <= 2:
-		assert tree.right is not None
-		return find_best(tree.right)
-	if tree.right.count <= 2:
-		assert tree.left is not None
-		return find_best(tree.left)
-	return tree
+
+	if root.left.count <= 2:
+		return find_best(root.right)
+	if root.right.count <= 2:
+		return find_best(root.left)
+	return root
 
 
-def collect_ids(tree):
-	if tree.count == 1:
-		return [tree.id]
-	return collect_ids(tree.left) + collect_ids(tree.right)
+def find_separating_node(root):
+	"""
+	Return an inner node of the tree such that the left and right subtrees
+	of that node describe different clusters. A simple heuristic is used
+	that inspects all inner nodes and skips those where one of the two joined
+	subtrees is a singleton. Then for each node the size of the smaller subtree
+	is computed. Finally, the node where that value is largest is picked.
+	"""
+	best = None
+	best_count = 0
+	for node in inner_nodes(root):
+		if node.left.count == 1 or node.right.count == 1:
+			continue
+		smallest_count = min(node.left.count, node.right.count)
+		if smallest_count > best_count:
+			best = node
+			best_count = smallest_count
+	return best
+
+
+def collect_ids(root):
+	"""
+	Return a list of ids of all leaves of the given tree
+	"""
+	if root.is_leaf():
+		return [root.id]
+	return collect_ids(root.left) + collect_ids(root.right)
 
 
 def plot_clustermap(group, gene, pdfpath):
@@ -81,7 +112,7 @@ def plot_clustermap(group, gene, pdfpath):
 
 	##clusters = hierarchy.fcluster(linkage, 0.5*(linkage[-2,2] + linkage[-1,2]), criterion='distance')
 	##print('clusters:', clusters)
-	n = find_best(hierarchy.to_tree(linkage))
+	n = find_separating_node(hierarchy.to_tree(linkage))
 	if n is not None:
 		left_ids, right_ids = collect_ids(n.left), collect_ids(n.right)
 	else:
