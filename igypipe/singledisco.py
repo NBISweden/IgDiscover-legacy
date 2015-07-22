@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 random.seed(123)
 
 MINGROUPSIZE_CONSENSUS = 10
+MAXIMUM_SUBSAMPLE_SIZE = 1600
 
 Groupinfo = namedtuple('Groupinfo', 'count unique_J unique_CDR3')
 
@@ -36,8 +37,8 @@ def add_subcommand(subparsers):
 		help='When finding approximate V gene matches, allow PERCENT errors. Default: %(default)s.')
 	subparser.add_argument('--consensus-threshold', '-t', metavar='PERCENT', type=float, default=60,
 		help='Threshold for consensus computation. Default: %(default)s%%.')
-	subparser.add_argument('--downsample', metavar='N', type=int, default=1600,
-		help='Before computing a consensus, downsample to N sequences. Default: %(default)s')
+	#subparser.add_argument('--downsample', metavar='N', type=int, default=1600,
+		#help='Before computing a consensus, downsample to N sequences. Default: %(default)s')
 	subparser.add_argument('--prefix', default='', metavar='PREFIX',
 		help='Add PREFIX before sequence names')
 	subparser.add_argument('--gene', '-g', action='append', default=[],
@@ -72,7 +73,7 @@ class Discoverer:
 	"""
 	Discover candidates for novel V genes.
 	"""
-	def __init__(self, database, windows, left, right, table_output, prefix, consensus_threshold, v_error_rate, downsample_to):
+	def __init__(self, database, windows, left, right, table_output, prefix, consensus_threshold, v_error_rate, downsample):
 		self.database = database
 		self.windows = windows
 		self.left = left
@@ -81,7 +82,7 @@ class Discoverer:
 		self.prefix = prefix
 		self.consensus_threshold = consensus_threshold
 		self.v_error_rate = v_error_rate
-		self.downsample_to = downsample_to
+		self.downsample = downsample
 
 	def __call__(self, args):
 		gene, group = args
@@ -98,7 +99,7 @@ class Discoverer:
 			group_in_window = group[(left <= group.V_SHM) & (group.V_SHM < right)]
 			if len(group_in_window) < MINGROUPSIZE_CONSENSUS:
 				continue
-			sister = sister_sequence(group_in_window, threshold=self.consensus_threshold/100, maximum_subsample_size=self.downsample_to)
+			sister = sister_sequence(group_in_window, threshold=self.consensus_threshold/100, maximum_subsample_size=self.downsample)
 			if sister in sisters:
 				sisters[sister].append((left, right, group_in_window))
 			else:
@@ -218,7 +219,7 @@ def discover_command(args):
 		groups.append((gene, group))
 
 	discoverer = Discoverer(database, windows, args.left, args.right,
-		args.table_output, args.prefix, args.consensus_threshold, v_error_rate, args.downsample)
+		args.table_output, args.prefix, args.consensus_threshold, v_error_rate, MAXIMUM_SUBSAMPLE_SIZE)
 	n_consensus = 0
 	with multiprocessing.Pool(args.threads) as pool:
 		for rows in pool.imap(discoverer, groups, chunksize=1):
