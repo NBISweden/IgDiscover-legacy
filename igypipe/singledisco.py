@@ -9,15 +9,14 @@ import sys
 import os.path
 from collections import Counter, OrderedDict, namedtuple
 import multiprocessing
-import hashlib
 import random
 import numpy as np
 import pandas as pd
 from sqt import SequenceReader
-from sqt.align import multialign, consensus, edit_distance
+from sqt.align import edit_distance
 from sqt.utils import available_cpu_count
 from .table import read_table
-from .utils import downsampled
+from .utils import downsampled, iterative_consensus, sequence_hash
 
 logger = logging.getLogger(__name__)
 
@@ -60,35 +59,13 @@ def add_subcommand(subparsers):
 	return subparser
 
 
-def sister_sequence(group, program='muscle-medium', threshold=0.6, downsample_to=1600):
+
+def sister_sequence(group, program='muscle-medium', threshold=0.6, maximum_subsample_size=1600):
 	"""
 	For a given group, compute a consensus sequence over the V gene sequences
 	in that group.
 	"""
-	all_sequences = [ (row.name, row.V_nt) for _, row in group.iterrows() ]
-	# First, try to compute consensus from a small subsample. If there are 'N'
-	# bases, increase subsample size and repeat.
-	subsample_size = 200
-	while True:
-		sequences = downsampled(all_sequences, subsample_size)
-		aligned = multialign(OrderedDict(sequences), program=program)
-		cons = consensus(aligned, threshold=threshold).strip('N')
-		if 'N' not in cons:
-			# This consensus is good enough
-			break
-		if len(all_sequences) <= subsample_size:
-			# We have already used all the sequences that are available
-			break
-		subsample_size *= 2
-		if subsample_size > downsample_to:
-			break
-	return cons
-
-
-def sequence_hash(s):
-	"""Return a hash of a string that looks like 'S123' (S is fixed)"""
-	h = int(hashlib.md5(s.encode()).hexdigest()[-4:], base=16)
-	return 'S{:03}'.format(h % 1000)
+	return iterative_consensus(list(group.V_nt), program, threshold, maximum_subsample_size=maximum_subsample_size)
 
 
 class Discoverer:
@@ -121,7 +98,7 @@ class Discoverer:
 			group_in_window = group[(left <= group.V_SHM) & (group.V_SHM < right)]
 			if len(group_in_window) < MINGROUPSIZE_CONSENSUS:
 				continue
-			sister = sister_sequence(group_in_window, threshold=self.consensus_threshold/100, downsample_to=self.downsample_to)
+			sister = sister_sequence(group_in_window, threshold=self.consensus_threshold/100, maximum_subsample_size=self.downsample_to)
 			if sister in sisters:
 				sisters[sister].append((left, right, group_in_window))
 			else:
