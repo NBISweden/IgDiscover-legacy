@@ -138,7 +138,10 @@ def plot_clustermap(group, gene, plotpath):
 			xticklabels=False, yticklabels=False)
 	cm.fig.suptitle(gene)
 	cm.savefig(plotpath, dpi=200)
-	return gene
+
+	# free the memory used by the plot
+	import matplotlib.pyplot as plt
+	plt.close('all')
 
 
 def command(args):
