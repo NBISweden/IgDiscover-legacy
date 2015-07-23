@@ -4,13 +4,11 @@ For each V gene, plot a clustermap of the sequences assigned to it.
 import sys
 import os.path
 import logging
-from concurrent.futures import ProcessPoolExecutor, as_completed
 import pandas as pd
 import seaborn as sns
 import numpy as np
 from scipy.spatial import distance
 from scipy.cluster import hierarchy
-from sqt.utils import available_cpu_count
 from sqt.align import edit_distance
 from .table import read_table
 from .utils import downsampled, distances
@@ -21,8 +19,6 @@ logger = logging.getLogger(__name__)
 def add_subcommand(subparsers):
 	subparser = subparsers.add_parser('clusterplot', help=__doc__)
 	subparser.set_defaults(func=command)
-	subparser.add_argument('--threads', '-j', type=int, default=2,
-		help='Number of threads. Default: %(default)s')
 	subparser.add_argument('--minimum-group-size', '-m', metavar='N', default=200,
 		help='Do not plot if there are less than N sequences for a gene. Default: %(default)s')
 	subparser.add_argument('table', help='Table with parsed IgBLAST results')
@@ -113,7 +109,6 @@ def plot_clustermap(group, gene, pdfpath):
 def command(args):
 	if not os.path.exists(args.directory):
 		os.mkdir(args.directory)
-
 	table = read_table(args.table)
 
 	# Discard rows with any mutation within J at all
@@ -122,15 +117,17 @@ def command(args):
 	logger.info('%s rows remain after discarding J%%SHM > 0', len(table))
 
 	n = 0
-	with ProcessPoolExecutor(max_workers=args.threads) as executor:
-		futures = []
-		for gene, group in table.groupby('V_gene'):
-			if len(group) < args.minimum_group_size:
-				continue
-			futures.append(executor.submit(plot_clustermap, group, gene, os.path.join(args.directory, gene + '.png')))
-			n += 1
-		for future in as_completed(futures):
-			gene = future.result()
-			logger.info('Plotted %r', gene)
+	for gene, group in table.groupby('V_gene'):
+		if len(group) < args.minimum_group_size:
+			continue
+		plot_clustermap(group, gene, os.path.join(args.directory, gene + '.png'))
+		n += 1
+		logger.info('Plotted %r', gene)
+		#for i, cons in enumerate(consensus_sequences):
+			#print('>{}_cluster{}\n{}'.format(gene, ('red', 'blue')[i], cons))
+			#print('number of Ns:', cons.count('N'))
+		#if len(consensus_sequences) >= 2:
+			#print('difference between consensuses:', edit_distance(*consensus_sequences[:2]))
+
 
 	logger.info('%s plots created (rest had too few sequences)', n)
