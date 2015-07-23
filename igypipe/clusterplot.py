@@ -65,6 +65,19 @@ def find_separating_node(root):
 	return best
 
 
+def find_clusters(root):
+	candidates = []
+	for node in inner_nodes(root):
+		if node.left.count == 1 or node.right.count == 1:
+			continue
+		smallest_count = min(node.left.count, node.right.count)
+
+		if smallest_count > best_count:
+			best = node
+			best_count = smallest_count
+	return best
+
+
 def collect_ids(root):
 	"""
 	Return a list of ids of all leaves of the given tree
@@ -74,7 +87,7 @@ def collect_ids(root):
 	return collect_ids(root.left) + collect_ids(root.right)
 
 
-def cluster_sequences(sequences):
+def cluster_sequences_old(sequences):
 	"""
 	Cluster the given sequences into groups of similar sequences.
 
@@ -94,6 +107,31 @@ def cluster_sequences(sequences):
 	for i, ids in enumerate(id_lists, start=1):
 		for id in ids:
 			clusters[id] = i
+
+	return pd.DataFrame(matrix), linkage, clusters
+
+
+def cluster_sequences(sequences):
+	"""
+	Cluster the given sequences into groups of similar sequences.
+
+	Return a triple that contains a pandas.DataFrame with the edit distances,
+	the linkage result, and a list that maps sequence ids to their cluster id.
+	If an entry is zero in that list, it means that the sequence is not part of
+	a cluster.
+	"""
+	matrix = distances(sequences)
+	linkage = hierarchy.linkage(distance.squareform(matrix), method='average')
+	inner = inner_nodes(hierarchy.to_tree(linkage))
+	prev = 100000
+	clusters = [0] * len(sequences)
+	cl = 1
+	for n in inner:
+		if prev/n.dist < 0.8 and n.left.count >= 5 and n.right.count >= 5:
+			for id in collect_ids(n.left):
+				clusters[id] = cl
+			cl += 1
+		prev = n.dist
 
 	return pd.DataFrame(matrix), linkage, clusters
 
@@ -128,7 +166,7 @@ def plot_clustermap(group, gene, plotpath):
 	sequences = downsampled(sequences, 300)
 	df, linkage, clusters = cluster_sequences(sequences)
 
-	palette = sns.color_palette(['black']) + sns.color_palette('Set1', n_colors=10, desat=.8)
+	palette = sns.color_palette(['black']) + sns.color_palette('Set1', n_colors=20, desat=.8)
 	row_colors = [ palette[cluster_id] for cluster_id in clusters ]
 	cm = sns.clustermap(df,
 			row_linkage=linkage,
