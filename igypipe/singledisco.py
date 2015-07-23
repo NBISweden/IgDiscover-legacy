@@ -7,16 +7,17 @@ import csv
 import logging
 import sys
 import os.path
-from collections import Counter, OrderedDict, namedtuple
+from collections import OrderedDict, namedtuple
 import multiprocessing
 import random
+
 import numpy as np
 import pandas as pd
 from sqt import SequenceReader
 from sqt.align import edit_distance
 from sqt.utils import available_cpu_count
 from .table import read_table
-from .utils import downsampled, iterative_consensus, sequence_hash
+from .utils import iterative_consensus, sequence_hash
 
 logger = logging.getLogger(__name__)
 
@@ -37,8 +38,6 @@ def add_subcommand(subparsers):
 		help='When finding approximate V gene matches, allow PERCENT errors. Default: %(default)s.')
 	subparser.add_argument('--consensus-threshold', '-t', metavar='PERCENT', type=float, default=60,
 		help='Threshold for consensus computation. Default: %(default)s%%.')
-	#subparser.add_argument('--downsample', metavar='N', type=int, default=1600,
-		#help='Before computing a consensus, downsample to N sequences. Default: %(default)s')
 	subparser.add_argument('--prefix', default='', metavar='PREFIX',
 		help='Add PREFIX before sequence names')
 	subparser.add_argument('--gene', '-g', action='append', default=[],
@@ -58,7 +57,6 @@ def add_subcommand(subparsers):
 		help='Output consensus sequences in FASTA format to this file.')
 	subparser.add_argument('table', help='Table with parsed IgBLAST results')  # nargs='+'
 	return subparser
-
 
 
 def sister_sequence(group, program='muscle-medium', threshold=0.6, maximum_subsample_size=1600):
@@ -113,7 +111,6 @@ class Discoverer:
 			group['consensus_diff'] = dists
 			group_exact_V = group[group.V_nt == sister]
 			group_approximate_V = group[group.consensus_diff <= len(sister) * self.v_error_rate]
-
 
 			# Instead of concatenating, the groups should be unioned, but not
 			# sure how to do this in pandas.
