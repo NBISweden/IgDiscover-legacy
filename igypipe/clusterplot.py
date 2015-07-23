@@ -11,7 +11,7 @@ from scipy.spatial import distance
 from scipy.cluster import hierarchy
 from sqt.align import edit_distance
 from .table import read_table
-from .utils import downsampled, distances
+from .utils import downsampled, distances, iterative_consensus
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +74,51 @@ def collect_ids(root):
 	return collect_ids(root.left) + collect_ids(root.right)
 
 
-def plot_clustermap(group, gene, pdfpath):
+def cluster_sequences(sequences):
+	"""
+	Cluster the given sequences into groups of similar sequences.
+
+	Return a triple that contains a pandas.DataFrame with the edit distances,
+	the linkage result, and a list that maps sequence ids to their cluster id.
+	If an entry is zero in that list, it means that the sequence is not part of
+	a cluster.
+	"""
+	matrix = distances(sequences)
+	linkage = hierarchy.linkage(distance.squareform(matrix), method='average')
+	sepnode = find_separating_node(hierarchy.to_tree(linkage))
+	id_lists = []
+	if sepnode is not None:
+		for n in (sepnode.left, sepnode.right):
+			id_lists.append(collect_ids(n))
+	clusters = [0] * len(sequences)
+	for i, ids in enumerate(id_lists, start=1):
+		for id in ids:
+			clusters[id] = i
+
+	return pd.DataFrame(matrix), linkage, clusters
+
+
+def cluster_consensus(sequences, clusters, minsize=5):
+	"""
+	Compute a consensus for each cluster that has at least minsize members.
+
+	Return a list of consensus sequences.
+	"""
+	n_clusters = max(clusters) + 1
+	cluster_sequences = [ [] for _ in range(n_clusters) ]
+	for i, cluster_id in enumerate(clusters):
+		if cluster_id == 0:
+			# sequence not assigned to a cluster
+			continue
+		cluster_sequences[cluster_id-1].append(sequences[i])
+	cons = []
+	for seqs in cluster_sequences:
+		if len(seqs) >= minsize:
+			cons.append(iterative_consensus(seqs))
+	return cons
+
+
+def plot_clustermap(group, gene, plotpath):
 	"""
 	Plot a clustermap for a specific V gene.
 
@@ -82,27 +126,18 @@ def plot_clustermap(group, gene, pdfpath):
 	"""
 	sequences = list(group.V_nt)
 	sequences = downsampled(sequences, 300)
-	m = distances(sequences)
-	d = pd.DataFrame(m)
-	dists = distance.squareform(m)
-	linkage = hierarchy.linkage(dists, method='average')
+	df, linkage, clusters = cluster_sequences(sequences)
 
-	palette = sns.color_palette(['red', 'blue', 'black'])
-
-	n = find_separating_node(hierarchy.to_tree(linkage))
-	if n is not None:
-		left_ids, right_ids = collect_ids(n.left), collect_ids(n.right)
-	else:
-		left_ids, right_ids = [], []
-	row_colors = [palette[0] if i in left_ids else palette[1] if i in right_ids else palette[2] for i in range(len(d))]
-	cm = sns.clustermap(d,
+	palette = sns.color_palette(['black']) + sns.color_palette('Set1', n_colors=10, desat=.8)
+	row_colors = [ palette[cluster_id] for cluster_id in clusters ]
+	cm = sns.clustermap(df,
 			row_linkage=linkage,
 			col_linkage=linkage,
 			row_colors=row_colors,
 			linewidths=0, linecolor='none', figsize=(210/25.4, 210/25.4), cmap='Blues',
 			xticklabels=False, yticklabels=False)
 	cm.fig.suptitle(gene)
-	cm.savefig(pdfpath, dpi=200)
+	cm.savefig(plotpath, dpi=200)
 	return gene
 
 
