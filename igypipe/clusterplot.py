@@ -111,7 +111,7 @@ def cluster_sequences_old(sequences):
 	return pd.DataFrame(matrix), linkage, clusters
 
 
-def cluster_sequences(sequences):
+def cluster_sequences(sequences, minsize=5):
 	"""
 	Cluster the given sequences into groups of similar sequences.
 
@@ -123,11 +123,11 @@ def cluster_sequences(sequences):
 	matrix = distances(sequences)
 	linkage = hierarchy.linkage(distance.squareform(matrix), method='average')
 	inner = inner_nodes(hierarchy.to_tree(linkage))
-	prev = 100000
+	prev = linkage[:,2].max()  # highest distance
 	clusters = [0] * len(sequences)
 	cl = 1
 	for n in inner:
-		if prev/n.dist < 0.8 and n.left.count >= 5 and n.right.count >= 5:
+		if prev/n.dist < 0.8 and n.left.count >= minsize and n.right.count >= minsize:
 			for id in collect_ids(n.left):
 				clusters[id] = cl
 			cl += 1
