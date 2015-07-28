@@ -30,7 +30,7 @@ CLUSTER_SUBSAMPLE_SIZE = 300
 
 Groupinfo = namedtuple('Groupinfo', 'count unique_J unique_CDR3')
 
-Sisterinfo = namedtuple('Sisterinfo', 'left right requested name group')
+Sisterinfo = namedtuple('Sisterinfo', 'sequence requested name group')
 
 
 def add_subcommand(subparsers):
@@ -92,6 +92,45 @@ def sister_sequence(group, program='muscle-medium', threshold=0.6, maximum_subsa
 	return iterative_consensus(list(group.V_nt), program, threshold, maximum_subsample_size=maximum_subsample_size)
 
 
+class SisterMerger:
+	def __init__(self):
+		self.sisters = []
+
+	def add(self, info):
+		self.sisters.append(info)
+
+	def merge_them_all(self):
+		if not self.sisters:
+			return
+		merged = [self.sisters[0]]
+		# quadratic
+		for s in self.sisters[1:]:
+			for i, m in enumerate(merged):
+				c = self._merged(m, s)
+				if c is not None:
+					merged[i] = c
+					break
+			else:
+				# Found no similar sister sequence
+				merged.append(s)
+		return merged
+
+	def __iter__(self):
+		for m in self.merge_them_all():
+			yield m
+
+	@staticmethod
+	def _merged(s, t):
+		if s.sequence == t.sequence:
+			requested = s.requested or t.requested
+			name = s.name + ';' + t.name
+			# take union of groups
+			group = pd.concat([s.group, t.group]).groupby(level=0).last()
+			return Sisterinfo(s.sequence, requested, name, group)
+		else:
+			return None
+
+
 class Discoverer:
 	"""
 	Discover candidates for novel V genes.
@@ -111,7 +150,7 @@ class Discoverer:
 	def __call__(self, args):
 		gene, group = args
 		# Collect all 'sister' sequences (consensus sequences)
-		sisters = OrderedDict()  # sequence -> list of (left, right) tuples
+		sisters = SisterMerger()
 		group = group.copy()
 		for left, right in self.windows:
 			left, right = float(left), float(right)
@@ -125,12 +164,7 @@ class Discoverer:
 				right = int(right)
 			requested = (left, right) == (self.left, self.right)
 			name = '{}-{}'.format(left, right)
-			# TODO just append, add sequence attribute
-			info = Sisterinfo(left, right, requested, name, group_in_window)
-			if sister in sisters:
-				sisters[sister].append(info)
-			else:
-				sisters[sister] = [info]
+			sisters.add(Sisterinfo(sister, requested, name, group_in_window))
 
 		if self.cluster:
 			indices = downsampled(list(group.index), CLUSTER_SUBSAMPLE_SIZE)
@@ -138,14 +172,12 @@ class Discoverer:
 			df, linkage, clusters = cluster_sequences(sequences)
 			for i, sister in enumerate(cluster_consensus(sequences, clusters), 1):
 				name = 'cl{}'.format(i)
-				info = Sisterinfo(None, None, False, name, group.loc[indices])
-				if sister in sisters:
-					sisters[sister].append(info)
-				else:
-					sisters[sister] = [info]
+				info = Sisterinfo(sister, False, name, group.loc[indices])
+				sisters.add(info)
 
 		rows = []
-		for sister, sister_info in sisters.items():
+		for sister_info in sisters:
+			sister = sister_info.sequence
 			dists = [ edit_distance(v_nt, sister) for v_nt in group.V_nt ]
 			assert len(dists) == len(group)
 
@@ -153,19 +185,17 @@ class Discoverer:
 			group_exact_V = group[group.V_nt == sister]
 			group_approximate_V = group[group.consensus_diff <= len(sister) * self.v_error_rate]
 
-			# Instead of concatenating, the groups should be unioned, but not
-			# sure how to do this in pandas.
-			group_in_window = pd.concat(si.group for si in sister_info)
-
 			info = dict()
 			for key, g in (
 					('total', group),  # TODO re-done for every sister
-					('window', group_in_window),
+					('window', sister_info.group),
 					('exact', group_exact_V),
 					('approx', group_approximate_V)):
 				unique_J = len(set(g.J_gene))
 				unique_CDR3 = len(set(s for s in g.CDR3_nt if s))
 				# Correct for concatenated dataframes by taking the set of indices.
+				# TODO
+				assert len(set(g.index)) == len(g.index)
 				count = len(set(g.index))
 				info[key] = Groupinfo(count=count, unique_J=unique_J, unique_CDR3=unique_CDR3)
 			if gene in self.database:
@@ -175,9 +205,8 @@ class Discoverer:
 			n_bases = sister.count('N')
 
 			# Build the row for the output table
-			window_str = ';'.join(si.name for si in sister_info)
 			sequence_id = '{}{}_{}'.format(self.prefix, gene, sequence_hash(sister))
-			row = [gene, window_str]
+			row = [gene, sister_info.name]
 			for key in ('total', 'window', 'exact', 'approx'):
 				row.extend([info[key].count, info[key].unique_J, info[key].unique_CDR3])
 			row.extend([n_bases, database_diff, sequence_id, sister])
