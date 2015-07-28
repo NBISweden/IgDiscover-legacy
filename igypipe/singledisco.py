@@ -17,7 +17,8 @@ from sqt import SequenceReader
 from sqt.align import edit_distance
 from sqt.utils import available_cpu_count
 from .table import read_table
-from .utils import iterative_consensus, sequence_hash
+from .utils import iterative_consensus, sequence_hash, downsampled
+from .cluster import cluster_sequences, cluster_consensus
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +26,7 @@ random.seed(123)
 
 MINGROUPSIZE_CONSENSUS = 10
 MAXIMUM_SUBSAMPLE_SIZE = 1600
+CLUSTER_SUBSAMPLE_SIZE = 300
 
 Groupinfo = namedtuple('Groupinfo', 'count unique_J unique_CDR3')
 
@@ -50,6 +52,8 @@ def add_subcommand(subparsers):
 		help='For consensus, include only sequences that have at most this error rate (in percent). Default: %(default)s', default=100)
 	subparser.add_argument('--window-width', '-w', type=float, metavar='PERCENT',
 		help='Compute consensus for all PERCENT-wide windows. Default: do not compute', default=None)
+	subparser.add_argument('--cluster', action='store_true', default=False,
+		help='Cluster sequences by similarity and compute consensus')
 	subparser.add_argument('--table-output', '-o', metavar='DIRECTORY',
 		help='Output tables for all analyzed genes to DIRECTORY. '
 			'Files will be named <GENE>.tab.')
@@ -92,11 +96,12 @@ class Discoverer:
 	"""
 	Discover candidates for novel V genes.
 	"""
-	def __init__(self, database, windows, left, right, table_output, prefix, consensus_threshold, v_error_rate, downsample):
+	def __init__(self, database, windows, left, right, cluster, table_output, prefix, consensus_threshold, v_error_rate, downsample):
 		self.database = database
 		self.windows = windows
 		self.left = left
 		self.right = right
+		self.cluster = cluster
 		self.table_output = table_output
 		self.prefix = prefix
 		self.consensus_threshold = consensus_threshold
@@ -126,6 +131,18 @@ class Discoverer:
 				sisters[sister].append(info)
 			else:
 				sisters[sister] = [info]
+
+		if self.cluster:
+			indices = downsampled(list(group.index), CLUSTER_SUBSAMPLE_SIZE)
+			sequences = list(group.V_nt.loc[indices])
+			df, linkage, clusters = cluster_sequences(sequences)
+			for i, sister in enumerate(cluster_consensus(sequences, clusters), 1):
+				name = 'cl{}'.format(i)
+				info = Sisterinfo(None, None, False, name, group.loc[indices])
+				if sister in sisters:
+					sisters[sister].append(info)
+				else:
+					sisters[sister] = [info]
 
 		rows = []
 		for sister, sister_info in sisters.items():
@@ -238,7 +255,7 @@ def discover_command(args):
 			continue
 		groups.append((gene, group))
 
-	discoverer = Discoverer(database, windows, args.left, args.right,
+	discoverer = Discoverer(database, windows, args.left, args.right, args.cluster,
 		args.table_output, args.prefix, args.consensus_threshold, v_error_rate, MAXIMUM_SUBSAMPLE_SIZE)
 	n_consensus = 0
 
