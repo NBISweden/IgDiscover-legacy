@@ -84,8 +84,6 @@ class Discoverer:
 
 	def __call__(self, args):
 		gene, group = args
-		#logger.info('Working on gene %s', gene)
-
 		# Collect all 'sister' sequences (consensus sequences)
 		sisters = OrderedDict()  # sequence -> list of (left, right) tuples
 		group = group.copy()
