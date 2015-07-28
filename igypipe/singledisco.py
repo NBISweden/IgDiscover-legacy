@@ -28,6 +28,8 @@ MAXIMUM_SUBSAMPLE_SIZE = 1600
 
 Groupinfo = namedtuple('Groupinfo', 'count unique_J unique_CDR3')
 
+Sisterinfo = namedtuple('Sisterinfo', 'left right requested name group')
+
 
 def add_subcommand(subparsers):
 	subparser = subparsers.add_parser('singledisco', help=__doc__)
@@ -107,18 +109,23 @@ class Discoverer:
 		sisters = OrderedDict()  # sequence -> list of (left, right) tuples
 		group = group.copy()
 		for left, right in self.windows:
-			if left == int(left):
-				left = int(left)
-			if right == int(right):
-				right = int(right)
+			left, right = float(left), float(right)
 			group_in_window = group[(left <= group.V_SHM) & (group.V_SHM < right)]
 			if len(group_in_window) < MINGROUPSIZE_CONSENSUS:
 				continue
 			sister = sister_sequence(group_in_window, threshold=self.consensus_threshold/100, maximum_subsample_size=self.downsample)
+			if left == int(left):
+				left = int(left)
+			if right == int(right):
+				right = int(right)
+			requested = (left, right) == (self.left, self.right)
+			name = '{}-{}'.format(left, right)
+			# TODO just append, add sequence attribute
+			info = Sisterinfo(left, right, requested, name, group_in_window)
 			if sister in sisters:
-				sisters[sister].append((left, right, group_in_window))
+				sisters[sister].append(info)
 			else:
-				sisters[sister] = [(left, right, group_in_window)]
+				sisters[sister] = [info]
 
 		rows = []
 		for sister, sister_info in sisters.items():
@@ -131,8 +138,7 @@ class Discoverer:
 
 			# Instead of concatenating, the groups should be unioned, but not
 			# sure how to do this in pandas.
-			sister_windows = [(w[0], w[1]) for w in sister_info]
-			group_in_window = pd.concat(w[2] for w in sister_info)
+			group_in_window = pd.concat(si.group for si in sister_info)
 
 			info = dict()
 			for key, g in (
@@ -150,10 +156,10 @@ class Discoverer:
 			else:
 				database_diff = None
 			n_bases = sister.count('N')
-			window_str = ';'.join('{}-{}'.format(l, r) for l, r in sister_windows)
-			sequence_id = '{}{}_{}'.format(self.prefix, gene, sequence_hash(sister))
 
 			# Build the row for the output table
+			window_str = ';'.join(si.name for si in sister_info)
+			sequence_id = '{}{}_{}'.format(self.prefix, gene, sequence_hash(sister))
 			row = [gene, window_str]
 			for key in ('total', 'window', 'exact', 'approx'):
 				row.extend([info[key].count, info[key].unique_J, info[key].unique_CDR3])
@@ -162,7 +168,7 @@ class Discoverer:
 
 			# If a window was requested via --left/--right, write the 'approx'
 			# subset to a separate file.
-			if self.table_output and (self.left, self.right) in sister_windows and len(group_approximate_V) > 0:
+			if self.table_output and any(si.requested for si in sister_info) and len(group_approximate_V) > 0:
 				if not os.path.exists(self.table_output):
 					os.mkdir(self.table_output)
 				path = os.path.join(self.table_output, gene + '.tab')
