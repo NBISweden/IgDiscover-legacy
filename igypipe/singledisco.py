@@ -59,6 +59,25 @@ def add_subcommand(subparsers):
 	return subparser
 
 
+class SerialPool:
+	"""
+	An alternative to multiprocessing.Pool that runs things in parallel for
+	easier debugging
+	"""
+	def __init__(self, *args, **kwargs):
+		pass
+
+	def __enter__(self):
+		return self
+
+	def __exit__(self, *args):
+		pass
+
+	def imap(self, func, iterable, chunksize):
+		for i in iterable:
+			yield func(i)
+
+
 def sister_sequence(group, program='muscle-medium', threshold=0.6, maximum_subsample_size=1600):
 	"""
 	For a given group, compute a consensus sequence over the V gene sequences
@@ -216,7 +235,9 @@ def discover_command(args):
 	discoverer = Discoverer(database, windows, args.left, args.right,
 		args.table_output, args.prefix, args.consensus_threshold, v_error_rate, MAXIMUM_SUBSAMPLE_SIZE)
 	n_consensus = 0
-	with multiprocessing.Pool(args.threads) as pool:
+
+	Pool = SerialPool if args.threads == 1 else multiprocessing.Pool
+	with Pool(args.threads) as pool:
 		for rows in pool.imap(discoverer, groups, chunksize=1):
 			writer.writerows(rows)
 			sys.stdout.flush()
