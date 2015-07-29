@@ -31,7 +31,7 @@ CLUSTER_SUBSAMPLE_SIZE = 300
 
 Groupinfo = namedtuple('Groupinfo', 'count unique_J unique_CDR3')
 
-Sisterinfo = namedtuple('Sisterinfo', 'sequence requested name group')
+SisterInfo = namedtuple('SisterInfo', 'sequence requested name group')
 
 
 def add_subcommand(subparsers):
@@ -108,7 +108,7 @@ class SisterMerger:
 
 	def _merge_all(self):
 		if not self.sisters:
-			return
+			return []
 		merged = [self.sisters[0]]
 		for s in self.sisters[1:]:
 			for i, m in enumerate(merged):
@@ -148,7 +148,7 @@ class SisterMerger:
 		name = s.name + ';' + t.name
 		# take union of groups
 		group = pd.concat([s.group, t.group]).groupby(level=0).last()
-		return Sisterinfo(seq, requested, name, group)
+		return SisterInfo(seq, requested, name, group)
 
 
 class Discoverer:
@@ -184,7 +184,7 @@ class Discoverer:
 				right = int(right)
 			requested = (left, right) == (self.left, self.right)
 			name = '{}-{}'.format(left, right)
-			sisters.add(Sisterinfo(sister, requested, name, group_in_window))
+			sisters.add(SisterInfo(sister, requested, name, group_in_window))
 
 		if self.cluster:
 			indices = downsampled(list(group.index), CLUSTER_SUBSAMPLE_SIZE)
@@ -192,7 +192,7 @@ class Discoverer:
 			df, linkage, clusters = cluster_sequences(sequences)
 			for i, sister in enumerate(cluster_consensus(sequences, clusters), 1):
 				name = 'cl{}'.format(i)
-				info = Sisterinfo(sister, False, name, group.loc[indices])
+				info = SisterInfo(sister, False, name, group.loc[indices])
 				sisters.add(info)
 
 		rows = []
