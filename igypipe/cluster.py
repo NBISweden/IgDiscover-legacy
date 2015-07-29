@@ -119,14 +119,14 @@ def cluster_consensus(sequences, clusters, minsize=5):
 	"""
 	Compute a consensus for each cluster that has at least minsize members.
 
+	A consensus will also be computed for sequences assigned to cluster zero
+	('unassigned').
+
 	Return a list of consensus sequences.
 	"""
 	n_clusters = max(clusters) + 1
 	cluster_sequences = [ [] for _ in range(n_clusters) ]
 	for i, cluster_id in enumerate(clusters):
-		if cluster_id == 0:
-			# sequence not assigned to a cluster
-			continue
 		cluster_sequences[cluster_id-1].append(sequences[i])
 	cons = []
 	for seqs in cluster_sequences:
