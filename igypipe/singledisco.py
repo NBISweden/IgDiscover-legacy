@@ -10,6 +10,7 @@ import os.path
 from collections import OrderedDict, namedtuple
 import multiprocessing
 import random
+from itertools import zip_longest
 
 import numpy as np
 import pandas as pd
@@ -93,17 +94,22 @@ def sister_sequence(group, program='muscle-medium', threshold=0.6, maximum_subsa
 
 
 class SisterMerger:
+	"""
+	Merge very similar consensus sequences into single entries. This could be
+	seen as a type of clustering using very specific criteria. Two sequences
+	are merged if one is the prefix of the other, allowing differences where
+	one of the sequences has an 'N' base.
+	"""
 	def __init__(self):
 		self.sisters = []
 
 	def add(self, info):
 		self.sisters.append(info)
 
-	def merge_them_all(self):
+	def _merge_all(self):
 		if not self.sisters:
 			return
 		merged = [self.sisters[0]]
-		# quadratic
 		for s in self.sisters[1:]:
 			for i, m in enumerate(merged):
 				c = self._merged(m, s)
@@ -116,19 +122,33 @@ class SisterMerger:
 		return merged
 
 	def __iter__(self):
-		for m in self.merge_them_all():
+		for m in self._merge_all():
 			yield m
 
 	@staticmethod
 	def _merged(s, t):
-		if s.sequence == t.sequence:
-			requested = s.requested or t.requested
-			name = s.name + ';' + t.name
-			# take union of groups
-			group = pd.concat([s.group, t.group]).groupby(level=0).last()
-			return Sisterinfo(s.sequence, requested, name, group)
-		else:
-			return None
+		seq = []
+		for c1, c2 in zip_longest(s.sequence, t.sequence):
+			if c1 is None:
+				c = c2
+			elif c2 is None:
+				c = c1
+			elif c1 == 'N':
+				c = c2
+			elif c2 == 'N':
+				c = c1
+			elif c1 != c2:
+				return None
+			else:
+				assert c1 == c2
+				c = c1
+			seq.append(c)
+		seq = ''.join(seq)
+		requested = s.requested or t.requested
+		name = s.name + ';' + t.name
+		# take union of groups
+		group = pd.concat([s.group, t.group]).groupby(level=0).last()
+		return Sisterinfo(seq, requested, name, group)
 
 
 class Discoverer:
