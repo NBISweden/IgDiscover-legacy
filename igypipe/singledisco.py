@@ -27,7 +27,7 @@ random.seed(123)
 
 MINGROUPSIZE_CONSENSUS = 10
 MAXIMUM_SUBSAMPLE_SIZE = 1600
-CLUSTER_SUBSAMPLE_SIZE = 300
+CLUSTER_SUBSAMPLE_SIZE = 500
 
 Groupinfo = namedtuple('Groupinfo', 'count unique_J unique_CDR3')
 
