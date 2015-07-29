@@ -10,3 +10,4 @@ runs/
 venv/
 build/
 *.egg-info/
+.tox/
