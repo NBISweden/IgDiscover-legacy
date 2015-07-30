@@ -190,10 +190,22 @@ class Discoverer:
 			indices = downsampled(list(group.index), CLUSTER_SUBSAMPLE_SIZE)
 			sequences = list(group.V_nt.loc[indices])
 			df, linkage, clusters = cluster_sequences(sequences)
-			for i, sister in enumerate(cluster_consensus(sequences, clusters), 1):
-				name = 'cl{}'.format(i)
-				info = SisterInfo(sister, False, name, group.loc[indices])
+
+			n_clusters = max(clusters) + 1
+			cluster_indices = [ [] for _ in range(n_clusters) ]
+			for i, cluster_id in enumerate(clusters):
+				cluster_indices[cluster_id].append(indices[i])
+
+			cl = 1
+			for ind in cluster_indices:
+				group_in_window = group.loc[ind]
+				if len(group_in_window) < MINGROUPSIZE_CONSENSUS:
+					continue
+				sister = sister_sequence(group_in_window, threshold=self.consensus_threshold/100, maximum_subsample_size=self.downsample)
+				name = 'cl{}'.format(cl)
+				info = SisterInfo(sister, False, name, group_in_window)
 				sisters.add(info)
+				cl += 1
 
 		rows = []
 		for sister_info in sisters:
@@ -213,10 +225,8 @@ class Discoverer:
 					('approx', group_approximate_V)):
 				unique_J = len(set(g.J_gene))
 				unique_CDR3 = len(set(s for s in g.CDR3_nt if s))
-				# Correct for concatenated dataframes by taking the set of indices.
-				# TODO
-				assert len(set(g.index)) == len(g.index)
-				count = len(set(g.index))
+				assert len(set(g.index)) == len(g.index)  # TODO remove this
+				count = len(g.index)
 				info[key] = Groupinfo(count=count, unique_J=unique_J, unique_CDR3=unique_CDR3)
 			if gene in self.database:
 				database_diff = edit_distance(sister, self.database[gene])
@@ -313,7 +323,6 @@ def discover_command(args):
 		for rows in pool.imap(discoverer, groups, chunksize=1):
 			writer.writerows(rows)
 			sys.stdout.flush()
-
 			if consensus_output:
 				for row in rows:
 					print('>{} window:{}\n{}'.format(row[-2], row[1], row[-1]), file=consensus_output)
