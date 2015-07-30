@@ -127,7 +127,7 @@ def cluster_consensus(sequences, clusters, minsize=5):
 	n_clusters = max(clusters) + 1
 	cluster_sequences = [ [] for _ in range(n_clusters) ]
 	for i, cluster_id in enumerate(clusters):
-		cluster_sequences[cluster_id-1].append(sequences[i])
+		cluster_sequences[cluster_id].append(sequences[i])
 	cons = []
 	for seqs in cluster_sequences:
 		if len(seqs) >= minsize:
