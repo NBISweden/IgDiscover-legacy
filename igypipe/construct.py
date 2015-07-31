@@ -87,7 +87,7 @@ class Merger:
 				c = c1
 			seq.append(c)
 		seq = ''.join(seq)
-		name = s.name + ';' + t.name
+		name = ';'.join(set(s.name.split(';')).union(t.name.split(';')))
 		return SequenceInfo(seq, name)
 
 
