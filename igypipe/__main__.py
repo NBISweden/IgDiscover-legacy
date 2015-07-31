@@ -13,8 +13,8 @@ __author__ = "Marcel Martin"
 import logging
 from sqt import HelpfulArgumentParser
 
-from . import (commonv, igblast, parse, count, group, discover, singledisco, init,
-	clusterplot, errorplot, __version__)
+from . import (commonv, igblast, parse, count, group, discover, construct,
+	singledisco, init, clusterplot, errorplot, __version__)
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ def main():
 	errorplot.add_subcommand(subparsers)
 	clusterplot.add_subcommand(subparsers)
 	singledisco.add_subcommand(subparsers)
-
+	construct.add_subcommand(subparsers)
 
 	args = parser.parse_args()
 	if not hasattr(args, 'func'):
