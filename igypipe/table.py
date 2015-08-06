@@ -26,28 +26,20 @@ def read_table(path, filter=True, log=False):
 	- V gene E-value too high
 	"""
 	base, ext = os.path.splitext(path)
-	sdb = base + '.sdb'
+	h5path = base + '.h5'
 
-	if not os.path.exists(sdb) or os.path.getmtime(path) > os.path.getmtime(sdb):
-		logger.info('(Re-)Creating table cache %s', sdb)
+	if not os.path.exists(h5path) or os.path.getmtime(path) > os.path.getmtime(h5path):
+		logger.info('(Re-)Creating table cache %s', h5path)
 		# Two or more processes may try to re-create the table at the same time.
 		# We therefore write the table into a temporary file first and then move
-		# it atomically. This could also be solved by using SQLite3’s locking
-		# mechanisms, which would also avoid the problem of processes doing the
-		# same work twice, but unfortunately pandas’ to_sql function issues
-		# COMMITs where it should not.
-		with TemporaryDirectory(dir=os.path.dirname(sdb)) as tempdir:
-			temp_db = os.path.join(tempdir, 'db')
-			connection = sqlite3.connect(temp_db)
+		# it atomically.
+		with TemporaryDirectory(dir=os.path.dirname(h5path)) as tempdir:
+			temp_h5 = os.path.join(tempdir, 'db.h5')
 			df = pd.read_csv(path, sep='\t')
-			df.to_sql('data', connection)
-			connection.commit()
-			connection.close()
-			os.rename(temp_db, sdb)
+			df.to_hdf(temp_h5, 'table')
+			os.rename(temp_h5, h5path)
 
-	connection = sqlite3.connect(sdb)
-	d = pd.read_sql('SELECT * FROM data', connection)
-	connection.close()
+	d = pd.read_hdf(h5path, 'table')
 	assert len(d) > 0
 
 	if log: logger.info('%s rows in input table', len(d))
