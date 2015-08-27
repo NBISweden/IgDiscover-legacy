@@ -13,11 +13,11 @@ reads/trimmed.fastq.gz -- primers removed from merged reads
 reads/filtered.fasta  -- too short sequences removed, converted to FASTA
 reads/collapsed.fasta -- collapsed sequences (duplicates removed)
 unique.igblast.txt -- raw IgBLAST output
-unique.table.tab -- result of parsing IgBLAST output
+unique.assigned.tab -- result of parsing IgBLAST output
 groups.tab -- sequences grouped by barcode
 consensus.fasta -- contains one consensus sequence for each group
 consensus.igblast.txt -- consensus sequences sent through IgBLAST
-consensus.table.tab -- result of parsing IgBLAST output
+consensus.assigned.tab -- result of parsing IgBLAST output
 """
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_pdf import FigureCanvasPdf
@@ -76,20 +76,20 @@ else:
 
 
 MERGED_READS = 'reads/merged.fastq.gz'
-COLLAPSED_READS = 'reads/collapsed.fasta'
+UNIQUE_READS = 'reads/unique.fasta'
 
 NONREDUNDANT = [
-		"stats/readlengthhisto.pdf",
+		#"stats/readlengthhisto.pdf",
 		"stats/barcodes.txt",
 		"stats/counts.txt",
-		"stats/unique.correlationVJ.pdf",
-		"stats/consensus.correlationVJ.pdf",
-		'stats/unique.errorhistograms.pdf',
-		"unique.v_usage.tab",
-		"unique.v_usage.pdf",
-		"consensus.v_usage.tab",
-		"consensus.v_usage.pdf",
-		"clusterplots/done"
+		"iteration-001/unique.correlationVJ.pdf",
+		"iteration-001/consensus.correlationVJ.pdf",
+		'iteration-001/unique.errorhistograms.pdf',
+		"iteration-001/unique.v_usage.tab",
+		"iteration-001/unique.v_usage.pdf",
+		"iteration-001/consensus.v_usage.tab",
+		"iteration-001/consensus.v_usage.pdf",
+		"iteration-001/clusterplots/done"
 ]
 
 rule all:
@@ -97,8 +97,6 @@ rule all:
 		NONREDUNDANT,
 		READS1, READS2,
 		#expand("fastqc/reads.{r}.zip", r=(1, 2)),
-		"unique.table.tab",
-		"consensus.table.tab",
 
 
 rule nonredundant:
@@ -125,7 +123,7 @@ if MERGE_PROGRAM == 'flash':
 		input: READS1, READS2
 		resources: time=60
 		threads: 8
-		log: 'flash.log'
+		log: 'reads/flash.log'
 		shell:
 			# -M: maximal overlap (2x300, 420-450bp expected fragment size)
 			"flash -t {threads} -c -M {FLASH_MAXIMUM_OVERLAP} {input} 2> >(tee {log} >&2) | pigz > {output}"
@@ -171,13 +169,13 @@ rule barcode_stats:
 
 
 rule stats_numbers:
-	output: txt="stats/counts.txt"
+	output: txt="{dir}/counts.txt"
 	input:
 		reads=READS1,
 		merged=MERGED_READS,
-		unique=COLLAPSED_READS,
-		unique_table="unique.table.tab",
-		consensus_table="consensus.table.tab",
+		unique=UNIQUE_READS,
+		unique_table="{dir}/unique.assigned.tab",
+		consensus_table="{dir}/consensus.assigned.tab",
 	shell:
 		"""
 		echo -n "Number of paired-end reads: " > {output}
@@ -201,9 +199,9 @@ rule stats_numbers:
 
 rule stats_correlation_V_J:
 	output:
-		pdf="stats/{base}.correlationVJ.pdf"
+		pdf="{base}.correlationVJ.pdf"
 	input:
-		table="{base}.table.tab"
+		table="{base}.assigned.tab"
 	run:
 		table = igypipe.read_table(input.table)
 		fig = Figure(figsize=(30/2.54, 21/2.54))
@@ -219,9 +217,9 @@ rule stats_correlation_V_J:
 
 rule stats_plot_errorhistograms:
 	output:
-		pdf='stats/{base}.errorhistograms.pdf',
+		pdf='{base}.errorhistograms.pdf',
 	input:
-		table='{base}.table.tab'
+		table='{base}.assigned.tab'
 	shell:
 		'igypipe errorplot {input.table} {output.pdf}'
 
@@ -294,12 +292,13 @@ rule fastq_to_fasta:
 
 rule dereplicate:
 	"""Collapse identical sequences with VSEARCH"""
-	output: fasta=COLLAPSED_READS
+	output: fasta=UNIQUE_READS
 	input: fasta="reads/filtered.fasta"
 	shell:
 		"""vsearch --derep_fulllength {input.fasta} --strand both --output {output.fasta} --sizeout"""
 
 
+# TODO this rule is unused
 rule cluster:
 	"""
 	TODO Daniel ran this three times (at 99%, 98% and 97% identity) in order to
@@ -308,7 +307,7 @@ rule cluster:
 	output:
 		fasta="clustered.fasta",  # centroids
 		uc="clustered.uc"
-	input: fasta=COLLAPSED_READS
+	input: fasta=UNIQUE_READS
 	resources: time=36*60, mem=32000
 	threads: 4
 	shell:
@@ -319,12 +318,22 @@ rule cluster:
 		"""
 
 
+rule initial_database:
+	"""Copy database files into the folder for iteration 1"""
+	output:
+		fasta="iteration-001/database/{species}_{gene,[VDJ]}.fasta"
+	input:
+		fasta="database/{species}_{gene}.fasta"
+	shell:
+		"cp -p {input} {output}"
+
+
 rule makeblastdb:
-	input: fasta="database/{organism}_{gene}.fasta"
-	output: "database/{organism}_{gene}.nhr" # and nin nog nsd nsi nsq
-	params: dbname="database/{organism}_{gene}"
-	log: 'database/{organism}_{gene}.log'
-	threads: 100  # force to run as only job
+	input: fasta="{dir}/{species}_{gene}.fasta"
+	output: "{dir}/{species}_{gene,[VDJ]}.nhr"  # and nin nog nsd nsi nsq
+	params: dbname="{dir}/{species}_{gene}"
+	log: '{dir}/{species}_{gene}.log'
+	threads: 100  # force to run as single job
 	shell:
 		r"""
 		makeblastdb -parse_seqids -dbtype nucl -in {input.fasta} -out {params.dbname} >& {log}
@@ -332,30 +341,40 @@ rule makeblastdb:
 		"""
 
 
+rule symlink_iteration_reads:
+	output:
+		fasta='{dir}/unique.fasta'
+	input:
+		fasta='reads/unique.fasta'
+	shell:
+		'ln -s ../{input.fasta} {output.fasta}'
+
+
 rule igypipe_igblast:
 	output:
-		txt="{base}.igblast.txt"
+		txt="{dir}/{base}.igblast.txt"
 	input:
-		fasta="{base}.fasta",
-		db_v="database/{species}_V.nhr".format(species=SPECIES),
-		db_d="database/{species}_D.nhr".format(species=SPECIES),
-		db_j="database/{species}_J.nhr".format(species=SPECIES)
+		fasta='{dir}/{base}.fasta',
+		db_v="{{dir}}/database/{species}_V.nhr".format(species=SPECIES),
+		db_d="{{dir}}/database/{species}_D.nhr".format(species=SPECIES),
+		db_j="{{dir}}/database/{species}_J.nhr".format(species=SPECIES)
 	params:
-		penalty='--penalty {}'.format(MISMATCH_PENALTY) if MISMATCH_PENALTY is not None else ''
+		penalty='--penalty {}'.format(MISMATCH_PENALTY) if MISMATCH_PENALTY is not None else '',
+		database='{dir}/database'
 	threads: 16
 	shell:
 		#-auxiliary_data $IGDATA/optional_file/{SPECIES}_gl.aux
 		r"""
-		igypipe igblast --threads {threads} {params.penalty} --species {SPECIES} database/ {input.fasta} > {output.txt}
+		igypipe igblast --threads {threads} {params.penalty} --species {SPECIES} {params.database} {input.fasta} > {output.txt}
 		"""
 
 
 rule igypipe_parse:
 	output:
-		tab="{base}.table.tab"
+		tab="{dir}/{base}.assigned.tab"
 	input:
-		txt="{base}.igblast.txt",
-		fasta="{base}.fasta"
+		txt="{dir}/{base}.igblast.txt",
+		fasta="{dir}/{base}.fasta"
 	params:
 		dirname=os.path.basename(os.getcwd())
 	shell:
@@ -365,30 +384,32 @@ rule igypipe_parse:
 rule igypipe_group:
 	"""Group by barcode"""
 	output:
-		pdf="stats/groupsizes.pdf",
-		tab="groups.tab",
-		fasta="consensus.fasta"
+		pdf="{base}/stats/groupsizes.pdf",
+		tab="{base}/groups.tab",
+		fasta="{base}/consensus.fasta"
 	input:
-		tab="unique.table.tab"
+		tab="{base}/unique.assigned.tab"
 	shell:
 		"igypipe group --program={MULTIALIGN_PROGRAM} --barcode-length {BARCODE_LENGTH} --plot-sizes {output.pdf} --groups-output {output.tab} {input.tab} > {output.fasta}"
 
 
 rule count_and_plot:
 	output:
-		plot="{base}.v_usage.pdf",
-		counts="{base}.v_usage.tab"
+		plot="{dir}/{base}.v_usage.pdf",
+		counts="{dir}/{base}.v_usage.tab"
 	input:
-		v_reference="database/{SPECIES}_V.fasta".format(SPECIES=SPECIES),
-		tab="{base}.table.tab"
+		v_reference="{{dir}}/database/{SPECIES}_V.fasta".format(SPECIES=SPECIES),
+		tab="{dir}/{base}.assigned.tab"
 	shell:
 		"igypipe count --reference {input.v_reference} {input.tab} {output.plot} > {output.counts}"
 
 
 rule igypipe_clusterplot:
 	output:
-		done="clusterplots/done"
+		done="{dir}/clusterplots/done"
 	input:
-		tab="unique.table.tab"
+		tab="{dir}/unique.assigned.tab"
+	params:
+		clusterplots="{dir}/clusterplots/"
 	shell:
-		"igypipe clusterplot {input.tab} clusterplots/ && touch {output.done}"
+		"igypipe clusterplot {input.tab} {params.clusterplots} && touch {output.done}"
