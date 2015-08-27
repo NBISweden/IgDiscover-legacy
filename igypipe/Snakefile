@@ -75,23 +75,31 @@ else:
 	READS2 = 'reads.2.fastq'
 
 
-rule all:
-	input:
-		READS1, READS2,
-		#expand("fastqc/reads.{r}.zip", r=(1, 2)),
+NONREDUNDANT = [
 		"stats/readlengthhisto.pdf",
 		"stats/barcodes.txt",
 		"stats/counts.txt",
 		"stats/unique.correlationVJ.pdf",
 		"stats/consensus.correlationVJ.pdf",
 		'stats/unique.errorhistograms.pdf',
-		"unique.table.tab",
-		"consensus.table.tab",
 		"unique.v_usage.tab",
 		"unique.v_usage.pdf",
 		"consensus.v_usage.tab",
 		"consensus.v_usage.pdf",
 		"clusterplots/done"
+]
+
+rule all:
+	input:
+		NONREDUNDANT,
+		READS1, READS2,
+		#expand("fastqc/reads.{r}.zip", r=(1, 2)),
+		"unique.table.tab",
+		"consensus.table.tab",
+
+
+rule nonredundant:
+	input: NONREDUNDANT
 
 
 if LIMIT:
