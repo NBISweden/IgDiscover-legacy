@@ -8,10 +8,10 @@ module load igypipe
 These are the main files that the pipeline creates, in the order in which they
 are created:
 
-merged.fastq.gz -- merged reads
-trimmed.fastq.gz -- primers removed from merged reads
-filtered.fasta  -- too short sequences removed, converted to FASTA
-unique.fasta -- collapsed sequences
+reads/merged.fastq.gz -- merged reads
+reads/trimmed.fastq.gz -- primers removed from merged reads
+reads/filtered.fasta  -- too short sequences removed, converted to FASTA
+reads/collapsed.fasta -- collapsed sequences (duplicates removed)
 unique.igblast.txt -- raw IgBLAST output
 unique.table.tab -- result of parsing IgBLAST output
 groups.tab -- sequences grouped by barcode
@@ -68,12 +68,15 @@ if not FORWARD_PRIMERS:
 shell.prefix("set -euo pipefail;")
 
 if LIMIT:
-	READS1 = 'reads-{}.1.fastq'.format(LIMIT)
-	READS2 = 'reads-{}.2.fastq'.format(LIMIT)
+	READS1 = 'reads/limited-{}.1.fastq'.format(LIMIT)
+	READS2 = 'reads/limited-{}.2.fastq'.format(LIMIT)
 else:
-	READS1 = 'reads.1.fastq'
-	READS2 = 'reads.2.fastq'
+	READS1 = 'reads/decompressed.1.fastq'
+	READS2 = 'reads/decompressed.2.fastq'
 
+
+MERGED_READS = 'reads/merged.fastq.gz'
+COLLAPSED_READS = 'reads/collapsed.fasta'
 
 NONREDUNDANT = [
 		"stats/readlengthhisto.pdf",
@@ -104,21 +107,21 @@ rule nonredundant:
 
 if LIMIT:
 	rule limit_reads:
-		output: 'reads-{}.{{nr}}.fastq'.format(LIMIT)
+		output: 'reads/limited-{}.{{nr}}.fastq'.format(LIMIT)
 		input: 'reads.{nr}.fastq.gz'
 		shell:
 			'sqt-fastqmod --limit {LIMIT} {input} > {output}'
 else:
-	rule ungzip:
-		output: "{file}.fastq"
-		input: "{file}.fastq.gz"
+	rule decompress_reads:
+		output: "reads/decompressed.{nr}.fastq"
+		input: "reads.{nr}.fastq.gz"
 		shell: "zcat {input} > {output}"
 
 
 if MERGE_PROGRAM == 'flash':
 	rule flash_merge:
 		"""Use FLASH to merge paired-end reads"""
-		output: "merged.fastq.gz"
+		output: MERGED_READS
 		input: READS1, READS2
 		resources: time=60
 		threads: 8
@@ -129,14 +132,14 @@ if MERGE_PROGRAM == 'flash':
 elif MERGE_PROGRAM == 'pear':
 	rule pear_merge:
 		"""Use pear to merge paired-end reads"""
-		output: 'pear.unassembled.forward.fastq', 'pear.unassembled.reverse.fastq', 'pear.discarded.fastq', fastq="merged.fastq.gz"
+		output: 'reads/pear.unassembled.forward.fastq', 'reads/pear.unassembled.reverse.fastq', 'reads/pear.discarded.fastq', fastq=MERGED_READS
 		input: READS1, READS2
 		resources: time=60
 		threads: 8
 		shell:
 			r"""
-			pear -j {threads} -f {input[0]} -r {input[1]} -o pear && \
-			gzip < pear.assembled.fastq > {output.fastq} && rm pear.assembled.fastq
+			pear -j {threads} -f {input[0]} -r {input[1]} -o reads/pear && \
+			gzip < reads/pear.assembled.fastq > {output.fastq} && rm reads/pear.assembled.fastq
 			"""
 else:
 	sys.exit("MERGE_PROGRAM not recognized")
@@ -148,30 +151,31 @@ rule read_length_histogram:
 		txt="stats/readlengthhisto.txt",
 		pdf="stats/readlengthhisto.pdf"
 	input:
-		fastq="merged.fastq.gz"
+		fastq=MERGED_READS
 	shell:
 		"sqt-readlenhisto --plot {output.pdf} {input}  > {output.txt}"
 
 
-rule barcodes:
+rule barcode_stats:
 	"""Print out number of random barcodes in the library
 	TODO
 	- run this only if random barcodes are actually used
 	- make sure that a stranded protocol is used
 	"""
 	output: txt="stats/barcodes.txt"
-	input: fastq="merged.fastq.gz"
+	input: fastq=MERGED_READS
 	shell:
 		"""
 		zcat {input} | awk 'NR%4==2 {{print substr($1,1,12)}}' | grep -v N | sort -u | wc -l > {output}
 		"""
 
+
 rule stats_numbers:
 	output: txt="stats/counts.txt"
 	input:
 		reads=READS1,
-		merged="merged.fastq.gz",
-		unique="unique.fasta",
+		merged=MERGED_READS,
+		unique=COLLAPSED_READS,
 		unique_table="unique.table.tab",
 		consensus_table="consensus.table.tab",
 	shell:
@@ -185,7 +189,7 @@ rule stats_numbers:
 		echo -n "Number of barcodes in merged sequences: " >> {output}
 		zcat {input.merged} | awk 'NR % 4 == 2 {{ print substr($1, 1, 12) }}' | sort -u | grep -v N | wc -l >> {output}
 		echo -n "Number of unique sequences: " >> {output}
-		grep -c '^>' unique.fasta >> {output}
+		grep -c '^>' {input.unique} >> {output}
 		echo -n "Number of barcodes in unique sequences: " >> {output}
 		grep -A 1 '^>' {input.unique} | awk '!/^>/ && $1 != "--" {{ print substr($1,1,12) }}' | sort -u | grep -v N | wc -l >> {output}
 		echo -n "Number of barcodes in unique table: " >> {output}
@@ -234,10 +238,10 @@ PRIMERS[0].extend(REVERSE_PRIMERS)
 PRIMERS[1].extend(reverse_complement(seq) for seq in FORWARD_PRIMERS)
 
 rule trim_primers_fivep:
-	output: fastq="trimmed-fivep.fastq.gz"
-	input: fastq="merged.fastq.gz"
+	output: fastq="reads/trimmed-fivep.fastq.gz"
+	input: fastq=MERGED_READS
 	resources: time=60
-	log: 'cutadapt-fiveprime.log'
+	log: 'reads/cutadapt-fiveprime.log'
 	params:
 		five_p=" ".join("-g ^{}".format(seq) for seq in PRIMERS[0])
 	shell:
@@ -247,10 +251,10 @@ rule trim_primers_fivep:
 
 
 rule trim_primers_threep:
-	output: fastq="trimmed.fastq.gz"
-	input: fastq="trimmed-fivep.fastq.gz"
+	output: fastq="reads/trimmed.fastq.gz"
+	input: fastq="reads/trimmed-fivep.fastq.gz"
 	resources: time=60
-	log: 'cutadapt-threeprime.log'
+	log: 'reads/cutadapt-threeprime.log'
 	params:
 		three_p=" ".join("-a {}$".format(seq) for seq in PRIMERS[1])
 	shell:
@@ -281,8 +285,8 @@ rule fastq_to_fasta:
 	* Remove low-quality sequences
 	* Discard too short sequences
 	"""
-	output: fasta="filtered.fasta"
-	input: fastq="trimmed.fastq.gz" if TRIM_PRIMERS else "merged.fastq.gz"
+	output: fasta="reads/filtered.fasta"
+	input: fastq="reads/trimmed.fastq.gz" if TRIM_PRIMERS else MERGED_READS
 	params: max_errors="--max-errors {MAXIMUM_EXPECTED_ERRORS}" if MAXIMUM_EXPECTED_ERRORS is not None else ""
 	shell:
 		"sqt-fastqmod {params.max_errors} --minimum-length {MINIMUM_MERGED_READ_LENGTH} --fasta {input.fastq} > {output.fasta}"
@@ -290,8 +294,8 @@ rule fastq_to_fasta:
 
 rule dereplicate:
 	"""Collapse identical sequences with VSEARCH"""
-	output: fasta="unique.fasta"
-	input: fasta="filtered.fasta"
+	output: fasta=COLLAPSED_READS
+	input: fasta="reads/filtered.fasta"
 	shell:
 		"""vsearch --derep_fulllength {input.fasta} --strand both --output {output.fasta} --sizeout"""
 
@@ -304,7 +308,7 @@ rule cluster:
 	output:
 		fasta="clustered.fasta",  # centroids
 		uc="clustered.uc"
-	input: fasta="unique.fasta"
+	input: fasta=COLLAPSED_READS
 	resources: time=36*60, mem=32000
 	threads: 4
 	shell:
