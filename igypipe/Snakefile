@@ -82,7 +82,8 @@ NONREDUNDANT = [
 	"iteration-001/unique.v_usage.pdf",
 	"iteration-001/consensus.v_usage.tab",
 	"iteration-001/consensus.v_usage.pdf",
-	"iteration-001/clusterplots/done"
+	"iteration-001/clusterplots/done",
+	"iteration-001/discover.tab"
 ]
 
 rule all:
@@ -410,3 +411,15 @@ rule igypipe_clusterplot:
 		clusterplots="{dir}/clusterplots/"
 	shell:
 		"igypipe clusterplot {input.tab} {params.clusterplots} && touch {output.done}"
+
+
+rule igypipe_singledisco:
+	"""Discover potential new V gene sequences"""
+	output:
+		tab="{dir}/discover.tab"
+	input:
+		v_reference="{{dir}}/database/{species}_V.fasta".format(species=config.species),
+		tab="{dir}/unique.assigned.tab"
+	threads: 4
+	shell:
+		"igypipe singledisco -j {threads} --cluster --window-width 2 --database {input.v_reference} {input.tab} > {output.tab}"
