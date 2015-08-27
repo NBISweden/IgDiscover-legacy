@@ -25,51 +25,45 @@ import seaborn as sns
 from sqt.dna import reverse_complement
 import igypipe
 
-# Set defaults for some configurable values.
+class Config:
+	def __init__(self, path):
+		# Set some defaults.
+		self.merge_program = 'pear'
+		self.limit = None  # or an integer
+		self.cluster_program = 'vsearch'
+		self.multialign_program = 'muscle-fast'
+		self.maximum_expected_errors = None  # or an integer
+		self.minimum_merged_read_length = 300
+		self.trim_primers = False
+		self.mismatch_penalty = None
+		self.barcode_length = 0
 
-MERGE_PROGRAM = 'pear'
+		self.read_from(path)
 
-# Limit processing to this number of reads. Set to None to process all.
-LIMIT = None
+	def read_from(self, path):
+		try:
+			exec(open(path).read(), self.__dict__)
+		except FileNotFoundError:
+			sys.exit("Pipeline configuration file {!r} not found. Please create it!".format(path))
+		# Convert all-uppercase attributes to lowercase
+		for attribute, value in list(vars(self).items()):
+			if attribute == attribute.upper():
+				setattr(self, attribute.lower(), value)
+		if self.trim_primers:
+			if not self.reverse_primers:
+				sys.exit("The list of reverse_primers is empty. This will not work correctly.")
+			if not self.forward_primers:
+				sys.exit("The list of forward_primers is empty. This will not work correctly.")
 
-# Which program to use for clustering. This can be either a path to the
-# usearch binary or vsearch.
-CLUSTER_PROGRAM = 'vsearch'
 
-MULTIALIGN_PROGRAM = 'muscle-medium'
-
-# Filter out reads that have more than this number of expected errors.
-# Set to None to disable.
-MAXIMUM_EXPECTED_ERRORS = None
-
-# Whether to trim primers. Can be set to True or False.
-TRIM_PRIMERS = False
-
-# Mismatch penalty for IgBLAST. The default is -1, which can lead to
-# misassignements when the reference database contains incomplete sequences.
-# Setting it to -2, -3 or -4 reduces misassignments of long sequences, but
-# makes the alignment less sensitive.
-MISMATCH_PENALTY = None
-
-BARCODE_LENGTH = 0
-
-try:
-	include: "pipeline.conf"
-except WorkflowError:
-	sys.exit("Pipeline configuration file 'pipeline.conf' not found. Please create it!")
-
-if not REVERSE_PRIMERS:
-	sys.exit("The list of REVERSE_PRIMERS is empty. This will currently not work correctly.")
-
-if not FORWARD_PRIMERS:
-	sys.exit("The list of FORWARD_PRIMERS is empty. This will currently not work correctly.")
+config = Config('pipeline.conf')
 
 # This command is run before every shell command and helps to catch errors early
 shell.prefix("set -euo pipefail;")
 
-if LIMIT:
-	READS1 = 'reads/limited-{}.1.fastq'.format(LIMIT)
-	READS2 = 'reads/limited-{}.2.fastq'.format(LIMIT)
+if config.limit:
+	READS1 = 'reads/limited-{}.1.fastq'.format(config.limit)
+	READS2 = 'reads/limited-{}.2.fastq'.format(config.limit)
 else:
 	READS1 = 'reads/decompressed.1.fastq'
 	READS2 = 'reads/decompressed.2.fastq'
@@ -79,17 +73,16 @@ MERGED_READS = 'reads/merged.fastq.gz'
 UNIQUE_READS = 'reads/unique.fasta'
 
 NONREDUNDANT = [
-		#"stats/readlengthhisto.pdf",
-		"stats/barcodes.txt",
-		"stats/counts.txt",
-		"iteration-001/unique.correlationVJ.pdf",
-		"iteration-001/consensus.correlationVJ.pdf",
-		'iteration-001/unique.errorhistograms.pdf',
-		"iteration-001/unique.v_usage.tab",
-		"iteration-001/unique.v_usage.pdf",
-		"iteration-001/consensus.v_usage.tab",
-		"iteration-001/consensus.v_usage.pdf",
-		"iteration-001/clusterplots/done"
+	"stats/barcodes.txt",
+	"iteration-001/counts.txt",
+	"iteration-001/unique.correlationVJ.pdf",
+	"iteration-001/consensus.correlationVJ.pdf",
+	'iteration-001/unique.errorhistograms.pdf',
+	"iteration-001/unique.v_usage.tab",
+	"iteration-001/unique.v_usage.pdf",
+	"iteration-001/consensus.v_usage.tab",
+	"iteration-001/consensus.v_usage.pdf",
+	"iteration-001/clusterplots/done"
 ]
 
 rule all:
@@ -103,12 +96,12 @@ rule nonredundant:
 	input: NONREDUNDANT
 
 
-if LIMIT:
+if config.limit:
 	rule limit_reads:
-		output: 'reads/limited-{}.{{nr}}.fastq'.format(LIMIT)
+		output: 'reads/limited-{}.{{nr}}.fastq'.format(config.limit)
 		input: 'reads.{nr}.fastq.gz'
 		shell:
-			'sqt-fastqmod --limit {LIMIT} {input} > {output}'
+			'sqt-fastqmod --limit {config.limit} {input} > {output}'
 else:
 	rule decompress_reads:
 		output: "reads/decompressed.{nr}.fastq"
@@ -116,7 +109,7 @@ else:
 		shell: "zcat {input} > {output}"
 
 
-if MERGE_PROGRAM == 'flash':
+if config.merge_program == 'flash':
 	rule flash_merge:
 		"""Use FLASH to merge paired-end reads"""
 		output: MERGED_READS
@@ -126,11 +119,15 @@ if MERGE_PROGRAM == 'flash':
 		log: 'reads/flash.log'
 		shell:
 			# -M: maximal overlap (2x300, 420-450bp expected fragment size)
-			"flash -t {threads} -c -M {FLASH_MAXIMUM_OVERLAP} {input} 2> >(tee {log} >&2) | pigz > {output}"
-elif MERGE_PROGRAM == 'pear':
+			"flash -t {threads} -c -M {config.flash_maximum_overlap} {input} 2> >(tee {log} >&2) | pigz > {output}"
+elif config.merge_program == 'pear':
 	rule pear_merge:
 		"""Use pear to merge paired-end reads"""
-		output: 'reads/pear.unassembled.forward.fastq', 'reads/pear.unassembled.reverse.fastq', 'reads/pear.discarded.fastq', fastq=MERGED_READS
+		output:
+			'reads/pear.unassembled.forward.fastq',
+			'reads/pear.unassembled.reverse.fastq',
+			'reads/pear.discarded.fastq',
+			fastq=MERGED_READS
 		input: READS1, READS2
 		resources: time=60
 		threads: 8
@@ -140,7 +137,7 @@ elif MERGE_PROGRAM == 'pear':
 			gzip < reads/pear.assembled.fastq > {output.fastq} && rm reads/pear.assembled.fastq
 			"""
 else:
-	sys.exit("MERGE_PROGRAM not recognized")
+	sys.exit("merge_program given in configuration file not recognized")
 
 
 rule read_length_histogram:
@@ -230,10 +227,10 @@ rule stats_plot_errorhistograms:
 # * fwd in the beginning, revcomp(rev) in the end
 # * rev in the beginning, revcomp(fwd) in the end
 PRIMERS = [
-	FORWARD_PRIMERS[:], [reverse_complement(seq) for seq in REVERSE_PRIMERS]
+	config.forward_primers[:], [reverse_complement(seq) for seq in config.reverse_primers]
 ]
-PRIMERS[0].extend(REVERSE_PRIMERS)
-PRIMERS[1].extend(reverse_complement(seq) for seq in FORWARD_PRIMERS)
+PRIMERS[0].extend(config.reverse_primers)
+PRIMERS[1].extend(reverse_complement(seq) for seq in config.forward_primers)
 
 rule trim_primers_fivep:
 	output: fastq="reads/trimmed-fivep.fastq.gz"
@@ -284,10 +281,10 @@ rule fastq_to_fasta:
 	* Discard too short sequences
 	"""
 	output: fasta="reads/filtered.fasta"
-	input: fastq="reads/trimmed.fastq.gz" if TRIM_PRIMERS else MERGED_READS
-	params: max_errors="--max-errors {MAXIMUM_EXPECTED_ERRORS}" if MAXIMUM_EXPECTED_ERRORS is not None else ""
+	input: fastq="reads/trimmed.fastq.gz" if config.trim_primers else MERGED_READS
+	params: max_errors="--max-errors {config.maximum_expected_errors}" if config.maximum_expected_errors is not None else ""
 	shell:
-		"sqt-fastqmod {params.max_errors} --minimum-length {MINIMUM_MERGED_READ_LENGTH} --fasta {input.fastq} > {output.fasta}"
+		"sqt-fastqmod {params.max_errors} --minimum-length {config.minimum_merged_read_length} --fasta {input.fastq} > {output.fasta}"
 
 
 rule dereplicate:
@@ -313,7 +310,7 @@ rule cluster:
 	shell:
 		# TODO -idprefix 5?
 		r"""
-		{CLUSTER_PROGRAM} -threads {threads} -cluster_fast {input.fasta} -id 0.97 -uc {output.uc} \
+		{config.cluster_program} -threads {threads} -cluster_fast {input.fasta} -id 0.97 -uc {output.uc} \
 			-idprefix 5 -sizeout --centroids {output.fasta}
 		"""
 
@@ -355,17 +352,17 @@ rule igypipe_igblast:
 		txt="{dir}/{base}.igblast.txt"
 	input:
 		fasta='{dir}/{base}.fasta',
-		db_v="{{dir}}/database/{species}_V.nhr".format(species=SPECIES),
-		db_d="{{dir}}/database/{species}_D.nhr".format(species=SPECIES),
-		db_j="{{dir}}/database/{species}_J.nhr".format(species=SPECIES)
+		db_v="{{dir}}/database/{species}_V.nhr".format(species=config.species),
+		db_d="{{dir}}/database/{species}_D.nhr".format(species=config.species),
+		db_j="{{dir}}/database/{species}_J.nhr".format(species=config.species)
 	params:
-		penalty='--penalty {}'.format(MISMATCH_PENALTY) if MISMATCH_PENALTY is not None else '',
+		penalty='--penalty {}'.format(config.mismatch_penalty) if config.mismatch_penalty is not None else '',
 		database='{dir}/database'
 	threads: 16
 	shell:
-		#-auxiliary_data $IGDATA/optional_file/{SPECIES}_gl.aux
+		#-auxiliary_data $IGDATA/optional_file/{config.species}_gl.aux
 		r"""
-		igypipe igblast --threads {threads} {params.penalty} --species {SPECIES} {params.database} {input.fasta} > {output.txt}
+		igypipe igblast --threads {threads} {params.penalty} --species {config.species} {params.database} {input.fasta} > {output.txt}
 		"""
 
 
@@ -378,7 +375,7 @@ rule igypipe_parse:
 	params:
 		dirname=os.path.basename(os.getcwd())
 	shell:
-		"igypipe parse --barcode-length {BARCODE_LENGTH} --rename {params.dirname}_ {input.txt} {input.fasta} > {output.tab}"
+		"igypipe parse --barcode-length {config.barcode_length} --rename {params.dirname}_ {input.txt} {input.fasta} > {output.tab}"
 
 
 rule igypipe_group:
@@ -390,7 +387,7 @@ rule igypipe_group:
 	input:
 		tab="{base}/unique.assigned.tab"
 	shell:
-		"igypipe group --program={MULTIALIGN_PROGRAM} --barcode-length {BARCODE_LENGTH} --plot-sizes {output.pdf} --groups-output {output.tab} {input.tab} > {output.fasta}"
+		"igypipe group --program={config.multialign_program} --barcode-length {config.barcode_length} --plot-sizes {output.pdf} --groups-output {output.tab} {input.tab} > {output.fasta}"
 
 
 rule count_and_plot:
@@ -398,7 +395,7 @@ rule count_and_plot:
 		plot="{dir}/{base}.v_usage.pdf",
 		counts="{dir}/{base}.v_usage.tab"
 	input:
-		v_reference="{{dir}}/database/{SPECIES}_V.fasta".format(SPECIES=SPECIES),
+		v_reference="{{dir}}/database/{species}_V.fasta".format(species=config.species),
 		tab="{dir}/{base}.assigned.tab"
 	shell:
 		"igypipe count --reference {input.v_reference} {input.tab} {output.plot} > {output.counts}"
