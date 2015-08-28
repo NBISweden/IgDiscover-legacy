@@ -423,3 +423,13 @@ rule igypipe_singledisco:
 	threads: 4
 	shell:
 		"igypipe singledisco -j {threads} --cluster --window-width 2 --database {input.v_reference} {input.tab} > {output.tab}"
+
+
+rule igypipe_construct:
+	"""Construct a new database out of the discovered sequences"""
+	output:
+		fasta='{dir}/discovered.fasta'
+	input:
+		tab='{dir}/discover.tab'
+	shell:
+		"igypipe construct --unique-CDR3 2 {input.tab} > {output.fasta}"
