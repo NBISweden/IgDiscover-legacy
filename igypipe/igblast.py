@@ -69,7 +69,7 @@ def run_igblast(fasta, database, species, penalty=None):
 		arguments += ['-penalty', str(penalty)]
 	arguments += [
 		#TODO '-auxiliary_data', '$IGDATA/optional_file/{species}_gl.aux',
-		#'-auxiliary_data', '/dev/null',
+		'-auxiliary_data', '/dev/null',
 		'-organism', species,
 		'-ig_seqtype', 'Ig',
 		'-num_threads' , '1',

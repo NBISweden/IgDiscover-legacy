@@ -361,7 +361,6 @@ rule igypipe_igblast:
 		database='{dir}/database'
 	threads: 16
 	shell:
-		#-auxiliary_data $IGDATA/optional_file/{config.species}_gl.aux
 		r"""
 		igypipe igblast --threads {threads} {params.penalty} --species {config.species} {params.database} {input.fasta} > {output.txt}
 		"""
