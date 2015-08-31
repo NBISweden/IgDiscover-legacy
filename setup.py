@@ -26,7 +26,7 @@ setup(
 		'matplotlib',
 		'snakemake',
 		'cutadapt',
-		'seaborn>=0.6.0'
+		'seaborn>=0.6.0',
 		'tables>=3.2.1'
 	],
 	classifiers = [
