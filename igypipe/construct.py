@@ -14,6 +14,7 @@ import logging
 from collections import namedtuple
 from itertools import zip_longest
 import pandas as pd
+from sqt import FastaReader
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +31,8 @@ def add_subcommand(subparsers):
 		help='Sequences must have at most COUNT N bases. Default: %(default)s')
 	subparser.add_argument('--unique-CDR3', type=int, metavar='COUNT', default=5,
 		help='Sequences must have at least COUNT exact unique CDR3s. Default: %(default)s')
+	subparser.add_argument('database', metavar='DATABASE.FASTA',
+		help='Existing (to be augmented) database in FASTA format')
 	subparser.add_argument('tables', metavar='DISCOVER.TAB',
 		help='Table (one or more) created by the "singledisco" command', nargs='+')
 	return subparser
@@ -40,7 +43,7 @@ SequenceInfo = namedtuple('SequenceInfo', 'sequence name')
 
 class Merger:
 	"""
-	Merge very similar sequences into single entries.
+	Merge sequences where one is a prefix of the other into single entries.
 
 	TODO unify with singledisco.SisterMerger?
 	"""
@@ -98,6 +101,12 @@ def construct_command(args):
 		#minimum_frequency = args.minimum_frequency
 	#logger.info('Minimum frequency set to %s', minimum_frequency)
 
+	merger = Merger()
+	previous_n = 0
+	for record in FastaReader(args.database):
+		previous_n += 1
+		merger.add(SequenceInfo(record.sequence.upper(), record.name))
+
 	# Read in tables
 	total_unfiltered = 0
 	tables = []
@@ -113,11 +122,11 @@ def construct_command(args):
 			unfiltered_length, len(table))
 		total_unfiltered += unfiltered_length
 		tables.append(table)
-	logger.info('Read %s tables with %s entries total. '
-		'After filtering, %s entries remain.', len(args.tables),
-		total_unfiltered, sum(map(len, tables)))
+	if len(args.tables) > 1:
+		logger.info('Read %s tables with %s entries total. '
+			'After filtering, %s entries remain.', len(args.tables),
+			total_unfiltered, sum(map(len, tables)))
 
-	merger = Merger()
 	for table in tables:
 		for _, row in table.iterrows():
 			merger.add(SequenceInfo(row['consensus'], row['name']))
@@ -127,4 +136,4 @@ def construct_command(args):
 		n += 1
 		print('>{}\n{}'.format(info.name, info.sequence))
 
-	logger.info('Wrote %s sequences', n)
+	logger.info('The new database has %s sequences (%s new)', n, n - previous_n)
