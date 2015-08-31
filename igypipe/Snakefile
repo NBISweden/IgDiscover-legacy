@@ -358,7 +358,7 @@ rule makeblastdb:
 	shell:
 		r"""
 		makeblastdb -parse_seqids -dbtype nucl -in {input.fasta} -out {params.dbname} >& {log}
-		grep '^Error:' {log} && {{ echo "makeblastdb failed when creating {params.dbname}"; false; }} || true
+		grep 'Error: ' {log} && {{ echo "makeblastdb failed when creating {params.dbname}"; false; }} || true
 		"""
 
 
