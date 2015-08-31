@@ -6,6 +6,7 @@ import os
 import multiprocessing
 import subprocess
 from itertools import islice
+import pkg_resources
 
 from sqt import SequenceReader
 from sqt.utils import available_cpu_count
@@ -67,9 +68,11 @@ def run_igblast(fasta, database, species, penalty=None):
 			os.path.join(database, '{species}_{gene}'.format(species=species, gene=gene))]
 	if penalty is not None:
 		arguments += ['-penalty', str(penalty)]
+	# The empty aux suppresses a warning from IgBLAST. /dev/null does not work.
+	empty_aux_path = pkg_resources.resource_filename('igypipe', 'empty.aux')
 	arguments += [
 		#TODO '-auxiliary_data', '$IGDATA/optional_file/{species}_gl.aux',
-		'-auxiliary_data', '/dev/null',
+		'-auxiliary_data', empty_aux_path,
 		'-organism', species,
 		'-ig_seqtype', 'Ig',
 		'-num_threads' , '1',

@@ -18,7 +18,8 @@ setup(
 	#license = 'MIT',
 	packages = ['igypipe'],
 	scripts = ['bin/igypipe'],
-	package_data = {'igypipe': ['pipeline.conf', 'Snakefile', 'databases/*/*.fasta']},
+	package_data = {'igypipe': ['pipeline.conf', 'Snakefile', 'empty.aux',
+		'databases/*/*.fasta']},
 	install_requires = [
 		'sqt>=0.4.6',
 		'pandas>=0.16.2',
