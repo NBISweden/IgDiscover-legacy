@@ -1,7 +1,8 @@
 """
-Discover potential new V genes within a single antibody library. Existing V
-sequences are grouped by their V gene assignment and within each group,
-consensus sequences are computed.
+Discover potential new V genes within a single antibody library.
+
+Existing V sequences are grouped by their V gene assignment and within each
+group, consensus sequences are computed.
 """
 import csv
 import logging
@@ -35,7 +36,7 @@ SisterInfo = namedtuple('SisterInfo', 'sequence requested name group')
 
 
 def add_subcommand(subparsers):
-	subparser = subparsers.add_parser('singledisco', help=__doc__)
+	subparser = subparsers.add_parser('singledisco', help=__doc__.split('\n')[1], description=__doc__)
 	subparser.set_defaults(func=discover_command)
 	subparser.add_argument('--threads', '-j', type=int, default=min(4, available_cpu_count()),
 		help='Number of threads. Default: no. of available CPUs, but at most 4')

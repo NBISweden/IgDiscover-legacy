@@ -17,7 +17,7 @@ PIPELINE_CONF = 'pipeline.conf'
 
 
 def add_subcommand(subparsers):
-	subparser = subparsers.add_parser('init', help=__doc__)
+	subparser = subparsers.add_parser('init', help=__doc__.split('\n')[1], description=__doc__)
 	subparser.set_defaults(func=init_command)
 	subparser.add_argument('--database', '--db', metavar='PATH', default=None,
 		help='Directory with IgBLAST database files. If not given, a dialog is shown.')

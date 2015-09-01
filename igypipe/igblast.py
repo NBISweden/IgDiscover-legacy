@@ -1,5 +1,5 @@
 """
-Run IgBLAST
+Run IgBLAST.
 """
 import sys
 import os
@@ -12,7 +12,7 @@ from sqt import SequenceReader
 from sqt.utils import available_cpu_count
 
 def add_subcommand(subparsers):
-	subparser = subparsers.add_parser('igblast', help=__doc__)
+	subparser = subparsers.add_parser('igblast', help=__doc__.split('\n')[1], description=__doc__)
 	subparser.set_defaults(func=igblast_command)
 	add = subparser.add_argument
 	add('--threads', '-t', '-j', type=int, default=available_cpu_count(),

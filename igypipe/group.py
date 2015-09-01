@@ -16,7 +16,7 @@ from .table import read_table
 logger = logging.getLogger(__name__)
 
 def add_subcommand(subparsers):
-	subparser = subparsers.add_parser('group', help=__doc__)
+	subparser = subparsers.add_parser('group', help=__doc__.split('\n')[1], description=__doc__)
 	subparser.set_defaults(func=group_command)
 	subparser.add_argument('--groups-output', metavar='FILE', default=None,
 		help='Write tab-separated table with groups to FILE')

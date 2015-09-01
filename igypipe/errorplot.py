@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 def add_subcommand(subparsers):
-	subparser = subparsers.add_parser('errorplot', help=__doc__)
+	subparser = subparsers.add_parser('errorplot', help=__doc__.split('\n')[1], description=__doc__)
 	subparser.set_defaults(func=errorplot_command)
 	subparser.add_argument('--minimum-group-size', '-m', metavar='N', default=200,
 		help='Do not plot if there are less than N sequences for a gene (default: %(default)s)')

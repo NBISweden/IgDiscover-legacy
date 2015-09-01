@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 def add_subcommand(subparsers):
-	subparser = subparsers.add_parser('parse', help=__doc__)
+	subparser = subparsers.add_parser('parse', help=__doc__.split('\n')[1], description=__doc__)
 	subparser.set_defaults(func=parse_command)
 	subparser.add_argument('--rename', default=None, metavar='PREFIX',
 		help='Rename reads to PREFIXseqN (where N is a number starting at 1)')

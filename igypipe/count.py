@@ -1,5 +1,5 @@
 """
-Count and plot V gene usage
+Count and plot V gene usage.
 """
 import re
 import logging
@@ -16,7 +16,7 @@ from .table import read_table
 logger = logging.getLogger(__name__)
 
 def add_subcommand(subparsers):
-	subparser = subparsers.add_parser('count', help=__doc__)
+	subparser = subparsers.add_parser('count', help=__doc__.split('\n')[1], description=__doc__)
 	subparser.set_defaults(func=count_command)
 	subparser.add_argument('--reference', metavar='FASTA',
 		help='FASTA file with V gene sequences. The names are used to ensure all names appear in the plot')

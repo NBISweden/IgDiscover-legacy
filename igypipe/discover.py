@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 def add_subcommand(subparsers):
-	subparser = subparsers.add_parser('discover', help=__doc__)
+	subparser = subparsers.add_parser('discover', help=__doc__.split('\n')[1], description=__doc__)
 	subparser.set_defaults(func=discover_command)
 	subparser.add_argument('--minimum-frequency', '-n', type=int, metavar='N',
 		default=None,

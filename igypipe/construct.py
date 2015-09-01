@@ -1,5 +1,5 @@
 """
-Create a new V gene database from V gene candidates.
+Create new V gene database from V gene candidates.
 
 After potentially new V gene sequences have been discovered with the singledisco
 subcommand, this script can be used to create a new V gene database. The
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 def add_subcommand(subparsers):
-	subparser = subparsers.add_parser('construct', help=__doc__)
+	subparser = subparsers.add_parser('construct', help=__doc__.split('\n')[1], description=__doc__)
 	subparser.set_defaults(func=construct_command)
 	#subparser.add_argument('--minimum-frequency', '-n', type=int, metavar='N',
 		#default=None,
