@@ -34,7 +34,7 @@ def add_subcommand(subparsers):
 	subparser.add_argument('database', metavar='DATABASE.FASTA',
 		help='Existing (to be augmented) database in FASTA format')
 	subparser.add_argument('tables', metavar='DISCOVER.TAB',
-		help='Table (one or more) created by the "singledisco" command', nargs='+')
+		help='Table (zero or more) created by the "singledisco" command', nargs='*')
 	return subparser
 
 
@@ -136,4 +136,4 @@ def construct_command(args):
 		n += 1
 		print('>{}\n{}'.format(info.name, info.sequence))
 
-	logger.info('The new database has %s sequences (%s new)', n, n - previous_n)
+	logger.info('Old database had %s sequences, new database has %s sequences (difference: %s)', previous_n, n, n - previous_n)
