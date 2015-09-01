@@ -18,7 +18,7 @@ import csv
 import logging
 import errno
 
-from sqt import SequenceReader
+from sqt import SequenceReader, xopen
 from sqt.dna import GENETIC_CODE, reverse_complement
 
 logger = logging.getLogger(__name__)
@@ -375,7 +375,7 @@ def parse_igblast(path, fasta_path, barcode_length):
 	Parse IgBLAST output created with option -outfmt "7 sseqid qstart qseq sstart sseq pident slen"
 	"""
 	with SequenceReader(fasta_path) as fasta:
-		with open(path) as f:
+		with xopen(path) as f:
 			for fasta_record, (record_header, record_lines) in zip(fasta, split_by_section(f, ['# IGBLASTN'])):
 				assert record_header == '# IGBLASTN 2.2.29+'
 				yield parse_igblast_record(record_lines, fasta_record, barcode_length)

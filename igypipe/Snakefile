@@ -12,7 +12,7 @@ reads/merged.fastq.gz -- merged reads
 reads/trimmed.fastq.gz -- primers removed from merged reads
 reads/filtered.fasta  -- too short sequences removed, converted to FASTA
 reads/collapsed.fasta -- collapsed sequences (duplicates removed)
-unique.igblast.txt -- raw IgBLAST output
+unique.igblast.txt.gz -- IgBLAST output
 unique.assigned.tab -- result of parsing IgBLAST output
 groups.tab -- sequences grouped by barcode
 consensus.fasta -- contains one consensus sequence for each group
@@ -372,7 +372,7 @@ rule symlink_iteration_reads:
 
 rule igypipe_igblast:
 	output:
-		txt="{dir}/{base}.igblast.txt"
+		txtgz="{dir}/{base}.igblast.txt.gz"
 	input:
 		fasta='{dir}/{base}.fasta',
 		db_v="{{dir}}/database/{species}_V.nhr".format(species=config.species),
@@ -384,7 +384,7 @@ rule igypipe_igblast:
 	threads: 16
 	shell:
 		r"""
-		igypipe igblast --threads {threads} {params.penalty} --species {config.species} {params.database} {input.fasta} > {output.txt}
+		igypipe igblast --threads {threads} {params.penalty} --species {config.species} {params.database} {input.fasta} | gzip > {output.txtgz}
 		"""
 
 
@@ -392,7 +392,7 @@ rule igypipe_parse:
 	output:
 		tab="{dir}/{base}.assigned.tab"
 	input:
-		txt="{dir}/{base}.igblast.txt",
+		txt="{dir}/{base}.igblast.txt.gz",
 		fasta="{dir}/{base}.fasta"
 	params:
 		dirname=os.path.basename(os.getcwd())
