@@ -1,6 +1,7 @@
 """
-For each V gene, plot a histogram of error rates for those sequences that were
-assigned to that gene.
+For each gene, plot a histogram of error rates.
+
+The histogram shows the error rates for all sequences assigned to that gene.
 """
 import logging
 from matplotlib.backends.backend_pdf import FigureCanvasPdf, PdfPages
@@ -22,23 +23,27 @@ def add_subcommand(subparsers):
 	return subparser
 
 
-def plot_error_histogram(group, v_gene, bins=np.arange(20.1)):
+def plot_error_histogram(group, v_gene_name, bins=np.arange(20.1)):
 	"""
 	Plot a histogram of error rates for a specific V gene.
 
 	v_gene -- name of the gene
 	"""
-	error_rates = list(group.V_SHM)
-	z = error_rates.count(0)
+	exact_matches = group[group.V_SHM == 0]
+	exact_unique_CDR3 = len(set(s for s in exact_matches.CDR3_nt if s))
+
 	fig = Figure(figsize=(297/25.4, 210/25.4))
 	ax = fig.gca()
 	ax.set_xlabel('Error rate (%)')
 	ax.set_ylabel('Frequency')
-	ax.set_title('Gene ' + v_gene, fontsize=18)
-	ax.text(0.95, 0.95, '{} sequences with zero differences'.format(z), transform=ax.transAxes, fontsize=15, ha='right', va='top')
-	ax.text(0.95, 0.90, '{} different J genes used'.format(len(set(group.J_gene))), transform=ax.transAxes, fontsize=15, ha='right', va='top')
+	fig.suptitle('Gene ' + v_gene_name, fontsize=18)
+	ax.set_title('{:,} sequences assigned, {} ({:.1%}) exact matches with {} unique CDR3s'.format(
+		len(group), len(exact_matches), len(exact_matches)/len(group),
+		exact_unique_CDR3),
+		fontsize=16)
+	ax.text(0.95, 0.95, '{} different J genes used'.format(len(set(group.J_gene))), transform=ax.transAxes, fontsize=15, ha='right', va='top')
 
-	_ = ax.hist(error_rates, bins=bins)
+	_ = ax.hist(list(group.V_SHM), bins=bins)
 	return fig
 
 
