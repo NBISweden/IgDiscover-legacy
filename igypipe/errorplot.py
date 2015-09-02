@@ -40,11 +40,13 @@ def plot_error_histogram(group, v_gene_name, bins=np.arange(20.1)):
 	fig.suptitle('Gene ' + v_gene_name, fontsize=18)
 	ax.set_title('{:,} sequences assigned'.format(len(group)), fontsize=16)
 
-	def draw_text(x, y, text):
-		ax.text(x, y, text, transform=ax.transAxes, fontsize=16, color='brown', ha='left', va='top')
-	draw_text(0.65, 0.95, '{:,} ({:.1%}) exact matches, using'.format(len(exact_matches), len(exact_matches) / len(group)))
-	draw_text(0.7, 0.9, '{} unique CDR3s'.format(exact_unique_CDR3))
-	draw_text(0.7, 0.85, '{} unique Js'.format(exact_unique_J))
+	ax.text(0.6, 0.95,
+		'{:,} ({:.1%}) exact matches, using\n  {} unique CDR3\n  {} unique J'.format(
+			len(exact_matches), len(exact_matches) / len(group),
+			exact_unique_CDR3, exact_unique_J),
+		transform=ax.transAxes, fontsize=16,
+		bbox=dict(boxstyle='round', facecolor='white', alpha=0.5),
+		horizontalalignment='left', verticalalignment='top')
 
 	_ = ax.hist(list(group.V_SHM), bins=bins)
 	return fig
