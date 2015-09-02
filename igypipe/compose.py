@@ -20,8 +20,8 @@ logger = logging.getLogger(__name__)
 
 
 def add_subcommand(subparsers):
-	subparser = subparsers.add_parser('construct', help=__doc__.split('\n')[1], description=__doc__)
-	subparser.set_defaults(func=construct_command)
+	subparser = subparsers.add_parser('compose', help=__doc__.split('\n')[1], description=__doc__)
+	subparser.set_defaults(func=compose_command)
 	#subparser.add_argument('--minimum-frequency', '-n', type=int, metavar='N',
 		#default=None,
 		#help='Minimum number of datasets in which sequence must occur (default is no. of files divided by two)')
@@ -94,7 +94,7 @@ class Merger:
 		return SequenceInfo(seq, name)
 
 
-def construct_command(args):
+def compose_command(args):
 	#if args.minimum_frequency is None:
 		#minimum_frequency = max((len(args.tables) + 1) // 2, 2)
 	#else:

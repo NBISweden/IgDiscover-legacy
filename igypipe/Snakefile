@@ -446,7 +446,7 @@ rule igypipe_singledisco:
 		"igypipe singledisco -j {threads} --cluster --window-width 2 --database {input.v_reference} {input.tab} > {output.tab}"
 
 
-rule igypipe_construct:
+rule igypipe_compose:
 	"""Construct a new database out of the discovered sequences"""
 	output:
 		fasta='{dir}/new_V_database.fasta'
@@ -454,5 +454,5 @@ rule igypipe_construct:
 		database="{{dir}}/database/{species}_V.fasta".format(species=config.species),
 		tab='{dir}/discover.tab'
 	shell:
-		"igypipe construct --unique-CDR3 2 {input.database} {input.tab} > {output.fasta}"
+		"igypipe compose --unique-CDR3 2 {input.database} {input.tab} > {output.fasta}"
 
