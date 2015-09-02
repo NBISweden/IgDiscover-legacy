@@ -31,17 +31,20 @@ def plot_error_histogram(group, v_gene_name, bins=np.arange(20.1)):
 	"""
 	exact_matches = group[group.V_SHM == 0]
 	exact_unique_CDR3 = len(set(s for s in exact_matches.CDR3_nt if s))
+	exact_unique_J = len(set(exact_matches.J_gene))
 
 	fig = Figure(figsize=(297/25.4, 210/25.4))
 	ax = fig.gca()
 	ax.set_xlabel('Error rate (%)')
 	ax.set_ylabel('Frequency')
 	fig.suptitle('Gene ' + v_gene_name, fontsize=18)
-	ax.set_title('{:,} sequences assigned, {} ({:.1%}) exact matches with {} unique CDR3s'.format(
-		len(group), len(exact_matches), len(exact_matches)/len(group),
-		exact_unique_CDR3),
-		fontsize=16)
-	ax.text(0.95, 0.95, '{} different J genes used'.format(len(set(group.J_gene))), transform=ax.transAxes, fontsize=15, ha='right', va='top')
+	ax.set_title('{:,} sequences assigned'.format(len(group)), fontsize=16)
+
+	def draw_text(x, y, text):
+		ax.text(x, y, text, transform=ax.transAxes, fontsize=16, color='brown', ha='left', va='top')
+	draw_text(0.65, 0.95, '{:,} ({:.1%}) exact matches, using'.format(len(exact_matches), len(exact_matches) / len(group)))
+	draw_text(0.7, 0.9, '{} unique CDR3s'.format(exact_unique_CDR3))
+	draw_text(0.7, 0.85, '{} unique Js'.format(exact_unique_J))
 
 	_ = ax.hist(list(group.V_SHM), bins=bins)
 	return fig
