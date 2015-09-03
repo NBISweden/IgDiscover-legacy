@@ -101,7 +101,7 @@ def looks_like_V_gene(s):
 	should look like.
 	"""
 	s = s.upper()
-	for start in 'CAGGT CAGCT CAGGA GAGGT GAAGT GACGT GAAAT GTGGA'.split():
+	for start in 'CAGGT CAGCT CAGGA GAGGT GAAGT GACGT GAAAT GTGGA GAGGC GAGAT CTGGT'.split():
 		if s.startswith(start):
 			break
 	else:
