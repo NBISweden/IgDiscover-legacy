@@ -73,7 +73,15 @@ class IgblastRecord(IgblastRecordNT):
 	# http://dx.doi.org/10.4161/mabs.27105
 	# The amino-acid version of the expression is:
 	# [FY][FWVHY]C[ETNGASDRIKVM]X{5,32}W[GAV]
-	cdr3regex = re.compile('(TT[TC]|TA[CT])(TT[CT]|TA[TC]|CA[TC]|GT[AGCT]|TGG)(TG[TC])(([GA][AGCT])|TC|CG)[AGCT]([ACGT]{3}){5,31}TGGG[GCT][GCTA]')
+	cdr3regex = re.compile("""
+		(TT[TC] | TA[CT])                            # F or Y
+		(TT[CT] | TA[TC] | CA[TC] | GT[AGCT] | TGG)  # any of F, W, V, H, Y
+		(TG[TC])                                     # C
+		(([GA][AGCT]) | TC | CG) [AGCT]              # any of ETNGASDRIKVM
+		([ACGT]{3}){5,31}                            # between five and 31 codons
+		TGG                                          # W
+		G[GCT][GCTA]                                 # G, A or V
+		""", re.VERBOSE)
 
 	def __init__(self, *args, **kwargs):
 		self.barcode, self.race_g, self.genomic_sequence = self._split_barcode()
@@ -109,7 +117,8 @@ class IgblastRecord(IgblastRecordNT):
 
 	def _utr_leader(self):
 		"""
-		Split the sequence before the V gene match into UTR and leader.
+		Split the sequence before the V gene match into UTR and leader by
+		searching for the start codon.
 		"""
 		if 'V' not in self.hits:
 			return None, None
