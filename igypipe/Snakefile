@@ -75,8 +75,9 @@ UNIQUE_READS = 'reads/unique.fasta'
 
 
 PER_ITERATION_TARGETS = [
+	'discover.tab',
+	'new_V_database.fasta',
 	'clusterplots/done',
-	'discovered.fasta',
 	'counts.txt',
 	'unique.correlationVJ.pdf',
 	'unique.errorhistograms.pdf',
@@ -345,7 +346,7 @@ for i in range(2, config.iterations + 1):
 		input:
 			fasta='iteration-{nr:03d}/new_V_database.fasta'.format(nr=i-1)
 		shell:
-			"cp -pv {input.fasta} {output.fasta}"
+			"cp -p {input.fasta} {output.fasta}"
 
 
 rule makeblastdb:
