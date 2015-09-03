@@ -236,7 +236,7 @@ class Discoverer:
 			n_bases = sister.count('N')
 
 			# Build the row for the output table
-			sequence_id = '{}{}_{}'.format(self.prefix, gene, sequence_hash(sister))
+			sequence_id = '{}{}_{}'.format(self.prefix, gene.rsplit('_S', 1)[0], sequence_hash(sister))
 			row = [gene, sister_info.name]
 			for key in ('total', 'window', 'exact', 'approx'):
 				row.extend([info[key].count, info[key].unique_J, info[key].unique_CDR3])
