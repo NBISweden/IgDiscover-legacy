@@ -21,7 +21,7 @@ setup(
 	package_data = {'igypipe': ['pipeline.conf', 'Snakefile', 'empty.aux',
 		'databases/*/*.fasta']},
 	install_requires = [
-		'sqt>=0.4.7',
+		'sqt>=0.4.8',
 		'pandas>=0.16.2',
 		'numpy',
 		'matplotlib',
