@@ -8,6 +8,7 @@ following filtering and processing steps are performed:
 * Discard sequences with N bases
 * Discard sequences with too few unique CDR3s (exact_unique_CDR3 column)
 * Discard sequences identical to one of the database sequences
+* Discard sequences that do not match a set of known good motifs
 * Merge nearly identical sequences (allowing length differences) into single entries
 """
 import logging
@@ -94,6 +95,23 @@ class Merger:
 		return SequenceInfo(seq, name)
 
 
+def looks_like_V_gene(s):
+	"""
+	Check whether the given sequence matches our expectations of how a V gene
+	should look like.
+	"""
+	s = s.upper()
+	for start in 'CAGGT CAGCT CAGGA GAGGT GAAGT GACGT GAAAT GTGGA'.split():
+		if s.startswith(start):
+			break
+	else:
+		return False
+	for end in 'TATTACTGT TTTTACTGT TATTACTGC TATTACTGC TATTGTGCA TATTACTGC TATTATTGT'.split():
+		if s[-len(end)-13:].find(end) != -1:
+			return True
+	return False
+
+
 def compose_command(args):
 	#if args.minimum_frequency is None:
 		#minimum_frequency = max((len(args.tables) + 1) // 2, 2)
@@ -116,6 +134,8 @@ def compose_command(args):
 		table = table[table.database_diff >= args.minimum_db_diff]
 		table = table[table.N_bases <= args.maximum_N]
 		table = table[table.exact_unique_CDR3 >= args.unique_CDR3]
+		table = table[[looks_like_V_gene(s) for s in table.consensus]]
+
 		table = table.dropna()
 		logger.info('Table read from %r contains %s sequences. '
 			'%s remain after applying filtering criteria', path,
