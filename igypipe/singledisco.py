@@ -21,6 +21,7 @@ from sqt.utils import available_cpu_count
 from .table import read_table
 from .utils import iterative_consensus, sequence_hash, downsampled
 from .cluster import cluster_sequences, cluster_consensus
+from .compose import looks_like_V_gene
 
 logger = logging.getLogger(__name__)
 
@@ -240,7 +241,7 @@ class Discoverer:
 			row = [gene, sister_info.name]
 			for key in ('total', 'window', 'exact', 'approx'):
 				row.extend([info[key].count, info[key].unique_J, info[key].unique_CDR3])
-			row.extend([n_bases, database_diff, sequence_id, sister])
+			row.extend([n_bases, database_diff, int(looks_like_V_gene(sister)), sequence_id, sister])
 			rows.append(row)
 
 			# If a window was requested via --left/--right, write the 'approx'
@@ -297,6 +298,7 @@ def discover_command(args):
 		'approx_unique_CDR3',
 		'N_bases',
 		'database_diff',
+		'looks_like_V',
 		'name',
 		'consensus'
 	])
