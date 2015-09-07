@@ -36,6 +36,10 @@ def read_table(path, filter=True, log=False):
 		with TemporaryDirectory(dir=os.path.dirname(h5path)) as tempdir:
 			temp_h5 = os.path.join(tempdir, 'db.h5')
 			df = pd.read_csv(path, sep='\t')
+			# Convert all mixed-type columns to str to avoid a PerformanceWarning
+			for col in df.columns:
+				if df[col].dtype.name == 'object':
+					df[col] = df[col].astype('str')
 			df.to_hdf(temp_h5, 'table')
 			os.rename(temp_h5, h5path)
 
