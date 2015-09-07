@@ -22,7 +22,6 @@ def add_subcommand(subparsers):
 		help='Write tab-separated table with groups to FILE')
 	subparser.add_argument('--plot-sizes', metavar='FILE', default=None,
 		help='Plot group sizes to FILE (.png or .pdf)')
-	subparser.add_argument('--barcode-length', type=int, default=None)
 	subparser.add_argument('--program', choices=('clustalo', 'muscle', 'muscle-medium', 'muscle-fast', 'mafft'),
 		default='muscle-fast',
 		help='Program to use for computing the multiple alignment')
@@ -61,16 +60,6 @@ def group_command(args):
 	d = read_table(args.table, log=True)
 	program = args.program
 	lengths = Counter()
-	if 'genomic_sequence' not in d:
-		logger.info('Old-style table format found')
-		# For backwards compatibility with older tables, support tables that only
-		# have a 'sequence' column (which is not split into barcode and race_g).
-		barcode_length = args.barcode_length
-		assert barcode_length is not None
-		d['barcode'] = [ s[:barcode_length] for s in d.sequence ]
-		d['race_g'] = [ 'G' * g_prefix_len(s) for s in d.sequence ]
-		d['genomic_sequence'] = [ s[barcode_length:].lstrip('G') for s in d.sequence ]
-		del d['sequence']
 
 	# Group by barcode, V- and J gene assignment
 	groups = d.groupby(('barcode', 'V_gene', 'J_gene', 'CDR3_nt'))

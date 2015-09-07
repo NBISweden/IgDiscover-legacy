@@ -409,8 +409,9 @@ rule igypipe_group:
 		fasta="{base}/consensus.fasta"
 	input:
 		tab="{base}/unique.assigned.tab"
+	log: "{base}/unique.consensus.log"
 	shell:
-		"igypipe group --program={config.multialign_program} --barcode-length {config.barcode_length} --plot-sizes {output.pdf} --groups-output {output.tab} {input.tab} > {output.fasta}"
+		"igypipe group --program={config.multialign_program} --plot-sizes {output.pdf} --groups-output {output.tab} {input.tab} > {output.fasta} 2> {log}"
 
 
 rule igypipe_count:
