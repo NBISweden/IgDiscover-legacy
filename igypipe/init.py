@@ -117,6 +117,8 @@ def guess_paired_path(path):
 
 
 def init_command(args):
+	if ' ' in args.directory:
+		sys.exit('The name of the new pipeline directory must not contain spaces')
 	gui = False
 	if args.reads1 is not None:
 		reads1 = args.reads1
