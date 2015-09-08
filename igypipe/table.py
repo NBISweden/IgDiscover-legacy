@@ -15,6 +15,37 @@ J_GENE_COVERAGE = 60  # at least
 V_GENE_EVALUE = 1E-3  # at most
 
 
+# These columns contain string data
+# convert them to str to avoid a PerformanceWarning
+# TODO some of these are actually categorical or bool
+STRING_COLUMNS = [
+	'V_gene',  # categorical
+	'D_gene',  # categorical
+	'J_gene',  # categorical
+	'stop',  # bool
+	'productive',  # bool
+	'UTR',
+	'leader',
+	'CDR1_nt',
+	'CDR1_aa',
+	'CDR2_nt',
+	'CDR2_aa',
+	'CDR3_nt',
+	'CDR3_aa',
+	'V_nt',
+	'V_aa',
+	'V_end',
+	'VD_junction',
+	'D_region',
+	'DJ_junction',
+	'J_start',
+	'name',
+	'barcode',
+	'race_G',
+	'genomic_sequence',
+]
+
+
 def read_table(path, filter=True, log=False):
 	"""
 	Read in the table created by the parse subcommand. Discard following rows
@@ -35,14 +66,17 @@ def read_table(path, filter=True, log=False):
 		# it atomically.
 		with TemporaryDirectory(dir=os.path.dirname(h5path)) as tempdir:
 			temp_h5 = os.path.join(tempdir, 'db.h5')
-			df = pd.read_csv(path, sep='\t')
-			# Convert all mixed-type columns to str to avoid a PerformanceWarning
-			for col in df.columns:
-				if df[col].dtype.name == 'object':
-					df[col] = df[col].astype('str')
+			df = pd.read_csv(path, sep='\t') #true_values=['yes'], false_values=['no'])
+
+			# Convert all string columns to str to avoid a PerformanceWarning
+			for col in STRING_COLUMNS:
+				df[col].fillna('', inplace=True)
+				df[col] = df[col].astype('str')
+				# Empty strings have been set to NaN by read_csv. Replacing
+				# by the empty string avoids problems with groupby, which
+				# ignores NaN values.
 			df.to_hdf(temp_h5, 'table')
 			os.rename(temp_h5, h5path)
-
 	d = pd.read_hdf(h5path, 'table')
 	assert len(d) > 0
 
