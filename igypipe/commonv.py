@@ -4,7 +4,7 @@ Find common V genes between two different antibody libraries.
 import logging
 from collections import Counter
 
-from .table import read_filtered_table
+from .table import read_table
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ def add_subcommand(subparsers):
 	subparser.add_argument('--minimum-frequency', '-n', type=int, metavar='N',
 		default=None,
 		help='Minimum number of datasets in which sequence must occur (default is no. of files divided by two)')
-	subparser.add_argument('table', help='Tables with parsed IgBLAST results (give at least two)', nargs='+')
+	subparser.add_argument('table', help='Tables with parsed and filtered IgBLAST results (give at least two)', nargs='+')
 	return subparser
 
 
@@ -30,7 +30,7 @@ def commonv_command(args):
 	# Read in tables
 	tables = []
 	for path in args.table:
-		table = read_filtered_table(path)
+		table = read_table(path)
 		table = table.loc[:,['V_gene', 'V_SHM', 'V_nt', 'name']]
 		tables.append(table)
 

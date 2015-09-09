@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from sqt.ansicolor import bggreen
 from sqt.align import multialign, consensus
 
-from .table import read_filtered_table
+from .table import read_table
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ def add_subcommand(subparsers):
 	subparser.add_argument('--program', choices=('clustalo', 'muscle', 'muscle-medium', 'muscle-fast', 'mafft'),
 		default='muscle-fast',
 		help='Program to use for computing the multiple alignment')
-	subparser.add_argument('table', help='Table with parsed IgBLAST results.')
+	subparser.add_argument('table', help='Table with filtered and parsed IgBLAST results.')
 	return subparser
 
 
@@ -57,7 +57,7 @@ def g_prefix_len(s):
 
 
 def group_command(args):
-	d = read_filtered_table(args.table, log=True)
+	d = read_table(args.table, log=True)
 	program = args.program
 	lengths = Counter()
 

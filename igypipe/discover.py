@@ -5,8 +5,6 @@ import logging
 from collections import Counter
 import pandas as pd
 
-#from .table import read_filtered_table
-
 logger = logging.getLogger(__name__)
 
 

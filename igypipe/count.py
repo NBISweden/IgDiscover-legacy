@@ -11,7 +11,7 @@ matplotlib.use('pdf')
 import matplotlib.pyplot as plt
 from sqt import FastaReader
 
-from .table import read_filtered_table
+from .table import read_table
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +20,7 @@ def add_subcommand(subparsers):
 	subparser.set_defaults(func=count_command)
 	subparser.add_argument('--reference', metavar='FASTA',
 		help='FASTA file with V gene sequences. The names are used to ensure all names appear in the plot')
-	subparser.add_argument('table', help='Table with parsed IgBLAST results.')
+	subparser.add_argument('table', help='Table with parsed and filtered IgBLAST results.')
 	subparser.add_argument('plot', nargs='?', help='Plot file (png or pdf).')
 	return subparser
 
@@ -38,7 +38,7 @@ def count_command(args):
 		gene_names.sort(key=natural_sort_key)
 	else:
 		gene_names = None
-	d = read_filtered_table(args.table, log=True)
+	d = read_table(args.table, log=True)
 
 	# Work around a pandas bug in reindex when the table is empty
 	if len(d) > 0:

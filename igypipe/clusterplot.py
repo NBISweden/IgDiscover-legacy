@@ -4,7 +4,7 @@ For each V gene, plot a clustermap of the sequences assigned to it.
 import os.path
 import logging
 import seaborn as sns
-from .table import read_filtered_table
+from .table import read_table
 from .utils import downsampled
 from .cluster import cluster_sequences
 
@@ -16,7 +16,7 @@ def add_subcommand(subparsers):
 	subparser.set_defaults(func=command)
 	subparser.add_argument('--minimum-group-size', '-m', metavar='N', default=200,
 		help='Do not plot if there are less than N sequences for a gene. Default: %(default)s')
-	subparser.add_argument('table', help='Table with parsed IgBLAST results')
+	subparser.add_argument('table', help='Table with parsed and filtered IgBLAST results')
 	subparser.add_argument('directory', help='Save clustermaps as PNG into this directory', default=None)
 	return subparser
 
@@ -50,10 +50,10 @@ def plot_clustermap(group, gene, plotpath):
 def command(args):
 	if not os.path.exists(args.directory):
 		os.mkdir(args.directory)
-	table = read_filtered_table(args.table)
+	table = read_table(args.table)
 
 	# Discard rows with any mutation within J at all
-	logger.info('%s rows read (filtered)', len(table))
+	logger.info('%s rows read', len(table))
 	table = table[table.J_SHM == 0][:]
 	logger.info('%s rows remain after discarding J%%SHM > 0', len(table))
 

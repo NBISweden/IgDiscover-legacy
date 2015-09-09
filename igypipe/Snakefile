@@ -13,11 +13,12 @@ reads/trimmed.fastq.gz -- primers removed from merged reads
 reads/filtered.fasta  -- too short sequences removed, converted to FASTA
 reads/collapsed.fasta -- collapsed sequences (duplicates removed)
 unique.igblast.txt.gz -- IgBLAST output
-unique.assigned.tab -- result of parsing IgBLAST output
+unique.assigned.tab -- parsed IgBLAST output as a tab-delimited table
+unique.filtered.tab -- filtered version of the above
 groups.tab -- sequences grouped by barcode
 consensus.fasta -- contains one consensus sequence for each group
 consensus.igblast.txt -- consensus sequences sent through IgBLAST
-consensus.assigned.tab -- result of parsing IgBLAST output
+consensus.assigned.tab -- parsed IgBLAST output
 """
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_pdf import FigureCanvasPdf
@@ -204,7 +205,7 @@ rule stats_correlation_V_J:
 	input:
 		table="{base}.assigned.tab"
 	run:
-		table = igypipe.read_filtered_table(input.table)
+		table = igypipe.read_table(input.table)
 		fig = Figure(figsize=(30/2.54, 21/2.54))
 		ax = fig.gca()
 		ax.set_xlabel('V%SHM')
@@ -221,7 +222,7 @@ rule stats_plot_errorhistograms:
 	output:
 		pdf='{base}.errorhistograms.pdf',
 	input:
-		table='{base}.assigned.tab'
+		table='{base}.filtered.tab'
 	shell:
 		'igypipe errorplot {input.table} {output.pdf}'
 
@@ -402,6 +403,15 @@ rule igypipe_parse:
 		"igypipe parse --barcode-length {config.barcode_length} --rename {params.dirname!r} {input.txt} {input.fasta} > {output.tab}"
 
 
+rule igypipe_filter:
+	output:
+		filtered="{dir}/{base}.filtered.tab"
+	input:
+		assigned="{dir}/{base}.assigned.tab"
+	shell:
+		"igypipe filter {input} > {output}"
+
+
 rule igypipe_group:
 	"""Group by barcode"""
 	output:
@@ -409,7 +419,7 @@ rule igypipe_group:
 		tab="{base}/groups.tab",
 		fasta="{base}/consensus.fasta"
 	input:
-		tab="{base}/unique.assigned.tab"
+		tab="{base}/unique.filtered.tab"
 	log: "{base}/unique.consensus.log"
 	shell:
 		"igypipe group --program={config.multialign_program} --plot-sizes {output.pdf} --groups-output {output.tab} {input.tab} > {output.fasta} 2> {log}"
@@ -421,7 +431,7 @@ rule igypipe_count:
 		counts="{dir}/{base}.v_usage.tab"
 	input:
 		v_reference="{{dir}}/database/{species}_V.fasta".format(species=config.species),
-		tab="{dir}/{base}.assigned.tab"
+		tab="{dir}/{base}.filtered.tab"
 	shell:
 		"igypipe count --reference {input.v_reference} {input.tab} {output.plot} > {output.counts}"
 
@@ -430,7 +440,7 @@ rule igypipe_clusterplot:
 	output:
 		done="{dir}/clusterplots/done"
 	input:
-		tab="{dir}/unique.assigned.tab"
+		tab="{dir}/unique.filtered.tab"
 	params:
 		clusterplots="{dir}/clusterplots/"
 	shell:
@@ -443,7 +453,7 @@ rule igypipe_singledisco:
 		tab="{dir}/discover.tab"
 	input:
 		v_reference="{{dir}}/database/{species}_V.fasta".format(species=config.species),
-		tab="{dir}/unique.assigned.tab"
+		tab="{dir}/unique.filtered.tab"
 	threads: 4
 	shell:
 		"igypipe singledisco -j {threads} --cluster --window-width 2 --database {input.v_reference} {input.tab} > {output.tab}"

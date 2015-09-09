@@ -41,23 +41,9 @@ STRING_COLUMNS = [
 ]
 
 
-def read_filtered_table(path,
-		v_gene_coverage=90,  # at least
-		j_gene_coverage=60,  # at least
-		v_gene_evalue=1E-3,  # at most
-		log=False
-	):
+def read_table(path, log=False):
 	"""
-	Read in the table created by the parse subcommand. Discard following rows
-	if filter is True:
-	- no J assigned
-	- stop codon found
-	- V gene coverage too low
-	- J gene coverage too low
-	- V gene E-value too high
-
-	The given thresholds are ignored if filter is set to False, and no filtering
-	is done.
+	Read in the table created by the parse subcommand (typically named *.tab)
 	"""
 	base, ext = os.path.splitext(path)
 	h5path = base + '.h5'
@@ -86,9 +72,27 @@ def read_filtered_table(path,
 
 	# Allow old-style %SHM column headers
 	d.rename(columns=lambda x: x.replace('%SHM', '_SHM'), inplace=True)
+	return d
 
+
+def filtered_table(table,
+		v_gene_coverage=90,  # at least
+		j_gene_coverage=60,  # at least
+		v_gene_evalue=1E-3,  # at most
+		log=False
+	):
+	"""
+	Discard the following rows in the table (read in by read_table):
+	- no J assigned
+	- stop codon found
+	- V gene coverage less than v_gene_coverage
+	- J gene coverage less than j_gene_coverage
+	- V gene E-value greater than v_gene_evalue
+
+	Return the filtered table.
+	"""
 	# Both V and J must be assigned
-	filtered = d.dropna(subset=('V_gene', 'J_gene'))[:]
+	filtered = table.dropna(subset=('V_gene', 'J_gene'))[:]
 	if log: logger.info('%s rows have both V and J assignment', len(filtered))
 	filtered['V_gene'] = pd.Categorical(filtered['V_gene'])
 
