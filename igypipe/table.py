@@ -9,11 +9,6 @@ from tempfile import TemporaryDirectory
 
 logger = logging.getLogger(__name__)
 
-# Thresholds for filtering
-V_GENE_COVERAGE = 90  # at least
-J_GENE_COVERAGE = 60  # at least
-V_GENE_EVALUE = 1E-3  # at most
-
 
 # These columns contain string data
 # convert them to str to avoid a PerformanceWarning
@@ -46,7 +41,12 @@ STRING_COLUMNS = [
 ]
 
 
-def read_table(path, filter=True, log=False):
+def read_table(path,
+		v_gene_coverage=90,  # at least
+		j_gene_coverage=60,  # at least
+		v_gene_evalue=1E-3,  # at most
+		log=False
+	):
 	"""
 	Read in the table created by the parse subcommand. Discard following rows
 	if filter is True:
@@ -55,6 +55,9 @@ def read_table(path, filter=True, log=False):
 	- V gene coverage too low
 	- J gene coverage too low
 	- V gene E-value too high
+
+	The given thresholds are ignored if filter is set to False, and no filtering
+	is done.
 	"""
 	base, ext = os.path.splitext(path)
 	h5path = base + '.h5'
@@ -83,8 +86,6 @@ def read_table(path, filter=True, log=False):
 
 	# Allow old-style %SHM column headers
 	d.rename(columns=lambda x: x.replace('%SHM', '_SHM'), inplace=True)
-	if not filter:
-		return d
 
 	# Both V and J must be assigned
 	filtered = d.dropna(subset=('V_gene', 'J_gene'))[:]
@@ -96,15 +97,15 @@ def read_table(path, filter=True, log=False):
 	if log: logger.info('%s of those do not have a stop codon', len(filtered))
 
 	# Filter out sequences with a too low V gene hit E-value
-	filtered = filtered[filtered.V_evalue <= V_GENE_EVALUE]
-	if log: logger.info('%s of those have an E-value of at most %s', len(filtered), V_GENE_EVALUE)
+	filtered = filtered[filtered.V_evalue <= v_gene_evalue]
+	if log: logger.info('%s of those have an E-value of at most %s', len(filtered), v_gene_evalue)
 
 	# Filter out sequences with too low V gene coverage
-	filtered = filtered[filtered.V_covered >= V_GENE_COVERAGE]
-	if log: logger.info('%s of those cover the V gene by at least %s%%', len(filtered), V_GENE_COVERAGE)
+	filtered = filtered[filtered.V_covered >= v_gene_coverage]
+	if log: logger.info('%s of those cover the V gene by at least %s%%', len(filtered), v_gene_coverage)
 
 	# Filter out sequences with too low J gene coverage
-	filtered = filtered[filtered.J_covered >= J_GENE_COVERAGE]
-	if log: logger.info('%s of those cover the J gene by at least %s%%', len(filtered), J_GENE_COVERAGE)
+	filtered = filtered[filtered.J_covered >= j_gene_coverage]
+	if log: logger.info('%s of those cover the J gene by at least %s%%', len(filtered), j_gene_coverage)
 
 	return filtered
