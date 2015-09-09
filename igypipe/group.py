@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from sqt.ansicolor import bggreen
 from sqt.align import multialign, consensus
 
-from .table import read_table
+from .table import read_filtered_table
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +57,7 @@ def g_prefix_len(s):
 
 
 def group_command(args):
-	d = read_table(args.table, log=True)
+	d = read_filtered_table(args.table, log=True)
 	program = args.program
 	lengths = Counter()
 

@@ -18,7 +18,7 @@ import pandas as pd
 from sqt import SequenceReader
 from sqt.align import edit_distance
 from sqt.utils import available_cpu_count
-from .table import read_table
+from .table import read_filtered_table
 from .utils import iterative_consensus, sequence_hash, downsampled
 from .cluster import cluster_sequences, cluster_consensus
 from .compose import looks_like_V_gene
@@ -265,7 +265,7 @@ def discover_command(args):
 	else:
 		database = dict()
 
-	table = read_table(args.table)
+	table = read_filtered_table(args.table)
 	table = table.loc[:,('name', 'V_gene', 'J_gene', 'V_nt', 'CDR3_nt', 'V_SHM', 'J_SHM')].copy()
 
 	# Discard rows with any mutation within J at all

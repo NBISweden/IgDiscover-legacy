@@ -4,7 +4,7 @@ For each V gene, plot a clustermap of the sequences assigned to it.
 import os.path
 import logging
 import seaborn as sns
-from .table import read_table
+from .table import read_filtered_table
 from .utils import downsampled
 from .cluster import cluster_sequences
 
@@ -50,7 +50,7 @@ def plot_clustermap(group, gene, plotpath):
 def command(args):
 	if not os.path.exists(args.directory):
 		os.mkdir(args.directory)
-	table = read_table(args.table)
+	table = read_filtered_table(args.table)
 
 	# Discard rows with any mutation within J at all
 	logger.info('%s rows read (filtered)', len(table))

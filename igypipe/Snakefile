@@ -204,7 +204,7 @@ rule stats_correlation_V_J:
 	input:
 		table="{base}.assigned.tab"
 	run:
-		table = igypipe.read_table(input.table)
+		table = igypipe.read_filtered_table(input.table)
 		fig = Figure(figsize=(30/2.54, 21/2.54))
 		ax = fig.gca()
 		ax.set_xlabel('V%SHM')

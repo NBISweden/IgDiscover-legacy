@@ -160,7 +160,7 @@ def compose_command(args):
 
 		table = table.dropna()
 		logger.info('Table read from %r contains %s sequences. '
-			'%s remain after applying filtering criteria', path,
+			'%s remain after filtering', path,
 			unfiltered_length, len(table))
 		total_unfiltered += unfiltered_length
 		tables.append(table)

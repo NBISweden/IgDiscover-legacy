@@ -41,7 +41,7 @@ STRING_COLUMNS = [
 ]
 
 
-def read_table(path,
+def read_filtered_table(path,
 		v_gene_coverage=90,  # at least
 		j_gene_coverage=60,  # at least
 		v_gene_evalue=1E-3,  # at most

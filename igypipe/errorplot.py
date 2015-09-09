@@ -8,7 +8,7 @@ from matplotlib.backends.backend_pdf import FigureCanvasPdf, PdfPages
 from matplotlib.figure import Figure
 import seaborn as sns
 import numpy as np
-from .table import read_table
+from .table import read_filtered_table
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +53,7 @@ def plot_error_histogram(group, v_gene_name, bins=np.arange(20.1)):
 
 
 def errorplot_command(args):
-	table = read_table(args.table)
+	table = read_filtered_table(args.table)
 
 	# Discard rows with any mutation within J at all
 	logger.info('%s rows read (filtered)', len(table))

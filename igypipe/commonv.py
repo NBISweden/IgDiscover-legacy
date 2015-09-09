@@ -4,7 +4,7 @@ Find common V genes between two different antibody libraries.
 import logging
 from collections import Counter
 
-from .table import read_table
+from .table import read_filtered_table
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ def commonv_command(args):
 	# Read in tables
 	tables = []
 	for path in args.table:
-		table = read_table(path)
+		table = read_filtered_table(path)
 		table = table.loc[:,['V_gene', 'V_SHM', 'V_nt', 'name']]
 		tables.append(table)
 

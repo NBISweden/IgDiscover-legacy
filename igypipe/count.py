@@ -11,7 +11,7 @@ matplotlib.use('pdf')
 import matplotlib.pyplot as plt
 from sqt import FastaReader
 
-from .table import read_table
+from .table import read_filtered_table
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ def count_command(args):
 		gene_names.sort(key=natural_sort_key)
 	else:
 		gene_names = None
-	d = read_table(args.table, log=True)
+	d = read_filtered_table(args.table, log=True)
 
 	# Work around a pandas bug in reindex when the table is empty
 	if len(d) > 0:
