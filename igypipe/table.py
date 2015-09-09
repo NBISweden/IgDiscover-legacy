@@ -78,7 +78,6 @@ def read_table(path, filter=True, log=False):
 			df.to_hdf(temp_h5, 'table')
 			os.rename(temp_h5, h5path)
 	d = pd.read_hdf(h5path, 'table')
-	assert len(d) > 0
 
 	if log: logger.info('%s rows in input table', len(d))
 

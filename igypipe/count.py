@@ -39,7 +39,12 @@ def count_command(args):
 	else:
 		gene_names = None
 	d = read_table(args.table, log=True)
-	counts = d.groupby('V_gene').size()
+
+	# Work around a pandas bug in reindex when the table is empty
+	if len(d) > 0:
+		counts = d.groupby('V_gene').size()
+	else:
+		counts = pd.Series([], dtype=int)
 
 	# Make sure that always all gene names are listed, even if expression is 0.
 	if gene_names:
