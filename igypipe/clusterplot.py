@@ -31,7 +31,7 @@ def plot_clustermap(group, gene, plotpath):
 	sequences = downsampled(sequences, 300)
 	df, linkage, clusters = cluster_sequences(sequences)
 
-	palette = sns.color_palette(['black']) + sns.color_palette('Set1', n_colors=20, desat=.8)
+	palette = sns.color_palette(['black']) + sns.color_palette('Set1', n_colors=max(clusters), desat=.8)
 	row_colors = [ palette[cluster_id] for cluster_id in clusters ]
 	cm = sns.clustermap(df,
 			row_linkage=linkage,
