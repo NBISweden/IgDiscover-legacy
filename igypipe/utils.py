@@ -67,5 +67,5 @@ def sequence_hash(s):
 	Return a hash of a string that looks like 'S123' (S is fixed). The idea is
 	that this allows one to quickly see whether two sequences are identical.
 	"""
-	h = int(hashlib.md5(s.encode()).hexdigest()[-4:], base=16)
-	return 'S{:03}'.format(h % 1000)
+	h = int(hashlib.md5(s.encode()).hexdigest()[-6:], base=16)
+	return 'S{:06}'.format(h % 1000000)
