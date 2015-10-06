@@ -25,16 +25,13 @@ logger = logging.getLogger(__name__)
 def add_subcommand(subparsers):
 	subparser = subparsers.add_parser('compose', help=__doc__.split('\n')[1], description=__doc__)
 	subparser.set_defaults(func=compose_command)
-	#subparser.add_argument('--minimum-frequency', '-n', type=int, metavar='N',
-		#default=None,
-		#help='Minimum number of datasets in which sequence must occur (default is no. of files divided by two)')
 	subparser.add_argument('--minimum-db-diff', '-b', type=int, metavar='DIST', default=1,
 		help='Sequences must have at least DIST differences to the database sequence. Default: %(default)s')
 	subparser.add_argument('--maximum-N', '-N', type=int, metavar='COUNT', default=0,
 		help='Sequences must have at most COUNT N bases. Default: %(default)s')
 	subparser.add_argument('--unique-CDR3', type=int, metavar='COUNT', default=5,
 		help='Sequences must have at least COUNT exact unique CDR3s. Default: %(default)s')
-	subparser.add_argument('database', metavar='DATABASE.FASTA',
+	subparser.add_argument('--database', metavar='DATABASE.FASTA',
 		help='Existing (to be augmented) database in FASTA format')
 	subparser.add_argument('tables', metavar='DISCOVER.TAB',
 		help='Table (zero or more) created by the "singledisco" command', nargs='*')
@@ -76,6 +73,12 @@ class Merger:
 
 	@staticmethod
 	def _merged(s, t):
+		"""
+		Merge two sequences if one is the prefix of the other. If they should
+		not be merged, None is returned.
+
+		s and t must have attributes sequence and name.
+		"""
 		seq = []
 		for c1, c2 in zip_longest(s.sequence, t.sequence):
 			if c1 is None:
@@ -143,9 +146,10 @@ def compose_command(args):
 
 	merger = Merger()
 	previous_n = 0
-	for record in FastaReader(args.database):
-		previous_n += 1
-		merger.add(SequenceInfo(record.sequence.upper(), record.name))
+	if args.database:
+		for record in FastaReader(args.database):
+			previous_n += 1
+			merger.add(SequenceInfo(record.sequence.upper(), record.name))
 
 	# Read in tables
 	total_unfiltered = 0
@@ -178,4 +182,7 @@ def compose_command(args):
 		n += 1
 		print('>{}\n{}'.format(info.name, info.sequence))
 
-	logger.info('Old database had %s sequences, new database has %s sequences (difference: %s)', previous_n, n, n - previous_n)
+	if args.database:
+		logger.info('Old database had %s sequences, new database has %s sequences (difference: %s)', previous_n, n, n - previous_n)
+	else:
+		logger.info('New database has %s sequences', n)
