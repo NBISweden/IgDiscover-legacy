@@ -1,7 +1,7 @@
 """
 Discover potential new V genes within a single antibody library.
 
-Existing V sequences are grouped by their V gene assignment and within each
+Existing V sequences are grouped by their V gene assignment, and within each
 group, consensus sequences are computed.
 """
 import csv
@@ -19,7 +19,7 @@ from sqt import SequenceReader
 from sqt.align import edit_distance
 from sqt.utils import available_cpu_count
 from .table import read_table
-from .utils import iterative_consensus, sequence_hash, downsampled
+from .utils import iterative_consensus, sequence_hash, downsampled, SerialPool
 from .cluster import cluster_sequences, cluster_consensus
 from .compose import looks_like_V_gene
 
@@ -66,25 +66,6 @@ def add_subcommand(subparsers):
 		help='Output consensus sequences in FASTA format to this file.')
 	subparser.add_argument('table', help='Table with parsed IgBLAST results')  # nargs='+'
 	return subparser
-
-
-class SerialPool:
-	"""
-	An alternative to multiprocessing.Pool that runs things in parallel for
-	easier debugging
-	"""
-	def __init__(self, *args, **kwargs):
-		pass
-
-	def __enter__(self):
-		return self
-
-	def __exit__(self, *args):
-		pass
-
-	def imap(self, func, iterable, chunksize):
-		for i in iterable:
-			yield func(i)
 
 
 def sister_sequence(group, program='muscle-medium', threshold=0.6, maximum_subsample_size=1600):

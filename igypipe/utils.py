@@ -69,3 +69,22 @@ def sequence_hash(s):
 	"""
 	h = int(hashlib.md5(s.encode()).hexdigest()[-6:], base=16)
 	return 'S{:06}'.format(h % 1000000)
+
+
+class SerialPool:
+	"""
+	An alternative to multiprocessing.Pool that runs things in parallel for
+	easier debugging
+	"""
+	def __init__(self, *args, **kwargs):
+		pass
+
+	def __enter__(self):
+		return self
+
+	def __exit__(self, *args):
+		pass
+
+	def imap(self, func, iterable, chunksize):
+		for i in iterable:
+			yield func(i)
