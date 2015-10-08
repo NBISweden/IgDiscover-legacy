@@ -138,12 +138,6 @@ def looks_like_V_gene(s):
 
 
 def compose_command(args):
-	#if args.minimum_frequency is None:
-		#minimum_frequency = max((len(args.tables) + 1) // 2, 2)
-	#else:
-		#minimum_frequency = args.minimum_frequency
-	#logger.info('Minimum frequency set to %s', minimum_frequency)
-
 	merger = Merger()
 	previous_n = 0
 	if args.database:
