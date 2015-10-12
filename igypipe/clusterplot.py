@@ -26,6 +26,8 @@ def plot_clustermap(group, gene, plotpath):
 	Plot a clustermap for a specific V gene.
 
 	gene -- gene name (only used to plot the title)
+
+	Return the number of clusters.
 	"""
 	sequences = list(group.V_nt)
 	sequences = downsampled(sequences, 300)
@@ -46,6 +48,8 @@ def plot_clustermap(group, gene, plotpath):
 	import matplotlib.pyplot as plt
 	plt.close('all')
 
+	return len(set(clusters))
+
 
 def command(args):
 	if not os.path.exists(args.directory):
@@ -61,9 +65,9 @@ def command(args):
 	for gene, group in table.groupby('V_gene'):
 		if len(group) < args.minimum_group_size:
 			continue
-		plot_clustermap(group, gene, os.path.join(args.directory, gene + '.png'))
+		n_clusters = plot_clustermap(group, gene, os.path.join(args.directory, gene + '.png'))
 		n += 1
-		logger.info('Plotted %r', gene)
+		logger.info('Plotted %r with %d clusters', gene, n_clusters)
 		#for i, cons in enumerate(consensus_sequences):
 			#print('>{}_cluster{}\n{}'.format(gene, ('red', 'blue')[i], cons))
 			#print('number of Ns:', cons.count('N'))

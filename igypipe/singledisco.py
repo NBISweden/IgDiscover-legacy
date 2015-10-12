@@ -182,9 +182,8 @@ class Discoverer:
 			indices = downsampled(list(group.index), self.cluster_subsample_size)
 			sequences = list(group.V_nt.loc[indices])
 			df, linkage, clusters = cluster_sequences(sequences)
-
-			n_clusters = max(clusters) + 1
-			cluster_indices = [ [] for _ in range(n_clusters) ]
+			logger.info('Clustering sequences for %r gave %d clusters', gene, len(set(clusters)))
+			cluster_indices = [ [] for _ in range(max(clusters) + 1) ]
 			for i, cluster_id in enumerate(clusters):
 				cluster_indices[cluster_id].append(indices[i])
 
