@@ -29,7 +29,6 @@ random.seed(123)
 
 MINGROUPSIZE_CONSENSUS = 10
 MAXIMUM_SUBSAMPLE_SIZE = 1600
-CLUSTER_SUBSAMPLE_SIZE = 500
 
 Groupinfo = namedtuple('Groupinfo', 'count unique_J unique_CDR3')
 
@@ -57,6 +56,8 @@ def add_subcommand(subparsers):
 		help='Compute consensus for all PERCENT-wide windows. Default: do not compute', default=None)
 	subparser.add_argument('--cluster', action='store_true', default=False,
 		help='Cluster sequences by similarity and compute consensus')
+	subparser.add_argument('--subsample', metavar='N', type=int, default=500,
+		help='When clustering, use N randomly chosen sequences. Default: %(default)s')
 	subparser.add_argument('--table-output', '-o', metavar='DIRECTORY',
 		help='Output tables for all analyzed genes to DIRECTORY. '
 			'Files will be named <GENE>.tab.')
@@ -138,7 +139,9 @@ class Discoverer:
 	"""
 	Discover candidates for novel V genes.
 	"""
-	def __init__(self, database, windows, left, right, cluster, table_output, prefix, consensus_threshold, v_error_rate, downsample):
+	def __init__(self, database, windows, left, right, cluster, table_output,
+			  prefix, consensus_threshold, v_error_rate, downsample,
+			  cluster_subsample_size):
 		self.database = database
 		self.windows = windows
 		self.left = left
@@ -149,6 +152,7 @@ class Discoverer:
 		self.consensus_threshold = consensus_threshold
 		self.v_error_rate = v_error_rate
 		self.downsample = downsample
+		self.cluster_subsample_size = cluster_subsample_size
 
 	def __call__(self, args):
 		gene, group = args
@@ -170,7 +174,7 @@ class Discoverer:
 			sisters.add(SisterInfo(sister, requested, name, group_in_window))
 
 		if self.cluster:
-			indices = downsampled(list(group.index), CLUSTER_SUBSAMPLE_SIZE)
+			indices = downsampled(list(group.index), self.cluster_subsample_size)
 			sequences = list(group.V_nt.loc[indices])
 			df, linkage, clusters = cluster_sequences(sequences)
 
@@ -299,7 +303,8 @@ def discover_command(args):
 		groups.append((gene, group))
 
 	discoverer = Discoverer(database, windows, args.left, args.right, args.cluster,
-		args.table_output, args.prefix, args.consensus_threshold, v_error_rate, MAXIMUM_SUBSAMPLE_SIZE)
+		args.table_output, args.prefix, args.consensus_threshold, v_error_rate,
+		MAXIMUM_SUBSAMPLE_SIZE, cluster_subsample_size=args.subsample)
 	n_consensus = 0
 
 	Pool = SerialPool if args.threads == 1 else multiprocessing.Pool
