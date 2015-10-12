@@ -20,7 +20,7 @@ from sqt.align import edit_distance
 from sqt.utils import available_cpu_count
 from .table import read_table
 from .utils import iterative_consensus, sequence_hash, downsampled, SerialPool
-from .cluster import cluster_sequences, cluster_consensus
+from .cluster import cluster_sequences
 from .compose import looks_like_V_gene
 
 logger = logging.getLogger(__name__)
@@ -155,6 +155,11 @@ class Discoverer:
 		self.cluster_subsample_size = cluster_subsample_size
 
 	def __call__(self, args):
+		"""
+		Discover new V genes. args is a tuple (gene, group)
+		gene -- name of the gene
+		group -- a pandas DataFrame with the group corresponding to the gene
+		"""
 		gene, group = args
 		# Collect all 'sister' sequences (consensus sequences)
 		sisters = SisterMerger()
