@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 random.seed(123)
 
-MINGROUPSIZE_CONSENSUS = 10
+MINGROUPSIZE_CONSENSUS = 5
 MAXIMUM_SUBSAMPLE_SIZE = 1600
 
 Groupinfo = namedtuple('Groupinfo', 'count unique_J unique_CDR3')
