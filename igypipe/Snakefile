@@ -465,7 +465,6 @@ rule igypipe_compose:
 	output:
 		fasta='{dir}/new_V_database.fasta'
 	input:
-		database="{{dir}}/database/{species}_V.fasta".format(species=config.species),
 		tab='{dir}/discover.tab'
 	shell:
-		"igypipe compose --unique-CDR3 2 --database {input.database} {input.tab} > {output.fasta}"
+		"igypipe compose --unique-CDR3 2 {input.tab} > {output.fasta}"
