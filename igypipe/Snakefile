@@ -448,7 +448,7 @@ rule igypipe_clusterplot:
 		"igypipe clusterplot {input.tab} {params.clusterplots} && touch {output.done}"
 
 
-rule igypipe_singledisco:
+rule igypipe_discover:
 	"""Discover potential new V gene sequences"""
 	output:
 		tab="{dir}/discover.tab"
@@ -457,7 +457,7 @@ rule igypipe_singledisco:
 		tab="{dir}/unique.filtered.tab"
 	threads: 4
 	shell:
-		"igypipe singledisco -j {threads} --cluster --subsample {config.subsample} --window-width 2 --database {input.v_reference} {input.tab} > {output.tab}"
+		"igypipe discover -j {threads} --cluster --subsample {config.subsample} --window-width 2 --database {input.v_reference} {input.tab} > {output.tab}"
 
 
 rule igypipe_compose:

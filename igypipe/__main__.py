@@ -14,7 +14,7 @@ import logging
 from sqt import HelpfulArgumentParser
 
 from . import (commonv, igblast, parse, filter, count, group, multidiscover, compose,
-	singledisco, init, clusterplot, errorplot, __version__)
+	discover, init, clusterplot, errorplot, __version__)
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ def main():
 	commonv.add_subcommand(subparsers)
 	errorplot.add_subcommand(subparsers)
 	clusterplot.add_subcommand(subparsers)
-	singledisco.add_subcommand(subparsers)
+	discover.add_subcommand(subparsers)
 	compose.add_subcommand(subparsers)
 
 	args = parser.parse_args()

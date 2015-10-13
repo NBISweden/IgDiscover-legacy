@@ -1,7 +1,7 @@
 """
 Create new V gene database from V gene candidates.
 
-After potentially new V gene sequences have been discovered with the singledisco
+After potentially new V gene sequences have been discovered with the discover
 subcommand, this script can be used to create a new V gene database. The
 following filtering and processing steps are performed:
 
@@ -34,7 +34,7 @@ def add_subcommand(subparsers):
 	subparser.add_argument('--database', metavar='DATABASE.FASTA',
 		help='Existing (to be augmented) database in FASTA format')
 	subparser.add_argument('tables', metavar='DISCOVER.TAB',
-		help='Table (zero or more) created by the "singledisco" command', nargs='*')
+		help='Table (zero or more) created by the "discover" command', nargs='*')
 	return subparser
 
 
@@ -45,7 +45,7 @@ class Merger:
 	"""
 	Merge sequences where one is a prefix of the other into single entries.
 
-	TODO unify with singledisco.SisterMerger?
+	TODO unify with discover.SisterMerger?
 	"""
 	def __init__(self):
 		self.sequences = []

@@ -17,7 +17,7 @@ def add_subcommand(subparsers):
 	subparser.add_argument('--minimum-db-diff', '-b', type=int, metavar='DIST', default=1,
 		help='Use only sequences that have at least DIST differences to the database sequence. Default: %(default)s')
 	subparser.add_argument('tables', metavar='DISCOVER.TAB',
-		help='Table created by the "singledisco" command (give at least two)', nargs='+')
+		help='Table created by the "discover" command (give at least two)', nargs='+')
 	return subparser
 
 

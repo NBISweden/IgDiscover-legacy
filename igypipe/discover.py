@@ -36,7 +36,7 @@ SisterInfo = namedtuple('SisterInfo', 'sequence requested name group')
 
 
 def add_subcommand(subparsers):
-	subparser = subparsers.add_parser('singledisco', help=__doc__.split('\n')[1], description=__doc__)
+	subparser = subparsers.add_parser('discover', help=__doc__.split('\n')[1], description=__doc__)
 	subparser.set_defaults(func=discover_command)
 	subparser.add_argument('--threads', '-j', type=int, default=min(4, available_cpu_count()),
 		help='Number of threads. Default: no. of available CPUs, but at most 4')
