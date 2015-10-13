@@ -9,8 +9,8 @@ logger = logging.getLogger(__name__)
 
 
 def add_subcommand(subparsers):
-	subparser = subparsers.add_parser('discover', help=__doc__.split('\n')[1], description=__doc__)
-	subparser.set_defaults(func=discover_command)
+	subparser = subparsers.add_parser('multidiscover', help=__doc__.split('\n')[1], description=__doc__)
+	subparser.set_defaults(func=multidiscover_command)
 	subparser.add_argument('--minimum-frequency', '-n', type=int, metavar='N',
 		default=None,
 		help='Minimum number of datasets in which sequence must occur (default is no. of files divided by two)')
@@ -21,7 +21,7 @@ def add_subcommand(subparsers):
 	return subparser
 
 
-def discover_command(args):
+def multidiscover_command(args):
 	if args.minimum_frequency is None:
 		minimum_frequency = max((len(args.tables) + 1) // 2, 2)
 	else:
