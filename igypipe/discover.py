@@ -12,12 +12,12 @@ from collections import OrderedDict, namedtuple
 import multiprocessing
 import random
 from itertools import zip_longest
-
 import numpy as np
 import pandas as pd
 from sqt import SequenceReader
 from sqt.align import edit_distance
 from sqt.utils import available_cpu_count
+
 from .table import read_table
 from .utils import iterative_consensus, sequence_hash, downsampled, SerialPool
 from .cluster import cluster_sequences

@@ -455,7 +455,7 @@ rule igypipe_discover:
 	input:
 		v_reference="{{dir}}/database/{species}_V.fasta".format(species=config.species),
 		tab="{dir}/unique.filtered.tab"
-	threads: 4
+	threads: 4  # TODO this could be increased up to 6
 	shell:
 		"igypipe discover -j {threads} --cluster --subsample {config.subsample} --window-width 2 --database {input.v_reference} {input.tab} > {output.tab}"
 
