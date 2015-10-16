@@ -56,7 +56,7 @@ def add_subcommand(subparsers):
 		help='Compute consensus for all PERCENT-wide windows. Default: do not compute', default=None)
 	subparser.add_argument('--cluster', action='store_true', default=False,
 		help='Cluster sequences by similarity and compute consensus')
-	subparser.add_argument('--subsample', metavar='N', type=int, default=500,
+	subparser.add_argument('--subsample', metavar='N', type=int, default=1000,
 		help='When clustering, use N randomly chosen sequences. Default: %(default)s')
 	subparser.add_argument('--table-output', '-o', metavar='DIRECTORY',
 		help='Output tables for all analyzed genes to DIRECTORY. '
