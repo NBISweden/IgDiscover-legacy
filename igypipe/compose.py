@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 def add_subcommand(subparsers):
 	subparser = subparsers.add_parser('compose', help=__doc__.split('\n')[1], description=__doc__)
 	subparser.set_defaults(func=compose_command)
-	subparser.add_argument('--minimum-db-diff', '-b', type=int, metavar='DIST', default=1,
+	subparser.add_argument('--minimum-db-diff', '-b', type=int, metavar='DIST', default=0,
 		help='Sequences must have at least DIST differences to the database sequence. Default: %(default)s')
 	subparser.add_argument('--maximum-N', '-N', type=int, metavar='COUNT', default=0,
 		help='Sequences must have at most COUNT N bases. Default: %(default)s')
