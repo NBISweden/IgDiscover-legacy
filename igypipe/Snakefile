@@ -1,10 +1,5 @@
 # kate: syntax Python;
 """
-Required modules:
-
-module use /proj/b2014342/sw/modules
-module load igypipe
-
 These are the main files that the pipeline creates, in the order in which they
 are created:
 
