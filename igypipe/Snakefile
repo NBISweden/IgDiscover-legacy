@@ -72,7 +72,7 @@ UNIQUE_READS = 'reads/unique.fasta'
 
 
 PER_ITERATION_TARGETS = [
-	'discover.tab',
+	'candidates.tab',
 	'new_V_database.fasta',
 	'clusterplots/done',
 	'counts.txt',
@@ -446,7 +446,7 @@ rule igypipe_clusterplot:
 rule igypipe_discover:
 	"""Discover potential new V gene sequences"""
 	output:
-		tab="{dir}/discover.tab"
+		tab="{dir}/candidates.tab"
 	input:
 		v_reference="{{dir}}/database/{species}_V.fasta".format(species=config.species),
 		tab="{dir}/unique.filtered.tab"
@@ -460,6 +460,6 @@ rule igypipe_compose:
 	output:
 		fasta='{dir}/new_V_database.fasta'
 	input:
-		tab='{dir}/discover.tab'
+		tab='{dir}/candidates.tab'
 	shell:
 		"igypipe compose --unique-CDR3 2 {input.tab} > {output.fasta}"
