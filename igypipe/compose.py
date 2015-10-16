@@ -157,7 +157,7 @@ def compose_command(args):
 		table = table[[looks_like_V_gene(s) for s in table.consensus]]
 
 		table = table.dropna()
-		logger.info('Table read from %r contains %s sequences. '
+		logger.info('Table read from %r contains %s candidate V gene sequences. '
 			'%s remain after filtering', path,
 			unfiltered_length, len(table))
 		total_unfiltered += unfiltered_length
