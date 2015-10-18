@@ -1,5 +1,5 @@
 """
-Discover potential new V genes within a single antibody library.
+Discover candidate new V genes within a single antibody library.
 
 Existing V sequences are grouped by their V gene assignment, and within each
 group, consensus sequences are computed.
@@ -111,7 +111,7 @@ class SisterMerger:
 
 	@staticmethod
 	def _merged(s, t):
-		seq = []
+		chars = []
 		for c1, c2 in zip_longest(s.sequence, t.sequence):
 			if c1 is None:
 				c = c2
@@ -126,8 +126,8 @@ class SisterMerger:
 			else:
 				assert c1 == c2
 				c = c1
-			seq.append(c)
-		seq = ''.join(seq)
+			chars.append(c)
+		seq = ''.join(chars)
 		requested = s.requested or t.requested
 		name = s.name + ';' + t.name
 		# take union of groups
@@ -224,6 +224,9 @@ class Discoverer:
 			else:
 				database_diff = None
 			n_bases = sister.count('N')
+
+			assert info['window'].count <= info['total'].count
+			assert info['exact'].count <= info['approx'].count
 
 			# Build the row for the output table
 			sequence_id = '{}{}_{}'.format(self.prefix, gene.rsplit('_S', 1)[0], sequence_hash(sister))
