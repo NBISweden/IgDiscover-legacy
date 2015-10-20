@@ -29,7 +29,8 @@ def add_subcommand(subparsers):
 	subparser.set_defaults(func=parse_command)
 	subparser.add_argument('--rename', default=None, metavar='PREFIX',
 		help='Rename reads to PREFIXseqN (where N is a number starting at 1)')
-	subparser.add_argument('--barcode-length', type=int, default=None)
+	subparser.add_argument('--barcode-length', type=int, default=0,
+		help='Default: %(default)s')
 	subparser.add_argument('igblast', help='IgBLAST output')
 	subparser.add_argument('fasta', help='File with original reads')
 	return subparser
