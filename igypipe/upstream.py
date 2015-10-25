@@ -5,14 +5,19 @@ For each gene, look at all the sequences assigned to it. Take the upstream
 sequences and compute a consensus for them. Only those assigned sequences are
 taken that have a very low error rate for the V gene match.
 
-Output a FASTA file that contains one consensus sequences for each gene.
+Output a FASTA file that contains one consensus sequence for each gene.
 """
 import logging
 from sqt.align import multialign, consensus
 from .table import read_table
+from collections import Counter
 #from .utils import iterative_consensus
 
 logger = logging.getLogger(__name__)
+
+# When computing a UTR consensus, ignore sequences that deviate by more than
+# this factor from the median length.
+UTR_MEDIAN_DEVIATION = 0.1
 
 
 def add_subcommand(subparsers):
@@ -22,7 +27,7 @@ def add_subcommand(subparsers):
 		type=float, default=1,
 		help='allow PERCENT errors. Default: %(default)s%%.')
 	subparser.add_argument('--consensus-threshold', '-t', metavar='PERCENT',
-		type=float, default=80,
+		type=float, default=75,
 		help='Threshold for consensus computation. Default: %(default)s%%.')
 	subparser.add_argument('--part', choices=['UTR', 'leader', 'UTR+leader'],
 		default='UTR+leader', help='Which part of the sequence before the V '
@@ -39,23 +44,50 @@ def upstream_command(args):
 	logger.info('%s rows remain after discarding V%%SHM > %s%%', len(table), args.max_error_percentage)
 	table['UTR+leader'] = table['UTR'] + table['leader']
 	table = table[table[args.part] != '']
+	table['UTR_length'] = [ len(s) for s in table['UTR'] ]
 
-	#table = table.loc[:,('name', 'V_gene', 'J_gene', 'V_nt', 'CDR3_nt', 'V_SHM', 'J_SHM', 'UTR', 'leader')].copy()
-
+	n = 0
+	n_written = 0
+	n_consensus_with_n = 0
 	for name, group in table.groupby('V_gene'):
-		sequences = group[args.part]
-		if len(sequences) == 0:
+		n += 1
+		if len(group) == 0:
 			logger.info('Gene %s has %s assignments, but no usable sequences, skipping.', name, len(group))
 			continue
-		maxlen = max(len(s) for s in sequences)
-		sequences = sequences[[(len(s) >= 0.9 * maxlen) for s in sequences]]
+		median_length = group['UTR_length'].median()
+
+		#counter = Counter(group['UTR_length'])
+		## If there is anything at freq. 10 or higher, take the longest of those
+		#frequent = [length for length, count in counter.items() if count >= 10]
+		#if frequent:
+			#longest = max(frequent)
+		#else:
+
+
+		lower = median_length * (1.0 - UTR_MEDIAN_DEVIATION)
+		upper = median_length * (1.0 + UTR_MEDIAN_DEVIATION)
+		logger.debug('Lengths: %s',  ', '.join(map(str, sorted(len(s) for s in group['UTR']))))
+		logger.debug('Lengths: %s', Counter(len(s) for s in group['UTR']))
+		logger.debug('Median: %s. Lower bound: %s. Upper bound: %s', median_length, lower, upper)
+		sequences = group[args.part]
+		sequences = sequences[group['UTR_length'] >= lower]
+		sequences = sequences[group['UTR_length'] <= upper]
+		if len(sequences) == 0:
+			logger.info('Gene %s has %s assignments, but lengths are too different, skipping.', name, len(group))
+			continue
+		assert len(sequences) > 0
 		if len(sequences) == 1:
 			cons = sequences.iloc[0]
 		else:
 			# Keep only those sequences whose length is at least 90% of the longest one
 			aligned = multialign(sequences, program='muscle-medium')
-			cons = consensus(aligned, threshold=0.8)
+			cons = consensus(aligned, threshold=args.consensus_threshold/100)
 		logger.info('Gene %s has %s assignments, %s usable (%s unique sequences). '
 			'Consensus has %s N bases.', name, len(group), len(sequences),
 			len(set(sequences)), cons.count('N'))
+		if cons.count('N') > 0:
+			n_consensus_with_n += 1
+		n_written += 1
 		print('>{} {}_consensus\n{}'.format(name, args.part, cons))
+
+	logger.info('Wrote a consensus for %s of %s genes (%s had N bases)', n_written, n, n_consensus_with_n)
