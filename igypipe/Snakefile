@@ -91,6 +91,8 @@ TARGETS = expand('iteration-{nr:03d}/{path}', nr=range(1, config.iterations+1), 
 TARGETS += expand('iteration-{nr:03d}/{{path}}'.format(nr=config.iterations), path=FINAL_TARGETS)
 TARGETS += ['stats/barcodes.txt']
 
+# Add also intermediate files
+TARGETS += [READS1, READS2, MERGED_READS, UNIQUE_READS]
 
 rule all:
 	input:
