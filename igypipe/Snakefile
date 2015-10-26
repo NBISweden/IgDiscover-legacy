@@ -21,6 +21,7 @@ import seaborn as sns
 from sqt.dna import reverse_complement
 import igypipe
 
+
 class Config:
 	def __init__(self, path):
 		# Set some defaults.
