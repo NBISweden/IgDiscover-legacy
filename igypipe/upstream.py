@@ -11,7 +11,7 @@ import logging
 from sqt.align import multialign, consensus
 from .table import read_table
 from collections import Counter
-#from .utils import iterative_consensus
+from .utils import iterative_consensus
 
 logger = logging.getLogger(__name__)
 
@@ -58,22 +58,24 @@ def upstream_command(args):
 		counter = Counter(group['UTR_length'])
 		logger.debug('Sequence lengths (length: count): %s',  ', '.join('{}: {}'.format(l,c) for l, c in counter.most_common()))
 
-		# Take all sequences that are at least as long as the tenth longest
-		# sequence. This gives us at least ten usable sequences, enough for
-		# a consensus.
-		length_threshold = sorted(group['UTR_length'], reverse=True)[:10][-1]
-		sequences = group[group['UTR_length'] >= length_threshold][args.part]
+		if args.part == 'leader':
+			sequences = list(group[args.part])
+		else:
+			# Take all sequences that are at least as long as the tenth longest
+			# sequence. This gives us at least ten usable sequences, enough for
+			# a consensus.
+			length_threshold = sorted(group['UTR_length'], reverse=True)[:10][-1]
+			sequences = list(group[group['UTR_length'] >= length_threshold][args.part])
 
 		if len(sequences) == 0:
 			logger.info('Gene %s has %s assignments, but lengths are too different, skipping.', name, len(group))
 			continue
 		assert len(sequences) > 0
 		if len(sequences) == 1:
-			cons = sequences.iloc[0]
+			cons = sequences[0]
 		else:
 			# Keep only those sequences whose length is at least 90% of the longest one
-			aligned = multialign(sequences, program='muscle-medium')
-			cons = consensus(aligned, threshold=args.consensus_threshold/100)
+			cons = iterative_consensus(sequences, program='muscle-medium', threshold=args.consensus_threshold/100)
 			# If the sequence lengths are different, the beginning can be unclear
 			cons = cons.lstrip('N')
 		logger.info('Gene %s has %s assignments, %s usable (%s unique sequences). '
