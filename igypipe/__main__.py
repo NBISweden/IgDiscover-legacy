@@ -19,7 +19,7 @@ from . import (commonv, igblast, parse, filter, count, group, multidiscover, com
 logger = logging.getLogger(__name__)
 
 def main():
-	logging.basicConfig(level=logging.DEBUG, format='%(levelname)s: %(message)s')
+	logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 	parser = HelpfulArgumentParser(description=__doc__, prog='igypipe')
 	parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
 

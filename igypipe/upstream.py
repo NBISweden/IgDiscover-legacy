@@ -32,12 +32,15 @@ def add_subcommand(subparsers):
 	subparser.add_argument('--part', choices=['UTR', 'leader', 'UTR+leader'],
 		default='UTR+leader', help='Which part of the sequence before the V '
 		'gene match to analyze. Default: %(default)s')
-
+	subparser.add_argument('--debug', default=False, action='store_true',
+		help='Enable debugging output')
 	subparser.add_argument('table', help='Table with parsed IgBLAST results')
 	return subparser
 
 
 def upstream_command(args):
+	if args.debug:
+		logging.getLogger().setLevel(logging.DEBUG)
 	table = read_table(args.table)
 	logger.info('%s rows read', len(table))
 	table = table[table.V_SHM <= args.max_error_percentage]
@@ -63,11 +66,10 @@ def upstream_command(args):
 			#longest = max(frequent)
 		#else:
 
-
 		lower = median_length * (1.0 - UTR_MEDIAN_DEVIATION)
 		upper = median_length * (1.0 + UTR_MEDIAN_DEVIATION)
-		logger.debug('Lengths: %s',  ', '.join(map(str, sorted(len(s) for s in group['UTR']))))
-		logger.debug('Lengths: %s', Counter(len(s) for s in group['UTR']))
+		counter = Counter(len(s) for s in group['UTR'])
+		logger.debug('Sequence lengths (length: count): %s',  ', '.join('{}: {}'.format(l,c) for l, c in counter.most_common()))
 		logger.debug('Median: %s. Lower bound: %s. Upper bound: %s', median_length, lower, upper)
 		sequences = group[args.part]
 		sequences = sequences[group['UTR_length'] >= lower]
