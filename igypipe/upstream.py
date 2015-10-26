@@ -54,26 +54,16 @@ def upstream_command(args):
 	n_consensus_with_n = 0
 	for name, group in table.groupby('V_gene'):
 		n += 1
-		if len(group) == 0:
-			logger.info('Gene %s has %s assignments, but no usable sequences, skipping.', name, len(group))
-			continue
-		median_length = group['UTR_length'].median()
-
-		#counter = Counter(group['UTR_length'])
-		## If there is anything at freq. 10 or higher, take the longest of those
-		#frequent = [length for length, count in counter.items() if count >= 10]
-		#if frequent:
-			#longest = max(frequent)
-		#else:
-
-		lower = median_length * (1.0 - UTR_MEDIAN_DEVIATION)
-		upper = median_length * (1.0 + UTR_MEDIAN_DEVIATION)
-		counter = Counter(len(s) for s in group['UTR'])
+		assert len(group) != 0
+		counter = Counter(group['UTR_length'])
 		logger.debug('Sequence lengths (length: count): %s',  ', '.join('{}: {}'.format(l,c) for l, c in counter.most_common()))
-		logger.debug('Median: %s. Lower bound: %s. Upper bound: %s', median_length, lower, upper)
-		sequences = group[args.part]
-		sequences = sequences[group['UTR_length'] >= lower]
-		sequences = sequences[group['UTR_length'] <= upper]
+
+		# Take all sequences that are at least as long as the tenth longest
+		# sequence. This gives us at least ten usable sequences, enough for
+		# a consensus.
+		length_threshold = sorted(group['UTR_length'], reverse=True)[:10][-1]
+		sequences = group[group['UTR_length'] >= length_threshold][args.part]
+
 		if len(sequences) == 0:
 			logger.info('Gene %s has %s assignments, but lengths are too different, skipping.', name, len(group))
 			continue
@@ -84,6 +74,8 @@ def upstream_command(args):
 			# Keep only those sequences whose length is at least 90% of the longest one
 			aligned = multialign(sequences, program='muscle-medium')
 			cons = consensus(aligned, threshold=args.consensus_threshold/100)
+			# If the sequence lengths are different, the beginning can be unclear
+			cons = cons.lstrip('N')
 		logger.info('Gene %s has %s assignments, %s usable (%s unique sequences). '
 			'Consensus has %s N bases.', name, len(group), len(sequences),
 			len(set(sequences)), cons.count('N'))
