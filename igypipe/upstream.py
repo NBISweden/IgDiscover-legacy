@@ -25,7 +25,7 @@ def add_subcommand(subparsers):
 	subparser.set_defaults(func=upstream_command)
 	subparser.add_argument('--max-error-percentage', '-e', metavar='PERCENT',
 		type=float, default=1,
-		help='allow PERCENT errors. Default: %(default)s%%.')
+		help='Allow PERCENT errors in V gene match. Default: %(default)s%%.')
 	subparser.add_argument('--consensus-threshold', '-t', metavar='PERCENT',
 		type=float, default=75,
 		help='Threshold for consensus computation. Default: %(default)s%%.')
