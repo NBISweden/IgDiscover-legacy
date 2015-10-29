@@ -268,7 +268,6 @@ def parse_hit(line):
 	subject_start = int(subject_start) - 1
 	subject_length = int(subject_length)  # Length of original subject sequence
 	#subject_end = subject_start + len(subject_sequence)
-	pid = percent_identity
 	# Percent identity is calculated by IgBLAST as
 	# 100 - errors / alignment_length and then rounded to two decimal digits
 	percent_identity = float(percent_identity)
@@ -423,8 +422,6 @@ class TableWriter:
 			"J_gene",
 			"stop",
 			"productive",
-			"UTR",
-			"leader",
 			"V_covered",
 			"D_covered",
 			"J_covered",
@@ -438,6 +435,8 @@ class TableWriter:
 			"FR3_SHM",
 			"V_SHM",
 			"J_SHM",
+			"UTR",
+			"leader",
 			"CDR1_nt",
 			"CDR1_aa",
 			"CDR2_nt",
@@ -520,8 +519,6 @@ class TableWriter:
 			record.j_gene,
 			yesno(record.has_stop),
 			yesno(record.is_productive),
-			record.utr,
-			record.leader,
 			v_covered,
 			d_covered,
 			j_covered,
@@ -535,6 +532,8 @@ class TableWriter:
 			shm('FR3'),
 			v_shm,
 			j_shm,
+			record.utr,
+			record.leader,
 			cdr1nt,
 			cdr1aa,
 			cdr2nt,
