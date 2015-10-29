@@ -45,15 +45,17 @@ def highlight(s, span):
 
 
 IgblastRecordNT = namedtuple('IgblastRecordNT',
-	'full_sequence query_name alignments ' \
-	'hits v_gene d_gene j_gene chain has_stop in_frame is_productive ' \
+	'full_sequence query_name alignments '
+	'hits v_gene d_gene j_gene chain has_stop in_frame is_productive '
 	'strand size junction barcode_length')
 AlignmentSummary = namedtuple('AlignmentSummary', 'start stop length matches mismatches gaps percent_identity')
 JunctionVDJ = namedtuple('JunctionVDJ', 'v_end vd_junction d_region dj_junction j_start')
 JunctionVJ = namedtuple('JunctionVJ', 'v_end vj_junction j_start')
 
 
-HitNT = namedtuple('HitNT', 'subject_id query_start query_sequence subject_start subject_sequence subject_length percent_identity evalue')
+HitNT = namedtuple('HitNT', 'subject_id query_start query_sequence '
+	'subject_start subject_sequence subject_length errors percent_identity '
+	'evalue')
 class Hit(HitNT):
 	def covered(self):
 		"""
@@ -258,15 +260,21 @@ def parse_hit(line):
 	# subject_sequence and query_sequence describe the alignment:
 	# They contain '-' characters for insertions and deletions.
 	assert len(subject_sequence) == len(query_sequence)
+	alignment_length = len(subject_sequence)
+	errors = sum(a != b for a,b in zip(subject_sequence, query_sequence))
 	query_sequence = query_sequence.replace('-', '')
 	subject_sequence = subject_sequence.replace('-', '')
 	query_start = int(query_start) - 1
 	subject_start = int(subject_start) - 1
 	subject_length = int(subject_length)  # Length of original subject sequence
 	#subject_end = subject_start + len(subject_sequence)
+	pid = percent_identity
+	# Percent identity is calculated by IgBLAST as
+	# 100 - errors / alignment_length and then rounded to two decimal digits
 	percent_identity = float(percent_identity)
 	evalue = float(evalue)
-	hit = Hit(subject_id, query_start, query_sequence, subject_start, subject_sequence, subject_length, percent_identity, evalue)
+	hit = Hit(subject_id, query_start, query_sequence, subject_start,
+		   subject_sequence, subject_length, errors, percent_identity, evalue)
 	return hit, gene
 
 
