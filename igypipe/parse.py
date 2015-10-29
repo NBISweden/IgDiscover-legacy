@@ -435,6 +435,8 @@ class TableWriter:
 			"FR3_SHM",
 			"V_SHM",
 			"J_SHM",
+			"V_errors",
+			"J_errors",
 			"UTR",
 			"leader",
 			"CDR1_nt",
@@ -479,12 +481,14 @@ class TableWriter:
 			v_nt = record.hits['V'].query_sequence
 			v_aa = nt_to_aa(v_nt)
 			v_shm = '{:.1f}'.format(100.0 - record.hits['V'].percent_identity)
+			v_errors = record.hits['V'].errors
 			v_covered = '{:.1f}'.format(100*record.hits['V'].covered())
 			v_evalue = '{:G}'.format(record.hits['V'].evalue)
 		else:
 			v_nt = None
 			v_aa = None
 			v_shm = None
+			v_errors = None
 			v_covered = None
 			v_evalue = None
 		if 'D' in record.hits:
@@ -494,11 +498,13 @@ class TableWriter:
 			d_covered = None
 			d_evalue = None
 		if 'J' in record.hits:
-			j_shm = '{:1.1f}'.format(100.0 - record.hits['J'].percent_identity)
+			j_shm = '{:.1f}'.format(100.0 - record.hits['J'].percent_identity)
+			j_errors = record.hits['J'].errors
 			j_covered = '{:.1f}'.format(100*record.hits['J'].covered())
 			j_evalue = '{:G}'.format(record.hits['J'].evalue)
 		else:
 			j_shm = None
+			j_errors = None
 			j_covered = None
 			j_evalue = None
 		v_end = getattr(record.junction, 'v_end', None)
@@ -532,6 +538,8 @@ class TableWriter:
 			shm('FR3'),
 			v_shm,
 			j_shm,
+			v_errors,
+			j_errors,
 			record.utr,
 			record.leader,
 			cdr1nt,
