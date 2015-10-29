@@ -5,6 +5,7 @@ import os.path
 import logging
 import sqlite3
 import pandas as pd
+import numpy as np
 from tempfile import TemporaryDirectory
 
 logger = logging.getLogger(__name__)
@@ -40,6 +41,7 @@ STRING_COLUMNS = [
 	'genomic_sequence',
 ]
 
+TYPES = {'V_errors': np.int32, 'J_errors': np.int32}
 
 def read_table(path, log=False):
 	"""
@@ -55,7 +57,7 @@ def read_table(path, log=False):
 		# it atomically.
 		with TemporaryDirectory(dir=os.path.dirname(h5path)) as tempdir:
 			temp_h5 = os.path.join(tempdir, 'db.h5')
-			df = pd.read_csv(path, sep='\t') #true_values=['yes'], false_values=['no'])
+			df = pd.read_csv(path, sep='\t', dtype=TYPES) #true_values=['yes'], false_values=['no'])
 
 			# Convert all string columns to str to avoid a PerformanceWarning
 			for col in STRING_COLUMNS:
