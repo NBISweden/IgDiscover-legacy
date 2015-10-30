@@ -41,7 +41,7 @@ STRING_COLUMNS = [
 	'genomic_sequence',
 ]
 
-TYPES = {'V_errors': np.int32, 'J_errors': np.int32}
+INTEGER_COLUMNS = ('V_errors', 'J_errors')
 
 def read_table(path, log=False):
 	"""
@@ -57,7 +57,7 @@ def read_table(path, log=False):
 		# it atomically.
 		with TemporaryDirectory(dir=os.path.dirname(h5path)) as tempdir:
 			temp_h5 = os.path.join(tempdir, 'db.h5')
-			df = pd.read_csv(path, sep='\t', dtype=TYPES) #true_values=['yes'], false_values=['no'])
+			df = pd.read_csv(path, sep='\t') #true_values=['yes'], false_values=['no'])
 
 			# Convert all string columns to str to avoid a PerformanceWarning
 			for col in STRING_COLUMNS:
@@ -66,6 +66,11 @@ def read_table(path, log=False):
 				# Empty strings have been set to NaN by read_csv. Replacing
 				# by the empty string avoids problems with groupby, which
 				# ignores NaN values.
+			# Columns that have any NaN values in them cannot be converted to
+			# int due to a numpy limitation.
+			for col in INTEGER_COLUMNS:
+				if all(df[col].notnull()):
+					df[col] = df[col].astype(int)
 			df.to_hdf(temp_h5, 'table')
 			os.rename(temp_h5, h5path)
 	d = pd.read_hdf(h5path, 'table')
