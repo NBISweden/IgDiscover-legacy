@@ -18,6 +18,7 @@ consensus.assigned.tab -- parsed IgBLAST output
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_pdf import FigureCanvasPdf
 import seaborn as sns
+import yaml
 from sqt.dna import reverse_complement
 import igypipe
 
@@ -41,13 +42,20 @@ class Config:
 
 	def read_from(self, path):
 		try:
-			exec(open(path).read(), self.__dict__)
+			content = open(path).read()
 		except FileNotFoundError:
 			sys.exit("Pipeline configuration file {!r} not found. Please create it!".format(path))
-		# Convert all-uppercase attributes to lowercase
-		for attribute, value in list(vars(self).items()):
-			if attribute == attribute.upper():
-				setattr(self, attribute.lower(), value)
+		# Heuristic to detect whether the configuration is YAML or in the old format
+		# Will be removed after a transition period
+		if 'species:' in content:
+			# It’s YAML
+			self.__dict__.update(yaml.safe_load(content))
+		else:
+			exec(content, self.__dict__)
+			# Convert all-uppercase attributes to lowercase
+			for attribute, value in list(vars(self).items()):
+				if attribute == attribute.upper():
+					setattr(self, attribute.lower(), value)
 		if self.trim_primers:
 			if not self.reverse_primers:
 				sys.exit("The list of reverse_primers is empty. This will not work correctly.")
