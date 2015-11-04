@@ -90,7 +90,7 @@ FINAL_TARGETS = [
 ]
 TARGETS = expand('iteration-{nr:03d}/{path}', nr=range(1, config.iterations+1), path=PER_ITERATION_TARGETS)
 TARGETS += expand('iteration-{nr:03d}/{{path}}'.format(nr=config.iterations), path=FINAL_TARGETS)
-TARGETS += ['stats/barcodes.txt']
+TARGETS += ['stats/barcodes.txt', 'stats/unique.readlengths.pdf', 'stats/merged.readlengths.pdf']
 
 # Add also intermediate files
 TARGETS += [READS1, READS2, MERGED_READS, UNIQUE_READS]
@@ -144,15 +144,24 @@ else:
 	sys.exit("merge_program given in configuration file not recognized")
 
 
-rule read_length_histogram:
-	# TODO on which data should this be created?
+rule merged_read_length_histogram:
 	output:
-		txt="stats/readlengthhisto.txt",
-		pdf="stats/readlengthhisto.pdf"
+		txt="stats/merged.readlengths.txt",
+		pdf="stats/merged.readlengths.pdf"
 	input:
 		fastq=MERGED_READS
 	shell:
-		"sqt-readlenhisto --plot {output.pdf} {input}  > {output.txt}"
+		"""sqt-readlenhisto --bins 100 --left 300 --title "Lengths of merged reads" --plot {output.pdf} {input}  > {output.txt}"""
+
+
+rule unique_read_length_histogram:
+	output:
+		txt="stats/unique.readlengths.txt",
+		pdf="stats/unique.readlengths.pdf"
+	input:
+		fastq=UNIQUE_READS
+	shell:
+		"""sqt-readlenhisto --bins 100 --left 300 --title "Lengths of pre-processed reads" --plot {output.pdf} {input}  > {output.txt}"""
 
 
 rule barcode_stats:
@@ -268,7 +277,7 @@ rule fastqc:
 		zip='fastqc/{file}.zip',
 		png='fastqc/{file}/Images/per_base_quality.png',
 		html='fastqc/{file}_fastqc.html'
-	input: fastq='{file}.fastq'
+	input: fastq='{file}.fastq.gz'
 	shell:
 		r"""
 		rm -rf fastqc/{wildcards.file}/ fastqc/{wildcards.file}_fastqc/ && \
