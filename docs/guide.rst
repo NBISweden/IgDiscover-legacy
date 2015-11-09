@@ -93,3 +93,10 @@ Finally, the last columns are:
 * ``N_bases``: Number of `N` bases in the consensus
 * ``database_diff``: Number of differences between consensus and database sequence. This is only assigned when the database sequences were provided with ``--database``.
 * ``consensus``: The consensus sequence itself
+
+
+Configuration
+=============
+
+forward_primers, reverse_primers: If any primer sequences are given here, then
+reads that do not have the primer sequence will be discarded.
