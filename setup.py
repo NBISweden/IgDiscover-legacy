@@ -30,6 +30,7 @@ setup(
 		'seaborn>=0.6.0',
 		'tables>=3.2.1',
 		'scipy',
+		'PyYAML',
 	],
 	classifiers = [
 		"Development Status :: 2 - Pre-Alpha",
