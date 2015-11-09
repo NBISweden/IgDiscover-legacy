@@ -18,6 +18,9 @@ consensus.assigned.tab -- parsed IgBLAST output
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_pdf import FigureCanvasPdf
 import seaborn as sns
+import numpy as np
+import pandas as pd
+from collections import Counter
 import yaml
 from sqt.dna import reverse_complement
 import igypipe
@@ -488,17 +491,23 @@ rule stats_correlation_V_J:
 	input:
 		table="{base}.assigned.tab"
 	run:
+		# sns.heatmap will not work properly with the object-oriented interface,
+		# so use pyplot
+		import matplotlib.pyplot as plt
 		table = igypipe.read_table(input.table)
-		fig = Figure(figsize=(30/2.54, 21/2.54))
-		ax = fig.gca()
-		ax.set_xlabel('V%SHM')
-		ax.set_ylabel('J%SHM')
-		if len(table) > 0:
-			ax.scatter(table['V_SHM'], table['J_SHM'])
-		ax.set_xlim(left=-0.1)
-		ax.set_ylim(bottom=-0.1)
-		ax.set_title('Correlation between V%SHM and J%SHM')
-		FigureCanvasPdf(fig).print_figure(output.pdf)
+		fig = plt.figure(figsize=(29.7/2.54, 21/2.54))
+		counts = np.zeros((21, 11), dtype=np.int64)
+		counter = Counter(zip(table['V_errors'], table['J_errors']))
+		for (v,j), count in counter.items():
+			if v is not None and v < counts.shape[0] and j is not None and j < counts.shape[1]:
+				counts[v,j] = count
+		df = pd.DataFrame(counts.T)[::-1]
+		df.index.name = 'J errors'
+		df.columns.name = 'V errors'
+		sns.heatmap(df, annot=True, fmt=',d', cbar=False)
+		fig.suptitle('V errors vs. J errors in unfiltered sequences')
+		fig.tight_layout()
+		fig.savefig(output.pdf)
 
 
 rule stats_plot_errorhistograms:
