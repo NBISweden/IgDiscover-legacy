@@ -36,7 +36,7 @@ class Config:
 		self.barcode_length = 0
 		self.iterations = 1
 		self.subsample = 500
-		self.stranded = True
+		self.stranded = False
 		self.forward_primers = None
 		self.reverse_primers = None
 		self.read_from(path)
