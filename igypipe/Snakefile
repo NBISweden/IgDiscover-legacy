@@ -32,12 +32,13 @@ class Config:
 		self.multialign_program = 'muscle-fast'
 		self.maximum_expected_errors = None  # or an integer
 		self.minimum_merged_read_length = 300
-		self.trim_primers = False
 		self.mismatch_penalty = None
 		self.barcode_length = 0
 		self.iterations = 1
 		self.subsample = 500
-
+		self.stranded = True
+		self.forward_primers = None
+		self.reverse_primers = None
 		self.read_from(path)
 
 	def read_from(self, path):
@@ -56,11 +57,16 @@ class Config:
 			for attribute, value in list(vars(self).items()):
 				if attribute == attribute.upper():
 					setattr(self, attribute.lower(), value)
-		if self.trim_primers:
-			if not self.reverse_primers:
-				sys.exit("The list of reverse_primers is empty. This will not work correctly.")
-			if not self.forward_primers:
-				sys.exit("The list of forward_primers is empty. This will not work correctly.")
+			if hasattr(self, 'trim_primers'):
+				if self.trim_primers:
+					if not self.reverse_primers:
+						sys.exit("The list of reverse_primers is empty. This will not work correctly.")
+					if not self.forward_primers:
+						sys.exit("The list of forward_primers is empty. This will not work correctly.")
+				else:
+					self.reverse_primers = None
+					self.forward_primers = None
+				del self.trim_primers
 
 
 config = Config('pipeline.conf')
@@ -149,7 +155,7 @@ elif config.merge_program == 'pear':
 			gzip < reads/pear.assembled.fastq > {output.fastq} && rm reads/pear.assembled.fastq
 			"""
 else:
-	sys.exit("merge_program given in configuration file not recognized")
+	sys.exit("merge_program {config.merge_program!r} given in configuration file not recognized".format(config=config))
 
 
 rule merged_read_length_histogram:
@@ -215,69 +221,60 @@ rule stats_numbers:
 		"""
 
 
-rule stats_correlation_V_J:
-	output:
-		pdf="{base}.correlationVJ.pdf"
-	input:
-		table="{base}.assigned.tab"
-	run:
-		table = igypipe.read_table(input.table)
-		fig = Figure(figsize=(30/2.54, 21/2.54))
-		ax = fig.gca()
-		ax.set_xlabel('V%SHM')
-		ax.set_ylabel('J%SHM')
-		if len(table) > 0:
-			ax.scatter(table['V_SHM'], table['J_SHM'])
-		ax.set_xlim(left=-0.1)
-		ax.set_ylim(bottom=-0.1)
-		ax.set_title('Correlation between V%SHM and J%SHM')
-		FigureCanvasPdf(fig).print_figure(output.pdf)
+# Remove primer sequences
+
+if config.forward_primers:
+	# At least one forward primer is to be removed
+	rule trim_forward_primers:
+		output: fastq='reads/forward-primer-trimmed.fastq.gz'
+		input: fastq=MERGED_READS
+		resources: time=120
+		log: 'reads/forward-primer-trimmed.cutadapt.log'
+		run:
+			primers = config.forward_primers
+			param = ' '.join('-g ^{}'.format(seq) for seq in primers)
+			if not config.stranded:
+				param += ' ' + ' '.join('-a {}$'.format(reverse_complement(seq)) for seq in config.forward_primers)
+			shell(
+			"""
+			cutadapt --discard-untrimmed {param} -o {output.fastq} {input.fastq} | tee {log}
+			""")
+else:
+	# No trimming, just symlink the file
+	rule dont_trim_forward_primers:
+		output: fastq='reads/forward-primer-trimmed.fastq.gz'
+		input: fastq=MERGED_READS
+		resources: time=1
+		shell:
+			'ln -sf {input.fastq} {output.fastq}'
 
 
-rule stats_plot_errorhistograms:
-	output:
-		pdf='{base}.errorhistograms.pdf',
-	input:
-		table='{base}.filtered.tab'
-	shell:
-		'igypipe errorplot {input.table} {output.pdf}'
-
-
-# Adjust the primer sequences so they are correctly reverse-complemented.
-# When a forward primer fwd and a reverse primer rev are given, then we need to
-# search for:
-# * fwd in the beginning, revcomp(rev) in the end
-# * rev in the beginning, revcomp(fwd) in the end
-PRIMERS = [
-	config.forward_primers[:], [reverse_complement(seq) for seq in config.reverse_primers]
-]
-PRIMERS[0].extend(config.reverse_primers)
-PRIMERS[1].extend(reverse_complement(seq) for seq in config.forward_primers)
-
-rule trim_primers_fivep:
-	output: fastq="reads/trimmed-fivep.fastq.gz"
-	input: fastq=MERGED_READS
-	resources: time=60
-	log: 'reads/cutadapt-fiveprime.log'
-	params:
-		five_p=" ".join("-g ^{}".format(seq) for seq in PRIMERS[0])
-	shell:
-		r"""
-		cutadapt --discard-untrimmed {params.five_p} -o {output.fastq} {input.fastq} | tee {log}
-		"""
-
-
-rule trim_primers_threep:
-	output: fastq="reads/trimmed.fastq.gz"
-	input: fastq="reads/trimmed-fivep.fastq.gz"
-	resources: time=60
-	log: 'reads/cutadapt-threeprime.log'
-	params:
-		three_p=" ".join("-a {}$".format(seq) for seq in PRIMERS[1])
-	shell:
-		r"""
-		cutadapt --discard-untrimmed {params.three_p} -o {output.fastq} {input.fastq} | tee {log}
-		"""
+if config.reverse_primers:
+	# At least one reverse primer is to be removed
+	rule trim_reverse_primers:
+		output: fastq='reads/trimmed.fastq.gz'
+		input: fastq='reads/forward-primer-trimmed.fastq.gz'
+		resources: time=120
+		log: 'reads/trimmed.cutadapt.log'
+		run:
+			primers = config.reverse_primers
+			# Reverse primers should appear reverse-complemented at the 3' end
+			# of the merged read.
+			param = ' '.join('-a {}$'.format(reverse_complement(seq)) for seq in primers)
+			if not config.stranded:
+				param += ' ' + ' '.join('-g ^{}'.format(seq) for seq in config.reverse_primers)
+			shell(
+			"""
+			cutadapt --discard-untrimmed {param} -o {output.fastq} {input.fastq} | tee {log}
+			""")
+else:
+	# No trimming, just symlink the file
+	rule dont_trim_reverse_primers:
+		output: fastq='reads/trimmed.fastq.gz'
+		input: fastq='reads/forward-primer-trimmed.fastq.gz'
+		resources: time=1
+		shell:
+			'ln -sf {input.fastq} {output.fastq}'
 
 
 rule fastqc:
@@ -303,7 +300,7 @@ rule fastq_to_fasta:
 	* Discard too short sequences
 	"""
 	output: fasta="reads/filtered.fasta"
-	input: fastq="reads/trimmed.fastq.gz" if config.trim_primers else MERGED_READS
+	input: fastq="reads/trimmed.fastq.gz"
 	params: max_errors="--max-errors {config.maximum_expected_errors}" if config.maximum_expected_errors is not None else ""
 	shell:
 		"sqt-fastqmod {params.max_errors} --minimum-length {config.minimum_merged_read_length} --fasta {input.fastq} > {output.fasta}"
@@ -483,3 +480,33 @@ rule igypipe_compose:
 		tab='{dir}/candidates.tab'
 	shell:
 		"igypipe compose --unique-CDR3 2 {input.tab} > {output.fasta}"
+
+
+rule stats_correlation_V_J:
+	output:
+		pdf="{base}.correlationVJ.pdf"
+	input:
+		table="{base}.assigned.tab"
+	run:
+		table = igypipe.read_table(input.table)
+		fig = Figure(figsize=(30/2.54, 21/2.54))
+		ax = fig.gca()
+		ax.set_xlabel('V%SHM')
+		ax.set_ylabel('J%SHM')
+		if len(table) > 0:
+			ax.scatter(table['V_SHM'], table['J_SHM'])
+		ax.set_xlim(left=-0.1)
+		ax.set_ylim(bottom=-0.1)
+		ax.set_title('Correlation between V%SHM and J%SHM')
+		FigureCanvasPdf(fig).print_figure(output.pdf)
+
+
+rule stats_plot_errorhistograms:
+	output:
+		pdf='{base}.errorhistograms.pdf',
+	input:
+		table='{base}.filtered.tab'
+	shell:
+		'igypipe errorplot {input.table} {output.pdf}'
+
+

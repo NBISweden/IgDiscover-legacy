@@ -100,3 +100,6 @@ Configuration
 
 forward_primers, reverse_primers: If any primer sequences are given here, then
 reads that do not have the primer sequence will be discarded.
+
+If you use an unstranded protocol, set the ``stranded`` setting to ``false``.
+The pipeline will then search also reverse-complemented reads for primers.
