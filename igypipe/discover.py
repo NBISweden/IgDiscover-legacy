@@ -65,6 +65,8 @@ def add_subcommand(subparsers):
 		help='FASTA file with V genes. If provided, differences between consensus and database will be computed.')
 	subparser.add_argument('--consensus-output', '-c', metavar='FASTA', default=None,
 		help='Output consensus sequences in FASTA format to this file.')
+	subparser.add_argument('--ignore-J', action='store_true', default=False,
+		help='Include also rows without J assignment or J%%SHM>0.')
 	subparser.add_argument('table', help='Table with parsed IgBLAST results')  # nargs='+'
 	return subparser
 
@@ -214,7 +216,7 @@ class Discoverer:
 					('window', sister_info.group),
 					('exact', group_exact_V),
 					('approx', group_approximate_V)):
-				unique_J = len(set(g.J_gene))
+				unique_J = len(set(s for s in g.J_gene if s))
 				unique_CDR3 = len(set(s for s in g.CDR3_nt if s))
 				assert len(set(g.index)) == len(g.index)  # TODO remove this
 				count = len(g.index)
@@ -260,10 +262,11 @@ def discover_command(args):
 	table = read_table(args.table)
 	table = table.loc[:,('name', 'V_gene', 'J_gene', 'V_nt', 'CDR3_nt', 'V_SHM', 'J_SHM')].copy()
 
-	# Discard rows with any mutation within J at all
 	logger.info('%s rows read', len(table))
-	table = table[table.J_SHM == 0][:]
-	logger.info('%s rows remain after discarding J%%SHM > 0', len(table))
+	if not args.ignore_J:
+		# Discard rows with any mutation within J at all
+		table = table[table.J_SHM == 0][:]
+		logger.info('%s rows remain after discarding J%%SHM > 0', len(table))
 
 	logger.info('Using an error rate window of %.1f%% to %.1f%%', args.left, args.right)
 	logger.info('Approximate comparisons between V gene sequence and consensus allow %.1f%% errors.', v_error_rate*100)
