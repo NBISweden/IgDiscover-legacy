@@ -386,7 +386,7 @@ rule symlink_iteration_reads:
 	input:
 		fasta='reads/unique.fasta'
 	shell:
-		'ln -s ../{input.fasta} {output.fasta}'
+		'ln -sf ../{input.fasta} {output.fasta}'
 
 
 rule igypipe_igblast:
