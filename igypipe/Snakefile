@@ -249,7 +249,9 @@ else:
 		input: fastq=MERGED_READS
 		resources: time=1
 		shell:
-			'ln -sf {input.fastq} {output.fastq}'
+			# The -r option is not available in older GNU coreutils.
+			# Change to ln -sf ../{input.fastq} {output.fastq} if you have problems.
+			'ln -srf {input.fastq} {output.fastq}'
 
 
 if config.reverse_primers:
@@ -277,7 +279,7 @@ else:
 		input: fastq='reads/forward-primer-trimmed.fastq.gz'
 		resources: time=1
 		shell:
-			'ln -sf {input.fastq} {output.fastq}'
+			'ln -srf {input.fastq} {output.fastq}'
 
 
 rule fastqc:
@@ -314,7 +316,7 @@ rule dereplicate:
 	output: fasta=UNIQUE_READS
 	input: fasta="reads/filtered.fasta"
 	shell:
-		"""vsearch --derep_fulllength {input.fasta} --strand both --output {output.fasta} --sizeout"""
+		'vsearch --derep_fulllength {input.fasta} --strand both --output {output.fasta} --sizeout'
 
 
 # TODO this rule is unused
@@ -368,8 +370,8 @@ for i in range(2, config.iterations + 1):
 
 
 rule makeblastdb:
-	input: fasta="{dir}/{species}_{gene}.fasta"
 	output: "{dir}/{species}_{gene,[VDJ]}.nhr"  # and nin nog nsd nsi nsq
+	input: fasta="{dir}/{species}_{gene}.fasta"
 	params: dbname="{dir}/{species}_{gene}"
 	log: '{dir}/{species}_{gene}.log'
 	threads: 100  # force to run as single job
