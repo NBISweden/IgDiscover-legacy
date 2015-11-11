@@ -30,21 +30,20 @@ def plot_error_histogram(group, v_gene_name, bins=np.arange(20.1)):
 	exact_unique_CDR3 = len(set(s for s in exact_matches.CDR3_nt if s))
 	exact_unique_J = len(set(exact_matches.J_gene))
 
-	fig = Figure(figsize=(297/25.4, 210/25.4))
+	fig = Figure(figsize=(297/2/25.4, 210/2/25.4))
 	ax = fig.gca()
 	ax.set_xlabel('Error rate (%)')
 	ax.set_ylabel('Frequency')
-	fig.suptitle('Gene ' + v_gene_name, fontsize=18)
-	ax.set_title('{:,} sequences assigned'.format(len(group)), fontsize=16)
+	fig.suptitle('Gene ' + v_gene_name, y=1.02, fontsize=16)
+	ax.set_title('{:,} sequences assigned'.format(len(group)))
 
-	ax.text(0.6, 0.95,
+	ax.text(0.3, 0.95,
 		'{:,} ({:.1%}) exact matches, using\n  {} unique CDR3\n  {} unique J'.format(
 			len(exact_matches), len(exact_matches) / len(group),
 			exact_unique_CDR3, exact_unique_J),
-		transform=ax.transAxes, fontsize=16,
+		transform=ax.transAxes, fontsize=14,
 		bbox=dict(boxstyle='round', facecolor='white', alpha=0.5),
 		horizontalalignment='left', verticalalignment='top')
-
 	_ = ax.hist(list(group.V_SHM), bins=bins)
 	return fig
 
@@ -64,5 +63,5 @@ def main(args):
 				continue
 			fig = plot_error_histogram(group, gene)
 			n += 1
-			FigureCanvasPdf(fig).print_figure(pages)
+			FigureCanvasPdf(fig).print_figure(pages, bbox_inches='tight')
 	logger.info('%s plots created (rest had too few sequences)', n)
