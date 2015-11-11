@@ -8,20 +8,17 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 
-def add_subcommand(subparsers):
-	subparser = subparsers.add_parser('multidiscover', help=__doc__.split('\n')[1], description=__doc__)
-	subparser.set_defaults(func=multidiscover_command)
-	subparser.add_argument('--minimum-frequency', '-n', type=int, metavar='N',
+def add_arguments(parser):
+	parser.add_argument('--minimum-frequency', '-n', type=int, metavar='N',
 		default=None,
 		help='Minimum number of datasets in which sequence must occur (default is no. of files divided by two)')
-	subparser.add_argument('--minimum-db-diff', '-b', type=int, metavar='DIST', default=1,
+	parser.add_argument('--minimum-db-diff', '-b', type=int, metavar='DIST', default=1,
 		help='Use only sequences that have at least DIST differences to the database sequence. Default: %(default)s')
-	subparser.add_argument('tables', metavar='DISCOVER.TAB',
+	parser.add_argument('tables', metavar='DISCOVER.TAB',
 		help='Table created by the "discover" command (give at least two)', nargs='+')
-	return subparser
 
 
-def multidiscover_command(args):
+def main(args):
 	if args.minimum_frequency is None:
 		minimum_frequency = max((len(args.tables) + 1) // 2, 2)
 	else:

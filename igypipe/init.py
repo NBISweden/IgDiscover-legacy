@@ -16,15 +16,12 @@ logger = logging.getLogger(__name__)
 PIPELINE_CONF = 'pipeline.conf'
 
 
-def add_subcommand(subparsers):
-	subparser = subparsers.add_parser('init', help=__doc__.split('\n')[1], description=__doc__)
-	subparser.set_defaults(func=init_command)
-	subparser.add_argument('--database', '--db', metavar='PATH', default=None,
+def add_arguments(parser):
+	parser.add_argument('--database', '--db', metavar='PATH', default=None,
 		help='Directory with IgBLAST database files. If not given, a dialog is shown.')
-	subparser.add_argument('directory', help='New pipeline directory to create')
-	subparser.add_argument('--reads1', default=None,
+	parser.add_argument('directory', help='New pipeline directory to create')
+	parser.add_argument('--reads1', default=None,
 		help='File with paired-end reads (first file only). If not given, a dialog is shown.')
-	return subparser
 
 
 def tkinter_reads_path(directory=False):
@@ -116,7 +113,7 @@ def guess_paired_path(path):
 	return paths[0]
 
 
-def init_command(args):
+def main(args):
 	if ' ' in args.directory:
 		sys.exit('The name of the new pipeline directory must not contain spaces')
 	gui = False

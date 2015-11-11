@@ -22,20 +22,17 @@ from sqt.dna import amino_acid_regex
 logger = logging.getLogger(__name__)
 
 
-def add_subcommand(subparsers):
-	subparser = subparsers.add_parser('compose', help=__doc__.split('\n')[1], description=__doc__)
-	subparser.set_defaults(func=compose_command)
-	subparser.add_argument('--minimum-db-diff', '-b', type=int, metavar='DIST', default=0,
+def add_arguments(parser):
+	parser.add_argument('--minimum-db-diff', '-b', type=int, metavar='DIST', default=0,
 		help='Sequences must have at least DIST differences to the database sequence. Default: %(default)s')
-	subparser.add_argument('--maximum-N', '-N', type=int, metavar='COUNT', default=0,
+	parser.add_argument('--maximum-N', '-N', type=int, metavar='COUNT', default=0,
 		help='Sequences must have at most COUNT N bases. Default: %(default)s')
-	subparser.add_argument('--unique-CDR3', type=int, metavar='COUNT', default=5,
+	parser.add_argument('--unique-CDR3', type=int, metavar='COUNT', default=5,
 		help='Sequences must have at least COUNT exact unique CDR3s. Default: %(default)s')
-	subparser.add_argument('--database', metavar='DATABASE.FASTA',
+	parser.add_argument('--database', metavar='DATABASE.FASTA',
 		help='Existing (to be augmented) database in FASTA format')
-	subparser.add_argument('tables', metavar='DISCOVER.TAB',
+	parser.add_argument('tables', metavar='DISCOVER.TAB',
 		help='Table (zero or more) created by the "discover" command', nargs='*')
-	return subparser
 
 
 SequenceInfo = namedtuple('SequenceInfo', 'sequence name')
@@ -137,7 +134,7 @@ def looks_like_V_gene(s):
 	#return bool(V_GENE_REGEX.match(s))
 
 
-def compose_command(args):
+def main(args):
 	merger = Merger()
 	previous_n = 0
 	if args.database:

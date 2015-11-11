@@ -11,10 +11,8 @@ import pkg_resources
 from sqt import SequenceReader
 from sqt.utils import available_cpu_count
 
-def add_subcommand(subparsers):
-	subparser = subparsers.add_parser('igblast', help=__doc__.split('\n')[1], description=__doc__)
-	subparser.set_defaults(func=igblast_command)
-	add = subparser.add_argument
+def add_arguments(parser):
+	add = parser.add_argument
 	add('--threads', '-t', '-j', type=int, default=available_cpu_count(),
 		help='Number of threads. Default: no. of available CPUs (%(default)s)')
 	add('--penalty', type=int, choices=(-1, -2, -3, -4), default=None,
@@ -25,21 +23,6 @@ def add_subcommand(subparsers):
 		help='Limit processing to first N records')
 	add('database', help='path to database')
 	add('fasta', help='File with original reads')
-	return subparser
-
-
-def igblast_command(args):
-	"""
-	Run IgBLAST in parallel
-	"""
-	if not 'IGDATA' in os.environ:
-		raise ValueError("The IGDATA environment variable needs to be set")
-
-	chunks = chunked_fasta(args.fasta, limit=args.limit)
-	runner = Runner(args.database, args.species, args.penalty)
-	with multiprocessing.Pool(args.threads) as pool:
-		for result in pool.imap(runner, chunks, chunksize=1):
-			sys.stdout.write(result)
 
 
 def run_igblast(fasta, database, species, penalty=None):
@@ -116,3 +99,17 @@ class Runner:
 
 	def __call__(self, s):
 		return run_igblast(s, self.dbpath, self.species, self.penalty)
+
+
+def main(args):
+	"""
+	Run IgBLAST in parallel
+	"""
+	if not 'IGDATA' in os.environ:
+		raise ValueError("The IGDATA environment variable needs to be set")
+
+	chunks = chunked_fasta(args.fasta, limit=args.limit)
+	runner = Runner(args.database, args.species, args.penalty)
+	with multiprocessing.Pool(args.threads) as pool:
+		for result in pool.imap(runner, chunks, chunksize=1):
+			sys.stdout.write(result)

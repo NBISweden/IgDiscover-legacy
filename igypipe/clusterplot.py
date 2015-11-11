@@ -11,14 +11,11 @@ from .cluster import cluster_sequences
 logger = logging.getLogger(__name__)
 
 
-def add_subcommand(subparsers):
-	subparser = subparsers.add_parser('clusterplot', help=__doc__.split('\n')[1], description=__doc__)
-	subparser.set_defaults(func=command)
-	subparser.add_argument('--minimum-group-size', '-m', metavar='N', default=200,
+def add_arguments(parser):
+	parser.add_argument('--minimum-group-size', '-m', metavar='N', default=200,
 		help='Do not plot if there are less than N sequences for a gene. Default: %(default)s')
-	subparser.add_argument('table', help='Table with parsed and filtered IgBLAST results')
-	subparser.add_argument('directory', help='Save clustermaps as PNG into this directory', default=None)
-	return subparser
+	parser.add_argument('table', help='Table with parsed and filtered IgBLAST results')
+	parser.add_argument('directory', help='Save clustermaps as PNG into this directory', default=None)
 
 
 def plot_clustermap(group, gene, plotpath):
@@ -51,7 +48,7 @@ def plot_clustermap(group, gene, plotpath):
 	return len(set(clusters))
 
 
-def command(args):
+def main(args):
 	if not os.path.exists(args.directory):
 		os.mkdir(args.directory)
 	table = read_table(args.table)

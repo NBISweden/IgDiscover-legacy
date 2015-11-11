@@ -15,18 +15,15 @@ from .table import read_table
 
 logger = logging.getLogger(__name__)
 
-def add_subcommand(subparsers):
-	subparser = subparsers.add_parser('group', help=__doc__.split('\n')[1], description=__doc__)
-	subparser.set_defaults(func=group_command)
-	subparser.add_argument('--groups-output', metavar='FILE', default=None,
+def add_arguments(parser):
+	parser.add_argument('--groups-output', metavar='FILE', default=None,
 		help='Write tab-separated table with groups to FILE')
-	subparser.add_argument('--plot-sizes', metavar='FILE', default=None,
+	parser.add_argument('--plot-sizes', metavar='FILE', default=None,
 		help='Plot group sizes to FILE (.png or .pdf)')
-	subparser.add_argument('--program', choices=('clustalo', 'muscle', 'muscle-medium', 'muscle-fast', 'mafft'),
+	parser.add_argument('--program', choices=('clustalo', 'muscle', 'muscle-medium', 'muscle-fast', 'mafft'),
 		default='muscle-fast',
 		help='Program to use for computing the multiple alignment')
-	subparser.add_argument('table', help='Table with filtered and parsed IgBLAST results.')
-	return subparser
+	parser.add_argument('table', help='Table with filtered and parsed IgBLAST results.')
 
 
 def write_groups(groups, path, limit=None):
@@ -56,7 +53,7 @@ def g_prefix_len(s):
 	return i
 
 
-def group_command(args):
+def main(args):
 	d = read_table(args.table, log=True)
 	program = args.program
 	lengths = Counter()

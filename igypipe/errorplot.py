@@ -13,14 +13,11 @@ from .table import read_table
 logger = logging.getLogger(__name__)
 
 
-def add_subcommand(subparsers):
-	subparser = subparsers.add_parser('errorplot', help=__doc__.split('\n')[1], description=__doc__)
-	subparser.set_defaults(func=errorplot_command)
-	subparser.add_argument('--minimum-group-size', '-m', metavar='N', default=200,
+def add_arguments(parser):
+	parser.add_argument('--minimum-group-size', '-m', metavar='N', default=200,
 		help='Do not plot if there are less than N sequences for a gene (default: %(default)s)')
-	subparser.add_argument('table', help='Table with parsed IgBLAST results')
-	subparser.add_argument('pdf', help='Plot error frequency histograms to this PDF file', default=None)
-	return subparser
+	parser.add_argument('table', help='Table with parsed IgBLAST results')
+	parser.add_argument('pdf', help='Plot error frequency histograms to this PDF file', default=None)
 
 
 def plot_error_histogram(group, v_gene_name, bins=np.arange(20.1)):
@@ -52,7 +49,7 @@ def plot_error_histogram(group, v_gene_name, bins=np.arange(20.1)):
 	return fig
 
 
-def errorplot_command(args):
+def main(args):
 	table = read_table(args.table)
 
 	# Discard rows with any mutation within J at all

@@ -8,9 +8,10 @@ taken that have a very low error rate for the V gene match.
 Output a FASTA file that contains one consensus sequence for each gene.
 """
 import logging
-from sqt.align import multialign, consensus
-from .table import read_table
 from collections import Counter
+from sqt.align import multialign, consensus
+
+from .table import read_table
 from .utils import iterative_consensus
 
 logger = logging.getLogger(__name__)
@@ -19,26 +20,23 @@ logger = logging.getLogger(__name__)
 # this factor from the median length.
 UTR_MEDIAN_DEVIATION = 0.1
 
-
-def add_subcommand(subparsers):
-	subparser = subparsers.add_parser('upstream', help=__doc__.split('\n')[1], description=__doc__)
-	subparser.set_defaults(func=upstream_command)
-	subparser.add_argument('--max-error-percentage', '-e', metavar='PERCENT',
+def add_arguments(parser):
+	arg = parser.add_argument
+	arg('--max-error-percentage', '-e', metavar='PERCENT',
 		type=float, default=1,
 		help='Allow PERCENT errors in V gene match. Default: %(default)s%%.')
-	subparser.add_argument('--consensus-threshold', '-t', metavar='PERCENT',
+	arg('--consensus-threshold', '-t', metavar='PERCENT',
 		type=float, default=75,
 		help='Threshold for consensus computation. Default: %(default)s%%.')
-	subparser.add_argument('--part', choices=['UTR', 'leader', 'UTR+leader'],
+	arg('--part', choices=['UTR', 'leader', 'UTR+leader'],
 		default='UTR+leader', help='Which part of the sequence before the V '
 		'gene match to analyze. Default: %(default)s')
-	subparser.add_argument('--debug', default=False, action='store_true',
+	arg('--debug', default=False, action='store_true',
 		help='Enable debugging output')
-	subparser.add_argument('table', help='Table with parsed IgBLAST results')
-	return subparser
+	arg('table', help='Table with parsed IgBLAST results')
 
 
-def upstream_command(args):
+def main(args):
 	if args.debug:
 		logging.getLogger().setLevel(logging.DEBUG)
 	table = read_table(args.table)

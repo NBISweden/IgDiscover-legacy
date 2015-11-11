@@ -35,40 +35,38 @@ Groupinfo = namedtuple('Groupinfo', 'count unique_J unique_CDR3')
 SisterInfo = namedtuple('SisterInfo', 'sequence requested name group')
 
 
-def add_subcommand(subparsers):
-	subparser = subparsers.add_parser('discover', help=__doc__.split('\n')[1], description=__doc__)
-	subparser.set_defaults(func=discover_command)
-	subparser.add_argument('--threads', '-j', type=int, default=min(4, available_cpu_count()),
+def add_arguments(parser):
+	arg = parser.add_argument
+	arg('--threads', '-j', type=int, default=min(4, available_cpu_count()),
 		help='Number of threads. Default: no. of available CPUs, but at most 4')
-	subparser.add_argument('--error-rate', metavar='PERCENT', type=float, default=1,
+	arg('--error-rate', metavar='PERCENT', type=float, default=1,
 		help='When finding approximate V gene matches, allow PERCENT errors. Default: %(default)s.')
-	subparser.add_argument('--consensus-threshold', '-t', metavar='PERCENT', type=float, default=60,
+	arg('--consensus-threshold', '-t', metavar='PERCENT', type=float, default=60,
 		help='Threshold for consensus computation. Default: %(default)s%%.')
-	subparser.add_argument('--prefix', default='', metavar='PREFIX',
+	arg('--prefix', default='', metavar='PREFIX',
 		help='Add PREFIX before sequence names')
-	subparser.add_argument('--gene', '-g', action='append', default=[],
+	arg('--gene', '-g', action='append', default=[],
 		help='Compute consensus for this gene. Can be given multiple times. Default: Compute for all genes.')
-	subparser.add_argument('--left', '-l', type=float, metavar='ERROR-RATE',
+	arg('--left', '-l', type=float, metavar='ERROR-RATE',
 		help='For consensus, include only sequences that have at least this error rate (in percent). Default: %(default)s', default=0)
-	subparser.add_argument('--right', '-r', type=float, metavar='ERROR-RATE',
+	arg('--right', '-r', type=float, metavar='ERROR-RATE',
 		help='For consensus, include only sequences that have at most this error rate (in percent). Default: %(default)s', default=100)
-	subparser.add_argument('--window-width', '-w', type=float, metavar='PERCENT',
+	arg('--window-width', '-w', type=float, metavar='PERCENT',
 		help='Compute consensus for all PERCENT-wide windows. Default: do not compute', default=None)
-	subparser.add_argument('--cluster', action='store_true', default=False,
+	arg('--cluster', action='store_true', default=False,
 		help='Cluster sequences by similarity and compute consensus')
-	subparser.add_argument('--subsample', metavar='N', type=int, default=1000,
+	arg('--subsample', metavar='N', type=int, default=1000,
 		help='When clustering, use N randomly chosen sequences. Default: %(default)s')
-	subparser.add_argument('--table-output', '-o', metavar='DIRECTORY',
+	arg('--table-output', '-o', metavar='DIRECTORY',
 		help='Output tables for all analyzed genes to DIRECTORY. '
 			'Files will be named <GENE>.tab.')
-	subparser.add_argument('--database', metavar='FASTA', default=None,
+	arg('--database', metavar='FASTA', default=None,
 		help='FASTA file with V genes. If provided, differences between consensus and database will be computed.')
-	subparser.add_argument('--consensus-output', '-c', metavar='FASTA', default=None,
+	arg('--consensus-output', '-c', metavar='FASTA', default=None,
 		help='Output consensus sequences in FASTA format to this file.')
-	subparser.add_argument('--ignore-J', action='store_true', default=False,
+	arg('--ignore-J', action='store_true', default=False,
 		help='Include also rows without J assignment or J%%SHM>0.')
-	subparser.add_argument('table', help='Table with parsed IgBLAST results')  # nargs='+'
-	return subparser
+	arg('table', help='Table with parsed IgBLAST results')  # nargs='+'
 
 
 def sister_sequence(group, program='muscle-medium', threshold=0.6, maximum_subsample_size=1600):
@@ -249,7 +247,7 @@ class Discoverer:
 		return rows
 
 
-def discover_command(args):
+def main(args):
 	v_error_rate = args.error_rate / 100
 	assert 0 <= v_error_rate <= 1
 

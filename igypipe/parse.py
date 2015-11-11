@@ -24,16 +24,13 @@ from sqt.dna import GENETIC_CODE, reverse_complement
 logger = logging.getLogger(__name__)
 
 
-def add_subcommand(subparsers):
-	subparser = subparsers.add_parser('parse', help=__doc__.split('\n')[1], description=__doc__)
-	subparser.set_defaults(func=parse_command)
-	subparser.add_argument('--rename', default=None, metavar='PREFIX',
+def add_arguments(parser):
+	parser.add_argument('--rename', default=None, metavar='PREFIX',
 		help='Rename reads to PREFIXseqN (where N is a number starting at 1)')
-	subparser.add_argument('--barcode-length', type=int, default=0,
+	parser.add_argument('--barcode-length', type=int, default=0,
 		help='Default: %(default)s')
-	subparser.add_argument('igblast', help='IgBLAST output')
-	subparser.add_argument('fasta', help='File with original reads')
-	return subparser
+	parser.add_argument('igblast', help='IgBLAST output')
+	parser.add_argument('fasta', help='File with original reads')
 
 
 def highlight(s, span):
@@ -562,7 +559,7 @@ class TableWriter:
 		])
 
 
-def parse_command(args):
+def main(args):
 	"""
 	Parse IgBLAST output
 	"""

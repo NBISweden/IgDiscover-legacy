@@ -18,11 +18,8 @@ from .table import read_table
 
 logger = logging.getLogger(__name__)
 
-def add_subcommand(subparsers):
-	subparser = subparsers.add_parser('filter', help=__doc__.split('\n')[1], description=__doc__)
-	subparser.set_defaults(func=filter_command)
-	subparser.add_argument('table', help='Table with filtered IgBLAST results.')
-	return subparser
+def add_arguments(parser):
+	parser.add_argument('table', help='Table with filtered IgBLAST results.')
 
 
 def filtered_table(table,
@@ -65,7 +62,7 @@ def filtered_table(table,
 	return filtered
 
 
-def filter_command(args):
+def main(args):
 	d = read_table(args.table, log=True)
 	d = filtered_table(d, log=True)
 	print(d.to_csv(sep='\t', index=False))

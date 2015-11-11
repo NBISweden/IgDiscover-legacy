@@ -9,17 +9,14 @@ from .table import read_table
 logger = logging.getLogger(__name__)
 
 
-def add_subcommand(subparsers):
-	subparser = subparsers.add_parser('commonv', help=__doc__.split('\n')[1], description=__doc__)
-	subparser.set_defaults(func=commonv_command)
-	subparser.add_argument('--minimum-frequency', '-n', type=int, metavar='N',
+def add_arguments(parser):
+	parser.add_argument('--minimum-frequency', '-n', type=int, metavar='N',
 		default=None,
 		help='Minimum number of datasets in which sequence must occur (default is no. of files divided by two)')
-	subparser.add_argument('table', help='Tables with parsed and filtered IgBLAST results (give at least two)', nargs='+')
-	return subparser
+	parser.add_argument('table', help='Tables with parsed and filtered IgBLAST results (give at least two)', nargs='+')
 
 
-def commonv_command(args):
+def main(args):
 	if args.minimum_frequency is None:
 		# args.table is a list of file names
 		minimum_frequency = max((len(args.table) + 1) // 2, 2)

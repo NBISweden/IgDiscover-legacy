@@ -15,14 +15,11 @@ from .table import read_table
 
 logger = logging.getLogger(__name__)
 
-def add_subcommand(subparsers):
-	subparser = subparsers.add_parser('count', help=__doc__.split('\n')[1], description=__doc__)
-	subparser.set_defaults(func=count_command)
-	subparser.add_argument('--reference', metavar='FASTA',
+def add_arguments(parser):
+	parser.add_argument('--reference', metavar='FASTA',
 		help='FASTA file with V gene sequences. The names are used to ensure all names appear in the plot')
-	subparser.add_argument('table', help='Table with parsed and filtered IgBLAST results.')
-	subparser.add_argument('plot', nargs='?', help='Plot file (png or pdf).')
-	return subparser
+	parser.add_argument('table', help='Table with parsed and filtered IgBLAST results.')
+	parser.add_argument('plot', nargs='?', help='Plot file (png or pdf).')
 
 
 # from http://stackoverflow.com/a/16090640/715090
@@ -31,7 +28,7 @@ def natural_sort_key(s, _nsre=re.compile('([0-9]+)')):
 		for text in re.split(_nsre, s)]
 
 
-def count_command(args):
+def main(args):
 	if args.reference:
 		with FastaReader(args.reference) as fr:
 			gene_names = [ record.name for record in fr ]

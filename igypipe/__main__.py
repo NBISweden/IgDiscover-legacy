@@ -11,10 +11,26 @@ Antibody pipeline helper script. It can:
 __author__ = "Marcel Martin"
 
 import logging
+import importlib
 from sqt import HelpfulArgumentParser
 
-from . import (commonv, igblast, parse, filter, count, group, multidiscover, compose,
-	discover, init, clusterplot, errorplot, upstream, __version__)
+from . import __version__
+
+COMMANDS = [
+	'commonv',
+	'igblast',
+	'parse',
+	'filter',
+	'count',
+	'group',
+	'multidiscover',
+	'compose',
+	'discover',
+	'init',
+	'clusterplot',
+	'errorplot',
+	'upstream'
+]
 
 logger = logging.getLogger(__name__)
 
@@ -24,19 +40,12 @@ def main():
 	parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
 
 	subparsers = parser.add_subparsers()
-	init.add_subcommand(subparsers)
-	igblast.add_subcommand(subparsers)
-	parse.add_subcommand(subparsers)
-	filter.add_subcommand(subparsers)
-	count.add_subcommand(subparsers)
-	group.add_subcommand(subparsers)
-	multidiscover.add_subcommand(subparsers)
-	commonv.add_subcommand(subparsers)
-	errorplot.add_subcommand(subparsers)
-	clusterplot.add_subcommand(subparsers)
-	discover.add_subcommand(subparsers)
-	compose.add_subcommand(subparsers)
-	upstream.add_subcommand(subparsers)
+	for command_name in COMMANDS:
+		module = importlib.import_module('.' + command_name, 'igypipe')
+		subparser = subparsers.add_parser(command_name,
+			help=module.__doc__.split('\n')[1], description=module.__doc__)
+		subparser.set_defaults(func=module.main)
+		module.add_arguments(subparser)
 
 	args = parser.parse_args()
 	if not hasattr(args, 'func'):
