@@ -13,3 +13,4 @@ build/
 .tox/
 .idea/
 _build
+bin/
