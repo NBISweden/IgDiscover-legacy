@@ -122,7 +122,7 @@ def main(args):
 	else:
 		gui = True
 		reads1 = tkinter_reads_path()
-	if reads1 == '':
+	if not reads1:
 		logger.error('Cancelled')
 		sys.exit(2)
 	reads2 = guess_paired_path(reads1)
@@ -136,7 +136,7 @@ def main(args):
 		gui = True
 		databases_path = pkg_resources.resource_filename('igypipe', 'databases')
 		dbpath = tkinter_database_path(databases_path)
-		if dbpath == '':
+		if not dbpath:
 			logger.error('Cancelled')
 			sys.exit(2)
 
