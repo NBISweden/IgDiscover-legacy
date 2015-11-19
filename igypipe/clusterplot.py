@@ -36,14 +36,20 @@ def plot_clustermap(group, gene, plotpath, size=300):
 	sequences = downsampled(sequences, size)
 	df, linkage, clusters = cluster_sequences(sequences)
 
-	palette = sns.color_palette(['black']) + sns.color_palette('Set1', n_colors=max(clusters), desat=.8)
+	palette = sns.color_palette([(0.15, 0.15, 0.15)])
+	palette += sns.color_palette('Spectral', n_colors=max(clusters), desat=0.9)
 	row_colors = [ palette[cluster_id] for cluster_id in clusters ]
 	cm = sns.clustermap(df,
 			row_linkage=linkage,
 			col_linkage=linkage,
 			row_colors=row_colors,
-			linewidths=0, linecolor='none', figsize=(210/25.4, 210/25.4), cmap='Blues',
-			xticklabels=False, yticklabels=False)
+			linewidths=None,
+			linecolor='none',
+			figsize=(210/25.4, 210/25.4),
+			cmap='Blues',
+			xticklabels=False,
+			yticklabels=False
+	)
 	cm.fig.suptitle(gene)
 	cm.savefig(plotpath, dpi=200)
 
