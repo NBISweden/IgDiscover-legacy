@@ -12,12 +12,15 @@ logger = logging.getLogger(__name__)
 
 
 def add_arguments(parser):
-	parser.add_argument('--minimum-group-size', '-m', metavar='N', default=200,
+	arg = parser.add_argument
+	arg('--minimum-group-size', '-m', metavar='N', default=200,
 		help='Do not plot if there are less than N sequences for a gene. Default: %(default)s')
-	parser.add_argument('--size', metavar='N', type=int, default=300,
+	arg('--gene', '-g', action='append', default=[],
+		help='Compute consensus for this gene. Can be given multiple times. Default: Compute for all genes.')
+	arg('--size', metavar='N', type=int, default=300,
 		help='Show at most N sequences (with a matrix of size N x N). Default: %(default)s')
-	parser.add_argument('table', help='Table with parsed and filtered IgBLAST results')
-	parser.add_argument('directory', help='Save clustermaps as PNG into this directory', default=None)
+	arg('table', help='Table with parsed and filtered IgBLAST results')
+	arg('directory', help='Save clustermaps as PNG into this directory', default=None)
 
 
 def plot_clustermap(group, gene, plotpath, size=300):
@@ -61,9 +64,14 @@ def main(args):
 	table = table[table.J_SHM == 0][:]
 	logger.info('%s rows remain after discarding J%%SHM > 0', len(table))
 
+	genes = frozenset(args.gene)
 	n = 0
+	too_few = 0
 	for gene, group in table.groupby('V_gene'):
+		if genes and gene not in genes:
+			continue
 		if len(group) < args.minimum_group_size:
+			too_few += 1
 			continue
 		n_clusters = plot_clustermap(group, gene, os.path.join(args.directory, gene + '.png'), size=args.size)
 		n += 1
@@ -75,4 +83,4 @@ def main(args):
 			#print('difference between consensuses:', edit_distance(*consensus_sequences[:2]))
 
 
-	logger.info('%s plots created (rest had too few sequences)', n)
+	logger.info('%s plots created (%s skipped because of too few sequences)', n, too_few)
