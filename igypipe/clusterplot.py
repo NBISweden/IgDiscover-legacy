@@ -19,11 +19,12 @@ def add_arguments(parser):
 		help='Compute consensus for this gene. Can be given multiple times. Default: Compute for all genes.')
 	arg('--size', metavar='N', type=int, default=300,
 		help='Show at most N sequences (with a matrix of size N x N). Default: %(default)s')
+	arg('--dpi', type=int, default=200, help='Resolution of output file. Default: %(default)s')
 	arg('table', help='Table with parsed and filtered IgBLAST results')
 	arg('directory', help='Save clustermaps as PNG into this directory', default=None)
 
 
-def plot_clustermap(group, gene, plotpath, size=300):
+def plot_clustermap(group, gene, plotpath, size=300, dpi=200):
 	"""
 	Plot a clustermap for a specific V gene.
 
@@ -51,7 +52,7 @@ def plot_clustermap(group, gene, plotpath, size=300):
 			yticklabels=False
 	)
 	cm.fig.suptitle(gene)
-	cm.savefig(plotpath, dpi=200)
+	cm.savefig(plotpath, dpi=dpi)
 
 	# free the memory used by the plot
 	import matplotlib.pyplot as plt
@@ -79,7 +80,7 @@ def main(args):
 		if len(group) < args.minimum_group_size:
 			too_few += 1
 			continue
-		n_clusters = plot_clustermap(group, gene, os.path.join(args.directory, gene + '.png'), size=args.size)
+		n_clusters = plot_clustermap(group, gene, os.path.join(args.directory, gene + '.png'), size=args.size, dpi=args.dpi)
 		n += 1
 		logger.info('Plotted %r with %d clusters', gene, n_clusters)
 		#for i, cons in enumerate(consensus_sequences):
