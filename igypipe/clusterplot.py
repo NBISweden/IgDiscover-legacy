@@ -20,16 +20,18 @@ def add_arguments(parser):
 	arg('--size', metavar='N', type=int, default=300,
 		help='Show at most N sequences (with a matrix of size N x N). Default: %(default)s')
 	arg('--dpi', type=int, default=200, help='Resolution of output file. Default: %(default)s')
+	arg('--no-title', dest='title', action='store_false', default=True,
+		help='Do not add a title to the plot')
 	arg('table', help='Table with parsed and filtered IgBLAST results')
 	arg('directory', help='Save clustermaps as PNG into this directory', default=None)
 
 
-def plot_clustermap(group, gene, plotpath, size=300, dpi=200):
+def plot_clustermap(group, title, plotpath, size=300, dpi=200):
 	"""
 	Plot a clustermap for a specific V gene.
 
 	size -- Downsample to this many sequences
-	gene -- gene name (only used to plot the title)
+	title
 
 	Return the number of clusters.
 	"""
@@ -51,7 +53,8 @@ def plot_clustermap(group, gene, plotpath, size=300, dpi=200):
 			xticklabels=False,
 			yticklabels=False
 	)
-	cm.fig.suptitle(gene)
+	if title is not None:
+		cm.fig.suptitle(title)
 	cm.savefig(plotpath, dpi=dpi)
 
 	# free the memory used by the plot
@@ -80,7 +83,8 @@ def main(args):
 		if len(group) < args.minimum_group_size:
 			too_few += 1
 			continue
-		n_clusters = plot_clustermap(group, gene, os.path.join(args.directory, gene + '.png'), size=args.size, dpi=args.dpi)
+		title = gene if args.title else None
+		n_clusters = plot_clustermap(group, title, os.path.join(args.directory, gene + '.png'), size=args.size, dpi=args.dpi)
 		n += 1
 		logger.info('Plotted %r with %d clusters', gene, n_clusters)
 		#for i, cons in enumerate(consensus_sequences):
