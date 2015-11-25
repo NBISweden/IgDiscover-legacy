@@ -1,6 +1,7 @@
 """
 Count and plot V, D, J gene usage.
 """
+import sys
 import logging
 import numpy as np
 import pandas as pd
@@ -32,20 +33,37 @@ def main(args):
 		gene_names.sort(key=natural_sort_key)
 	else:
 		gene_names = None
-	d = read_table(args.table, log=True)
+	table = read_table(args.table, log=True)
 
+	columns = ('gene', 'count', 'unique_CDR3')
+	if args.gene != 'V':
+		columns += ('unique_V',)
+	if args.gene != 'J':
+		columns += ('unique_J',)
 	column_name = '{}_gene'.format(args.gene)
-	# Work around a pandas bug in reindex when the table is empty
-	if len(d) > 0:
-		counts = d.groupby(column_name).size()
+	if len(table) > 0:
+		rows = []
+		groups = table.groupby(column_name)
+		for gene, group in groups:
+			count = len(group)
+			unique_CDR3 = len(set(s for s in group.CDR3_nt if s))
+			row = dict(gene=gene, count=count, unique_CDR3=unique_CDR3)
+			if args.gene != 'V':
+				row['unique_V'] = len(set(s for s in group.V_gene if s))
+			if args.gene != 'J':
+				row['unique_J'] = len(set(s for s in group.J_gene if s))
+			rows.append(row)
+		counts = pd.DataFrame(rows, columns=columns).set_index('gene')
 	else:
-		counts = pd.Series([], dtype=int)
+		# Work around a pandas bug in reindex when the table is empty
+		counts = pd.DataFrame(columns=columns, dtype=int).set_index('gene')
 
-	# Make sure that always all gene names are listed, even if expression is 0.
+	# Make sure that always all gene names are listed even if no sequences
+	# were assigned.
 	if gene_names:
 		counts = counts.reindex(gene_names, fill_value=0)
 
-	print(counts.to_csv(None, sep='\t'))
+	counts.to_csv(sys.stdout, sep='\t')
 	logger.info("Wrote CSV")
 
 	if not args.plot:
@@ -61,7 +79,7 @@ def main(args):
 	ax.set_xticklabels(counts.index, rotation='vertical')
 	ax.grid(axis='x')
 	ax.set_xlim((-0.5, None))
-	ax.bar(np.arange(len(counts)), counts)
+	ax.bar(np.arange(len(counts)), counts.count)
 	fig.tight_layout()
 	fig.savefig(args.plot)
 	logger.info("Wrote %s", args.plot)
