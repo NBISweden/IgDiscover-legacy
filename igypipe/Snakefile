@@ -96,14 +96,14 @@ PER_ITERATION_TARGETS = [
 	'counts.txt',
 	'unique.correlationVJ.pdf',
 	'unique.errorhistograms.pdf',
-	'unique.v_usage.tab',
-	'unique.v_usage.pdf',
+	'unique.V_usage.tab',
+	'unique.V_usage.pdf',
 ]
 # targets for last iteration only
 FINAL_TARGETS = [
 	'consensus.correlationVJ.pdf',
-	'consensus.v_usage.tab',
-	'consensus.v_usage.pdf',
+	'consensus.V_usage.tab',
+	'consensus.V_usage.pdf',
 ]
 TARGETS = expand('iteration-{nr:03d}/{path}', nr=range(1, config.iterations+1), path=PER_ITERATION_TARGETS)
 TARGETS += expand('iteration-{nr:03d}/{{path}}'.format(nr=config.iterations), path=FINAL_TARGETS)
@@ -447,13 +447,13 @@ rule igypipe_group:
 
 rule igypipe_count:
 	output:
-		plot="{dir}/{base}.v_usage.pdf",
-		counts="{dir}/{base}.v_usage.tab"
+		plot="{dir}/{base}.{gene,[VDJ]}_usage.pdf",
+		counts="{dir}/{base}.{gene}_usage.tab"
 	input:
-		v_reference="{{dir}}/database/{species}_V.fasta".format(species=config.species),
+		reference="{{dir}}/database/{species}_{{gene}}.fasta".format(species=config.species),
 		tab="{dir}/{base}.filtered.tab"
 	shell:
-		"igypipe count --database {input.v_reference} {input.tab} {output.plot} > {output.counts}"
+		"igypipe count --database {input.reference} --gene {wildcards.gene} {input.tab} {output.plot} > {output.counts}"
 
 
 rule igypipe_clusterplot:
