@@ -201,10 +201,7 @@ class Discoverer:
 		rows = []
 		for sister_info in sisters:
 			sister = sister_info.sequence
-			dists = [ edit_distance(v_nt, sister) for v_nt in group.V_nt ]
-			assert len(dists) == len(group)
-
-			group['consensus_diff'] = dists
+			group['consensus_diff'] = [ edit_distance(v_nt, sister) for v_nt in group.V_nt ]
 			group_exact_V = group[group.V_nt == sister]
 			group_approximate_V = group[group.consensus_diff <= len(sister) * self.v_error_rate]
 
