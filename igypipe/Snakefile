@@ -453,7 +453,7 @@ rule igypipe_count:
 		v_reference="{{dir}}/database/{species}_V.fasta".format(species=config.species),
 		tab="{dir}/{base}.filtered.tab"
 	shell:
-		"igypipe count --reference {input.v_reference} {input.tab} {output.plot} > {output.counts}"
+		"igypipe count --database {input.v_reference} {input.tab} {output.plot} > {output.counts}"
 
 
 rule igypipe_clusterplot:
