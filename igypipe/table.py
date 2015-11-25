@@ -71,7 +71,7 @@ def read_table(path, log=False):
 			for col in INTEGER_COLUMNS:
 				if all(df[col].notnull()):
 					df[col] = df[col].astype(int)
-			df.to_hdf(temp_h5, 'table')
+			df.to_hdf(temp_h5, 'table', complevel=3, complib='zlib')
 			os.rename(temp_h5, h5path)
 	d = pd.read_hdf(h5path, 'table')
 
