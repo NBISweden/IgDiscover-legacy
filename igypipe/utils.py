@@ -5,6 +5,7 @@ import random
 import hashlib
 from collections import OrderedDict
 import numpy as np
+import re
 from sqt.align import edit_distance, multialign, consensus
 
 def downsampled(population, size):
@@ -88,3 +89,17 @@ class SerialPool:
 	def imap(self, func, iterable, chunksize):
 		for i in iterable:
 			yield func(i)
+
+
+def natural_sort_key(s, _nsre=re.compile('([0-9]+)')):
+	"""
+	Use this function as sorting key to sort in 'natural' order.
+
+	>>> names = ['file10', 'file1.5', 'file1']
+	>>> sorted(names, key=natural_sort_key)
+	['file1', 'file1.5', 'file10']
+
+	Source: http://stackoverflow.com/a/16090640/715090
+	"""
+	return [int(text) if text.isdigit() else text.lower()
+		for text in re.split(_nsre, s)]

@@ -1,9 +1,7 @@
 """
 Count and plot V gene usage.
 """
-import re
 import logging
-
 import numpy as np
 import pandas as pd
 import matplotlib
@@ -12,6 +10,7 @@ import matplotlib.pyplot as plt
 from sqt import FastaReader
 
 from .table import read_table
+from .utils import natural_sort_key
 
 logger = logging.getLogger(__name__)
 
@@ -20,12 +19,6 @@ def add_arguments(parser):
 		help='FASTA file with V gene sequences. The names are used to ensure all names appear in the plot')
 	parser.add_argument('table', help='Table with parsed and filtered IgBLAST results.')
 	parser.add_argument('plot', nargs='?', help='Plot file (png or pdf).')
-
-
-# from http://stackoverflow.com/a/16090640/715090
-def natural_sort_key(s, _nsre=re.compile('([0-9]+)')):
-	return [int(text) if text.isdigit() else text.lower()
-		for text in re.split(_nsre, s)]
 
 
 def main(args):
