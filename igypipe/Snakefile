@@ -152,9 +152,10 @@ elif config.merge_program == 'pear':
 		input: READS1, READS2
 		resources: time=60
 		threads: 8
+		log: 'reads/pear.log'
 		shell:
 			r"""
-			pear -j {threads} -f {input[0]} -r {input[1]} -o reads/pear && \
+			pear -j {threads} -f {input[0]} -r {input[1]} -o reads/pear | tee {log} && \
 			gzip < reads/pear.assembled.fastq > {output.fastq} && rm reads/pear.assembled.fastq
 			"""
 else:
