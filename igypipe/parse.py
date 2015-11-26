@@ -33,14 +33,6 @@ def add_arguments(parser):
 	parser.add_argument('fasta', help='File with original reads')
 
 
-def highlight(s, span):
-	"""Highlight part of a string in red"""
-	if span is None:
-		return s
-	start, stop = span
-	return s[0:start] + red(s[start:stop]) + s[stop:]
-
-
 IgblastRecordNT = namedtuple('IgblastRecordNT',
 	'full_sequence query_name alignments '
 	'hits v_gene d_gene j_gene chain has_stop in_frame is_productive '
