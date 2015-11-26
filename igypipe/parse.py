@@ -11,7 +11,8 @@ A few extra things are done in addition to parsing:
 """
 """
 TODO
-- barcode_length should not be an attribute of IgblastRecord
+- barcode_length should not be an attribute of IgblastRecord and barcodes should
+  be stripped off before running IgBLAST
 """
 from collections import namedtuple
 import re
@@ -52,6 +53,11 @@ class Hit(_Hit):
 		return len(self.subject_sequence) / self.subject_length
 
 
+def nt_to_aa(s):
+	"""Translate nucleotide sequence to amino acid sequence"""
+	return ''.join(GENETIC_CODE.get(s[i:i+3], '*') for i in range(0, len(s), 3))
+
+
 sizeregex = re.compile('(.*);size=(\d+);$')  # TODO move into class below
 
 _IgblastRecord = namedtuple('IgblastRecordNT',
@@ -76,6 +82,50 @@ class IgblastRecord(_IgblastRecord):
 		TGG                                          # W
 		G[GCT][GCTA]                                 # G, A or V
 		""", re.VERBOSE)
+
+	# Order of columns (use with as_dict())
+	columns = [
+		'count',
+		'V_gene',
+		'D_gene',
+		'J_gene',
+		'stop',
+		'productive',
+		'V_covered',
+		'D_covered',
+		'J_covered',
+		'V_evalue',
+		'D_evalue',
+		'J_evalue',
+		'FR1_SHM',
+		'CDR1_SHM',
+		'FR2_SHM',
+		'CDR2_SHM',
+		'FR3_SHM',
+		'V_SHM',
+		'J_SHM',
+		'V_errors',
+		'J_errors',
+		'UTR',
+		'leader',
+		'CDR1_nt',
+		'CDR1_aa',
+		'CDR2_nt',
+		'CDR2_aa',
+		'CDR3_nt',
+		'CDR3_aa',
+		'V_nt',
+		'V_aa',
+		'V_end',
+		'VD_junction',
+		'D_region',
+		'DJ_junction',
+		'J_start',
+		'name',
+		'barcode',
+		'race_G',
+		'genomic_sequence',
+	]
 
 	def __init__(self, *args, **kwargs):
 		self.barcode, self.race_g, self.genomic_sequence = self._split_barcode()
@@ -177,10 +227,105 @@ class IgblastRecord(_IgblastRecord):
 			return None
 		return self.full_sequence[alignment.start:alignment.stop]
 
+	def as_dict(self):
+		"""
+		Flatten all the information in this record and return as a dictionary.
+		The dictionary can then be used with e.g. a csv.DictWriter or
+		pandas.DataFrame.from_items.
+		"""
+		cdr1nt = self.region_sequence('CDR1')
+		cdr1aa = nt_to_aa(cdr1nt) if cdr1nt else None
+		cdr2nt = self.region_sequence('CDR2')
+		cdr2aa = nt_to_aa(cdr2nt) if cdr2nt else None
+		cdr3nt = self.region_sequence('CDR3')
+		cdr3aa = nt_to_aa(cdr3nt) if cdr3nt else None
 
-def nt_to_aa(s):
-	"""Translate nucleotide sequence to amino acid sequence"""
-	return ''.join(GENETIC_CODE.get(s[i:i+3], '*') for i in range(0, len(s), 3))
+		def shm(region):
+			if region in self.alignments:
+				rar = self.alignments[region]
+				if rar is None or rar.percent_identity is None:
+					return None
+				return 100. - rar.percent_identity
+			else:
+				return None
+
+		if 'V' in self.hits:
+			v_nt = self.hits['V'].query_sequence
+			v_aa = nt_to_aa(v_nt)
+			v_shm = 100. - self.hits['V'].percent_identity
+			v_errors = self.hits['V'].errors
+			v_covered = 100. * self.hits['V'].covered()
+			v_evalue = self.hits['V'].evalue
+		else:
+			v_nt = None
+			v_aa = None
+			v_shm = None
+			v_errors = None
+			v_covered = None
+			v_evalue = None
+		if 'D' in self.hits:
+			d_covered = 100. * self.hits['D'].covered()
+			d_evalue = self.hits['D'].evalue
+		else:
+			d_covered = None
+			d_evalue = None
+		if 'J' in self.hits:
+			j_shm = 100. - self.hits['J'].percent_identity
+			j_errors = self.hits['J'].errors
+			j_covered = 100. * self.hits['J'].covered()
+			j_evalue = self.hits['J'].evalue
+		else:
+			j_shm = None
+			j_errors = None
+			j_covered = None
+			j_evalue = None
+		v_end = getattr(self.junction, 'v_end', None)
+		vd_junction = getattr(self.junction, 'vd_junction', None)
+		d_region = getattr(self.junction, 'd_region', None)
+		dj_junction = getattr(self.junction, 'dj_junction', None)
+		j_start = getattr(self.junction, 'j_start', None)
+		return dict(
+			count=self.size,
+			V_gene=self.v_gene,
+			D_gene=self.d_gene,
+			J_gene=self.j_gene,
+			stop=self.has_stop,
+			productive=self.is_productive,
+			V_covered=v_covered,
+			D_covered=d_covered,
+			J_covered=j_covered,
+			V_evalue=v_evalue,
+			D_evalue=d_evalue,
+			J_evalue=j_evalue,
+			FR1_SHM=shm('FR1'),
+			CDR1_SHM=shm('CDR1'),
+			FR2_SHM=shm('FR2'),
+			CDR2_SHM=shm('CDR2'),
+			FR3_SHM=shm('FR3'),
+			V_SHM=v_shm,
+			J_SHM=j_shm,
+			V_errors=v_errors,
+			J_errors=j_errors,
+			UTR=self.utr,
+			leader=self.leader,
+			CDR1_nt=cdr1nt,
+			CDR1_aa=cdr1aa,
+			CDR2_nt=cdr2nt,
+			CDR2_aa=cdr2aa,
+			CDR3_nt=cdr3nt,
+			CDR3_aa=cdr3aa,
+			V_nt=v_nt,
+			V_aa=v_aa,
+			V_end=v_end,
+			VD_junction=vd_junction,
+			D_region=d_region,
+			DJ_junction=dj_junction,
+			J_start=j_start,
+			name=self.query_name,
+			barcode=self.barcode,
+			race_G=self.race_g,
+			genomic_sequence=self.genomic_sequence,
+		)
 
 
 def split_by_section(it, section_starts):
@@ -367,168 +512,42 @@ def parse_igblast_record(record_lines, fasta_record, barcode_length):
 		barcode_length=barcode_length)
 
 
-def yesno(v):
-	"""
-	Return "yes", "no" or None for boolean value v, which may also be None.
-	"""
-	if v is None:
-		return None
-	return ["no", "yes"][v]
-
-
 class TableWriter:
-	def __init__(self, file, rename=None):
+	def __init__(self, file):
 		"""
 		If rename is not None, rename reads to {rename}seq{number}, where
 		{number} is a sequential number starting from 1.
 		"""
 		self._file = file
-		self._writer = csv.writer(file, delimiter='\t')
-		self._writer.writerow([
-			"count",
-			"V_gene",
-			"D_gene",
-			"J_gene",
-			"stop",
-			"productive",
-			"V_covered",
-			"D_covered",
-			"J_covered",
-			"V_evalue",
-			"D_evalue",
-			"J_evalue",
-			"FR1_SHM",
-			"CDR1_SHM",
-			"FR2_SHM",
-			"CDR2_SHM",
-			"FR3_SHM",
-			"V_SHM",
-			"J_SHM",
-			"V_errors",
-			"J_errors",
-			"UTR",
-			"leader",
-			"CDR1_nt",
-			"CDR1_aa",
-			"CDR2_nt",
-			"CDR2_aa",
-			"CDR3_nt",
-			"CDR3_aa",
-			"V_nt",
-			"V_aa",
-			"V_end",
-			"VD_junction",
-			"D_region",
-			"DJ_junction",
-			"J_start",
-			"name",
-			"barcode",
-			"race_G",
-			"genomic_sequence",
-		])
-		self.read_number = 1
-		self.rename = rename
+		self._writer = csv.DictWriter(file, fieldnames=IgblastRecord.columns, delimiter='\t')
+		self._writer.writeheader()
 
-	def write(self, record):
-		cdr1nt = record.region_sequence('CDR1')
-		cdr1aa = nt_to_aa(cdr1nt) if cdr1nt else None
-		cdr2nt = record.region_sequence('CDR2')
-		cdr2aa = nt_to_aa(cdr2nt) if cdr2nt else None
-		cdr3nt = record.region_sequence('CDR3')
-		cdr3aa = nt_to_aa(cdr3nt) if cdr3nt else None
+	@staticmethod
+	def yesno(v):
+		"""
+		Return "yes", "no" or None for boolean value v, which may also be None.
+		"""
+		if v is None:
+			return None
+		return ["no", "yes"][v]
 
-		def shm(region):
-			if region in record.alignments:
-				rar = record.alignments[region]
-				if rar is None or rar.percent_identity is None:
-					return None
-				return '{:.1f}'.format(100.0 - rar.percent_identity)
-			else:
-				return None
-
-		if 'V' in record.hits:
-			v_nt = record.hits['V'].query_sequence
-			v_aa = nt_to_aa(v_nt)
-			v_shm = '{:.1f}'.format(100.0 - record.hits['V'].percent_identity)
-			v_errors = record.hits['V'].errors
-			v_covered = '{:.1f}'.format(100*record.hits['V'].covered())
-			v_evalue = '{:G}'.format(record.hits['V'].evalue)
-		else:
-			v_nt = None
-			v_aa = None
-			v_shm = None
-			v_errors = None
-			v_covered = None
-			v_evalue = None
-		if 'D' in record.hits:
-			d_covered = '{:.1f}'.format(100*record.hits['D'].covered())
-			d_evalue = '{:G}'.format(record.hits['D'].evalue)
-		else:
-			d_covered = None
-			d_evalue = None
-		if 'J' in record.hits:
-			j_shm = '{:.1f}'.format(100.0 - record.hits['J'].percent_identity)
-			j_errors = record.hits['J'].errors
-			j_covered = '{:.1f}'.format(100*record.hits['J'].covered())
-			j_evalue = '{:G}'.format(record.hits['J'].evalue)
-		else:
-			j_shm = None
-			j_errors = None
-			j_covered = None
-			j_evalue = None
-		v_end = getattr(record.junction, 'v_end', None)
-		vd_junction = getattr(record.junction, 'vd_junction', None)
-		d_region = getattr(record.junction, 'd_region', None)
-		dj_junction = getattr(record.junction, 'dj_junction', None)
-		j_start = getattr(record.junction, 'j_start', None)
-		if self.rename is not None:
-			name = "{}seq{}".format(self.rename, self.read_number)
-		else:
-			name = record.query_name
-
-		self.read_number += 1
-		self._writer.writerow([
-			record.size,
-			record.v_gene,
-			record.d_gene,
-			record.j_gene,
-			yesno(record.has_stop),
-			yesno(record.is_productive),
-			v_covered,
-			d_covered,
-			j_covered,
-			v_evalue,
-			d_evalue,
-			j_evalue,
-			shm('FR1'),
-			shm('CDR1'),
-			shm('FR2'),
-			shm('CDR2'),
-			shm('FR3'),
-			v_shm,
-			j_shm,
-			v_errors,
-			j_errors,
-			record.utr,
-			record.leader,
-			cdr1nt,
-			cdr1aa,
-			cdr2nt,
-			cdr2aa,
-			cdr3nt,
-			cdr3aa,
-			v_nt,
-			v_aa,
-			v_end,
-			vd_junction,
-			d_region,
-			dj_junction,
-			j_start,
-			name,
-			record.barcode,
-			record.race_g,
-			record.genomic_sequence,
-		])
+	def write(self, d):
+		"""
+		Write the IgBLAST record (must be given as dictionary) to the output
+		file.
+		"""
+		d = d.copy()
+		d['stop'] = self.yesno(d['stop'])
+		d['productive'] = self.yesno(d['productive'])
+		for name in ('V_covered', 'D_covered', 'J_covered',
+				'FR1_SHM', 'CDR1_SHM', 'FR2_SHM', 'CDR2_SHM', 'FR3_SHM',
+				'V_SHM', 'J_SHM'):
+			if d[name] is not None:
+				d[name] = '{:.1f}'.format(d[name])
+		for name in ('V_evalue', 'D_evalue', 'J_evalue'):
+			if d[name] is not None:
+				d[name] = '{:G}'.format(d[name])
+		self._writer.writerow(d)
 
 
 def main(args):
@@ -536,14 +555,16 @@ def main(args):
 	Parse IgBLAST output
 	"""
 	n = 0
-	writer = TableWriter(sys.stdout, args.rename)
+	writer = TableWriter(sys.stdout)
 	with SequenceReader(args.fasta) as fasta, xopen(args.igblast) as igblast:
 		for fasta_record, (record_header, record_lines) in zip(fasta, split_by_section(igblast, ['# IGBLASTN'])):
 			assert record_header == '# IGBLASTN 2.2.29+'
-			record = parse_igblast_record(record_lines, fasta_record, args.barcode_length)
+			d = parse_igblast_record(record_lines, fasta_record, args.barcode_length).as_dict()
 			n += 1
+			if args.rename is not None:
+				d['name'] = "{}seq{}".format(args.rename, n)
 			try:
-				writer.write(record)
+				writer.write(d)
 			except IOError as e:
 				if e.errno == errno.EPIPE:
 					sys.exit(1)
