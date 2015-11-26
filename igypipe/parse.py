@@ -1,7 +1,9 @@
 """
 Parse IgBLAST output and write out a tab-separated table.
 
-A few extra things are done that are not strictly parsing:
+IgBLAST must have been run with -outfmt "7 sseqid qstart qseq sstart sseq pident slen"
+
+A few extra things are done in addition to parsing:
 - The CDR3 is detected by using a regular expression
 - The leader is detected within the sequence before the found V gene (by
   searching for the start codon).
@@ -33,19 +35,15 @@ def add_arguments(parser):
 	parser.add_argument('fasta', help='File with original reads')
 
 
-IgblastRecordNT = namedtuple('IgblastRecordNT',
-	'full_sequence query_name alignments '
-	'hits v_gene d_gene j_gene chain has_stop in_frame is_productive '
-	'strand size junction barcode_length')
 AlignmentSummary = namedtuple('AlignmentSummary', 'start stop length matches mismatches gaps percent_identity')
 JunctionVDJ = namedtuple('JunctionVDJ', 'v_end vd_junction d_region dj_junction j_start')
 JunctionVJ = namedtuple('JunctionVJ', 'v_end vj_junction j_start')
 
 
-HitNT = namedtuple('HitNT', 'subject_id query_start query_sequence '
+_Hit = namedtuple('HitNT', 'subject_id query_start query_sequence '
 	'subject_start subject_sequence subject_length errors percent_identity '
 	'evalue')
-class Hit(HitNT):
+class Hit(_Hit):
 	def covered(self):
 		"""
 		Return fraction of bases in the original subject sequence that are
@@ -56,7 +54,11 @@ class Hit(HitNT):
 
 sizeregex = re.compile('(.*);size=(\d+);$')  # TODO move into class below
 
-class IgblastRecord(IgblastRecordNT):
+_IgblastRecord = namedtuple('IgblastRecordNT',
+	'full_sequence query_name alignments '
+	'hits v_gene d_gene j_gene chain has_stop in_frame is_productive '
+	'strand size junction barcode_length')
+class IgblastRecord(_IgblastRecord):
 	# TODO move computation of cdr3_span, cdr3_sequence, vdj_sequence into constructor
 	# TODO maybe make all coordinates relative to full sequence
 
@@ -174,17 +176,6 @@ class IgblastRecord(IgblastRecordNT):
 		if alignment.start is None or alignment.stop is None:
 			return None
 		return self.full_sequence[alignment.start:alignment.stop]
-
-	"""
-	def igblast_matches_regex(self):
-		if self.cdr3_start is None:
-			return True
-		span = self.cdr3_span()
-		if span is None:
-			return True
-		start, end = span
-		return self.cdr3_start - self.hits['V'].query_start == start
-	"""
 
 
 def nt_to_aa(s):
@@ -376,17 +367,6 @@ def parse_igblast_record(record_lines, fasta_record, barcode_length):
 		barcode_length=barcode_length)
 
 
-def parse_igblast(path, fasta_path, barcode_length):
-	"""
-	Parse IgBLAST output created with option -outfmt "7 sseqid qstart qseq sstart sseq pident slen"
-	"""
-	with SequenceReader(fasta_path) as fasta:
-		with xopen(path) as f:
-			for fasta_record, (record_header, record_lines) in zip(fasta, split_by_section(f, ['# IGBLASTN'])):
-				assert record_header == '# IGBLASTN 2.2.29+'
-				yield parse_igblast_record(record_lines, fasta_record, barcode_length)
-
-
 def yesno(v):
 	"""
 	Return "yes", "no" or None for boolean value v, which may also be None.
@@ -557,13 +537,15 @@ def main(args):
 	"""
 	n = 0
 	writer = TableWriter(sys.stdout, args.rename)
-	for record in parse_igblast(args.igblast, args.fasta, args.barcode_length):
-		n += 1
-		try:
-			writer.write(record)
-		except IOError as e:
-			if e.errno == errno.EPIPE:
-				sys.exit(1)
-			raise
-		#print('CDR3:', highlight(record.vdj_sequence, record.cdr3_span()))
+	with SequenceReader(args.fasta) as fasta, xopen(args.igblast) as igblast:
+		for fasta_record, (record_header, record_lines) in zip(fasta, split_by_section(igblast, ['# IGBLASTN'])):
+			assert record_header == '# IGBLASTN 2.2.29+'
+			record = parse_igblast_record(record_lines, fasta_record, args.barcode_length)
+			n += 1
+			try:
+				writer.write(record)
+			except IOError as e:
+				if e.errno == errno.EPIPE:
+					sys.exit(1)
+				raise
 	logger.info('%d records parsed and written', n)
