@@ -21,6 +21,7 @@ import csv
 import logging
 import errno
 
+import pandas as pd
 from sqt import SequenceReader, xopen
 from sqt.dna import reverse_complement
 from .utils import nt_to_aa
@@ -33,6 +34,8 @@ def add_arguments(parser):
 		help='Rename reads to PREFIXseqN (where N is a number starting at 1)')
 	parser.add_argument('--barcode-length', type=int, default=0,
 		help='Default: %(default)s')
+	parser.add_argument('--hdf5', metavar='FILE',
+		help='Write table in HDF5 format to FILE')
 	parser.add_argument('igblast', help='IgBLAST output')
 	parser.add_argument('fasta', help='File with original reads')
 
@@ -551,6 +554,8 @@ def main(args):
 	Parse IgBLAST output
 	"""
 	n = 0
+	if args.hdf5:
+		rows = []
 	writer = TableWriter(sys.stdout)
 	with SequenceReader(args.fasta) as fasta, xopen(args.igblast) as igblast:
 		for fasta_record, (record_header, record_lines) in zip(fasta, split_by_section(igblast, ['# IGBLASTN'])):
@@ -559,6 +564,8 @@ def main(args):
 			n += 1
 			if args.rename is not None:
 				d['name'] = "{}seq{}".format(args.rename, n)
+			if args.hdf5:
+				rows.append(d)
 			try:
 				writer.write(d)
 			except IOError as e:
@@ -566,3 +573,21 @@ def main(args):
 					sys.exit(1)
 				raise
 	logger.info('%d records parsed and written', n)
+	if args.hdf5:
+		from igypipe.table import STRING_COLUMNS, INTEGER_COLUMNS
+		df = pd.DataFrame(rows, columns=IgblastRecord.columns)
+		# TODO code below is copied from igypipe.table
+		# Convert all string columns to str to avoid a PerformanceWarning
+		for col in STRING_COLUMNS:
+			df[col].fillna('', inplace=True)
+			df[col] = df[col].astype('str')
+			# Empty strings have been set to NaN by read_csv. Replacing
+			# by the empty string avoids problems with groupby, which
+			# ignores NaN values.
+			# Columns that have any NaN values in them cannot be converted to
+			# int due to a numpy limitation.
+			for col in INTEGER_COLUMNS:
+				if all(df[col].notnull()):
+					df[col] = df[col].astype(int)
+		df.to_hdf(args.hdf5, 'table', mode='w', complevel=3, complib='zlib')
+		logger.info('HDF5 file written')
