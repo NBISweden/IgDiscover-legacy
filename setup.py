@@ -29,7 +29,7 @@ setup(
 		'cutadapt',
 		'seaborn>=0.6.0',
 		'tables>=3.2.1',
-		'scipy',
+		'scipy>=0.16.1',
 		'PyYAML',
 	],
 	classifiers = [

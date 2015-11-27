@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Antibody pipeline helper script. It can:
+IgY-Pipe computes V/D/J gene usage profiles and discovers novel V genes
 
 - Run IgBLAST in parallel (wrapper inspired by igblastwrp).
 - Parse IgBLAST output into a tab-separated table
@@ -13,9 +13,14 @@ __author__ = "Marcel Martin"
 import logging
 import importlib
 from sqt import HelpfulArgumentParser
+import matplotlib as mpl
+mpl.use('Agg')
 
 from . import __version__
 
+# List of all subcommands. A module of the given name must exist and define
+# add_arguments() and main() functions. Documentation is taken from the first
+# line of the module’s docstring.
 COMMANDS = [
 	'commonv',
 	'igblast',
@@ -29,7 +34,8 @@ COMMANDS = [
 	'init',
 	'clusterplot',
 	'errorplot',
-	'upstream'
+	'upstream',
+	'dendrogram',
 ]
 
 logger = logging.getLogger(__name__)
