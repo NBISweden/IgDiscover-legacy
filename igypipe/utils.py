@@ -7,6 +7,8 @@ from collections import OrderedDict
 import numpy as np
 import re
 from sqt.align import edit_distance, multialign, consensus
+from sqt.dna import GENETIC_CODE
+
 
 def downsampled(population, size):
 	"""
@@ -103,3 +105,8 @@ def natural_sort_key(s, _nsre=re.compile('([0-9]+)')):
 	"""
 	return [int(text) if text.isdigit() else text.lower()
 		for text in re.split(_nsre, s)]
+
+
+def nt_to_aa(s):
+	"""Translate nucleotide sequence to amino acid sequence"""
+	return ''.join(GENETIC_CODE.get(s[i:i+3], '*') for i in range(0, len(s), 3))

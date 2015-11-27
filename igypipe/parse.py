@@ -22,7 +22,8 @@ import logging
 import errno
 
 from sqt import SequenceReader, xopen
-from sqt.dna import GENETIC_CODE, reverse_complement
+from sqt.dna import reverse_complement
+from .utils import nt_to_aa
 
 logger = logging.getLogger(__name__)
 
@@ -51,11 +52,6 @@ class Hit(_Hit):
 		covered by this hit.
 		"""
 		return len(self.subject_sequence) / self.subject_length
-
-
-def nt_to_aa(s):
-	"""Translate nucleotide sequence to amino acid sequence"""
-	return ''.join(GENETIC_CODE.get(s[i:i+3], '*') for i in range(0, len(s), 3))
 
 
 sizeregex = re.compile('(.*);size=(\d+);$')  # TODO move into class below
