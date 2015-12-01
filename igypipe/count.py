@@ -79,7 +79,7 @@ def main(args):
 	ax.set_xticklabels(counts.index, rotation='vertical')
 	ax.grid(axis='x')
 	ax.set_xlim((-0.5, None))
-	ax.bar(np.arange(len(counts)), counts.count)
+	ax.bar(np.arange(len(counts)), counts['count'])
 	fig.tight_layout()
 	fig.savefig(args.plot)
 	logger.info("Wrote %s", args.plot)
