@@ -32,7 +32,7 @@ def distances(sequences, band=0.2):
 	and sequences[j].
 	"""
 	m = np.zeros((len(sequences), len(sequences)), dtype=float)
-	maxdiff = max(int(len(s) * band) for s in sequences)
+	maxdiff = max((int(len(s) * band) for s in sequences), default=0)
 	for i, s in enumerate(sequences):
 		for j, t in enumerate(sequences):
 			if i < j:

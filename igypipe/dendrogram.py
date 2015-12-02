@@ -21,11 +21,7 @@ def add_arguments(parser):
 
 def main(args):
 	sequences = list(FastaReader(args.fasta))
-	m = distances([s.sequence for s in sequences])
-	y = distance.squareform(m)
-	l = hierarchy.average(y)  # UPGMA
 	labels = [s.name for s in sequences]
-
 	sns.set_style("white")
 	font_size = 297 / 25.4 * 72 / (len(labels) + 5)
 	font_size = min(16, max(6, font_size))
@@ -35,7 +31,13 @@ def main(args):
 	ax = fig.gca()
 	sns.despine(ax=ax, top=True, right=True, left=True, bottom=True)
 	sns.set_style('whitegrid')
-	result = hierarchy.dendrogram(l, labels=labels, leaf_font_size=font_size, orientation='right', color_threshold=0.95*max(l[:,2]))
+	if sequences:
+		m = distances([s.sequence for s in sequences])
+		y = distance.squareform(m)
+		l = hierarchy.average(y)  # UPGMA
+		hierarchy.dendrogram(l, labels=labels, leaf_font_size=font_size, orientation='right', color_threshold=0.95*max(l[:,2]))
+	else:
+		ax.text(0.5, 0.5, 'no sequences', fontsize='xx-large')
 	ax.grid(False)
 	fig.tight_layout()
 	fig.savefig(args.plot)
