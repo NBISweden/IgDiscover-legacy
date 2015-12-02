@@ -39,8 +39,6 @@ def add_arguments(parser):
 	arg = parser.add_argument
 	arg('--threads', '-j', type=int, default=min(4, available_cpu_count()),
 		help='Number of threads. Default: no. of available CPUs, but at most 4')
-	arg('--error-rate', metavar='PERCENT', type=float, default=1,
-		help='When finding approximate V gene matches, allow PERCENT errors. Default: %(default)s.')
 	arg('--consensus-threshold', '-t', metavar='PERCENT', type=float, default=60,
 		help='Threshold for consensus computation. Default: %(default)s%%.')
 	arg('--prefix', default='', metavar='PREFIX',
@@ -66,6 +64,10 @@ def add_arguments(parser):
 		help='Output consensus sequences in FASTA format to this file.')
 	arg('--ignore-J', action='store_true', default=False,
 		help='Include also rows without J assignment or J%%SHM>0.')
+	arg('--approx', action='store_true', default=False,
+		help='Count also approximate matches (adds three columns to output table).')
+	arg('--error-rate', metavar='PERCENT', type=float, default=1,
+		help='When finding approximate V gene matches, allow PERCENT errors. Default: %(default)s.')
 	arg('table', help='Table with parsed IgBLAST results')  # nargs='+'
 
 
@@ -141,7 +143,7 @@ class Discoverer:
 	"""
 	def __init__(self, database, windows, left, right, cluster, table_output,
 			  prefix, consensus_threshold, v_error_rate, downsample,
-			  cluster_subsample_size):
+			  cluster_subsample_size, approx_columns):
 		self.database = database
 		self.windows = windows
 		self.left = left
@@ -153,6 +155,7 @@ class Discoverer:
 		self.v_error_rate = v_error_rate
 		self.downsample = downsample
 		self.cluster_subsample_size = cluster_subsample_size
+		self.approx_columns = approx_columns
 
 	def __call__(self, args):
 		"""
@@ -203,14 +206,17 @@ class Discoverer:
 			sister = sister_info.sequence
 			group['consensus_diff'] = [ edit_distance(v_nt, sister) for v_nt in group.V_nt ]
 			group_exact_V = group[group.V_nt == sister]
-			group_approximate_V = group[group.consensus_diff <= len(sister) * self.v_error_rate]
+			if self.approx_columns:
+				group_approximate_V = group[group.consensus_diff <= len(sister) * self.v_error_rate]
 
+			groups = (
+				('total', group),  # TODO re-done for every sister
+				('window', sister_info.group),
+				('exact', group_exact_V))
+			if self.approx_columns:
+				groups +=  (('approx', group_approximate_V), )
 			info = dict()
-			for key, g in (
-					('total', group),  # TODO re-done for every sister
-					('window', sister_info.group),
-					('exact', group_exact_V),
-					('approx', group_approximate_V)):
+			for key, g in groups:
 				unique_J = len(set(s for s in g.J_gene if s))
 				unique_CDR3 = len(set(s for s in g.CDR3_nt if s))
 				assert len(set(g.index)) == len(g.index)  # TODO remove this
@@ -223,19 +229,20 @@ class Discoverer:
 			n_bases = sister.count('N')
 
 			assert info['window'].count <= info['total'].count
-			assert info['exact'].count <= info['approx'].count
+			if self.approx_columns:
+				assert info['exact'].count <= info['approx'].count
 
 			# Build the row for the output table
 			sequence_id = '{}{}_{}'.format(self.prefix, gene.rsplit('_S', 1)[0], sequence_hash(sister))
 			row = [gene, sister_info.name]
-			for key in ('total', 'window', 'exact', 'approx'):
+			for key, _ in groups:
 				row.extend([info[key].count, info[key].unique_J, info[key].unique_CDR3])
 			row.extend([n_bases, database_diff, int(looks_like_V_gene(sister)), sequence_id, sister])
 			rows.append(row)
 
 			# If a window was requested via --left/--right, write the 'approx'
 			# subset to a separate file.
-			if self.table_output and any(si.requested for si in sister_info) and len(group_approximate_V) > 0:
+			if self.table_output and self.approx_columns and any(si.requested for si in sister_info) and len(group_approximate_V) > 0:
 				if not os.path.exists(self.table_output):
 					os.mkdir(self.table_output)
 				path = os.path.join(self.table_output, gene + '.tab')
@@ -264,14 +271,15 @@ def main(args):
 		logger.info('%s rows remain after discarding J%%SHM > 0', len(table))
 
 	logger.info('Using an error rate window of %.1f%% to %.1f%%', args.left, args.right)
-	logger.info('Approximate comparisons between V gene sequence and consensus allow %.1f%% errors.', v_error_rate*100)
+	if args.approx:
+		logger.info('Approximate comparisons between V gene sequence and consensus allow %.1f%% errors.', v_error_rate*100)
 
 	if args.consensus_output:
 		consensus_output = open(args.consensus_output, 'w')
 	else:
 		consensus_output = None
 	writer = csv.writer(sys.stdout, delimiter='\t')
-	writer.writerow([
+	columns = [
 		'gene',
 		'window',
 		'total_seqs',
@@ -283,15 +291,17 @@ def main(args):
 		'exact_seqs',
 		'exact_unique_J',
 		'exact_unique_CDR3',
-		'approx_seqs',
-		'approx_unique_J',
-		'approx_unique_CDR3',
+	]
+	if args.approx:
+		columns += ['approx_seqs', 'approx_unique_J', 'approx_unique_CDR3']
+	columns += [
 		'N_bases',
 		'database_diff',
 		'looks_like_V',
 		'name',
 		'consensus'
-	])
+	]
+	writer.writerow(columns)
 	genes = set(args.gene)
 	if args.window_width:
 		windows = [ (start, start + args.window_width) for start in np.arange(0, 20, args.window_width) ]
@@ -309,7 +319,8 @@ def main(args):
 
 	discoverer = Discoverer(database, windows, args.left, args.right, args.cluster,
 		args.table_output, args.prefix, args.consensus_threshold, v_error_rate,
-		MAXIMUM_SUBSAMPLE_SIZE, cluster_subsample_size=args.subsample)
+		MAXIMUM_SUBSAMPLE_SIZE, cluster_subsample_size=args.subsample,
+		approx_columns=args.approx)
 	n_consensus = 0
 
 	Pool = SerialPool if args.threads == 1 else multiprocessing.Pool
