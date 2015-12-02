@@ -281,13 +281,13 @@ def main(args):
 	writer = csv.writer(sys.stdout, delimiter='\t')
 	columns = [
 		'gene',
-		'window',
+		'subsets',
 		'total_seqs',
 		'total_unique_J',
 		'total_unique_CDR3',
-		'window_seqs',
-		'window_unique_J',
-		'window_unique_CDR3',
+		'subset_seqs',
+		'subset_unique_J',
+		'subset_unique_CDR3',
 		'exact_seqs',
 		'exact_unique_J',
 		'exact_unique_CDR3',
