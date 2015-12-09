@@ -57,11 +57,13 @@ def main(args):
 	logger.info('%s rows remain after discarding J%%SHM > 0', len(table))
 
 	n = 0
+	too_few = 0
 	with PdfPages(args.pdf) as pages:
 		for gene, group in table.groupby('V_gene'):
 			if len(group) < args.minimum_group_size:
+				too_few += 1
 				continue
 			fig = plot_error_histogram(group, gene)
 			n += 1
 			FigureCanvasPdf(fig).print_figure(pages, bbox_inches='tight')
-	logger.info('%s plots created (rest had too few sequences)', n)
+	logger.info('%s plots created (%s skipped because of too few sequences)', n, too_few)
