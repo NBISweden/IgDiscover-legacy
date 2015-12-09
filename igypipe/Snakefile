@@ -6,7 +6,7 @@ are created:
 reads/merged.fastq.gz -- merged reads
 reads/trimmed.fastq.gz -- primers removed from merged reads
 reads/filtered.fasta  -- too short sequences removed, converted to FASTA
-reads/collapsed.fasta -- collapsed sequences (duplicates removed)
+reads/unique.fasta -- collapsed sequences (duplicates removed)
 unique.igblast.txt.gz -- IgBLAST output
 unique.assigned.tab -- parsed IgBLAST output as a tab-delimited table
 unique.filtered.tab -- filtered version of the above
@@ -457,7 +457,9 @@ rule igypipe_count:
 		reference="{{dir}}/database/{species}_{{gene}}.fasta".format(species=config.species),
 		tab="{dir}/{base}.filtered.tab"
 	shell:
-		"igypipe count --database {input.reference} --gene {wildcards.gene} {input.tab} {output.plot} > {output.counts}"
+		"igypipe count --database {input.reference} --gene {wildcards.gene} "
+		"{input.tab} {output.plot} > {output.counts}.tmp && "
+		"mv {output.counts}.tmp {output.counts}"
 
 
 rule igypipe_clusterplot:
@@ -480,7 +482,9 @@ rule igypipe_discover:
 		tab="{dir}/unique.filtered.tab"
 	threads: 4  # TODO this could be increased up to 6
 	shell:
-		"igypipe discover -j {threads} --cluster --subsample {config.subsample} --window-width 2 --database {input.v_reference} {input.tab} > {output.tab}"
+		"igypipe discover -j {threads} --cluster --subsample {config.subsample} "
+		"--window-width 2 --database {input.v_reference} {input.tab} > "
+		"{output.tab}.tmp && mv {output.tab}.tmp {output.tab}"
 
 
 rule igypipe_compose:
@@ -490,7 +494,7 @@ rule igypipe_compose:
 	input:
 		tab='{dir}/candidates.tab'
 	shell:
-		"igypipe compose --unique-CDR3 2 {input.tab} > {output.fasta}"
+		"igypipe compose --unique-CDR3 2 {input.tab} > {output.fasta}.tmp && mv {output.fasta}.tmp {output.fasta}"
 
 
 rule stats_correlation_V_J:
