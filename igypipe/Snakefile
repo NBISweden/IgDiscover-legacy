@@ -36,6 +36,7 @@ class Config:
 		self.stranded = False
 		self.forward_primers = None
 		self.reverse_primers = None
+		self.library_name = os.path.basename(os.getcwd())
 		self.read_from(path)
 
 	def read_from(self, path):
@@ -417,10 +418,8 @@ rule igypipe_parse:
 	input:
 		txt="{dir}/{base}.igblast.txt.gz",
 		fasta="{dir}/{base}.fasta"
-	params:
-		dirname=os.path.basename(os.getcwd()) + '_'
 	shell:
-		"igypipe parse --barcode-length {config.barcode_length} --rename {params.dirname!r} {input.txt} {input.fasta} > {output.tab}"
+		"igypipe parse --barcode-length {config.barcode_length} --rename {config.library_name!r}_ {input.txt} {input.fasta} > {output.tab}"
 
 
 rule igypipe_filter:

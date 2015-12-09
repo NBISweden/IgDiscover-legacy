@@ -19,9 +19,11 @@ PIPELINE_CONF = 'pipeline.conf'
 def add_arguments(parser):
 	parser.add_argument('--database', '--db', metavar='PATH', default=None,
 		help='Directory with IgBLAST database files. If not given, a dialog is shown.')
-	parser.add_argument('directory', help='New pipeline directory to create')
 	parser.add_argument('--reads1', default=None,
 		help='File with paired-end reads (first file only). If not given, a dialog is shown.')
+	parser.add_argument('--library-name', metavar='NAME', default=None,
+		help='Name of the library. Set library_name in the configuration file.')
+	parser.add_argument('directory', help='New pipeline directory to create')
 
 
 def tkinter_reads_path(directory=False):
@@ -158,10 +160,17 @@ def main(args):
 	snakepath = pkg_resources.resource_filename('igypipe', 'Snakefile')
 	os.symlink(os.path.relpath(snakepath, args.directory), os.path.join(args.directory, 'Snakefile'))
 
+	if args.library_name:
+		library_name = args.library_name
+	else:
+		library_name = os.path.basename(os.path.normpath(args.directory))
 	# Write the pipeline configuration
-	configuration = pkg_resources.resource_string('igypipe', PIPELINE_CONF)
-	with open(os.path.join(args.directory, PIPELINE_CONF), 'wb') as f:
-		f.write(configuration)
+	configuration = pkg_resources.resource_string('igypipe', PIPELINE_CONF).decode()
+	with open(os.path.join(args.directory, PIPELINE_CONF), 'w') as f:
+		for line in configuration.splitlines(keepends=True):
+			if line.startswith('library_name:'):
+				line = 'library_name: ' + library_name + '\n'
+			f.write(line)
 
 	# Copy database
 	os.mkdir(os.path.join(args.directory, 'database'))
