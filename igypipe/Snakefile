@@ -17,6 +17,7 @@ consensus.assigned.tab -- parsed IgBLAST output
 """
 import yaml
 from sqt.dna import reverse_complement
+from sqt import FastaReader
 import igypipe
 
 
@@ -375,11 +376,15 @@ rule makeblastdb:
 	params: dbname="{dir}/{species}_{gene}"
 	log: '{dir}/{species}_{gene}.log'
 	threads: 100  # force to run as single job
-	shell:
-		r"""
+	run:
+		with FastaReader(input.fasta) as fr:
+			sequences = list(fr)
+		if not sequences:
+			raise ValueError("The FASTA file {} is empty, cannot continue!".format(input.fasta))
+		shell(r"""
 		makeblastdb -parse_seqids -dbtype nucl -in {input.fasta} -out {params.dbname} >& {log}
 		grep 'Error: ' {log} && {{ echo "makeblastdb failed when creating {params.dbname}"; false; }} || true
-		"""
+		""")
 
 
 rule symlink_iteration_reads:
