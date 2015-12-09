@@ -15,12 +15,6 @@ consensus.fasta -- contains one consensus sequence for each group
 consensus.igblast.txt -- consensus sequences sent through IgBLAST
 consensus.assigned.tab -- parsed IgBLAST output
 """
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_pdf import FigureCanvasPdf
-import seaborn as sns
-import numpy as np
-import pandas as pd
-from collections import Counter
 import yaml
 from sqt.dna import reverse_complement
 import igypipe
@@ -498,9 +492,15 @@ rule stats_correlation_V_J:
 	input:
 		table="{base}.assigned.tab"
 	run:
+		import matplotlib
+		matplotlib.use('pdf')
 		# sns.heatmap will not work properly with the object-oriented interface,
 		# so use pyplot
 		import matplotlib.pyplot as plt
+		import seaborn as sns
+		import numpy as np
+		import pandas as pd
+		from collections import Counter
 		table = igypipe.read_table(input.table)
 		fig = plt.figure(figsize=(29.7/2.54, 21/2.54))
 		counts = np.zeros((21, 11), dtype=np.int64)
