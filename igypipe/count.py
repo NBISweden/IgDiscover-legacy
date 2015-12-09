@@ -80,6 +80,6 @@ def main(args):
 	ax.grid(axis='x')
 	ax.set_xlim((-0.5, None))
 	ax.bar(np.arange(len(counts)), counts['count'])
-	fig.tight_layout()
+	fig.set_tight_layout(True)
 	fig.savefig(args.plot)
 	logger.info("Wrote %s", args.plot)

@@ -39,5 +39,5 @@ def main(args):
 	else:
 		ax.text(0.5, 0.5, 'no sequences', fontsize='xx-large')
 	ax.grid(False)
-	fig.tight_layout()
+	fig.set_tight_layout(True)
 	fig.savefig(args.plot)

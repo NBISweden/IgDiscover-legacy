@@ -513,7 +513,7 @@ rule stats_correlation_V_J:
 		df.columns.name = 'V errors'
 		sns.heatmap(df, annot=True, fmt=',d', cbar=False)
 		fig.suptitle('V errors vs. J errors in unfiltered sequences')
-		fig.tight_layout()
+		fig.set_tight_layout(True)
 		fig.savefig(output.pdf)
 
 

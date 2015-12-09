@@ -81,7 +81,7 @@ def main(args):
 		ax.set_title('Histogram of group sizes (>1)')
 		ax.grid(axis='x')
 		ax.tick_params(direction="outward", top=False, right=False)
-		fig.tight_layout()
+		fig.set_tight_layout(True)
 		fig.savefig(args.plot_sizes)
 
 	# Compute consensus within each group
