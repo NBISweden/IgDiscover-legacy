@@ -65,8 +65,11 @@ class Config:
 					self.forward_primers = None
 				del self.trim_primers
 
-
 config = Config('pipeline.conf')
+
+print('IgY-Pipe configuration:')
+for k, v in vars(config).items():
+	print('   ', k, ': ', repr(v), sep='')
 
 # This command is run before every shell command and helps to catch errors early
 shell.prefix("set -euo pipefail;")
