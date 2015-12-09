@@ -65,5 +65,5 @@ def filtered_table(table,
 def main(args):
 	d = read_table(args.table, log=True)
 	d = filtered_table(d, log=True)
-	print(d.to_csv(sep='\t', index=False))
+	print(d.to_csv(sep='\t', index=False), end='')
 	logger.info('%d rows written', len(d))

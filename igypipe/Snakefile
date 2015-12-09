@@ -416,14 +416,14 @@ rule igypipe_igblast:
 rule igypipe_parse:
 	output:
 		tab="{dir}/{base}.assigned.tab",
-		h5="{dir}/{base}.assigned.h5"
+		#h5="{dir}/{base}.assigned.h5"
 	input:
 		txt="{dir}/{base}.igblast.txt.gz",
 		fasta="{dir}/{base}.fasta"
 	params:
 		dirname=os.path.basename(os.getcwd()) + '_'
 	shell:
-		"igypipe parse --barcode-length {config.barcode_length} --rename {params.dirname!r} --hdf5 {output.h5} {input.txt} {input.fasta} > {output.tab}"
+		"igypipe parse --barcode-length {config.barcode_length} --rename {params.dirname!r} {input.txt} {input.fasta} > {output.tab}"
 
 
 rule igypipe_filter:
