@@ -185,7 +185,7 @@ class Discoverer:
 			indices = downsampled(list(group.index), self.cluster_subsample_size)
 			sequences = list(group.V_nt.loc[indices])
 			df, linkage, clusters = cluster_sequences(sequences)
-			logger.info('Clustering sequences for %r gave %d clusters', gene, len(set(clusters)))
+			logger.info('Clustering sequences for %r gave %d cluster(s)', gene, len(set(clusters)))
 			cluster_indices = [ [] for _ in range(max(clusters) + 1) ]
 			for i, cluster_id in enumerate(clusters):
 				cluster_indices[cluster_id].append(indices[i])
@@ -210,7 +210,6 @@ class Discoverer:
 				group_approximate_V = group[group.consensus_diff <= len(sister) * self.v_error_rate]
 
 			groups = (
-				('total', group),  # TODO re-done for every sister
 				('window', sister_info.group),
 				('exact', group_exact_V))
 			if self.approx_columns:
@@ -228,7 +227,6 @@ class Discoverer:
 				database_diff = None
 			n_bases = sister.count('N')
 
-			assert info['window'].count <= info['total'].count
 			if self.approx_columns:
 				assert info['exact'].count <= info['approx'].count
 
@@ -282,9 +280,6 @@ def main(args):
 	columns = [
 		'gene',
 		'subsets',
-		'total_seqs',
-		'total_unique_J',
-		'total_unique_CDR3',
 		'subset_seqs',
 		'subset_unique_J',
 		'subset_unique_CDR3',
