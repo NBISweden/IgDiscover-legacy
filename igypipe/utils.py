@@ -65,13 +65,14 @@ def iterative_consensus(sequences, program='muscle-medium', threshold=0.6,
 	return cons
 
 
-def sequence_hash(s):
+def sequence_hash(s, digits=4):
 	"""
-	Return a hash of a string that looks like 'S123' (S is fixed). The idea is
-	that this allows one to quickly see whether two sequences are identical.
+	For a string, return a 'fingerprint' that looks like 'S1234' (the character
+	'S' is fixed). The idea is that this allows one to quickly see whether two
+	sequences are identical.
 	"""
-	h = int(hashlib.md5(s.encode()).hexdigest()[-6:], base=16)
-	return 'S{:06}'.format(h % 1000000)
+	h = int(hashlib.md5(s.encode()).hexdigest()[-4:], base=16)
+	return 'S' + str(h % 10**digits).rjust(digits, '0')
 
 
 class SerialPool:
