@@ -41,10 +41,8 @@ class Config:
 		self.read_from(path)
 
 	def read_from(self, path):
-		try:
-			content = open(path).read()
-		except FileNotFoundError:
-			sys.exit("Pipeline configuration file {!r} not found. Please create it!".format(path))
+		with open(path) as f:
+			content = f.read()
 		# Heuristic to detect whether the configuration is YAML or in the old format
 		# Will be removed after a transition period
 		if 'species:' in content:
@@ -67,7 +65,14 @@ class Config:
 					self.forward_primers = None
 				del self.trim_primers
 
-config = Config('pipeline.conf')
+try:
+	config = Config('igypipe.yaml')
+except FileNotFoundError:
+	# For backwards compatibility, try old path also
+	try:
+		config = Config('pipeline.conf')
+	except FileNotFoundError:
+		sys.exit("Pipeline configuration file 'igypipe.yaml' not found. Please create it!")
 
 print('IgY-Pipe configuration:')
 for k, v in vars(config).items():

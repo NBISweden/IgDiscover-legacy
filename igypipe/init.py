@@ -13,7 +13,7 @@ import pkg_resources
 logger = logging.getLogger(__name__)
 
 
-PIPELINE_CONF = 'pipeline.conf'
+PIPELINE_CONF = 'igypipe.yaml'
 
 
 def add_arguments(parser):
@@ -187,4 +187,4 @@ def main(args):
 		if yesno('Directory initialized', 'Do you want to edit the configuration file now?'):
 			subprocess.call(["xdg-open", os.path.join(args.directory, PIPELINE_CONF)])
 	logger.info('Directory %s initialized.', args.directory)
-	logger.info('Edit %s/pipeline.conf, then run "cd %s && snakemake -j" to start the pipeline', args.directory, args.directory)
+	logger.info('Edit %s/%s, then run "cd %s && snakemake -j" to start the pipeline', args.directory, PIPELINE_CONF, args.directory)

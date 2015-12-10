@@ -90,5 +90,3 @@ reverse_primers:
 
 # maximum_expected_errors: null
 # maximum_expected_errors: 5
-
-# kate: syntax yaml;
