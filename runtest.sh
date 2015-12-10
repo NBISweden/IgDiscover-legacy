@@ -1,11 +1,10 @@
 #!/bin/bash
 set -eo pipefail
 unset DISPLAY
-
-export IGDATA=$HOME/scm/antibodies/igblast
+export IGDATA=$PWD/igblast
 source venv/bin/activate
-rm -rf tmp/testrun
-igypipe init --library-name testing --db testdata/db --reads testdata/test.1.fastq.gz tmp/testrun
-cp -p testdata/igypipe.yaml tmp/testrun/
-cd tmp/testrun
+rm -rf testrun
+igypipe init --library-name testing --db testdata/db --reads testdata/reads.1.fastq.gz testrun
+cp -p testdata/igypipe.yaml testrun/
+cd testrun
 snakemake -pj
