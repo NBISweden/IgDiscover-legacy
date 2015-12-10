@@ -126,6 +126,25 @@ def looks_like_V_gene(s):
 	#return bool(V_GENE_REGEX.match(s))
 
 
+class UniqueNamer:
+	"""
+	Assign unique names by appending letters to already seen ones.
+	"""
+	def __init__(self):
+		self._names = set()
+
+	def __call__(self, name):
+		ext = 'A'
+		new_name = name
+		while new_name in self._names:
+			if ext == '[':
+				raise ValueError('too many duplicate names')
+			new_name = name + ext
+			ext = chr(ord(ext) + 1)
+		self._names.add(new_name)
+		return new_name
+
+
 def main(args):
 	merger = Merger()
 	previous_n = 0
@@ -160,10 +179,11 @@ def main(args):
 		for _, row in table.iterrows():
 			merger.add(SequenceInfo(row['consensus'], row['name']))
 
+	namer = UniqueNamer()
 	n = 0
 	for info in merger:
 		n += 1
-		print('>{}\n{}'.format(info.name, info.sequence))
+		print('>{}\n{}'.format(namer(info.name), info.sequence))
 
 	if args.database:
 		logger.info('Old database had %s sequences, new database has %s sequences (difference: %s)', previous_n, n, n - previous_n)

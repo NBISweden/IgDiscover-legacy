@@ -3,7 +3,7 @@ Test the SisterMerger class
 """
 import pandas as pd
 from igypipe.discover import SisterMerger, SisterInfo
-from igypipe.compose import Merger, SequenceInfo
+from igypipe.compose import Merger, SequenceInfo, UniqueNamer
 
 def test_0():
 	merger = SisterMerger()
@@ -65,3 +65,14 @@ def test_with_N():
 	assert sisters[0].sequence == 'ACCGGTAANGT'
 	assert sisters[0].name == 'name1;name2'
 	assert sisters[1] == info2
+
+
+def test_unique_namer():
+	namer = UniqueNamer()
+	assert namer('Name') == 'Name'
+	assert namer('AnotherName') == 'AnotherName'
+	assert namer('Name') == 'NameA'
+	assert namer('Name') == 'NameB'
+	assert namer('YetAnotherName') == 'YetAnotherName'
+	assert namer('Name') == 'NameC'
+	assert namer('NameC') == 'NameCA'
