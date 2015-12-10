@@ -76,6 +76,9 @@ except FileNotFoundError:
 
 print('IgY-Pipe configuration:')
 for k, v in vars(config).items():
+	# TODO the following line is only necessary for non-YAML configurations
+	if k.startswith('_'):
+		continue
 	print('   ', k, ': ', repr(v), sep='')
 
 # This command is run before every shell command and helps to catch errors early
