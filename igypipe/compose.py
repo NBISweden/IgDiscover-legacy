@@ -160,7 +160,8 @@ def main(args):
 		table = pd.read_csv(path, sep='\t')
 		unfiltered_length = len(table)
 		table = table[table.database_diff >= args.minimum_db_diff]
-		table = table[table.N_bases <= args.maximum_N]
+		if 'N_bases' in table.columns:
+			table = table[table.N_bases <= args.maximum_N]
 		table = table[table.exact_unique_CDR3 >= args.unique_CDR3]
 		table = table[[looks_like_V_gene(s) for s in table.consensus]]
 

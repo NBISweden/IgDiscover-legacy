@@ -53,6 +53,9 @@ def add_arguments(parser):
 		help='Compute consensus for all PERCENT-wide windows. Default: do not compute', default=None)
 	arg('--cluster', action='store_true', default=False,
 		help='Cluster sequences by similarity and compute consensus')
+	arg('--max-n-bases', type=int, default=0, metavar='MAXN',
+		help='Remove rows that have more than MAXN "N" nucleotides. If >0, an '
+			'N_bases column is added. Default: 0')
 	arg('--subsample', metavar='N', type=int, default=1000,
 		help='When clustering, use N randomly chosen sequences. Default: %(default)s')
 	arg('--table-output', '-o', metavar='DIRECTORY',
@@ -134,7 +137,7 @@ class Discoverer:
 	"""
 	def __init__(self, database, windows, left, right, cluster, table_output,
 			  prefix, consensus_threshold, v_error_rate, downsample,
-			  cluster_subsample_size, approx_columns):
+			  cluster_subsample_size, approx_columns, max_n_bases):
 		self.database = database
 		self.windows = windows
 		self.left = left
@@ -147,6 +150,7 @@ class Discoverer:
 		self.downsample = downsample
 		self.cluster_subsample_size = cluster_subsample_size
 		self.approx_columns = approx_columns
+		self.max_n_bases = max_n_bases
 
 	def __call__(self, args):
 		"""
@@ -195,6 +199,9 @@ class Discoverer:
 		rows = []
 		for sister_info in sisters:
 			sister = sister_info.sequence
+			n_bases = sister.count('N')
+			if n_bases > self.max_n_bases:
+				continue
 			group['consensus_diff'] = [ edit_distance(v_nt, sister) for v_nt in group.V_nt ]
 			group_exact_V = group[group.V_nt == sister]
 			if self.approx_columns:
@@ -216,7 +223,6 @@ class Discoverer:
 				database_diff = edit_distance(sister, self.database[gene])
 			else:
 				database_diff = None
-			n_bases = sister.count('N')
 
 			if self.approx_columns:
 				assert info['exact'].count <= info['approx'].count
@@ -227,7 +233,9 @@ class Discoverer:
 			row = [gene, sister_info.name]
 			for key, _ in groups:
 				row.extend([info[key].count, info[key].unique_J, info[key].unique_CDR3])
-			row.extend([n_bases, database_diff, int(looks_like_V_gene(sister)), sequence_id, sister])
+			if self.max_n_bases:
+				row += [n_bases]
+			row += [database_diff, int(looks_like_V_gene(sister)), sequence_id, sister]
 			rows.append(row)
 
 			# If a window was requested via --left/--right, write the 'approx'
@@ -281,8 +289,9 @@ def main(args):
 	]
 	if args.approx:
 		columns += ['approx_seqs', 'approx_unique_J', 'approx_unique_CDR3']
+	if args.max_n_bases:
+		columns += ['N_bases']
 	columns += [
-		'N_bases',
 		'database_diff',
 		'looks_like_V',
 		'name',
@@ -307,7 +316,7 @@ def main(args):
 	discoverer = Discoverer(database, windows, args.left, args.right, args.cluster,
 		args.table_output, args.prefix, args.consensus_threshold, v_error_rate,
 		MAXIMUM_SUBSAMPLE_SIZE, cluster_subsample_size=args.subsample,
-		approx_columns=args.approx)
+		approx_columns=args.approx, max_n_bases=args.max_n_bases)
 	n_consensus = 0
 
 	Pool = SerialPool if args.threads == 1 else multiprocessing.Pool
