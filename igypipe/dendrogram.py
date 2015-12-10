@@ -31,7 +31,7 @@ def main(args):
 	ax = fig.gca()
 	sns.despine(ax=ax, top=True, right=True, left=True, bottom=True)
 	sns.set_style('whitegrid')
-	if sequences:
+	if len(sequences) >= 2:
 		m = distances([s.sequence for s in sequences])
 		y = distance.squareform(m)
 		l = hierarchy.average(y)  # UPGMA
