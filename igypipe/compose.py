@@ -45,28 +45,20 @@ class Merger:
 	TODO unify with discover.SisterMerger?
 	"""
 	def __init__(self):
-		self.sequences = []
+		self._sequences = []
 
 	def add(self, info):
-		self.sequences.append(info)
-
-	def _merge_all(self):
-		if not self.sequences:
-			return []
-		merged = [self.sequences[0]]
-		for s in self.sequences[1:]:
-			for i, m in enumerate(merged):
-				c = self._merged(m, s)
-				if c is not None:
-					merged[i] = c
-					break
-			else:
-				# Found no similar sequence
-				merged.append(s)
-		return merged
+		# See if we already have a similar sequence
+		for i, s in enumerate(self._sequences):
+			c = self._merged(s, info)
+			if c is not None:
+				self._sequences[i] = c
+				break
+		else:
+			self._sequences.append(info)
 
 	def __iter__(self):
-		yield from self._merge_all()
+		yield from self._sequences
 
 	@staticmethod
 	def _merged(s, t):

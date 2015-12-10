@@ -87,29 +87,20 @@ class SisterMerger:
 	one of the sequences has an 'N' base.
 	"""
 	def __init__(self):
-		self.sisters = []
+		self._sequences = []
 
 	def add(self, info):
-		self.sisters.append(info)
-
-	def _merge_all(self):
-		if not self.sisters:
-			return []
-		merged = [self.sisters[0]]
-		for s in self.sisters[1:]:
-			for i, m in enumerate(merged):
-				c = self._merged(m, s)
-				if c is not None:
-					merged[i] = c
-					break
-			else:
-				# Found no similar sister sequence
-				merged.append(s)
-		return merged
+		# See if we already have a similar sequence
+		for i, s in enumerate(self._sequences):
+			c = self._merged(s, info)
+			if c is not None:
+				self._sequences[i] = c
+				break
+		else:
+			self._sequences.append(info)
 
 	def __iter__(self):
-		for m in self._merge_all():
-			yield m
+		yield from self._sequences
 
 	@staticmethod
 	def _merged(s, t):

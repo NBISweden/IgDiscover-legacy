@@ -2,8 +2,8 @@
 Test the SisterMerger class
 """
 import pandas as pd
-from igypipe.singledisco import SisterMerger, SisterInfo
-
+from igypipe.discover import SisterMerger, SisterInfo
+from igypipe.compose import Merger, SequenceInfo
 
 def test_0():
 	merger = SisterMerger()
