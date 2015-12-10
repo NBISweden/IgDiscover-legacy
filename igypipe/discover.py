@@ -222,6 +222,7 @@ class Discoverer:
 				assert info['exact'].count <= info['approx'].count
 
 			# Build the row for the output table
+			# TODO use UniqueNamer here
 			sequence_id = '{}{}_{}'.format(self.prefix, gene.rsplit('_S', 1)[0], sequence_hash(sister))
 			row = [gene, sister_info.name]
 			for key, _ in groups:
