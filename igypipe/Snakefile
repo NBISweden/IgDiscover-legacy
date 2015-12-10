@@ -416,9 +416,10 @@ rule igypipe_igblast:
 		database='{dir}/database'
 	threads: 16
 	shell:
-		r"""
-		igypipe igblast --threads {threads} {params.penalty} --species {config.species} {params.database} {input.fasta} | gzip > {output.txtgz}
-		"""
+		"igypipe igblast --threads {threads} {params.penalty} "
+		"--species {config.species} {params.database} {input.fasta} | "
+		"gzip > {output.txtgz}.tmp && "
+		"mv {output.txtgz}.tmp {output.txtgz}"
 
 
 rule igypipe_parse:
