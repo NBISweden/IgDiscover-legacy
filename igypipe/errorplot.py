@@ -1,7 +1,8 @@
 """
-For each gene, plot a histogram of error rates.
+Plot histograms of differences to reference V gene
 
-The histogram shows the error rates for all sequences assigned to that gene.
+For each gene, a histogram is plotted that shows how often a sequence was
+assigned to that gene at a certain percentage difference.
 """
 import logging
 from matplotlib.backends.backend_pdf import FigureCanvasPdf, PdfPages
@@ -20,28 +21,26 @@ def add_arguments(parser):
 	parser.add_argument('pdf', help='Plot error frequency histograms to this PDF file', default=None)
 
 
-def plot_error_histogram(group, v_gene_name, bins=np.arange(20.1)):
+def plot_difference_histogram(group, gene_name, bins=np.arange(20.1)):
 	"""
-	Plot a histogram of error rates for a specific V gene.
-
-	v_gene -- name of the gene
+	Plot a histogram of percentage differences for a specific gene.
 	"""
 	exact_matches = group[group.V_SHM == 0]
 	exact_unique_CDR3 = len(set(s for s in exact_matches.CDR3_nt if s))
 	exact_unique_J = len(set(exact_matches.J_gene))
 
-	fig = Figure(figsize=(297/2/25.4, 210/2/25.4))
+	fig = Figure(figsize=(100/25.4, 60/25.4))
 	ax = fig.gca()
-	ax.set_xlabel('Error rate (%)')
+	ax.set_xlabel('Percentage difference')
 	ax.set_ylabel('Frequency')
-	fig.suptitle('Gene ' + v_gene_name, y=1.02, fontsize=16)
+	fig.suptitle('Gene ' + gene_name, y=1.08, fontsize=16)
 	ax.set_title('{:,} sequences assigned'.format(len(group)))
 
-	ax.text(0.3, 0.95,
-		'{:,} ({:.1%}) exact matches, using\n  {} unique CDR3\n  {} unique J'.format(
+	ax.text(0.25, 0.95,
+		'{:,} ({:.1%}) exact matches\n  {} unique CDR3\n  {} unique J'.format(
 			len(exact_matches), len(exact_matches) / len(group),
 			exact_unique_CDR3, exact_unique_J),
-		transform=ax.transAxes, fontsize=14,
+		transform=ax.transAxes, fontsize=10,
 		bbox=dict(boxstyle='round', facecolor='white', alpha=0.5),
 		horizontalalignment='left', verticalalignment='top')
 	_ = ax.hist(list(group.V_SHM), bins=bins)
@@ -63,7 +62,7 @@ def main(args):
 			if len(group) < args.minimum_group_size:
 				too_few += 1
 				continue
-			fig = plot_error_histogram(group, gene)
+			fig = plot_difference_histogram(group, gene)
 			n += 1
 			FigureCanvasPdf(fig).print_figure(pages, bbox_inches='tight')
 	logger.info('%s plots created (%s skipped because of too few sequences)', n, too_few)
