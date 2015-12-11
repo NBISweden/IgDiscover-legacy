@@ -31,10 +31,6 @@ def cluster_sequences(sequences, minsize=5):
 	the linkage result, and a list that maps sequence ids to their cluster id.
 	If an entry is zero in that list, it means that the sequence is not part of
 	a cluster.
-
-	TODO The clusters are sometimes nested within each other. In such a case,
-	the clusters are found, but then overwritten in the next step (can be seen
-	by some cluster ids being unused in the returned clusters array).
 	"""
 	matrix = distances(sequences)
 	linkage = hierarchy.linkage(distance.squareform(matrix), method='average')
