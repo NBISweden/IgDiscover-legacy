@@ -503,7 +503,7 @@ rule igypipe_compose:
 	input:
 		tab='{dir}/candidates.tab'
 	shell:
-		"igypipe compose --unique-CDR3 2 {input.tab} > {output.fasta}.tmp && mv {output.fasta}.tmp {output.fasta}"
+		"igypipe compose --looks-like-V --unique-CDR3 2 {input.tab} > {output.fasta}.tmp && mv {output.fasta}.tmp {output.fasta}"
 
 
 rule stats_correlation_V_J:

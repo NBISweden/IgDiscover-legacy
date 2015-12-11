@@ -17,23 +17,25 @@ from collections import namedtuple
 from itertools import zip_longest
 import pandas as pd
 from sqt import FastaReader
-from sqt.dna import amino_acid_regex
 from .utils import UniqueNamer
 
 logger = logging.getLogger(__name__)
 
 
 def add_arguments(parser):
-	parser.add_argument('--minimum-db-diff', '-b', type=int, metavar='DIST', default=0,
-		help='Sequences must have at least DIST differences to the database sequence. Default: %(default)s')
+	parser.add_argument('--minimum-db-diff', '-b', type=int, metavar='N', default=0,
+		help='Sequences must have at least N differences to the database sequence. Default: %(default)s')
 	parser.add_argument('--maximum-N', '-N', type=int, metavar='COUNT', default=0,
 		help='Sequences must have at most COUNT N bases. Default: %(default)s')
-	parser.add_argument('--unique-CDR3', type=int, metavar='COUNT', default=5,
+	parser.add_argument('--unique-CDR3', type=int, metavar='COUNT', default=1,
 		help='Sequences must have at least COUNT exact unique CDR3s. Default: %(default)s')
+	parser.add_argument('--looks-like-V', action='store_true', default=False,
+		help='Sequences must look like V genes (uses the looks_like_V column). '
+		'Default: Column is ignored')
 	parser.add_argument('--database', metavar='DATABASE.FASTA',
 		help='Existing (to be augmented) database in FASTA format')
 	parser.add_argument('tables', metavar='DISCOVER.TAB',
-		help='Table (zero or more) created by the "discover" command', nargs='*')
+		help='Tables (zero or more) created by the "discover" command', nargs='*')
 
 
 SequenceInfo = namedtuple('SequenceInfo', 'sequence name')
@@ -108,8 +110,8 @@ def main(args):
 		if 'N_bases' in table.columns:
 			table = table[table.N_bases <= args.maximum_N]
 		table = table[table.exact_unique_CDR3 >= args.unique_CDR3]
-		table = table[[looks_like_V_gene(s) for s in table.consensus]]
-
+		if args.looks_like_V:
+			table = table[table.looks_like_V == 1]
 		table = table.dropna()
 		logger.info('Table read from %r contains %s candidate V gene sequences. '
 			'%s remain after filtering', path,
