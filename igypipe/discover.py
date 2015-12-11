@@ -278,7 +278,7 @@ def main(args):
 		consensus_output = None
 	writer = csv.writer(sys.stdout, delimiter='\t')
 	columns = [
-		'gene',
+		'source_gene',
 		'subsets',
 		'subset_seqs',
 		'subset_unique_J',
