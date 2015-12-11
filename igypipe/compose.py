@@ -18,6 +18,7 @@ from itertools import zip_longest
 import pandas as pd
 from sqt import FastaReader
 from sqt.dna import amino_acid_regex
+from .utils import UniqueNamer
 
 logger = logging.getLogger(__name__)
 
@@ -124,25 +125,6 @@ def looks_like_V_gene(s):
 	return False
 
 	#return bool(V_GENE_REGEX.match(s))
-
-
-class UniqueNamer:
-	"""
-	Assign unique names by appending letters to already seen ones.
-	"""
-	def __init__(self):
-		self._names = set()
-
-	def __call__(self, name):
-		ext = 'A'
-		new_name = name
-		while new_name in self._names:
-			if ext == '[':
-				raise ValueError('too many duplicate names')
-			new_name = name + ext
-			ext = chr(ord(ext) + 1)
-		self._names.add(new_name)
-		return new_name
 
 
 def main(args):

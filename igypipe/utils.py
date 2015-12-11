@@ -111,3 +111,22 @@ def natural_sort_key(s, _nsre=re.compile('([0-9]+)')):
 def nt_to_aa(s):
 	"""Translate nucleotide sequence to amino acid sequence"""
 	return ''.join(GENETIC_CODE.get(s[i:i+3], '*') for i in range(0, len(s), 3))
+
+
+class UniqueNamer:
+	"""
+	Assign unique names by appending letters to already seen ones.
+	"""
+	def __init__(self):
+		self._names = set()
+
+	def __call__(self, name):
+		ext = 'A'
+		new_name = name
+		while new_name in self._names:
+			if ext == '[':
+				raise ValueError('Too many duplicate names')
+			new_name = name + ext
+			ext = chr(ord(ext) + 1)
+		self._names.add(new_name)
+		return new_name
