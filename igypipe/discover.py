@@ -74,14 +74,6 @@ def add_arguments(parser):
 	arg('table', help='Table with parsed IgBLAST results')  # nargs='+'
 
 
-def sister_sequence(group, program='muscle-medium', threshold=0.6, maximum_subsample_size=1600):
-	"""
-	For a given group, compute a consensus sequence over the V gene sequences
-	in that group.
-	"""
-	return iterative_consensus(list(group.V_nt), program, threshold, maximum_subsample_size=maximum_subsample_size)
-
-
 class SisterMerger:
 	"""
 	Merge very similar consensus sequences into single entries. This could be
@@ -152,6 +144,15 @@ class Discoverer:
 		self.approx_columns = approx_columns
 		self.max_n_bases = max_n_bases
 
+	def _sister_sequence(self, group):
+		"""
+		For a given group, compute a consensus sequence over the V gene sequences
+		in that group.
+		"""
+		return iterative_consensus(list(group.V_nt), program='muscle-medium',
+			threshold=self.consensus_threshold/100,
+			maximum_subsample_size=self.downsample)
+
 	def __call__(self, args):
 		"""
 		Discover new V genes. args is a tuple (gene, group)
@@ -167,7 +168,7 @@ class Discoverer:
 			group_in_window = group[(left <= group.V_SHM) & (group.V_SHM < right)]
 			if len(group_in_window) < MINGROUPSIZE_CONSENSUS:
 				continue
-			sister = sister_sequence(group_in_window, threshold=self.consensus_threshold/100, maximum_subsample_size=self.downsample)
+			sister = self._sister_sequence(group_in_window)
 			if left == int(left):
 				left = int(left)
 			if right == int(right):
@@ -180,7 +181,8 @@ class Discoverer:
 			indices = downsampled(list(group.index), self.cluster_subsample_size)
 			sequences = list(group.V_nt.loc[indices])
 			df, linkage, clusters = cluster_sequences(sequences)
-			logger.info('Clustering sequences for %r gave %d cluster(s)', gene, len(set(clusters)))
+			logger.info('Clustering sequences for %r gave %d cluster(s)', gene,
+				len(set(clusters)))
 			cluster_indices = [ [] for _ in range(max(clusters) + 1) ]
 			for i, cluster_id in enumerate(clusters):
 				cluster_indices[cluster_id].append(indices[i])
@@ -190,7 +192,7 @@ class Discoverer:
 				group_in_window = group.loc[ind]
 				if len(group_in_window) < MINGROUPSIZE_CONSENSUS:
 					continue
-				sister = sister_sequence(group_in_window, threshold=self.consensus_threshold/100, maximum_subsample_size=self.downsample)
+				sister = self._sister_sequence(group_in_window)
 				name = 'cl{}'.format(cl)
 				info = SisterInfo(sister, False, name, group_in_window)
 				sisters.add(info)
@@ -202,9 +204,9 @@ class Discoverer:
 			n_bases = sister.count('N')
 			if n_bases > self.max_n_bases:
 				continue
-			group['consensus_diff'] = [ edit_distance(v_nt, sister) for v_nt in group.V_nt ]
 			group_exact_V = group[group.V_nt == sister]
 			if self.approx_columns:
+				group['consensus_diff'] = [ edit_distance(v_nt, sister) for v_nt in group.V_nt ]
 				group_approximate_V = group[group.consensus_diff <= len(sister) * self.v_error_rate]
 
 			groups = (
@@ -216,7 +218,6 @@ class Discoverer:
 			for key, g in groups:
 				unique_J = len(set(s for s in g.J_gene if s))
 				unique_CDR3 = len(set(s for s in g.CDR3_nt if s))
-				assert len(set(g.index)) == len(g.index)  # TODO remove this
 				count = len(g.index)
 				info[key] = Groupinfo(count=count, unique_J=unique_J, unique_CDR3=unique_CDR3)
 			if gene in self.database:
