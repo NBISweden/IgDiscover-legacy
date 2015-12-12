@@ -23,19 +23,23 @@ logger = logging.getLogger(__name__)
 
 
 def add_arguments(parser):
-	parser.add_argument('--minimum-db-diff', '-b', type=int, metavar='N', default=0,
-		help='Sequences must have at least N differences to the database sequence. Default: %(default)s')
-	parser.add_argument('--maximum-N', '-N', type=int, metavar='COUNT', default=0,
-		help='Sequences must have at most COUNT N bases. Default: %(default)s')
-	parser.add_argument('--unique-CDR3', type=int, metavar='COUNT', default=1,
-		help='Sequences must have at least COUNT exact unique CDR3s. Default: %(default)s')
-	parser.add_argument('--looks-like-V', action='store_true', default=False,
+	arg = parser.add_argument
+	arg('--minimum-db-diff', '-b', type=int, metavar='N', default=0,
+		help='Sequences must have at least N differences to the database '
+		'sequence. Default: %(default)s')
+	arg('--maximum-N', '-N', type=int, metavar='COUNT', default=0,
+		help='Sequences must have at most COUNT "N" bases. Default: %(default)s')
+	arg('--unique-CDR3', type=int, metavar='N', default=1,
+		help='Sequences must have at least N exact unique CDR3s. '
+		'Default: %(default)s')
+	arg('--looks-like-V', action='store_true', default=False,
 		help='Sequences must look like V genes (uses the looks_like_V column). '
 		'Default: Column is ignored')
-	parser.add_argument('--database', metavar='DATABASE.FASTA',
+	arg('--database', metavar='DATABASE.FASTA',
 		help='Existing (to be augmented) database in FASTA format')
-	parser.add_argument('tables', metavar='DISCOVER.TAB',
-		help='Tables (zero or more) created by the "discover" command', nargs='*')
+	arg('tables', metavar='DISCOVER.TAB',
+		help='Tables (zero or more) created by the "discover" command',
+		nargs='*')
 
 
 SequenceInfo = namedtuple('SequenceInfo', 'sequence name')
