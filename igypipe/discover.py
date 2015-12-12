@@ -280,10 +280,10 @@ def main(args):
 	writer = csv.writer(sys.stdout, delimiter='\t')
 	columns = [
 		'source_gene',
-		'subsets',
-		'subset_seqs',
-		'subset_unique_J',
-		'subset_unique_CDR3',
+		'consensus_from',
+		'consensus_seqs',
+		'consensus_unique_J',
+		'consensus_unique_CDR3',
 		'exact_seqs',
 		'exact_unique_J',
 		'exact_unique_CDR3',
