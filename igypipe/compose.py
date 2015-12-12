@@ -24,6 +24,9 @@ logger = logging.getLogger(__name__)
 
 def add_arguments(parser):
 	arg = parser.add_argument
+	arg('--consensus-seqs', type=int, metavar='N', default=100,
+		help='Consensus must represent at least N sequences. '
+		'Default: %(default)s')
 	arg('--minimum-db-diff', '-b', type=int, metavar='N', default=0,
 		help='Sequences must have at least N differences to the database '
 		'sequence. Default: %(default)s')
@@ -116,6 +119,7 @@ def main(args):
 		table = table[table.exact_unique_CDR3 >= args.unique_CDR3]
 		if args.looks_like_V:
 			table = table[table.looks_like_V == 1]
+		table = table[table.consensus_seqs >= args.consensus_seqs]
 		table = table.dropna()
 		logger.info('Table read from %r contains %s candidate V gene sequences. '
 			'%s remain after filtering', path,
