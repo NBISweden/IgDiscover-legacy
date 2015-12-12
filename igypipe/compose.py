@@ -6,6 +6,7 @@ subcommand, this script can be used to create a new V gene database. The
 following filtering and processing steps are performed:
 
 * Discard sequences with N bases
+* Discard sequences that come from a consensus over too few source sequences 
 * Discard sequences with too few unique CDR3s (exact_unique_CDR3 column)
 * Discard sequences identical to one of the database sequences
 * Discard sequences that do not match a set of known good motifs
@@ -59,26 +60,11 @@ class SequenceMerger(Merger):
 
 		s and t must have attributes sequence and name.
 		"""
-		seq = []
-		for c1, c2 in zip_longest(s.sequence, t.sequence):
-			if c1 is None:
-				c = c2
-			elif c2 is None:
-				c = c1
-			#elif c1 == 'N':
-				#c = c2
-			#elif c2 == 'N':
-				#c = c1
-			elif c1 != c2:
-				return None
-			else:
-				assert c1 == c2
-				c = c1
-			seq.append(c)
-		seq = ''.join(seq)
-		name = ';'.join(set(s.name.split(';')).union(t.name.split(';')))
-		return SequenceInfo(seq, name)
-
+		if s.sequence.startswith(t.sequence):
+			return s
+		if t.sequence.startswith(s.sequence):
+			return t
+		return None
 
 def main(args):
 	merger = SequenceMerger()
