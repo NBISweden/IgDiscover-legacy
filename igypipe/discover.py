@@ -21,7 +21,7 @@ from sqt.utils import available_cpu_count
 from .table import read_table
 from .utils import iterative_consensus, sequence_hash, downsampled, SerialPool
 from .cluster import cluster_sequences
-from .utils import looks_like_V_gene
+from .utils import looks_like_V_gene, Merger
 
 logger = logging.getLogger(__name__)
 
@@ -74,31 +74,14 @@ def add_arguments(parser):
 	arg('table', help='Table with parsed IgBLAST results')  # nargs='+'
 
 
-class SisterMerger:
+class SisterMerger(Merger):
 	"""
 	Merge very similar consensus sequences into single entries. This could be
 	seen as a type of clustering using very specific criteria. Two sequences
 	are merged if one is the prefix of the other, allowing differences where
 	one of the sequences has an 'N' base.
 	"""
-	def __init__(self):
-		self._sequences = []
-
-	def add(self, info):
-		# See if we already have a similar sequence
-		for i, s in enumerate(self._sequences):
-			c = self._merged(s, info)
-			if c is not None:
-				self._sequences[i] = c
-				break
-		else:
-			self._sequences.append(info)
-
-	def __iter__(self):
-		yield from self._sequences
-
-	@staticmethod
-	def _merged(s, t):
+	def merged(self, s, t):
 		chars = []
 		for c1, c2 in zip_longest(s.sequence, t.sequence):
 			if c1 is None:

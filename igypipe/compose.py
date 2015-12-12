@@ -17,7 +17,7 @@ from collections import namedtuple
 from itertools import zip_longest
 import pandas as pd
 from sqt import FastaReader
-from .utils import UniqueNamer
+from .utils import UniqueNamer, Merger
 
 logger = logging.getLogger(__name__)
 
@@ -48,30 +48,11 @@ def add_arguments(parser):
 SequenceInfo = namedtuple('SequenceInfo', 'sequence name')
 
 
-class Merger:
+class SequenceMerger(Merger):
 	"""
 	Merge sequences where one is a prefix of the other into single entries.
-
-	TODO unify with discover.SisterMerger?
 	"""
-	def __init__(self):
-		self._sequences = []
-
-	def add(self, info):
-		# See if we already have a similar sequence
-		for i, s in enumerate(self._sequences):
-			c = self._merged(s, info)
-			if c is not None:
-				self._sequences[i] = c
-				break
-		else:
-			self._sequences.append(info)
-
-	def __iter__(self):
-		yield from self._sequences
-
-	@staticmethod
-	def _merged(s, t):
+	def merged(self, s, t):
 		"""
 		Merge two sequences if one is the prefix of the other. If they should
 		not be merged, None is returned.
@@ -100,7 +81,7 @@ class Merger:
 
 
 def main(args):
-	merger = Merger()
+	merger = SequenceMerger()
 	previous_n = 0
 	if args.database:
 		for record in FastaReader(args.database):

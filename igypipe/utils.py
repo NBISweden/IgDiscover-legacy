@@ -166,3 +166,33 @@ def looks_like_V_gene(s):
 	return False
 
 	#return bool(_V_GENE_REGEX.match(s))
+
+
+class Merger:
+	"""
+	Merge similar items into one. To specify what "similar" means, implement
+	the merged() method in a subclass.
+	"""
+	def __init__(self):
+		self._items = []
+
+	def add(self, item):
+		# See if we already have a similar item
+		for i, existing_item in enumerate(self._items):
+			m = self.merged(existing_item, item)
+			if m is not None:
+				self._items[i] = m
+				break
+		else:
+			self._items.append(item)
+
+	def __iter__(self):
+		yield from self._items
+
+	def merged(self, existing_item, item):
+		"""
+		If existing_item and item can be returned, this method must return
+		a new item that represents a merged version of bothe. If they cannot
+		be merged, it must return None.
+		"""
+		raise NotImplementedError("not implemented")
