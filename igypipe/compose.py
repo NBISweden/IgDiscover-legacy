@@ -18,6 +18,8 @@ from collections import namedtuple
 from itertools import zip_longest
 import pandas as pd
 from sqt import FastaReader
+from sqt.align import edit_distance
+
 from .utils import UniqueNamer, Merger
 
 logger = logging.getLogger(__name__)
@@ -28,6 +30,9 @@ def add_arguments(parser):
 	arg('--consensus-seqs', type=int, metavar='N', default=100,
 		help='Consensus must represent at least N sequences. '
 		'Default: %(default)s')
+	arg('--max-differences', type=int, metavar='MAXDIFF', default=1,
+		help='Merge sequences if they have at most MAXDIFF differences. '
+		'The one with more CDR3s is kept. Default: %(default)s')
 	arg('--minimum-db-diff', '-b', type=int, metavar='N', default=0,
 		help='Sequences must have at least N differences to the database '
 		'sequence. Default: %(default)s')
@@ -46,13 +51,17 @@ def add_arguments(parser):
 		nargs='*')
 
 
-SequenceInfo = namedtuple('SequenceInfo', 'sequence name')
+SequenceInfo = namedtuple('SequenceInfo', 'sequence name exact_unique_CDR3')
 
 
 class SequenceMerger(Merger):
 	"""
 	Merge sequences where one is a prefix of the other into single entries.
 	"""
+	def __init__(self, max_differences):
+		super().__init__()
+		self._max_differences = max_differences
+
 	def merged(self, s, t):
 		"""
 		Merge two sequences if one is the prefix of the other. If they should
@@ -64,15 +73,19 @@ class SequenceMerger(Merger):
 			return s
 		if t.sequence.startswith(s.sequence):
 			return t
+		if edit_distance(s.sequence, t.sequence) <= self._max_differences:
+			if s.exact_unique_CDR3 >= t.exact_unique_CDR3:
+				return s
+			return t
 		return None
 
 def main(args):
-	merger = SequenceMerger()
+	merger = SequenceMerger(args.max_differences)
 	previous_n = 0
 	if args.database:
 		for record in FastaReader(args.database):
 			previous_n += 1
-			merger.add(SequenceInfo(record.sequence.upper(), record.name))
+			merger.add(SequenceInfo(record.sequence.upper(), record.name, 0))  # TODO zero?
 
 	# Read in tables
 	total_unfiltered = 0
@@ -100,7 +113,7 @@ def main(args):
 
 	for table in tables:
 		for _, row in table.iterrows():
-			merger.add(SequenceInfo(row['consensus'], row['name']))
+			merger.add(SequenceInfo(row['consensus'], row['name'], row['exact_unique_CDR3']))
 
 	namer = UniqueNamer()
 	n = 0

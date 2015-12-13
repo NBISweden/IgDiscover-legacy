@@ -3,7 +3,7 @@ Test the SisterMerger class
 """
 import pandas as pd
 from igypipe.discover import SisterMerger, SisterInfo
-from igypipe.compose import Merger, SequenceInfo
+from igypipe.compose import SequenceMerger, SequenceInfo
 from igypipe.utils import UniqueNamer
 
 def test_0():
@@ -77,3 +77,23 @@ def test_unique_namer():
 	assert namer('YetAnotherName') == 'YetAnotherName'
 	assert namer('Name') == 'NameC'
 	assert namer('NameC') == 'NameCA'
+
+
+def test_sequence_merger_withCDR3():
+	merger = SequenceMerger(max_differences=1)
+	infos = [
+		SequenceInfo('ACGTTA', 'Name1', 15),
+		SequenceInfo('ACGTTAT', 'Name2', 100),  # kept because it is longer
+		SequenceInfo('ACGCCAT', 'Name3', 15),  # kept because edit distance > 1
+		SequenceInfo('ACGGTAT', 'Name5', 120),  # kept because more CDR3s
+	]
+	merger.add(infos[0]); merged = list(merger)
+	assert len(merged) == 1 and merged[0] == infos[0]
+	merger.add(infos[0]); merged = list(merger)
+	assert len(merged) == 1 and merged[0] == infos[0]
+	merger.add(infos[1]); merged = list(merger)
+	assert len(merged) == 1 and merged[0] == infos[1]
+	merger.add(infos[2]); merged = list(merger)
+	assert len(merged) == 2 and merged[0] == infos[1] and merged[1] == infos[2]
+	merger.add(infos[3]); merged = list(merger)
+	assert len(merged) == 2 and merged[0] == infos[3] and merged[1] == infos[2]
