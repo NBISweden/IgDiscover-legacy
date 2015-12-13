@@ -4,6 +4,7 @@ Installation
 
 To install IgY-Pipe, you first need to install the programs that it requires:
 
+* MUSCLE
 * FastQC
 * vsearch
 * IgBLAST
