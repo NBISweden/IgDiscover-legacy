@@ -3,6 +3,7 @@ Draw a dendrogram of sequences in a FASTA file.
 """
 import logging
 import sys
+import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -34,6 +35,11 @@ def main(args):
 	if len(sequences) >= 2:
 		m = distances([s.sequence for s in sequences])
 		y = distance.squareform(m)
+		mindist = int(y.min())
+		logger.info('Smallest distance is %s. Found between:', mindist)
+		for i,j in np.argwhere(m == y.min()):
+			if i < j:
+				logger.info('%s and %s', labels[i], labels[j])
 		l = hierarchy.average(y)  # UPGMA
 		hierarchy.dendrogram(l, labels=labels, leaf_font_size=font_size, orientation='right', color_threshold=0.95*max(l[:,2]))
 	else:
