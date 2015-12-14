@@ -105,7 +105,7 @@ PER_ITERATION_TARGETS = [
 	'unique.errorhistograms.pdf',
 	'unique.V_usage.tab',
 	'unique.V_usage.pdf',
-	'database/{species}_V-dendrogram.pdf'.format(species=config.species),
+	'V_dendrogram.pdf',
 ]
 # targets for last iteration only
 FINAL_TARGETS = [
@@ -548,8 +548,8 @@ rule stats_plot_errorhistograms:
 
 rule dendrogram:
 	output:
-		pdf='{base}-dendrogram.pdf'
+		pdf='{dir}/{gene}_dendrogram.pdf'
 	input:
-		fasta='{base}.fasta'
+		fasta='{{dir}}/database/{species}_{{gene}}.fasta'.format(species=config.species)
 	shell:
 		'igypipe dendrogram {input.fasta} {output.pdf}'
