@@ -518,15 +518,20 @@ rule igypipe_discover:
 		"{output.tab}.tmp && mv {output.tab}.tmp {output.tab}"
 
 
-
 rule igypipe_compose:
 	"""Construct a new database out of the discovered sequences"""
 	output:
 		fasta='iteration-{nr}/new_V_database.fasta'
 	input:
 		tab='iteration-{nr}/candidates.tab'
-	shell:
-		"igypipe compose --looks-like-V --unique-CDR3 2 {input.tab} > {output.fasta}.tmp && mv {output.fasta}.tmp {output.fasta}"
+	run:
+		nr = int(wildcards.nr, base=10)
+		if nr == config.iterations:
+			# Apply stricter filtering criteria for final iteration
+			criteria = '--looks-like-V --unique-CDR3 3 --consensus-seqs 500'
+		else:
+			criteria = '--looks-like-V --unique-CDR3 2 --consensus-seqs 100'
+		shell("igypipe compose {criteria} {input.tab} > {output.fasta}.tmp && mv {output.fasta}.tmp {output.fasta}")
 
 
 rule stats_correlation_V_J:
