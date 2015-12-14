@@ -6,8 +6,9 @@ library_name:
 species: rhesus_monkey
 
 
-# How many iterations to run the pipeline when discovering new V genes.
-iterations: 1
+# How many discovery iterations to run.
+# If 0, the database will not be updated.
+iterations: 0
 
 
 # Filter out merged reads that are shorter than this length.

@@ -109,4 +109,4 @@ def test_sequence_merger_prefix():
 	merger.add(infos[1])
 	merged = list(merger)
 	assert len(merged) == 1
-	assert merged[0] == infos[0]  # TODO or should it be infos[1]?
+	assert merged[0] == infos[0]
