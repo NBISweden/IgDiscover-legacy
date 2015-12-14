@@ -47,8 +47,8 @@ def add_arguments(parser):
 	arg('--database', metavar='DATABASE.FASTA',
 		help='Existing (to be augmented) database in FASTA format')
 	arg('tables', metavar='DISCOVER.TAB',
-		help='Tables (zero or more) created by the "discover" command',
-		nargs='*')
+		help='Tables (one or more) created by the "discover" command',
+		nargs='+')
 
 
 SequenceInfo = namedtuple('SequenceInfo', 'sequence name exact_unique_CDR3')
