@@ -92,6 +92,9 @@ def main(args):
 	tables = []
 	for path in args.tables:
 		table = pd.read_csv(path, sep='\t')
+		# TODO remove this after deprecation period
+		table.rename(columns=dict(window_seqs='consensus_seqs', subset_seqs='consensus_seqs'), inplace=True)
+
 		unfiltered_length = len(table)
 		table = table[table.database_diff >= args.minimum_db_diff]
 		if 'N_bases' in table.columns:
