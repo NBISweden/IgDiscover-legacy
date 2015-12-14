@@ -69,15 +69,18 @@ class SequenceMerger(Merger):
 
 		s and t must have attributes sequence and name.
 		"""
-		if s.sequence.startswith(t.sequence):
-			return s
-		if t.sequence.startswith(s.sequence):
-			return t
-		if edit_distance(s.sequence, t.sequence) <= self._max_differences:
+		s_seq = s.sequence
+		t_seq = t.sequence
+		# Make both sequences the same length - cheap trick to not penalize
+		# end gaps
+		s_seq += t_seq[len(s_seq):]
+		t_seq += s_seq[len(t_seq):]
+		if edit_distance(s_seq, t_seq) <= self._max_differences:
 			if s.exact_unique_CDR3 >= t.exact_unique_CDR3:
 				return s
 			return t
 		return None
+
 
 def main(args):
 	merger = SequenceMerger(args.max_differences)

@@ -97,3 +97,16 @@ def test_sequence_merger_withCDR3():
 	assert len(merged) == 2 and merged[0] == infos[1] and merged[1] == infos[2]
 	merger.add(infos[3]); merged = list(merger)
 	assert len(merged) == 2 and merged[0] == infos[3] and merged[1] == infos[2]
+
+
+def test_sequence_merger_prefix():
+	merger = SequenceMerger(max_differences=1)
+	infos = [
+		SequenceInfo('AAATAA', 'Name1', 117),
+		SequenceInfo('AAACAAG', 'Name2', 10),
+	]
+	merger.add(infos[0])
+	merger.add(infos[1])
+	merged = list(merger)
+	assert len(merged) == 1
+	assert merged[0] == infos[0]  # TODO or should it be infos[1]?
