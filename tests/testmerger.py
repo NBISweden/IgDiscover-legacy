@@ -96,7 +96,7 @@ def test_sequence_merger_withCDR3():
 	merger.add(infos[2]); merged = list(merger)
 	assert len(merged) == 2 and merged[0] == infos[1] and merged[1] == infos[2]
 	merger.add(infos[3]); merged = list(merger)
-	assert len(merged) == 2 and merged[0] == infos[3] and merged[1] == infos[2]
+	assert len(merged) == 2 and merged[0] == infos[2] and merged[1] == infos[3]
 
 
 def test_sequence_merger_prefix():
@@ -110,3 +110,18 @@ def test_sequence_merger_prefix():
 	merged = list(merger)
 	assert len(merged) == 1
 	assert merged[0] == infos[0]
+
+
+def test_merger_check_all_previous():
+	merger = SequenceMerger(max_differences=1)
+	infos = [
+		SequenceInfo('ATAAAA', 's1', 11),
+		SequenceInfo('AAGAAA', 's2', 12),
+		SequenceInfo('AAACAA', 's3', 13),
+		SequenceInfo('AAAAAA', 'Final', 200)
+	]
+	for info in infos:
+		merger.add(info)
+	merged = list(merger)
+	assert len(merged) == 1
+	assert merged[0] == infos[3]

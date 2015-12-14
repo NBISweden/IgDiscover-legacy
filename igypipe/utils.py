@@ -177,14 +177,19 @@ class Merger:
 		self._items = []
 
 	def add(self, item):
-		# See if we already have a similar item
-		for i, existing_item in enumerate(self._items):
+		# This method could possibly be made simpler if the graph structure
+		# was made explicit.
+
+		items = []
+		m = None
+		for existing_item in self._items:
 			m = self.merged(existing_item, item)
-			if m is not None:
-				self._items[i] = m
-				break
-		else:
-			self._items.append(item)
+			if m is None:
+				items.append(existing_item)
+			else:
+				item = m
+		items.append(item)
+		self._items = items
 
 	def __iter__(self):
 		yield from self._items
@@ -192,7 +197,7 @@ class Merger:
 	def merged(self, existing_item, item):
 		"""
 		If existing_item and item can be returned, this method must return
-		a new item that represents a merged version of bothe. If they cannot
+		a new item that represents a merged version of both. If they cannot
 		be merged, it must return None.
 		"""
 		raise NotImplementedError("not implemented")
