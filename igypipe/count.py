@@ -78,7 +78,7 @@ def main(args):
 	ax.set_xticks(np.arange(len(counts)) + 0.5)
 	ax.set_xticklabels(counts.index, rotation='vertical')
 	ax.grid(axis='x')
-	ax.set_xlim((-0.5, None))
+	ax.set_xlim((-0.25, len(counts)))
 	ax.bar(np.arange(len(counts)), counts['count'])
 	fig.set_tight_layout(True)
 	fig.savefig(args.plot)
