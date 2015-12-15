@@ -581,4 +581,4 @@ rule dendrogram:
 	input:
 		fasta='{{dir}}/database/{species}_{{gene}}.fasta'.format(species=config.species)
 	shell:
-		'igypipe dendrogram {input.fasta} {output.pdf}'
+		'igypipe dendrogram --mark database/{config.species}_{wildcards.gene}.fasta {input.fasta} {output.pdf}'
