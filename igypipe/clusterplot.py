@@ -19,6 +19,8 @@ def add_arguments(parser):
 		help='Compute consensus for this gene. Can be given multiple times. Default: Compute for all genes.')
 	arg('--size', metavar='N', type=int, default=300,
 		help='Show at most N sequences (with a matrix of size N x N). Default: %(default)s')
+	arg('--ignore-J', action='store_true', default=False,
+		help='Include also rows without J assignment or J%%SHM>0.')
 	arg('--dpi', type=int, default=200, help='Resolution of output file. Default: %(default)s')
 	arg('--no-title', dest='title', action='store_false', default=True,
 		help='Do not add a title to the plot')
@@ -71,8 +73,10 @@ def main(args):
 
 	# Discard rows with any mutation within J at all
 	logger.info('%s rows read', len(table))
-	table = table[table.J_SHM == 0][:]
-	logger.info('%s rows remain after discarding J%%SHM > 0', len(table))
+	if not args.ignore_J:
+		# Discard rows with any mutation within J at all
+		table = table[table.J_SHM == 0][:]
+		logger.info('%s rows remain after discarding J%%SHM > 0', len(table))
 
 	genes = frozenset(args.gene)
 	n = 0

@@ -17,6 +17,8 @@ logger = logging.getLogger(__name__)
 def add_arguments(parser):
 	parser.add_argument('--minimum-group-size', '-m', metavar='N', default=200,
 		help='Do not plot if there are less than N sequences for a gene (default: %(default)s)')
+	parser.add_argument('--ignore-J', action='store_true', default=False,
+		help='Include also rows without J assignment or J%%SHM>0.')
 	parser.add_argument('table', help='Table with parsed IgBLAST results')
 	parser.add_argument('pdf', help='Plot error frequency histograms to this PDF file', default=None)
 
@@ -52,8 +54,10 @@ def main(args):
 
 	# Discard rows with any mutation within J at all
 	logger.info('%s rows read', len(table))
-	table = table[table.J_SHM == 0][:]
-	logger.info('%s rows remain after discarding J%%SHM > 0', len(table))
+	if not args.ignore_J:
+		# Discard rows with any mutation within J at all
+		table = table[table.J_SHM == 0][:]
+		logger.info('%s rows remain after discarding J%%SHM > 0', len(table))
 
 	n = 0
 	too_few = 0

@@ -33,6 +33,7 @@ class Config:
 		self.mismatch_penalty = None
 		self.barcode_length = 0
 		self.iterations = 1
+		self.ignore_j = False
 		self.subsample = 500
 		self.stranded = False
 		self.forward_primers = None
@@ -499,9 +500,10 @@ rule igypipe_clusterplot:
 	input:
 		tab="{dir}/unique.filtered.tab"
 	params:
-		clusterplots="{dir}/clusterplots/"
+		clusterplots="{dir}/clusterplots/",
+		ignore_j='--ignore-J' if config.ignore_j else ''
 	shell:
-		"igypipe clusterplot {input.tab} {params.clusterplots} && touch {output.done}"
+		"igypipe clusterplot {params.ignore_j} {input.tab} {params.clusterplots} && touch {output.done}"
 
 
 rule igypipe_discover:
@@ -511,10 +513,13 @@ rule igypipe_discover:
 	input:
 		v_reference="{{dir}}/database/{species}_V.fasta".format(species=config.species),
 		tab="{dir}/unique.filtered.tab"
+	params:
+		ignore_j='--ignore-J' if config.ignore_j else ''
 	threads: 4  # TODO this could be increased up to 6
 	shell:
 		"igypipe discover -j {threads} --cluster --subsample {config.subsample} "
-		"--window-width 2 --database {input.v_reference} {input.tab} > "
+		"--window-width 2 --database {input.v_reference} {params.ignore_j} "
+		"{input.tab} > "
 		"{output.tab}.tmp && mv {output.tab}.tmp {output.tab}"
 
 
@@ -566,13 +571,15 @@ rule stats_correlation_V_J:
 		fig.savefig(output.pdf)
 
 
-rule stats_plot_errorhistograms:
+rule plot_errorhistograms:
 	output:
 		pdf='{base}.errorhistograms.pdf',
 	input:
 		table='{base}.filtered.tab'
+	params:
+		ignore_j='--ignore-J' if config.ignore_j else ''
 	shell:
-		'igypipe errorplot {input.table} {output.pdf}'
+		'igypipe errorplot {params.ignore_j} {input.table} {output.pdf}'
 
 
 rule dendrogram:

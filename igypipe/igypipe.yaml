@@ -53,6 +53,11 @@ reverse_primers:
 
 ## Advanced settings (usually do not need to be changed)
 
+# When discovering new V genes, ignore whether a J gene has been assigned
+# and also ignore its %SHM.
+
+# ignore_j: false
+
 
 # Read merging program. Choose either 'pear' or 'flash'.
 # pear merges more reads, but is slower.
