@@ -25,7 +25,7 @@ setup(
 		'sqt>=0.5.0',
 		'pandas>=0.16.2',
 		'numpy',
-		'matplotlib',
+		'matplotlib>1.5.0',
 		'snakemake',
 		'cutadapt',
 		'seaborn>=0.6.0',
