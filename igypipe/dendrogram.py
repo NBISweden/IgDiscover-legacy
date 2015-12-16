@@ -25,16 +25,34 @@ def add_arguments(parser):
 	parser.add_argument('plot', help='Path to output PDF or PNG')
 
 
+class PrefixComparer:
+	def __init__(self, sequences):
+		self._sequences = [ s.upper() for s in sequences ]
+
+	def __contains__(self, other):
+		for seq in self._sequences:
+			if seq.startswith(other) or other.startswith(seq):
+				return True
+		return False
+
+
 def main(args):
 	with FastaReader(args.fasta) as fr:
 		sequences = list(fr)
+	logger.info('Plotting dendrogram of %s sequences', len(sequences))
 	if args.mark:
 		with FastaReader(args.mark) as fr:
-			mark = set(record.sequence for record in fr)
-		labels = [
-			record.name + (' (new)' if record.sequence not in mark else '')
-			for record in sequences
-		]
+			mark = PrefixComparer(record.sequence for record in fr)
+		labels = []
+		n_new = 0
+		for record in sequences:
+			if record.sequence not in mark:
+				extra = ' (new)'
+				n_new += 1
+			else:
+				extra = ''
+			labels.append(record.name + extra)
+		logger.info('%s sequences marked as "new"', n_new)
 	else:
 		labels = [s.name for s in sequences]
 	sns.set_style("white")
