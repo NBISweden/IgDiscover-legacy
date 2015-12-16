@@ -76,7 +76,7 @@ except FileNotFoundError:
 		sys.exit("Pipeline configuration file 'igypipe.yaml' not found. Please create it!")
 
 print('IgY-Pipe configuration:')
-for k, v in vars(config).items():
+for k, v in sorted(vars(config).items()):
 	# TODO the following line is only necessary for non-YAML configurations
 	if k.startswith('_'):
 		continue
