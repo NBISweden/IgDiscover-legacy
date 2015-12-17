@@ -14,9 +14,11 @@ import logging
 import importlib
 from sqt import HelpfulArgumentParser
 import matplotlib as mpl
-mpl.use('Agg')
-
+import warnings
 from . import __version__
+
+mpl.use('Agg')
+warnings.filterwarnings('ignore', 'axes.color_cycle is deprecated and replaced with axes.prop_cycle')
 
 # List of all subcommands. A module of the given name must exist and define
 # add_arguments() and main() functions. Documentation is taken from the first
