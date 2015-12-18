@@ -1,9 +1,9 @@
 """
 Rename sequences in a target FASTA file using a template FASTA file
 
-Entries in the target file that have equivalent sequence will be renamed to match
-the name in the template file. Sequences are considered to be equivalent if one
-is a prefix of the other.
+The sequences in the target file will get the name that they have in the
+template file. Sequences are considered to be equivalent if one is a prefix of
+the other.
 """
 import logging
 from collections import Counter
@@ -66,13 +66,13 @@ class PrefixDict:
 def main(args):
 	templates = dict()  # maps sequences to names
 	with FastaReader(args.template) as fr:
-		templates = PrefixDict([])
+		template = PrefixDict([])
 		for record in fr:
 			try:
-				templates.add(record.sequence.upper(), record.name)
+				template.add(record.sequence.upper(), record.name)
 			except ValueError:
 				logger.error('Sequences in entry %r and %r are duplicate',
-					record.name, templates[record.sequence.upper()])
+					record.name, template[record.sequence.upper()])
 	logger.info('Read %d entries from template', len(templates))
 
 	with FastaReader(args.target) as fr:
@@ -80,7 +80,7 @@ def main(args):
 
 	# Rename
 	for record in sequences:
-		record.name = templates.get(record.sequence.upper(), record.name + args.not_found)
+		record.name = template.get(record.sequence.upper(), record.name + args.not_found)
 
 	if args.sort:
 		sequences = sorted(sequences, key=lambda s: natural_sort_key(s.name))
