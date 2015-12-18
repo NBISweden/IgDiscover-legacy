@@ -52,7 +52,7 @@ def main(args):
 			else:
 				extra = ''
 			labels.append(record.name + extra)
-		logger.info('%s sequences marked as "new"', n_new)
+		logger.info('%s sequence(s) marked as "new"', n_new)
 	else:
 		labels = [s.name for s in sequences]
 	sns.set_style("white")
