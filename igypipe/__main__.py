@@ -39,6 +39,7 @@ COMMANDS = [
 	'upstream',
 	'dendrogram',
 	'rename',
+	'union',
 ]
 
 logger = logging.getLogger(__name__)
