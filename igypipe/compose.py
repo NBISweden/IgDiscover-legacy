@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 def add_arguments(parser):
 	arg = parser.add_argument
-	arg('--consensus-seqs', type=int, metavar='N', default=100,
+	arg('--consensus-seqs', type=int, metavar='N', default=0,
 		help='Consensus must represent at least N sequences. '
 		'Default: %(default)s')
 	arg('--max-differences', type=int, metavar='MAXDIFF', default=1,

@@ -542,7 +542,7 @@ rule igypipe_compose:
 			# Apply stricter filtering criteria for final iteration
 			criteria += '--unique-CDR3=3 --consensus-seqs=200'
 		else:
-			criteria += '--unique-CDR3=2 --consensus-seqs=100'
+			criteria += '--unique-CDR3=2'
 		shell("igypipe compose {criteria} {input.tab} > {output.fasta}.tmp && mv {output.fasta}.tmp {output.fasta}")
 
 
