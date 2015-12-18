@@ -19,7 +19,7 @@ import yaml
 from sqt.dna import reverse_complement
 from sqt import FastaReader
 import igypipe
-
+from igypipe.utils import relative_symlink
 
 class Config:
 	def __init__(self, path):
@@ -262,10 +262,12 @@ else:
 		output: fastq='reads/forward-primer-trimmed.fastq.gz'
 		input: fastq=MERGED_READS
 		resources: time=1
-		shell:
-			# The -r option is not available in older GNU coreutils.
-			# Change to ln -sf ../{input.fastq} {output.fastq} if you have problems.
-			'ln -srf {input.fastq} {output.fastq}'
+		run:
+			try:
+				os.remove(output.fastq)
+			except FileNotFoundError:
+				pass
+			relative_symlink(input.fastq, output.fastq)
 
 
 if config.reverse_primers:
@@ -292,8 +294,12 @@ else:
 		output: fastq='reads/trimmed.fastq.gz'
 		input: fastq='reads/forward-primer-trimmed.fastq.gz'
 		resources: time=1
-		shell:
-			'ln -srf {input.fastq} {output.fastq}'
+		run:
+			try:
+				os.remove(output.fastq)
+			except FileNotFoundError:
+				pass
+			relative_symlink(input.fastq, output.fastq)
 
 
 rule fastqc:

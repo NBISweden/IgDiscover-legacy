@@ -3,6 +3,7 @@ Some utility functions that work on sequences and lists of sequences.
 """
 import random
 import hashlib
+import os
 from collections import OrderedDict
 import numpy as np
 import re
@@ -201,3 +202,11 @@ class Merger:
 		be merged, it must return None.
 		"""
 		raise NotImplementedError("not implemented")
+
+
+def relative_symlink(src, dst):
+	"""
+	Create a symbolic link in any directory.
+	"""
+	target = os.path.relpath(os.path.abspath(src), start=os.path.dirname(dst))
+	os.symlink(target, dst)
