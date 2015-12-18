@@ -77,6 +77,6 @@ def main(args):
 		for record in fr:
 			n += 1
 			s = record.sequence.upper()
-			name = templates.get(record.sequence, record.name + ' (not found)')
+			name = templates.get(record.sequence, record.name + args.not_found)
 			print('>{}\n{}'.format(name, record.sequence))
 	logger.info('Wrote %s FASTA records', n)
