@@ -8,11 +8,14 @@ is a prefix of the other.
 import logging
 from collections import Counter
 from sqt import FastaReader
+from .utils import natural_sort_key
 
 logger = logging.getLogger(__name__)
 
 def add_arguments(parser):
 	arg = parser.add_argument
+	arg('--no-sort', dest='sort', action='store_false', default=True,
+		help='Do not sort sequences by name')
 	arg('--not-found', metavar='TEXT', default=' (not found)',
 		help='Append this text to the record name when the sequence was not found '
 		'in the template. Default: %(default)r')
@@ -72,11 +75,15 @@ def main(args):
 					record.name, templates[record.sequence.upper()])
 	logger.info('Read %d entries from template', len(templates))
 
-	n = 0
 	with FastaReader(args.target) as fr:
-		for record in fr:
-			n += 1
-			s = record.sequence.upper()
-			name = templates.get(record.sequence, record.name + args.not_found)
-			print('>{}\n{}'.format(name, record.sequence))
-	logger.info('Wrote %s FASTA records', n)
+		sequences = list(fr)
+
+	# Rename
+	for record in sequences:
+		record.name = templates.get(record.sequence.upper(), record.name + args.not_found)
+
+	if args.sort:
+		sequences = sorted(sequences, key=lambda s: natural_sort_key(s.name))
+	for record in sequences:
+		print('>{}\n{}'.format(record.name, record.sequence))
+	logger.info('Wrote %s FASTA records', len(sequences))
