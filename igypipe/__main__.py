@@ -38,6 +38,7 @@ COMMANDS = [
 	'errorplot',
 	'upstream',
 	'dendrogram',
+	'rename',
 ]
 
 logger = logging.getLogger(__name__)

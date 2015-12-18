@@ -5,6 +5,8 @@ import pandas as pd
 from igypipe.discover import SisterMerger, SisterInfo
 from igypipe.compose import SequenceMerger, SequenceInfo
 from igypipe.utils import UniqueNamer
+from igypipe.rename import PrefixDict
+from nose.tools import raises
 
 def test_0():
 	merger = SisterMerger()
@@ -125,3 +127,28 @@ def test_merger_check_all_previous():
 	merged = list(merger)
 	assert len(merged) == 1
 	assert merged[0] == infos[3]
+
+
+
+class TestPrefixDict:
+	def setup(self):
+		self.pd = PrefixDict([
+			('AAACCT', 7),
+			('AGAAA', 11),
+			('AGAAC', 13)
+		])
+
+	@raises(KeyError)
+	def test_ambiguous(self):
+		self.pd['AGAA']
+
+	@raises(KeyError)
+	def test_missing(self):
+		self.pd['TTAAG']
+
+	def test_existing(self):
+		assert self.pd['AAACCT'] == 7
+		assert self.pd['AAACCT'] == 7
+		assert self.pd['AAA'] == 7
+		assert self.pd['AGAAAT'] == 11
+		assert self.pd['AGAACT'] == 13
