@@ -214,12 +214,12 @@ class Discoverer:
 			# Build the row for the output table
 			# TODO use UniqueNamer here
 			sequence_id = '{}{}_{}'.format(self.prefix, gene.rsplit('_S', 1)[0], sequence_hash(sister))
-			row = [gene, sister_info.name if len(sister_info.group) < len(group) else 'all']
+			row = [gene, sequence_id, sister_info.name if len(sister_info.group) < len(group) else 'all']
 			for key, _ in groups:
 				row.extend([info[key].count, info[key].unique_J, info[key].unique_CDR3])
 			if self.max_n_bases:
 				row += [n_bases]
-			row += [database_diff, int(looks_like_V_gene(sister)), sequence_id, sister]
+			row += [database_diff, int(looks_like_V_gene(sister)), sister]
 			rows.append(row)
 
 			# If a window was requested via --left/--right, write the 'approx'
@@ -263,6 +263,7 @@ def main(args):
 	writer = csv.writer(sys.stdout, delimiter='\t')
 	columns = [
 		'source_gene',
+		'name',
 		'consensus_from',
 		'consensus_seqs',
 		'consensus_unique_J',
@@ -278,7 +279,6 @@ def main(args):
 	columns += [
 		'database_diff',
 		'looks_like_V',
-		'name',
 		'consensus'
 	]
 	writer.writerow(columns)
