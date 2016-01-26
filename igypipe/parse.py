@@ -81,9 +81,17 @@ JunctionVDJ = namedtuple('JunctionVDJ', 'v_end vd_junction d_region dj_junction 
 JunctionVJ = namedtuple('JunctionVJ', 'v_end vj_junction j_start')
 
 
-_Hit = namedtuple('HitNT', 'subject_id query_start query_sequence '
-	'subject_start subject_sequence subject_length errors percent_identity '
-	'evalue')
+_Hit = namedtuple('_Hit', [
+	'subject_id',  # name of database record, such as "VH4.11"
+	'query_start',
+	'query_sequence',  # aligned part of the query
+	'subject_start',
+	'subject_sequence',  # aligned part of the reference
+	'subject_length',  # total length of reference, depends only on subject_id
+	'errors',
+	'percent_identity',
+	'evalue',
+])
 class Hit(_Hit):
 	def covered(self):
 		"""
@@ -115,7 +123,7 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 	# http://dx.doi.org/10.4161/mabs.27105
 	# The amino-acid version of the expression is:
 	# [FY][FWVHY]C[ETNGASDRIKVM]X{5,32}W[GAV]
-	cdr3regex = re.compile("""
+	CDR3REGEX = re.compile("""
 		(TT[TC] | TA[CT])                            # F or Y
 		(TT[CT] | TA[TC] | CA[TC] | GT[AGCT] | TGG)  # any of F, W, V, H, Y
 		(TG[TC])                                     # C
@@ -170,7 +178,7 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		'race_G',
 		'genomic_sequence',
 	]
-	def __new__(cls, record, barcode_length):
+	def __new__(cls, record, barcode_length, v_database):
 		d = record._asdict()
 		m = cls.SIZEREGEX.match(record.query_name)
 		if m:
@@ -182,9 +190,11 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		obj.size = size
 		return obj
 
-	def __init__(self, record, barcode_length):
+	def __init__(self, record, barcode_length, v_database):
 		self.barcode_length = barcode_length
 		self.barcode, self.race_g, self.genomic_sequence = self._split_barcode()
+		if 'V' in self.hits:
+			self.hits['V'] = self._fixed_v_hit(v_database)
 		self.utr, self.leader = self._utr_leader()
 		self.alignments['CDR3'] = self._fixed_cdr3_alignment()
 
@@ -244,6 +254,25 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		return AlignmentSummary(start=start, stop=stop, length=None, matches=None,
 			mismatches=None, gaps=None, percent_identity=None)
 
+	def _fixed_v_hit(self, v_database):
+		hit = self.hits['V']
+		logger.info('%s %d subject_id %s v hit has subject_start %d. query_start %s', self.query_name, self.size, hit.subject_id, hit.subject_start, hit.query_start)
+		if hit.subject_start != 1 or hit.query_start == 0:
+			return hit
+		d = hit._asdict()
+		assert self.full_sequence[d['query_start']:d['query_start'] + len(d['query_sequence'])] == d['query_sequence']
+		d['query_start'] -= 1
+		d['subject_start'] -= 1
+		d['query_sequence'] = self.full_sequence[d['query_start']:d['query_start'] + len(d['query_sequence']) + 1]
+		if v_database:
+			reference = v_database[hit.subject_id]
+			preceding_base = reference[d['subject_start']]
+		else:
+			preceding_base = 'N'
+		d['subject_sequence'] = preceding_base + d['subject_sequence']  # TODO maybe not needed
+		# TODO one could adjust the no. of errors, percent_identity (and E-value)
+		return Hit(**d)
+
 	def _cdr3_span(self):
 		"""
 		Return (start, end) of CDR3 relative to query. The CDR3 is detected
@@ -254,7 +283,7 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		hit_v = self.hits['V']
 		hit_j = self.hits['J']
 
-		match = self.cdr3regex.search(self.vdj_sequence)
+		match = self.CDR3REGEX.search(self.vdj_sequence)
 		if not match:
 			return None
 		# The first three and the last two codons are not part of the CDR3.
@@ -596,12 +625,18 @@ def main(args):
 	n = 0
 	if args.hdf5:
 		rows = []
-	writer = TableWriter(sys.stdout)
 
+	if args.vdatabase:
+		with SequenceReader(args.vdatabase) as fr:
+			v_database = { record.name: record.sequence.upper() for record in fr }
+	else:
+		v_database = None
+
+	writer = TableWriter(sys.stdout)
 	with xopen(args.fasta) as fasta, xopen(args.igblast) as igblast:
 		parser = IgBlastParser(fasta, igblast)
 		for record in parser:
-			extended_record = ExtendedIgBlastRecord(record, barcode_length=args.barcode_length)
+			extended_record = ExtendedIgBlastRecord(record, barcode_length=args.barcode_length, v_database=v_database)
 			d = extended_record.asdict()
 			n += 1
 			if args.rename is not None:
