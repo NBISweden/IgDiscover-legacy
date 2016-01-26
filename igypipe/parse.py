@@ -11,7 +11,7 @@ A few extra things are done in addition to parsing:
 """
 """
 TODO
-- barcode_length should not be an attribute of IgblastRecord and barcodes should
+- barcode_length should not be an attribute of IgBlastRecord and barcodes should
   be stripped off before running IgBLAST
 """
 from collections import namedtuple
@@ -34,10 +34,46 @@ def add_arguments(parser):
 		help='Rename reads to PREFIXseqN (where N is a number starting at 1)')
 	parser.add_argument('--barcode-length', type=int, default=0,
 		help='Default: %(default)s')
+	parser.add_argument('--vdatabase', '--vdb', metavar='FASTA',
+		help="Path to FASTA file with VH genes. Used to fix 5' ends of V gene alignments")
 	parser.add_argument('--hdf5', metavar='FILE',
 		help='Write table in HDF5 format to FILE')
 	parser.add_argument('igblast', help='IgBLAST output')
 	parser.add_argument('fasta', help='File with original reads')
+
+
+def none_if_na(s):
+	"""Return None if s == 'N/A'. Return s otherwise."""
+	return None if s == 'N/A' else s
+
+
+def split_by_section(it, section_starts):
+	"""
+	Parse a stream of lines into chunks of sections. When one of the lines
+	starts with a string given in section_starts, a new section is started, and
+	a tuple (head, lines) is returned where head is the matching line and lines
+	contains a list of the lines following the section header, up to (but
+	excluding) the next section header.
+
+	Works a bit like str.split(), but on lines.
+	"""
+	lines = None
+	header = None
+	for line in it:
+		line = line.strip()
+		for start in section_starts:
+			if line.startswith(start):
+				if header is not None:
+					yield (header, lines)
+				header = line
+				lines = []
+				break
+		else:
+			if header is None:
+				raise ParseError("Expected a line starting with one of {}".format(', '.join(section_starts)))
+			lines.append(line)
+	if header is not None:
+		yield (header, lines)
 
 
 AlignmentSummary = namedtuple('AlignmentSummary', 'start stop length matches mismatches gaps percent_identity')
@@ -57,13 +93,20 @@ class Hit(_Hit):
 		return len(self.subject_sequence) / self.subject_length
 
 
-sizeregex = re.compile('(.*);size=(\d+);$')  # TODO move into class below
-
-_IgblastRecord = namedtuple('IgblastRecordNT',
+IgBlastRecord = namedtuple('IgBlastRecord',
 	'full_sequence query_name alignments '
 	'hits v_gene d_gene j_gene chain has_stop in_frame is_productive '
-	'strand size junction barcode_length')
-class IgblastRecord(_IgblastRecord):
+	'strand junction')
+
+
+class ExtendedIgBlastRecord(IgBlastRecord):
+	"""
+	This extended record does a few extra things:
+	- The CDR3 is detected by using a regular expression
+	- The leader is detected within the sequence before the found V gene (by
+	searching for the start codon).
+	- The RACE-specific run of G in the beginning of the sequence is detected.
+	"""
 	# TODO move computation of cdr3_span, cdr3_sequence, vdj_sequence into constructor
 	# TODO maybe make all coordinates relative to full sequence
 
@@ -82,7 +125,9 @@ class IgblastRecord(_IgblastRecord):
 		G[GCT][GCTA]                                 # G, A or V
 		""", re.VERBOSE)
 
-	# Order of columns (use with as_dict())
+	SIZEREGEX = re.compile('(.*);size=(\d+);$')
+
+	# Order of columns (use with asdict())
 	columns = [
 		'count',
 		'V_gene',
@@ -125,8 +170,20 @@ class IgblastRecord(_IgblastRecord):
 		'race_G',
 		'genomic_sequence',
 	]
+	def __new__(cls, record, barcode_length):
+		d = record._asdict()
+		m = cls.SIZEREGEX.match(record.query_name)
+		if m:
+			d['query_name'] = m.group(1)
+			size = int(m.group(2))
+		else:
+			size = None
+		obj = super().__new__(cls, **d)
+		obj.size = size
+		return obj
 
-	def __init__(self, *args, **kwargs):
+	def __init__(self, record, barcode_length):
+		self.barcode_length = barcode_length
 		self.barcode, self.race_g, self.genomic_sequence = self._split_barcode()
 		self.utr, self.leader = self._utr_leader()
 		self.alignments['CDR3'] = self._fixed_cdr3_alignment()
@@ -226,9 +283,9 @@ class IgblastRecord(_IgblastRecord):
 			return None
 		return self.full_sequence[alignment.start:alignment.stop]
 
-	def as_dict(self):
+	def asdict(self):
 		"""
-		Flatten all the information in this record and return as a dictionary.
+		Return a flattened representation of this record as a dictionary.
 		The dictionary can then be used with e.g. a csv.DictWriter or
 		pandas.DataFrame.from_items.
 		"""
@@ -327,188 +384,171 @@ class IgblastRecord(_IgblastRecord):
 		)
 
 
-def split_by_section(it, section_starts):
+class ParseError(Exception):
+	pass
+
+
+class IgBlastParser:
 	"""
-	Parse a stream of lines into chunks of sections. When one of the lines
-	starts with a string given in section_starts, a new section is started, and
-	a tuple (head, lines) is returned where head is the matching line and lines
-	contains a list of the lines following the section header, up to (but
-	excluding) the next section header.
-
-	Works a bit like str.split(), but on lines.
+	Parser for IgBLAST results. Works only when IgBLAST was run with
+	the option -outfmt "7 sseqid qstart qseq sstart sseq pident slen".
 	"""
-	lines = None
-	header = None
-	for line in it:
-		line = line.strip()
-		for start in section_starts:
-			if line.startswith(start):
-				if header is not None:
-					yield (header, lines)
-				header = line
-				lines = []
-				break
-		else:
-			if header is None:
-				raise ParseError("Expected a line starting with one of {}".format(', '.join(section_starts)))
-			lines.append(line)
-	if header is not None:
-		yield (header, lines)
-
-
-def none_if_na(s):
-	"""Return None if s == 'N/A'. Return s otherwise."""
-	return None if s == 'N/A' else s
-
-
-def parse_alignment_summary(fields):
-	start, stop, length, matches, mismatches, gaps = (int(v) for v in fields[:6])
-	percent_identity = float(fields[6])
-	return AlignmentSummary(
-		start=start - 1,
-		stop=stop,
-		length=length,
-		matches=matches,
-		mismatches=mismatches,
-		gaps=gaps,
-		percent_identity=percent_identity
-	)
-
-
-def parse_hit(line):
-	"""
-	Parse a line of the "Hit table" section and return a tuple (hit, gene) where
-	hit is a Hit object.
-	"""
-	gene, subject_id, query_start, query_sequence, subject_start, subject_sequence, percent_identity, subject_length, evalue = line.split('\t')
-	# subject_sequence and query_sequence describe the alignment:
-	# They contain '-' characters for insertions and deletions.
-	assert len(subject_sequence) == len(query_sequence)
-	alignment_length = len(subject_sequence)
-	errors = sum(a != b for a,b in zip(subject_sequence, query_sequence))
-	query_sequence = query_sequence.replace('-', '')
-	subject_sequence = subject_sequence.replace('-', '')
-	query_start = int(query_start) - 1
-	subject_start = int(subject_start) - 1
-	subject_length = int(subject_length)  # Length of original subject sequence
-	#subject_end = subject_start + len(subject_sequence)
-	# Percent identity is calculated by IgBLAST as
-	# 100 - errors / alignment_length and then rounded to two decimal digits
-	percent_identity = float(percent_identity)
-	evalue = float(evalue)
-	hit = Hit(subject_id, query_start, query_sequence, subject_start,
-		   subject_sequence, subject_length, errors, percent_identity, evalue)
-	return hit, gene
-
-
-def parse_igblast_record(record_lines, fasta_record, barcode_length):
 	BOOL = { 'Yes': True, 'No': False, 'N/A': None }
 	FRAME = { 'In-frame': True, 'Out-of-frame': False, 'N/A': None }
-	SECTIONS = set([
+	SECTIONS = frozenset([
 		'# Query:',
 		'# V-(D)-J rearrangement summary',
 		'# V-(D)-J junction details',
 		'# Alignment summary',
 		'# Hit table',
 	])
-	hits = dict()
-	# All of the sections are optional, so we need to set default values here.
-	query_name = None
-	junction = None
-	v_gene, d_gene, j_gene, chain, has_stop, in_frame, is_productive, strand = [None] * 8
-	alignments = dict()
-	for section, lines in split_by_section(record_lines, SECTIONS):
-		if section.startswith('# Query: '):
-			query_name = section.split(': ')[1]
-		elif section.startswith('# V-(D)-J rearrangement summary'):
-			fields = lines[0].split('\t')
-			if len(fields) == 7:
-				# No D assignment
-				v_gene, j_gene, chain, has_stop, in_frame, is_productive, strand = fields
-				d_gene = None
-			else:
-				v_gene, d_gene, j_gene, chain, has_stop, in_frame, is_productive, strand = fields
-			v_gene = none_if_na(v_gene)
-			d_gene = none_if_na(d_gene)
-			j_gene = none_if_na(j_gene)
-			chain = none_if_na(chain)
-			has_stop = BOOL[has_stop]
-			in_frame = FRAME[in_frame]
-			is_productive = BOOL[is_productive]
-			strand = strand if strand in '+-' else None
-		elif section.startswith('# V-(D)-J junction details'):
-			fields = lines[0].split('\t')
-			if len(fields) == 5:
-				junction = JunctionVDJ(
-					v_end=fields[0],
-					vd_junction=fields[1],
-					d_region=fields[2],
-					dj_junction=fields[3],
-					j_start=fields[4]
-				)
-			else:
-				junction = JunctionVJ(
-					v_end=fields[0],
-					vj_junction=fields[1],
-					j_start=fields[2])
-		elif section.startswith('# Alignment summary'):
-			for line in lines:
-				fields = line.split('\t')
-				if len(fields) == 8 and fields[0] != 'Total':
-					summary = parse_alignment_summary(fields[1:])
-					region_name, _, imgt = fields[0].partition('-')
-					assert imgt in ('IMGT', 'IMGT (germline)')
-					alignments[region_name] = summary
-		elif section.startswith('# Hit table'):
-			for line in lines:
-				if not line or line.startswith('#'):
+
+	def __init__(self, sequence_file, igblast_file):
+		self._sequence_reader = SequenceReader(sequence_file)
+		self._igblast_file = igblast_file
+
+	def __iter__(self):
+		"""
+		Yield IgBlastRecord objects
+		"""
+		zipped = zip(self._sequence_reader, split_by_section(self._igblast_file, ['# IGBLASTN']))
+		for fasta_record, (record_header, record_lines) in zipped:
+			assert record_header == '# IGBLASTN 2.2.29+'
+			yield self._parse_record(record_lines, fasta_record)
+
+	def _parse_record(self, record_lines, fasta_record):
+		"""
+		Parse a single IgBLAST record
+		"""
+		hits = dict()
+		# All of the sections are optional, so we need to set default values here.
+		query_name = None
+		junction = None
+		v_gene, d_gene, j_gene, chain, has_stop, in_frame, is_productive, strand = [None] * 8
+		alignments = dict()
+		for section, lines in split_by_section(record_lines, self.SECTIONS):
+			if section.startswith('# Query: '):
+				query_name = section.split(': ')[1]
+			elif section.startswith('# V-(D)-J rearrangement summary'):
+				fields = lines[0].split('\t')
+				if len(fields) == 7:
+					# No D assignment
+					v_gene, j_gene, chain, has_stop, in_frame, is_productive, strand = fields
+					d_gene = None
+				else:
+					v_gene, d_gene, j_gene, chain, has_stop, in_frame, is_productive, strand = fields
+				v_gene = none_if_na(v_gene)
+				d_gene = none_if_na(d_gene)
+				j_gene = none_if_na(j_gene)
+				chain = none_if_na(chain)
+				has_stop = self.BOOL[has_stop]
+				in_frame = self.FRAME[in_frame]
+				is_productive = self.BOOL[is_productive]
+				strand = strand if strand in '+-' else None
+			elif section.startswith('# V-(D)-J junction details'):
+				fields = lines[0].split('\t')
+				if len(fields) == 5:
+					junction = JunctionVDJ(
+						v_end=fields[0],
+						vd_junction=fields[1],
+						d_region=fields[2],
+						dj_junction=fields[3],
+						j_start=fields[4]
+					)
+				else:
+					junction = JunctionVJ(
+						v_end=fields[0],
+						vj_junction=fields[1],
+						j_start=fields[2])
+			elif section.startswith('# Alignment summary'):
+				for line in lines:
+					fields = line.split('\t')
+					if len(fields) == 8 and fields[0] != 'Total':
+						summary = self._parse_alignment_summary(fields[1:])
+						region_name, _, imgt = fields[0].partition('-')
+						assert imgt in ('IMGT', 'IMGT (germline)')
+						alignments[region_name] = summary
+			elif section.startswith('# Hit table'):
+				for line in lines:
+					if not line or line.startswith('#'):
+						continue
+					hit, gene = self._parse_hit(line)
+					assert gene in ('V', 'D', 'J')
+					assert gene not in hits, "Two hits for same gene found"
+					hits[gene] = hit
+
+		assert fasta_record.name == query_name
+		full_sequence = fasta_record.sequence
+		if strand == '-':
+			full_sequence = reverse_complement(full_sequence)
+
+		if __debug__:
+			for gene in ('V', 'D', 'J'):
+				if gene not in hits:
 					continue
-				hit, gene = parse_hit(line)
-				assert gene in ('V', 'D', 'J')
-				assert gene not in hits, "Two hits for same gene found"
-				hits[gene] = hit
+				hit = hits[gene]
 
-	assert fasta_record.name == query_name
-	full_sequence = fasta_record.sequence
-	if strand == '-':
-		full_sequence = reverse_complement(full_sequence)
+				qsequence = hit.query_sequence
+				#print(gene, hit.query_start, '-', hit.query_start + len(qsequence), end=' ')
 
-	if __debug__:
-		for gene in ('V', 'D', 'J'):
-			if gene not in hits:
-				continue
-			hit = hits[gene]
+				# IgBLAST removes the trailing semicolon (why, oh why??)
+				qname = query_name[:-1] if query_name.endswith(';') else query_name
+				assert chain in (None, 'VL', 'VH', 'VK', 'NON'), chain
+				assert qsequence == full_sequence[hit.query_start:hit.query_start+len(qsequence)]
 
-			qsequence = hit.query_sequence
-			#print(gene, hit.query_start, '-', hit.query_start + len(qsequence), end=' ')
+		return IgBlastRecord(
+			query_name=query_name,
+			alignments=alignments,
+			v_gene=v_gene,
+			d_gene=d_gene,
+			j_gene=j_gene,
+			chain=chain,
+			has_stop=has_stop,
+			in_frame=in_frame,
+			is_productive=is_productive,
+			strand=strand,
+			hits=hits,
+			full_sequence=full_sequence,
+			junction=junction)
 
-			# IgBLAST removes the trailing semicolon (why, oh why??)
-			qname = query_name[:-1] if query_name.endswith(';') else query_name
-			assert chain in (None, 'VL', 'VH', 'VK', 'NON'), chain
-			assert qsequence == full_sequence[hit.query_start:hit.query_start+len(qsequence)]
+	def _parse_alignment_summary(self, fields):
+		start, stop, length, matches, mismatches, gaps = (int(v) for v in fields[:6])
+		percent_identity = float(fields[6])
+		return AlignmentSummary(
+			start=start - 1,
+			stop=stop,
+			length=length,
+			matches=matches,
+			mismatches=mismatches,
+			gaps=gaps,
+			percent_identity=percent_identity
+		)
 
-	m = sizeregex.match(query_name)
-	if m:
-		query_name = m.group(1)
-		size = int(m.group(2))
-	else:
-		size = None
-	return IgblastRecord(
-		query_name=query_name,
-		alignments=alignments,
-		v_gene=v_gene,
-		d_gene=d_gene,
-		j_gene=j_gene,
-		chain=chain,
-		has_stop=has_stop,
-		in_frame=in_frame,
-		is_productive=is_productive,
-		strand=strand,
-		hits=hits,
-		full_sequence=full_sequence,
-		size=size,
-		junction=junction,
-		barcode_length=barcode_length)
+
+	def _parse_hit(self, line):
+		"""
+		Parse a line of the "Hit table" section and return a tuple (hit, gene)
+		where hit is a Hit object.
+		"""
+		gene, subject_id, query_start, query_sequence, subject_start, subject_sequence, percent_identity, subject_length, evalue = line.split('\t')
+		# subject_sequence and query_sequence describe the alignment:
+		# They contain '-' characters for insertions and deletions.
+		assert len(subject_sequence) == len(query_sequence)
+		alignment_length = len(subject_sequence)
+		errors = sum(a != b for a,b in zip(subject_sequence, query_sequence))
+		query_sequence = query_sequence.replace('-', '')
+		subject_sequence = subject_sequence.replace('-', '')
+		query_start = int(query_start) - 1
+		subject_start = int(subject_start) - 1
+		subject_length = int(subject_length)  # Length of original subject sequence
+		#subject_end = subject_start + len(subject_sequence)
+		# Percent identity is calculated by IgBLAST as
+		# 100 - errors / alignment_length and then rounded to two decimal digits
+		percent_identity = float(percent_identity)
+		evalue = float(evalue)
+		hit = Hit(subject_id, query_start, query_sequence, subject_start,
+			subject_sequence, subject_length, errors, percent_identity, evalue)
+		return hit, gene
 
 
 class TableWriter:
@@ -518,7 +558,7 @@ class TableWriter:
 		{number} is a sequential number starting from 1.
 		"""
 		self._file = file
-		self._writer = csv.DictWriter(file, fieldnames=IgblastRecord.columns, delimiter='\t')
+		self._writer = csv.DictWriter(file, fieldnames=ExtendedIgBlastRecord.columns, delimiter='\t')
 		self._writer.writeheader()
 
 	@staticmethod
@@ -557,10 +597,12 @@ def main(args):
 	if args.hdf5:
 		rows = []
 	writer = TableWriter(sys.stdout)
-	with SequenceReader(args.fasta) as fasta, xopen(args.igblast) as igblast:
-		for fasta_record, (record_header, record_lines) in zip(fasta, split_by_section(igblast, ['# IGBLASTN'])):
-			assert record_header == '# IGBLASTN 2.2.29+'
-			d = parse_igblast_record(record_lines, fasta_record, args.barcode_length).as_dict()
+
+	with xopen(args.fasta) as fasta, xopen(args.igblast) as igblast:
+		parser = IgBlastParser(fasta, igblast)
+		for record in parser:
+			extended_record = ExtendedIgBlastRecord(record, barcode_length=args.barcode_length)
+			d = extended_record.asdict()
 			n += 1
 			if args.rename is not None:
 				d['name'] = "{}seq{}".format(args.rename, n)
@@ -575,7 +617,7 @@ def main(args):
 	logger.info('%d records parsed and written', n)
 	if args.hdf5:
 		from igypipe.table import STRING_COLUMNS, INTEGER_COLUMNS
-		df = pd.DataFrame(rows, columns=IgblastRecord.columns)
+		df = pd.DataFrame(rows, columns=IgBlastRecord.columns)
 		# TODO code below is copied from igypipe.table
 		# Convert all string columns to str to avoid a PerformanceWarning
 		for col in STRING_COLUMNS:
