@@ -153,7 +153,7 @@ if config.merge_program == 'flash':
 		log: 'reads/flash.log'
 		shell:
 			# -M: maximal overlap (2x300, 420-450bp expected fragment size)
-			"flash -t {threads} -c -M {config.flash_maximum_overlap} {input} 2> >(tee {log} >&2) | pigz > {output}"
+			"flash -t {threads} -c -M {config.flash_maximum_overlap} {input} 2> >(tee {log} >&2) | gzip > {output}"
 elif config.merge_program == 'pear':
 	rule pear_merge:
 		"""Use pear to merge paired-end reads"""
