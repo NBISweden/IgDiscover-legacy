@@ -93,6 +93,9 @@ _Hit = namedtuple('_Hit', [
 	'evalue',
 ])
 class Hit(_Hit):
+	# This avoids having a __dict__ attribute, which is necessary for namedtuple
+	# subclasses that need _asdict() to work (http://bugs.python.org/issue24931)
+	__slots__ = ()
 	def covered(self):
 		"""
 		Return fraction of bases in the original subject sequence that are
@@ -256,7 +259,7 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 
 	def _fixed_v_hit(self, v_database):
 		hit = self.hits['V']
-		logger.info('%s %d subject_id %s v hit has subject_start %d. query_start %s', self.query_name, self.size, hit.subject_id, hit.subject_start, hit.query_start)
+		#logger.info('%s %d subject_id %s v hit has subject_start %d. query_start %s', self.query_name, self.size, hit.subject_id, hit.subject_start, hit.query_start)
 		if hit.subject_start != 1 or hit.query_start == 0:
 			return hit
 		d = hit._asdict()
