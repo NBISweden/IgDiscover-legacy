@@ -64,7 +64,6 @@ class PrefixDict:
 		return len(self._items)
 
 def main(args):
-	templates = dict()  # maps sequences to names
 	with FastaReader(args.template) as fr:
 		template = PrefixDict([])
 		for record in fr:
@@ -73,7 +72,7 @@ def main(args):
 			except ValueError:
 				logger.error('Sequences in entry %r and %r are duplicate',
 					record.name, template[record.sequence.upper()])
-	logger.info('Read %d entries from template', len(templates))
+	logger.info('Read %d entries from template', len(template))
 
 	with FastaReader(args.target) as fr:
 		sequences = list(fr)
