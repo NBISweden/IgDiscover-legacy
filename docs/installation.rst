@@ -22,22 +22,20 @@ Either follow the instructions on the linked page or try these commands::
 	wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
 	bash Miniconda3-latest-Linux-x86_64.sh
 
-Then close the terminal window and open a new one. Make sure that conda is
-installed by running ``conda list``. If everything is working, you should see
-a list of some packages. If it works, installing IgY-Pipe is now just a matter
-of typing in a single command.
+When you get the question “Do you wish the installer to prepend the Miniconda3
+install location to PATH in your /home/.../.bashrc”, answer ``yes``. If you
+don’t, you need to type in the line ``export PATH=...`` that the installer
+prints every time before using conda or Igy-Pipe.
 
-Try to install IgY-Pipe from the bioconda channel with this command::
+Next, close the terminal window and open a new one. Make sure that conda is
+installed by typing in ``conda list``. If everything is working, you should see
+a list of some packages. If it works, IgY-Pipe can now be installed.
+
+Install IgY-Pipe from the bioconda channel with this command::
 
 	conda install -c bioconda igypipe
 
-If this does not work, then we have not yet made IgY-Pipe available online.
-In this case, you need to get the conda package as a ``.tar.gz`` file from us.
-Then install it with this command (replace the file name with the actual file name)::
-
-	conda install -c bioconda igypipe-0.x.y-0.tar.gz
-
-Make sure that it works by running ::
+Then make sure that it works by running ::
 
 	igypipe --version
 
