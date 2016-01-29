@@ -18,8 +18,7 @@ setup(
 	#license = 'MIT',
 	entry_points = {'console_scripts': ['igypipe = igypipe.__main__:main']},
 	packages = ['igypipe'],
-	package_data = {'igypipe': ['pipeline.conf', 'Snakefile', 'empty.aux',
-		'databases/*/*.fasta']},
+	package_data = {'igypipe': ['igypipe.yaml', 'Snakefile', 'empty.aux']},
 	setup_requires = ['numpy'],
 	install_requires = [
 		'sqt>=0.6.0',
