@@ -135,7 +135,7 @@ if config.limit:
 		output: 'reads/limited-{}.{{nr}}.fastq'.format(config.limit)
 		input: 'reads.{nr}.fastq.gz'
 		shell:
-			'sqt-fastqmod --limit {config.limit} {input} > {output}'
+			'sqt fastxmod --limit {config.limit} {input} > {output}'
 else:
 	rule decompress_reads:
 		output: "reads/decompressed.{nr}.fastq"
@@ -182,7 +182,7 @@ rule merged_read_length_histogram:
 	input:
 		fastq=MERGED_READS
 	shell:
-		"""sqt-readlenhisto --bins 100 --left 300 --title "Lengths of merged reads" --plot {output.pdf} {input}  > {output.txt}"""
+		"""sqt readlenhisto --bins 100 --left 300 --title "Lengths of merged reads" --plot {output.pdf} {input}  > {output.txt}"""
 
 
 rule unique_read_length_histogram:
@@ -192,7 +192,7 @@ rule unique_read_length_histogram:
 	input:
 		fastq=UNIQUE_READS
 	shell:
-		"""sqt-readlenhisto --bins 100 --left 300 --title "Lengths of pre-processed reads" --plot {output.pdf} {input}  > {output.txt}"""
+		"""sqt readlenhisto --bins 100 --left 300 --title "Lengths of pre-processed reads" --plot {output.pdf} {input}  > {output.txt}"""
 
 
 rule barcode_stats:
@@ -328,7 +328,7 @@ rule fastq_to_fasta:
 	input: fastq="reads/trimmed.fastq.gz"
 	params: max_errors="--max-errors {config.maximum_expected_errors}" if config.maximum_expected_errors is not None else ""
 	shell:
-		"sqt-fastqmod {params.max_errors} --minimum-length {config.minimum_merged_read_length} --fasta {input.fastq} > {output.fasta}"
+		"sqt fastxmod {params.max_errors} --minimum-length {config.minimum_merged_read_length} --fasta {input.fastq} > {output.fasta}"
 
 
 rule dereplicate:

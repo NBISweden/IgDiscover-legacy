@@ -22,7 +22,7 @@ setup(
 		'databases/*/*.fasta']},
 	setup_requires = ['numpy'],
 	install_requires = [
-		'sqt>=0.5.0',
+		'sqt>=0.6.0',
 		'pandas>=0.16.2',
 		'numpy',
 		'matplotlib>=1.5.0',
