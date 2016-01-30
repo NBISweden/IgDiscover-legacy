@@ -9,5 +9,6 @@ Table of contents
 
    self
    installation
+   test
    guide
    changes

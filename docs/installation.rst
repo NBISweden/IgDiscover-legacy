@@ -41,6 +41,8 @@ Then make sure that it works by running ::
 
 and you should see the version number of IgY-Pipe.
 
+You should now :ref:`run IgY-Pipe on the test data set <test>`
+
 
 .. _manual-installation:
 
@@ -148,3 +150,5 @@ Finally, check the installation with ::
 	igypipe --version
 
 and you should see the version number of IgY-Pipe.
+
+You should now :ref:`run IgY-Pipe on the test data set <test>`
