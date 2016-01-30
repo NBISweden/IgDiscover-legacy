@@ -1,5 +1,9 @@
 """
 Run IgBLAST.
+
+This is a wrapper for the igblastn tool that has a somewhat simpler command-line
+syntax and can also run IgBLAST in parallel. The result is printed to standard
+output.
 """
 import sys
 import os
@@ -11,6 +15,7 @@ import pkg_resources
 from sqt import SequenceReader
 from sqt.utils import available_cpu_count
 
+
 def add_arguments(parser):
 	add = parser.add_argument
 	add('--threads', '-t', '-j', type=int, default=available_cpu_count(),
@@ -21,7 +26,8 @@ def add_arguments(parser):
 		help='Which species (default: %(default)s)')
 	add('--limit', type=int, metavar='N',
 		help='Limit processing to first N records')
-	add('database', help='path to database')
+	add('database', help='Database directory. Must contain BLAST databases for '
+		'SPECIES_V, SPECIES_D and SPECIES_J.')
 	add('fasta', help='File with original reads')
 
 
@@ -105,9 +111,6 @@ def main(args):
 	"""
 	Run IgBLAST in parallel
 	"""
-	if not 'IGDATA' in os.environ:
-		raise ValueError("The IGDATA environment variable needs to be set")
-
 	chunks = chunked_fasta(args.fasta, limit=args.limit)
 	runner = Runner(args.database, args.species, args.penalty)
 	with multiprocessing.Pool(args.threads) as pool:
