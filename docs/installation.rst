@@ -41,7 +41,7 @@ Then make sure that it works by running ::
 
 and you should see the version number of IgY-Pipe.
 
-You should now :ref:`run IgY-Pipe on the test data set <test>`
+You should now :ref:`run IgY-Pipe on the test data set <test>`.
 
 
 .. _manual-installation:
@@ -126,7 +126,13 @@ optionally -- flash.
    If you install it by hand, make sure you end up with a ``fastqc`` binary in
    the ``$PATH``.
 
-8. (Optionally, install flash. Not described here.)
+8. Optionally, install flash::
+
+	wget -O FLASH-1.2.11.tar.gz http://sourceforge.net/projects/flashpage/files/FLASH-1.2.11.tar.gz/download
+	tar xf FLASH-1.2.11.tar.gz
+	cd FLASH-1.2.11
+	make
+	mv flash ~/.local/bin/
 
 
 Install IgY-Pipe
@@ -151,4 +157,4 @@ Finally, check the installation with ::
 
 and you should see the version number of IgY-Pipe.
 
-You should now :ref:`run IgY-Pipe on the test data set <test>`
+You should now :ref:`run IgY-Pipe on the test data set <test>`.
