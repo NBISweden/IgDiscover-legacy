@@ -2,6 +2,7 @@
 User guide
 ==========
 
+
 Running the pipeline
 ====================
 
@@ -32,6 +33,173 @@ Then copy FASTA files with V, D, J sequences into the directory. The files need
 to be named ``rhesus_monkey_V.fasta``, ``rhesus_monkey_D.fasta`` and
 ``rhesus_monkey_J.fasta``. The ``makeblastdb`` program will be run automatically
 by the pipeline next time it runs.
+
+
+Files
+=====
+
+reads/merged.fastq.gz -- merged reads
+reads/trimmed.fastq.gz -- primers removed from merged reads
+reads/filtered.fasta  -- too short sequences removed, converted to FASTA
+reads/unique.fasta -- collapsed sequences (duplicates removed)
+unique.igblast.txt.gz -- IgBLAST output
+unique.assigned.tab -- parsed IgBLAST output as a tab-delimited table
+unique.filtered.tab -- filtered version of the above
+groups.tab -- sequences grouped by barcode
+consensus.fasta -- contains one consensus sequence for each group
+consensus.igblast.txt -- consensus sequences sent through IgBLAST
+consensus.assigned.tab -- parsed IgBLAST output
+
+
+reads.1.fastq.gz
+reads.2.fastq.gz
+igypipe.yaml
+Snakefile
+
+reads/decompressed.1.fastq
+reads/decompressed.2.fastq
+reads/merged.fastq.gz
+reads/forward-primer-trimmed.fastq.gz
+reads/trimmed.fastq.gz
+reads/unique.fasta
+reads/pear.unassembled.reverse.fastq
+reads/pear.unassembled.forward.fastq
+reads/pear.discarded.fastq
+reads/pear.log
+reads/filtered.fasta
+
+iteration-05/consensus.fasta
+iteration-05/unique.fasta
+iteration-05/consensus.assigned.tab.gz
+iteration-05/unique.correlationVJ.pdf
+iteration-05/clusterplots/VH7.21_S4259.png
+iteration-05/clusterplots/done
+iteration-05/consensus.igblast.txt.gz
+iteration-05/candidates.tab
+iteration-05/new_V_database.fasta
+iteration-05/unique.errorhistograms.pdf
+iteration-05/counts.txt
+iteration-05/stats
+iteration-05/stats/groupsizes.pdf
+iteration-05/groups.tab
+iteration-05/unique.V_usage.pdf
+iteration-05/database
+iteration-05/database/rhesus_monkey_J.fasta
+iteration-05/database/rhesus_monkey_D.fasta
+iteration-05/database/rhesus_monkey_V.fasta  (+ .nsi/nin/snq/nhr/nog)
+iteration-05/unique.V_usage.tab
+iteration-05/unique.assigned.tab.gz
+iteration-05/unique.filtered.tab.gz
+iteration-05/unique.igblast.txt.gz
+iteration-05/V_dendrogram.pdf
+iteration-05/unique.consensus.log
+
+final/consensus.V_usage.tab
+final/consensus.fasta
+final/unique.fasta
+final/consensus.assigned.tab.gz
+final/unique.correlationVJ.pdf
+final/clusterplots/VH7.21_S4259.png
+final/clusterplots/done
+final/consensus.igblast.txt.gz
+final/unique.errorhistograms.pdf
+final/consensus.correlationVJ.pdf
+final/counts.txt
+final/stats
+final/stats/groupsizes.pdf
+final/groups.tab
+final/unique.V_usage.pdf
+final/database/rhesus_monkey_J.fasta
+final/database/rhesus_monkey_D.fasta
+final/database/rhesus_monkey_V.fasta
+final/unique.V_usage.tab
+final/consensus.filtered.tab.gz
+final/unique.assigned.tab.gz
+final/unique.filtered.tab.gz
+final/unique.igblast.txt.gz
+final/V_dendrogram.pdf
+final/consensus.V_usage.pdf
+final/unique.consensus.log
+
+stats
+stats/unique.readlengths.txt
+stats/merged.readlengths.pdf
+stats/unique.readlengths.pdf
+stats/merged.readlengths.txt
+stats/barcodes.txt
+database
+database/rhesus_monkey_J.fasta
+database/rhesus_monkey_D.fasta
+database/rhesus_monkey_V.fasta
+
+
+
+
+
+Structure of each sequence
+==========================
+
+IgY-Pipe assumes that its input data are overlapping paired-end reads. After
+merging, they should have this structure (from 5' to 3'):
+
+* A random barcode (molecular identifier). This is optional. Set the
+  configuration option ``barcode_length`` to 0 if you don’t have random barcodes
+  or if you don’t want the program to use them.
+* A run of G nucleotides. This is an artifact of the RACE protocol (Rapid
+  amplification of cDNA ends).
+* 5' UTR
+* Leader
+* Re-arranged V, D and J gene sequences (in that order)
+
+We use IgBLAST to detect the location of the V, D, J genes (run as part of the
+``igypipe igblast`` subcommand), and the remaining parts are detected
+subsequently with ``igypipe parse``. The G nucleotides after the barcode are
+always split off, even if no RACE protocol was used. (This should not be a
+problem in practice.) The leader sequence is detected by looking for a start
+codon near 60 bp upstream of the start of the V gene match.
+
+
+Novel VH gene names
+===================
+
+Each novel VH gene discovered by IgY-Pipe gets a unique name such as
+“VH4.11_S1234”. The “VH4.11” is the name of the database gene to which the novel
+VH gene was initially assigned. The number *1234* is derived from the base
+sequence of the novel gene. That is, if you discover the same sequence in two
+different runs of the IgY-Pipe, or just in different iterations, the number will
+be the same. This may help when manually inspecting results.
+
+Be aware that you still need to check the sequence itself since even different
+sequences can sometimes lead to the same number (a “hash collision”).
+
+
+Subcommands
+===========
+
+    commonv             Find common V genes between two different antibody
+                        libraries.
+    igblast             Run IgBLAST.
+    parse               Parse IgBLAST output and write out a tab-separated
+                        table.
+    filter              Filter table with parsed IgBLAST results
+    count               Count and plot V, D, J gene usage.
+    group               Group sequences by barcode and V/J assignment and
+                        print each group’s consensus
+    multidiscover       Find V gene sister sequences shared by multiple
+                        libraries.
+    compose             Create new V gene database from V gene candidates.
+    discover            Discover candidate new V genes within a single
+                        antibody library.
+    init                Create and initialize a new pipeline directory.
+    clusterplot         For each V gene, plot a clustermap of the sequences
+                        assigned to it.
+    errorplot           Plot histograms of differences to reference V gene
+    upstream            Cluster upstream sequences (UTR and leader) for each
+                        gene
+    dendrogram          Draw a dendrogram of sequences in a FASTA file.
+    rename              Rename sequences in a target FASTA file using a
+                        template FASTA file
+    union               Compute union of sequences in multiple FASTA files
 
 
 The assigned.tab table
