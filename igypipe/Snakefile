@@ -1,19 +1,5 @@
 # kate: syntax Python;
 """
-These are the main files that the pipeline creates, in the order in which they
-are created:
-
-reads/merged.fastq.gz -- merged reads
-reads/trimmed.fastq.gz -- primers removed from merged reads
-reads/filtered.fasta  -- too short sequences removed, converted to FASTA
-reads/unique.fasta -- collapsed sequences (duplicates removed)
-unique.igblast.txt.gz -- IgBLAST output
-unique.assigned.tab -- parsed IgBLAST output as a tab-delimited table
-unique.filtered.tab -- filtered version of the above
-groups.tab -- sequences grouped by barcode
-consensus.fasta -- contains one consensus sequence for each group
-consensus.igblast.txt -- consensus sequences sent through IgBLAST
-consensus.assigned.tab -- parsed IgBLAST output
 """
 import yaml
 from sqt.dna import reverse_complement
