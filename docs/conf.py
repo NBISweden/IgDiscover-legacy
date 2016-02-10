@@ -1,4 +1,4 @@
-# IgY-Pipe documentation build configuration file
+# IgDiscover documentation build configuration file
 import sys
 import os
 
@@ -31,14 +31,14 @@ master_doc = 'index'
 
 # General information about the project.
 authors = u'Marcel Martin'
-project = u'IgY-Pipe'
-copyright = u'2015, ' + authors
+project = u'IgDiscover'
+copyright = u'2015-2016, ' + authors
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
-from igypipe import __version__
+from igdiscover import __version__
 # The short X.Y version.
 version = __version__
 # The full version, including alpha/beta/rc tags.
@@ -165,7 +165,7 @@ html_static_path = ['_static']
 #html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'IgY-Pipedoc'
+htmlhelp_basename = 'IgDiscoverdoc'
 
 
 # -- Options for LaTeX output ---------------------------------------------
@@ -185,7 +185,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  ('index', 'IgY-Pipe.tex', u'IgY-Pipe Documentation',
+  ('index', 'IgDiscover.tex', u'IgDiscover Documentation',
    authors, 'manual'),
 ]
 
@@ -215,7 +215,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'igy-pipe', u'IgY-Pipe Documentation',
+    ('index', 'igdiscover', u'IgDiscover Documentation',
      [authors], 1)
 ]
 
@@ -229,8 +229,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'IgY-Pipe', u'IgY-Pipe Documentation',
-   authors, 'IgY-Pipe', 'One line description of project.',
+  ('index', 'IgDiscover', u'IgDiscover Documentation',
+   authors, 'IgDiscover', 'One line description of project.',
    'Miscellaneous'),
 ]
 

@@ -4,8 +4,8 @@
 import yaml
 from sqt.dna import reverse_complement
 from sqt import FastaReader
-import igypipe
-from igypipe.utils import relative_symlink
+import igdiscover
+from igdiscover.utils import relative_symlink
 
 class Config:
 	def __init__(self, path):
@@ -53,15 +53,15 @@ class Config:
 				del self.trim_primers
 
 try:
-	config = Config('igypipe.yaml')
+	config = Config('igdiscover.yaml')
 except FileNotFoundError:
 	# For backwards compatibility, try old path also
 	try:
 		config = Config('pipeline.conf')
 	except FileNotFoundError:
-		sys.exit("Pipeline configuration file 'igypipe.yaml' not found. Please create it!")
+		sys.exit("Pipeline configuration file 'igdiscover.yaml' not found. Please create it!")
 
-print('IgY-Pipe configuration:')
+print('IgDiscover configuration:')
 for k, v in sorted(vars(config).items()):
 	# TODO the following line is only necessary for non-YAML configurations
 	if k.startswith('_'):
@@ -421,7 +421,7 @@ rule symlink_iteration_reads:
 		'ln -f {input.fasta} {output.fasta}'
 
 
-rule igypipe_igblast:
+rule igdiscover_igblast:
 	output:
 		txtgz="{dir}/{base}.igblast.txt.gz"
 	input:
@@ -434,32 +434,32 @@ rule igypipe_igblast:
 		database='{dir}/database'
 	threads: 16
 	shell:
-		"igypipe igblast --threads {threads} {params.penalty} "
+		"igdiscover igblast --threads {threads} {params.penalty} "
 		"--species {config.species} {params.database} {input.fasta} | "
 		"gzip > {output.txtgz}.tmp && "
 		"mv {output.txtgz}.tmp {output.txtgz}"
 
 
-rule igypipe_parse:
+rule igdiscover_parse:
 	output:
 		tabgz="{dir}/{base}.assigned.tab.gz",
 	input:
 		txt="{dir}/{base}.igblast.txt.gz",
 		fasta="{dir}/{base}.fasta"
 	shell:
-		"igypipe parse --barcode-length {config.barcode_length} --rename {config.library_name!r}_ {input.txt} {input.fasta} | gzip > {output.tabgz}"
+		"igdiscover parse --barcode-length {config.barcode_length} --rename {config.library_name!r}_ {input.txt} {input.fasta} | gzip > {output.tabgz}"
 
 
-rule igypipe_filter:
+rule igdiscover_filter:
 	output:
 		filtered="{dir}/{base}.filtered.tab.gz"
 	input:
 		assigned="{dir}/{base}.assigned.tab.gz"
 	shell:
-		"igypipe filter {input} | gzip > {output}"
+		"igdiscover filter {input} | gzip > {output}"
 
 
-rule igypipe_group:
+rule igdiscover_group:
 	"""Group by barcode"""
 	output:
 		pdf="{base}/stats/groupsizes.pdf",
@@ -469,10 +469,10 @@ rule igypipe_group:
 		tab="{base}/unique.filtered.tab.gz"
 	log: "{base}/unique.consensus.log"
 	shell:
-		"igypipe group --program={config.multialign_program} --plot-sizes {output.pdf} --groups-output {output.tab} {input.tab} > {output.fasta} 2> {log}"
+		"igdiscover group --program={config.multialign_program} --plot-sizes {output.pdf} --groups-output {output.tab} {input.tab} > {output.fasta} 2> {log}"
 
 
-rule igypipe_count:
+rule igdiscover_count:
 	output:
 		plot="{dir}/{base}.{gene,[VDJ]}_usage.pdf",
 		counts="{dir}/{base}.{gene}_usage.tab"
@@ -480,12 +480,12 @@ rule igypipe_count:
 		reference="{{dir}}/database/{species}_{{gene}}.fasta".format(species=config.species),
 		tab="{dir}/{base}.filtered.tab.gz"
 	shell:
-		"igypipe count --database {input.reference} --gene {wildcards.gene} "
+		"igdiscover count --database {input.reference} --gene {wildcards.gene} "
 		"{input.tab} {output.plot} > {output.counts}.tmp && "
 		"mv {output.counts}.tmp {output.counts}"
 
 
-rule igypipe_clusterplot:
+rule igdiscover_clusterplot:
 	output:
 		done="{dir}/clusterplots/done"
 	input:
@@ -494,10 +494,10 @@ rule igypipe_clusterplot:
 		clusterplots="{dir}/clusterplots/",
 		ignore_j='--ignore-J' if config.ignore_j else ''
 	shell:
-		"igypipe clusterplot {params.ignore_j} {input.tab} {params.clusterplots} && touch {output.done}"
+		"igdiscover clusterplot {params.ignore_j} {input.tab} {params.clusterplots} && touch {output.done}"
 
 
-rule igypipe_discover:
+rule igdiscover_discover:
 	"""Discover potential new V gene sequences"""
 	output:
 		tab="{dir}/candidates.tab"
@@ -508,13 +508,13 @@ rule igypipe_discover:
 		ignore_j='--ignore-J' if config.ignore_j else ''
 	threads: 4  # TODO this could be increased up to 6
 	shell:
-		"igypipe discover -j {threads} --cluster --subsample {config.subsample} "
+		"igdiscover discover -j {threads} --cluster --subsample {config.subsample} "
 		"--window-width 2 --database {input.v_reference} {params.ignore_j} "
 		"{input.tab} > "
 		"{output.tab}.tmp && mv {output.tab}.tmp {output.tab}"
 
 
-rule igypipe_compose:
+rule igdiscover_compose:
 	"""Construct a new database out of the discovered sequences"""
 	output:
 		fasta='iteration-{nr}/new_V_database.fasta'
@@ -528,7 +528,7 @@ rule igypipe_compose:
 			criteria += '--unique-CDR3=3 --consensus-seqs=200'
 		else:
 			criteria += '--unique-CDR3=2'
-		shell("igypipe compose {criteria} {input.tab} > {output.fasta}.tmp && mv {output.fasta}.tmp {output.fasta}")
+		shell("igdiscover compose {criteria} {input.tab} > {output.fasta}.tmp && mv {output.fasta}.tmp {output.fasta}")
 
 
 rule stats_correlation_V_J:
@@ -546,7 +546,7 @@ rule stats_correlation_V_J:
 		import numpy as np
 		import pandas as pd
 		from collections import Counter
-		table = igypipe.read_table(input.table)
+		table = igdiscover.read_table(input.table)
 		fig = plt.figure(figsize=(29.7/2.54, 21/2.54))
 		counts = np.zeros((21, 11), dtype=np.int64)
 		counter = Counter(zip(table['V_errors'], table['J_errors']))
@@ -570,7 +570,7 @@ rule plot_errorhistograms:
 	params:
 		ignore_j='--ignore-J' if config.ignore_j else ''
 	shell:
-		'igypipe errorplot {params.ignore_j} {input.table} {output.pdf}'
+		'igdiscover errorplot {params.ignore_j} {input.table} {output.pdf}'
 
 
 rule dendrogram:
@@ -579,4 +579,4 @@ rule dendrogram:
 	input:
 		fasta='{{dir}}/database/{species}_{{gene}}.fasta'.format(species=config.species)
 	shell:
-		'igypipe dendrogram --mark database/{config.species}_{wildcards.gene}.fasta {input.fasta} {output.pdf}'
+		'igdiscover dendrogram --mark database/{config.species}_{wildcards.gene}.fasta {input.fasta} {output.pdf}'

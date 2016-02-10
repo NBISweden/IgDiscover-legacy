@@ -2,23 +2,23 @@ import sys
 from setuptools import setup
 
 # set __version__
-exec(next(open('igypipe/__init__.py')))
+exec(next(open('igdiscover/__init__.py')))
 
 if sys.version_info < (3, 3):
 	sys.stdout.write("At least Python 3.3 is required.\n")
 	sys.exit(1)
 
 setup(
-	name = 'igypipe',
+	name = 'igdiscover',
 	version = __version__,
 	author = 'Marcel Martin',
 	author_email = 'marcel.martin@scilifelab.se',
 	url = '',
 	description = '',
 	#license = 'MIT',
-	entry_points = {'console_scripts': ['igypipe = igypipe.__main__:main']},
-	packages = ['igypipe'],
-	package_data = {'igypipe': ['igypipe.yaml', 'Snakefile', 'empty.aux']},
+	entry_points = {'console_scripts': ['igdiscover = igdiscover.__main__:main']},
+	packages = ['igdiscover'],
+	package_data = {'igdiscover': ['igdiscover.yaml', 'Snakefile', 'empty.aux']},
 	setup_requires = ['numpy'],
 	install_requires = [
 		'sqt>=0.6.0',

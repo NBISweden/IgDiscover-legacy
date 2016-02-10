@@ -654,9 +654,9 @@ def main(args):
 				raise
 	logger.info('%d records parsed and written', n)
 	if args.hdf5:
-		from igypipe.table import STRING_COLUMNS, INTEGER_COLUMNS
+		from igdiscover.table import STRING_COLUMNS, INTEGER_COLUMNS
 		df = pd.DataFrame(rows, columns=IgBlastRecord.columns)
-		# TODO code below is copied from igypipe.table
+		# TODO code below is copied from igdiscover.table
 		# Convert all string columns to str to avoid a PerformanceWarning
 		for col in STRING_COLUMNS:
 			df[col].fillna('', inplace=True)

@@ -13,7 +13,7 @@ import pkg_resources
 logger = logging.getLogger(__name__)
 
 
-PIPELINE_CONF = 'igypipe.yaml'
+PIPELINE_CONF = 'igdiscover.yaml'
 
 
 def add_arguments(parser):
@@ -136,7 +136,7 @@ def main(args):
 		dbpath = args.database
 	else:
 		gui = True
-		databases_path = pkg_resources.resource_filename('igypipe', 'databases')
+		databases_path = pkg_resources.resource_filename('igdiscover', 'databases')
 		dbpath = tkinter_database_path(databases_path)
 		if not dbpath:
 			logger.error('Cancelled')
@@ -157,7 +157,7 @@ def main(args):
 	create_symlink(reads1, args.directory, 'reads.1.fastq')
 	create_symlink(reads2, args.directory, 'reads.2.fastq')
 
-	snakepath = pkg_resources.resource_filename('igypipe', 'Snakefile')
+	snakepath = pkg_resources.resource_filename('igdiscover', 'Snakefile')
 	os.symlink(os.path.relpath(snakepath, args.directory), os.path.join(args.directory, 'Snakefile'))
 
 	if args.library_name:
@@ -165,7 +165,7 @@ def main(args):
 	else:
 		library_name = os.path.basename(os.path.normpath(args.directory))
 	# Write the pipeline configuration
-	configuration = pkg_resources.resource_string('igypipe', PIPELINE_CONF).decode()
+	configuration = pkg_resources.resource_string('igdiscover', PIPELINE_CONF).decode()
 	with open(os.path.join(args.directory, PIPELINE_CONF), 'w') as f:
 		for line in configuration.splitlines(keepends=True):
 			if line.startswith('library_name:'):

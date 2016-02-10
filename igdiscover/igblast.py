@@ -58,7 +58,7 @@ def run_igblast(fasta, database, species, penalty=None):
 	if penalty is not None:
 		arguments += ['-penalty', str(penalty)]
 	# The empty aux suppresses a warning from IgBLAST. /dev/null does not work.
-	empty_aux_path = pkg_resources.resource_filename('igypipe', 'empty.aux')
+	empty_aux_path = pkg_resources.resource_filename('igdiscover', 'empty.aux')
 	arguments += [
 		#TODO '-auxiliary_data', '$IGDATA/optional_file/{species}_gl.aux',
 		'-auxiliary_data', empty_aux_path,

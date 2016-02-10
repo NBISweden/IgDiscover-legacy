@@ -4,35 +4,35 @@
 Test data set
 =============
 
-After installing IgY-Pipe, you should run it once on a small test data that we
+After installing IgDiscover, you should run it once on a small test data that we
 provide, both to test your installation and to familiarize yourself with
 running the program.
 
-1. Download und unpack the test data set igypipe-test-0.1.tar.gz_. To do this
+1. Download und unpack the test data set igdiscover-test-0.1.tar.gz_. To do this
    from the command-line, use these commands::
 
-	wget https://export.uppmax.uu.se/b2014342/bc795179e13e84ef/igypipe-test-0.1.tar.gz
-	tar xf igypipe-test-0.1.tar.gz
+	wget https://export.uppmax.uu.se/b2014342/bc795179e13e84ef/igdiscover-test-0.1.tar.gz
+	tar xf igdiscover-test-0.1.tar.gz
 
-.. _igypipe-test-0.1.tar.gz: https://export.uppmax.uu.se/b2014342/bc795179e13e84ef/igypipe-test-0.1.tar.gz
+.. _igdiscover-test-0.1.tar.gz: https://export.uppmax.uu.se/b2014342/bc795179e13e84ef/igdiscover-test-0.1.tar.gz
 
    The test data set contains some paired-end reads from a rhesus monkey and the
    publicly available VH, DH, and JH gene databases as three FASTA files.
 
-2. Initialize the IgY-Pipe pipeline directory::
+2. Initialize the IgDiscover pipeline directory::
 
-	igypipe init --db igypipe-test-0.1/db/ --reads igypipe-test-0.1/reads.1.fastq.gz igypipetest
+	igdiscover init --db igdiscover-test-0.1/db/ --reads igdiscover-test-0.1/reads.1.fastq.gz igdiscovertest
 
-   The name ``igypipetest`` is the name of the pipeline directory that will be
+   The name ``igdiscovertest`` is the name of the pipeline directory that will be
    created. Note that only the path to the *first* reads file needs to be
    given. The second file is found automatically.
 
    The command will have printed a message telling you that the pipeline
    directory has been initialized, that you should edit the configuration file,
-   and how to actually run IgY-Pipe after that.
+   and how to actually run IgDiscover after that.
 
 3. Edit the configuration file. The configuration file is in
-   ``igypipetest/igypipe.yaml``. The configuration is in YAML format, which
+   ``igdiscovertest/igdiscover.yaml``. The configuration is in YAML format, which
    should be straightforward to understand. When editing the file, just follow
    the way it is already structured.
 
@@ -48,9 +48,9 @@ running the program.
    - In the same way, make sure that the ``reverse_primers`` contain
      ``GCAGGCCTTTTTGGCCNNNNNGGGGCATTCTCACAGGAGACGAGGGGGAAAAG``.
 
-4. Run IgY-Pipe. Change into the pipeline directory and then run snakemake
-   (just copy and paste what the ``igypipe init`` command above told you)::
+4. Run IgDiscover. Change into the pipeline directory and then run snakemake
+   (just copy and paste what the ``igdiscover init`` command above told you)::
 
-	cd igypipetest && snakemake -j
+	cd igdiscovertest && snakemake -j
 
 5. Finally, inspect the results.

@@ -4,7 +4,7 @@ unset DISPLAY
 export IGDATA=$PWD/igblast
 source venv/bin/activate
 rm -rf testrun
-igypipe init --library-name testing --db testdata/db --reads testdata/reads.1.fastq.gz testrun
-cp -p testdata/igypipe.yaml testrun/
+igdiscover init --library-name testing --db testdata/db --reads testdata/reads.1.fastq.gz testrun
+cp -p testdata/igdiscover.yaml testrun/
 cd testrun
 exec snakemake -pj

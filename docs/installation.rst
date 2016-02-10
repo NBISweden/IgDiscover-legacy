@@ -2,13 +2,13 @@
 Installation
 ============
 
-IgY-Pipe is written in Python 3 and needs a Linux distribution to run. It may
+IgDiscover is written in Python 3 and needs a Linux distribution to run. It may
 even work on OS X and even Windows, but this has not been tested.
 
-IgY-Pipe depends on many programs that are not available in most Linux
+IgDiscover depends on many programs that are not available in most Linux
 distributions. To simplify the installation process, we provide everything as
 `conda <http://conda.pydata.org/docs/>`_ packages. Conda makes it possible to
-install IgY-Pipe with a single command, but conda itself needs to be installed
+install IgDiscover with a single command, but conda itself needs to be installed
 first. If you do not want to use conda, follow the :ref:`manual installation
 instructions <manual-installation>`.
 
@@ -25,23 +25,23 @@ Either follow the instructions on the linked page or try these commands::
 When you get the question “Do you wish the installer to prepend the Miniconda3
 install location to PATH in your /home/.../.bashrc”, answer ``yes``. If you
 don’t, you need to type in the line ``export PATH=...`` that the installer
-prints every time before using conda or Igy-Pipe.
+prints every time before using conda or IgDiscover.
 
 Next, close the terminal window and open a new one. Make sure that conda is
 installed by typing in ``conda list``. If everything is working, you should see
-a list of some packages. If it works, IgY-Pipe can now be installed.
+a list of some packages. If it works, IgDiscover can now be installed.
 
-Install IgY-Pipe from the bioconda channel with this command::
+Install IgDiscover from the bioconda channel with this command::
 
-	conda install -c bioconda igypipe
+	conda install -c bioconda igdiscover
 
 Then make sure that it works by running ::
 
-	igypipe --version
+	igdiscover --version
 
-and you should see the version number of IgY-Pipe.
+and you should see the version number of IgDiscover.
 
-You should now :ref:`run IgY-Pipe on the test data set <test>`.
+You should now :ref:`run IgDiscover on the test data set <test>`.
 
 
 .. _manual-installation:
@@ -49,7 +49,7 @@ You should now :ref:`run IgY-Pipe on the test data set <test>`.
 Manual installation without conda
 ---------------------------------
 
-Non-Python dependencies need to be installed by hand. When IgY-Pipe itself is
+Non-Python dependencies need to be installed by hand. When IgDiscover itself is
 installed in the last step, the Python dependencies will automatically be
 installed.
 
@@ -135,26 +135,26 @@ optionally -- flash.
 	mv flash ~/.local/bin/
 
 
-Install IgY-Pipe
+Install IgDiscover
 ~~~~~~~~~~~~~~~~
 
-If you have an ``igypipe-....tar.gz`` file, then unpack it, change into the
+If you have an ``igdiscover-....tar.gz`` file, then unpack it, change into the
 created directory and run ::
 
 	python3 setup.py install --user
 
-If you do not have a ``.tar.gz`` file, install IgY-Pipe with the Python
-package manager ``pip``, which will download IgY-Pipe before installing it::
+If you do not have a ``.tar.gz`` file, install IgDiscover with the Python
+package manager ``pip``, which will download IgDiscover before installing it::
 
-	pip3 install --user igypipe
+	pip3 install --user igdiscover
 
 Both commands also install all remaining dependencies. The ``--user`` option
 instructs both commands to install everything into ``$HOME/.local``.
 
 Finally, check the installation with ::
 
-	igypipe --version
+	igdiscover --version
 
-and you should see the version number of IgY-Pipe.
+and you should see the version number of IgDiscover.
 
-You should now :ref:`run IgY-Pipe on the test data set <test>`.
+You should now :ref:`run IgDiscover on the test data set <test>`.

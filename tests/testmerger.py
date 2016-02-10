@@ -2,10 +2,10 @@
 Test the SisterMerger class
 """
 import pandas as pd
-from igypipe.discover import SisterMerger, SisterInfo
-from igypipe.compose import SequenceMerger, SequenceInfo
-from igypipe.utils import UniqueNamer
-from igypipe.rename import PrefixDict
+from igdiscover.discover import SisterMerger, SisterInfo
+from igdiscover.compose import SequenceMerger, SequenceInfo
+from igdiscover.utils import UniqueNamer
+from igdiscover.rename import PrefixDict
 from nose.tools import raises
 
 def test_0():

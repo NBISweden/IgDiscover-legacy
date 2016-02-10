@@ -10,7 +10,7 @@ import seaborn as sns
 from scipy.spatial import distance
 from scipy.cluster import hierarchy
 from sqt import FastaReader
-from igypipe.utils import distances
+from igdiscover.utils import distances
 
 
 logger = logging.getLogger(__name__)

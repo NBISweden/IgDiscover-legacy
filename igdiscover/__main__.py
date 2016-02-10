@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-IgY-Pipe computes V/D/J gene usage profiles and discovers novel V genes
+IgDiscover computes V/D/J gene usage profiles and discovers novel V genes
 
 - Run IgBLAST in parallel (wrapper inspired by igblastwrp).
 - Parse IgBLAST output into a tab-separated table
@@ -46,12 +46,12 @@ logger = logging.getLogger(__name__)
 
 def main():
 	logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
-	parser = HelpfulArgumentParser(description=__doc__, prog='igypipe')
+	parser = HelpfulArgumentParser(description=__doc__, prog='igdiscover')
 	parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
 
 	subparsers = parser.add_subparsers()
 	for command_name in COMMANDS:
-		module = importlib.import_module('.' + command_name, 'igypipe')
+		module = importlib.import_module('.' + command_name, 'igdiscover')
 		subparser = subparsers.add_parser(command_name,
 			help=module.__doc__.split('\n')[1], description=module.__doc__)
 		subparser.set_defaults(func=module.main)
