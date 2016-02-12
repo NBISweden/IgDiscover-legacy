@@ -73,16 +73,14 @@ for k, v in sorted(vars(config).items()):
 shell.prefix("set -euo pipefail;")
 
 if config.limit:
-	READS1 = 'reads/limited-{}.1.fastq'.format(config.limit)
-	READS2 = 'reads/limited-{}.2.fastq'.format(config.limit)
+	READS1 = 'reads/limited-{}.1.fastq.gz'.format(config.limit)
+	READS2 = 'reads/limited-{}.2.fastq.gz'.format(config.limit)
 else:
-	READS1 = 'reads/decompressed.1.fastq'
-	READS2 = 'reads/decompressed.2.fastq'
-
+	READS1 = 'reads.1.fastq.gz'
+	READS2 = 'reads.2.fastq.gz'
 
 MERGED_READS = 'reads/merged.fastq.gz'
 UNIQUE_READS = 'reads/unique.fasta'
-
 
 # Targets for each iteration
 ITERATION_TARGETS = [
@@ -119,15 +117,10 @@ rule all:
 
 if config.limit:
 	rule limit_reads:
-		output: 'reads/limited-{}.{{nr}}.fastq'.format(config.limit)
+		output: 'reads/limited-{}.{{nr}}.fastq.gz'.format(config.limit)
 		input: 'reads.{nr}.fastq.gz'
 		shell:
-			'sqt fastxmod --limit {config.limit} {input} > {output}'
-else:
-	rule decompress_reads:
-		output: "reads/decompressed.{nr}.fastq"
-		input: "reads.{nr}.fastq.gz"
-		shell: "zcat {input} > {output}"
+			'sqt fastxmod --limit {config.limit} {input} | gzip > {output}'
 
 
 if config.merge_program == 'flash':
@@ -145,18 +138,21 @@ elif config.merge_program == 'pear':
 	rule pear_merge:
 		"""Use pear to merge paired-end reads"""
 		output:
-			'reads/pear.unassembled.forward.fastq',
-			'reads/pear.unassembled.reverse.fastq',
-			'reads/pear.discarded.fastq',
-			fastq=MERGED_READS
+			unmerged1='reads/pear.unassembled.forward.fastq.gz',
+			unmerged2='reads/pear.unassembled.reverse.fastq.gz',
+			discarded='reads/pear.discarded.fastq.gz',
+			fastq=MERGED_READS,
 		input: READS1, READS2
 		resources: time=60
 		threads: 8
 		log: 'reads/pear.log'
 		shell:
 			r"""
-			pear -j {threads} -f {input[0]} -r {input[1]} -o reads/pear | tee {log} && \
-			gzip < reads/pear.assembled.fastq > {output.fastq} && rm reads/pear.assembled.fastq
+			pear -j {threads} -f {input[0]} -r {input[1]} -o reads/pear | tee {log}
+			for f in reads/pear.{{unassembled.forward,unassembled.reverse,assembled,discarded}}.fastq; do
+				gzip -f $f
+			done
+			mv reads/pear.assembled.fastq.gz {output.fastq}
 			"""
 else:
 	sys.exit("merge_program {config.merge_program!r} given in configuration file not recognized".format(config=config))
@@ -207,9 +203,9 @@ rule stats_numbers:
 	shell:
 		"""
 		echo -n "Number of paired-end reads: " > {output}
-		awk 'END {{ print NR/4 }}' {input.reads} >> {output}
+		zcat {input.reads} | awk 'END {{ print NR/4 }}' >> {output}
 		echo -n "Number of barcodes (looking at 1st read in pair): " >> {output}
-		awk 'NR % 4 == 2 {{ print substr($1, 1, 12) }}' {input.reads} | sort -u | grep -v N | wc -l >> {output}
+		zcat {input.reads} | awk 'NR % 4 == 2 {{ print substr($1, 1, 12) }}' | sort -u | grep -v N | wc -l >> {output}
 		echo -n "Number of merged sequences: " >> {output}
 		zcat {input.merged} | awk 'END {{ print NR/4 }}' >> {output}
 		echo -n "Number of barcodes in merged sequences: " >> {output}
