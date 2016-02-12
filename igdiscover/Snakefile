@@ -11,6 +11,7 @@ class Config:
 	def __init__(self, path):
 		# Set some defaults.
 		self.merge_program = 'pear'
+		self.flash_maximum_overlap = 300
 		self.limit = None  # or an integer
 		self.cluster_program = 'vsearch'
 		self.multialign_program = 'muscle-fast'
