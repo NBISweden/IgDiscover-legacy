@@ -11,10 +11,6 @@ species: rhesus_monkey
 iterations: 0
 
 
-# Filter out merged reads that are shorter than this length.
-minimum_merged_read_length: 300
-
-
 # Length of the random barcode sequence, assumed to be in the beginning of each
 # sequence. Set to 0 when you have no random barcode.
 barcode_length: 0
@@ -50,8 +46,13 @@ reverse_primers:
 
 # limit: false
 
-
+##
 ## Advanced settings (usually do not need to be changed)
+##
+
+# Filter out merged reads that are shorter than this length.
+minimum_merged_read_length: 300
+
 
 # When discovering new V genes, ignore whether a J gene has been assigned
 # and also ignore its %SHM.
