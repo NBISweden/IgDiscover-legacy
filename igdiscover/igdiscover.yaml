@@ -8,7 +8,7 @@ species: rhesus_monkey
 
 # How many discovery iterations to run.
 # If 0, the database will not be updated.
-iterations: 0
+iterations: 4
 
 
 # Length of the random barcode sequence, assumed to be in the beginning of each
