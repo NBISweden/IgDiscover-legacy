@@ -3,25 +3,76 @@ User guide
 ==========
 
 
-Running the pipeline
-====================
+IgDiscover overview
+===================
 
-Each library will be processed in a separate subdirectory of the pipeline
-directory, such as ``pipeline/xyz`` for a library named ``xyz``. Use the command
-``igdiscover init pipeline/xyz`` to initialize the directory for a new library. When
-you run it, you will be asked to select the file that contains the reads that
-you want to analyze. Only select the first file; the second file will be
-determined automatically.
+IgDiscover works on a single library at a time. It creates a subdirectory for
+the library, which contains all intermediate and result files.
 
-You will then be asked for the IgBLAST database directory to use. Next, you
-should adjust the configuration file ``pipeline.conf`` if necessary.
+To start an analysis, you need:
 
-Finally, make sure you are in the ``xyz`` directory, and then run::
+1. Two FASTQ files with paired-end reads
+2. A database of V/D/J genes (three FASTA files named ``v.fasta``, ``d.fasta``, ``j.fasta``)
+3. A configuration file that describes the library
 
-    snakemake -j
+To run an analysis, proceed as follows.
 
-The ``-j`` option makes sure that as many processors as available on your machine
-are used in parallel.
+1. Create and initialize the analysis directory.
+
+   First, pick a name for your analysis. We will use ``myexperiment`` in the following.
+   Run ``igdiscover init``::
+
+       igdiscover init myexperiment
+
+   A dialog will appear and ask for the file with the *first* reads.
+   Find the ``mylibrary.1.fastq.gz`` file or whatever it is called and select it.
+   You do not need to choose the second read file!
+   It is found automatically.
+
+   Next, choose the directory with your database.
+   The directory must contain the three files ``v.fasta``, ``d.fasta``, ``j.fasta``.
+   These files contain the VH, DH, JH gene sequences, respectively.
+
+   If you do not want a graphical user interface, use the two command-line
+   parameters ``--db`` and ``--reads`` to provide this information instead::
+
+       igdiscover init --db path/to/my/database/ --reads mylibrary.1.fastq.gz myexperiment
+
+   In any case, an analysis directory named ``myexperiment`` will have been created.
+
+2. Adjust the configuration file
+
+   The previous step created a configuration file named ``myexperiment/igdiscover.yaml``.
+   Use a text editor to modify the file.
+   The settings you should make sure to check are:
+
+   - ``iterations`` and
+   - ``species``
+
+   The ``iterations`` specifies the number of rounds of V gene discovery that will be performed.
+   Four or five rounds are usually sufficient.
+   You can also set this to zero, in which case the initial database will be used unchanged.
+
+   The ``species`` must be set to a value supported by IgBLAST.
+   As IgDiscover uses custom V/D/J databases, this setting does not influence results too much.
+
+   Setting the parameters ``stranded``, ``forward_primers`` and ``reverse_primers`` to the correct values can be used to remove 5' and 3' primers from the sequences.
+   Doing this is not strictly necessary for IgDiscover!
+   It is simplest if you do not specify any primer sequences.
+
+3. Run the analysis
+
+   Change into the newly created analysis directory and run the ``snakemake`` tool in order to run the analysis.
+   Make sure you add the ``-j`` parameter in order to use all available cores of your machine::
+
+       snakemake -j
+
+   The ``-p`` parameter prints out a bit more information while IgDiscover works if you would like to see it::
+
+       snakemake -p -j
+
+   Depending on the size of your library, your computer, and the number of iterations, this will now take from a few hours to a day.
+
 
 
 Creating a new IgBLAST database
@@ -37,6 +88,22 @@ by the pipeline next time it runs.
 
 Files
 =====
+
+filtered.fasta
+flash.log
+forward-primer-trimmed.cutadapt.log
+forward-primer-trimmed.fastq.gz
+merged.fastq.gz
+pear.assembled.fastq
+pear.discarded.fastq
+pear.log
+pear.unassembled.forward.fastq
+pear.unassembled.reverse.fastq
+trimmed.cutadapt.log
+trimmed.fastq.gz
+unique.fasta
+
+
 
 reads/merged.fastq.gz -- merged reads
 reads/trimmed.fastq.gz -- primers removed from merged reads
@@ -56,8 +123,6 @@ reads.2.fastq.gz
 igdiscover.yaml
 Snakefile
 
-reads/decompressed.1.fastq
-reads/decompressed.2.fastq
 reads/merged.fastq.gz
 reads/forward-primer-trimmed.fastq.gz
 reads/trimmed.fastq.gz
