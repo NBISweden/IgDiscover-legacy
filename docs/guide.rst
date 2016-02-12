@@ -241,30 +241,22 @@ sequences can sometimes lead to the same number (a “hash collision”).
 Subcommands
 ===========
 
-    commonv             Find common V genes between two different antibody
-                        libraries.
-    igblast             Run IgBLAST.
-    parse               Parse IgBLAST output and write out a tab-separated
-                        table.
-    filter              Filter table with parsed IgBLAST results
-    count               Count and plot V, D, J gene usage.
-    group               Group sequences by barcode and V/J assignment and
-                        print each group’s consensus
-    multidiscover       Find V gene sister sequences shared by multiple
-                        libraries.
-    compose             Create new V gene database from V gene candidates.
-    discover            Discover candidate new V genes within a single
-                        antibody library.
-    init                Create and initialize a new pipeline directory.
-    clusterplot         For each V gene, plot a clustermap of the sequences
-                        assigned to it.
-    errorplot           Plot histograms of differences to reference V gene
-    upstream            Cluster upstream sequences (UTR and leader) for each
-                        gene
-    dendrogram          Draw a dendrogram of sequences in a FASTA file.
-    rename              Rename sequences in a target FASTA file using a
-                        template FASTA file
-    union               Compute union of sequences in multiple FASTA files
+commonv             Find common V genes between two different antibody libraries.
+igblast             Run IgBLAST.
+parse               Parse IgBLAST output and write out a tab-separated table.
+filter              Filter table with parsed IgBLAST results
+count               Count and plot V, D, J gene usage.
+group               Group sequences by barcode and V/J assignment and print each group’s consensus
+multidiscover       Find V gene sister sequences shared by multiple libraries.
+compose             Create new V gene database from V gene candidates.
+discover            Discover candidate new V genes within a single antibody library.
+init                Create and initialize a new pipeline directory.
+clusterplot         For each V gene, plot a clustermap of the sequences assigned to it.
+errorplot           Plot histograms of differences to reference V gene
+upstream            Cluster upstream sequences (UTR and leader) for each gene
+dendrogram          Draw a dendrogram of sequences in a FASTA file.
+rename              Rename sequences in a target FASTA file using a template FASTA file
+union               Compute union of sequences in multiple FASTA files
 
 
 The assigned.tab table
