@@ -22,10 +22,10 @@ Either follow the instructions on the linked page or try these commands::
 	wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
 	bash Miniconda3-latest-Linux-x86_64.sh
 
-When you get the question “Do you wish the installer to prepend the Miniconda3
-install location to PATH in your /home/.../.bashrc”, answer ``yes``. If you
-don’t, you need to type in the line ``export PATH=...`` that the installer
-prints every time before using conda or IgDiscover.
+Accept the license, and when you get the question “Do you wish the installer to
+prepend the Miniconda3 install location to PATH in your /home/.../.bashrc”,
+answer ``yes``. If you don’t, you need to type in the line ``export PATH=...``
+that the installer prints every time before using conda or IgDiscover.
 
 Next, close the terminal window and open a new one. Make sure that conda is
 installed by typing in ``conda list``. If everything is working, you should see
