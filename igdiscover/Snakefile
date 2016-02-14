@@ -86,7 +86,7 @@ UNIQUE_READS = 'reads/unique.fasta'
 ITERATION_TARGETS = [
 	'clusterplots/done',
 	'counts.txt',
-	'unique.correlationVJ.pdf',
+	#'unique.correlationVJ.pdf',
 	'unique.errorhistograms.pdf',
 	'unique.V_usage.tab',
 	'unique.V_usage.pdf',
@@ -99,7 +99,7 @@ DISCOVERY_TARGETS = [
 ]
 # Targets for final iteration
 FINAL_TARGETS = [
-	'consensus.correlationVJ.pdf',
+	#'consensus.correlationVJ.pdf',
 	'consensus.V_usage.tab',
 	'consensus.V_usage.pdf',
 ]
