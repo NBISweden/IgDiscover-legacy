@@ -25,6 +25,8 @@ warnings.filterwarnings('ignore', 'The `IPython.html` package')
 # add_arguments() and main() functions. Documentation is taken from the first
 # line of the module’s docstring.
 COMMANDS = [
+	'init',
+	'run',
 	'commonv',
 	'igblast',
 	'parse',
@@ -34,7 +36,6 @@ COMMANDS = [
 	'multidiscover',
 	'compose',
 	'discover',
-	'init',
 	'clusterplot',
 	'errorplot',
 	'upstream',

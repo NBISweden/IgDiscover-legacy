@@ -36,7 +36,6 @@ def tkinter_reads_path(directory=False):
 		filetypes=[
 			("Reads", "*.fasta *.fastq *.fastq.gz *.fasta.gz"),
 			("Any file", "*")])
-	# messagebox.showinfo('Chosen file', repr(path))
 	return path
 
 
@@ -47,7 +46,6 @@ def tkinter_database_path(initialdir):
 	root = tk.Tk()
 	root.withdraw()
 	path = filedialog.askdirectory(title="Choose IgBLAST database directory", mustexist=True, initialdir=initialdir)
-	# messagebox.showinfo('Chosen file', repr(path))
 	return path
 
 
@@ -80,7 +78,7 @@ def qt_path():
 
 def is_1_2(s, t):
 	"""
-	Determine whether s and t are identical except for a single character at
+	Determine whether s and t are identical except for a single character of
 	which one of them is '1' and the other is '2'.
 	"""
 	differences = 0
@@ -105,7 +103,7 @@ def guess_paired_path(path):
 	Return None if no second file was found or if there are too many candidates.
 
 	>>> guess_paired_path('file.1.fastq.gz')
-	file.2.fastq.gz  # if that file exists
+	'file.2.fastq.gz'  # if that file exists
 	"""
 	base, name = os.path.split(path)
 	glob_pattern = os.path.join(base, name.replace('1', '?'))
@@ -157,9 +155,6 @@ def main(args):
 	create_symlink(reads1, args.directory, 'reads.1.fastq')
 	create_symlink(reads2, args.directory, 'reads.2.fastq')
 
-	snakepath = pkg_resources.resource_filename('igdiscover', 'Snakefile')
-	os.symlink(os.path.relpath(snakepath, args.directory), os.path.join(args.directory, 'Snakefile'))
-
 	if args.library_name:
 		library_name = args.library_name
 	else:
@@ -187,4 +182,4 @@ def main(args):
 		if yesno('Directory initialized', 'Do you want to edit the configuration file now?'):
 			subprocess.call(["xdg-open", os.path.join(args.directory, PIPELINE_CONF)])
 	logger.info('Directory %s initialized.', args.directory)
-	logger.info('Edit %s/%s, then run "cd %s && snakemake -j" to start the pipeline', args.directory, PIPELINE_CONF, args.directory)
+	logger.info('Edit %s/%s, then run "cd %s && igdiscover run" to start the pipeline', args.directory, PIPELINE_CONF, args.directory)

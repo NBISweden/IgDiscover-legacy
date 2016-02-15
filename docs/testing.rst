@@ -38,7 +38,7 @@ running the program.
 
    Change the following settings in the configuration file:
 
-   - Change the number of iterations from 0 to 2.
+   - Change the number of iterations from 4 to 2.
    - Change the ``barcode_length`` from 0 to 12.
    - Specify that a stranded protocol is used by changing the appropriate
      setting from *false* to *true*.
@@ -48,9 +48,8 @@ running the program.
    - In the same way, make sure that the ``reverse_primers`` contain
      ``GCAGGCCTTTTTGGCCNNNNNGGGGCATTCTCACAGGAGACGAGGGGGAAAAG``.
 
-4. Run IgDiscover. Change into the pipeline directory and then run snakemake
-   (just copy and paste what the ``igdiscover init`` command above told you)::
+4. Run IgDiscover. Change into the pipeline directory and then run the analysis with this command::
 
-	cd igdiscovertest && snakemake -j
+	cd igdiscovertest && igdiscover run
 
 5. Finally, inspect the results.

@@ -2,7 +2,7 @@
 
 library_name:
 
-# Choose 'human', 'mouse' or 'rhesus_monkey'
+# Choose a species support by IgBLAST, such as 'human', 'mouse' or 'rhesus_monkey'
 species: rhesus_monkey
 
 

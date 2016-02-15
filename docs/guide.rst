@@ -62,14 +62,15 @@ To run an analysis, proceed as follows.
 
 3. Run the analysis
 
-   Change into the newly created analysis directory and run the ``snakemake`` tool in order to run the analysis.
-   Make sure you add the ``-j`` parameter in order to use all available cores of your machine::
+   Change into the newly created analysis directory and run the analysis::
 
-       snakemake -j
+       igdiscover run
 
-   The ``-p`` parameter prints out a bit more information while IgDiscover works if you would like to see it::
+   This will use `snakemake <http://snakemake.bitbucket.org/>`_ to run the pipeline on all available CPU cores.
 
-       snakemake -p -j
+   Add the ``-p`` parameter to print out slightly more information::
+
+       igdiscover run -p
 
    Depending on the size of your library, your computer, and the number of iterations, this will now take from a few hours to a day.
 
