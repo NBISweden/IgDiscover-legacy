@@ -33,7 +33,7 @@ COMMANDS = [
 	'filter',
 	'count',
 	'group',
-	'multidiscover',
+	#'multidiscover',
 	'compose',
 	'discover',
 	'clusterplot',
