@@ -76,6 +76,106 @@ To run an analysis, proceed as follows.
 
 
 
+The analysis directory
+======================
+
+IgDiscover writes all intermediate files, the final V gene database, statistics and plots into the analysis directory that was created with ``igdiscover init``.
+The files in the ``final/`` subdirectory are likely the most relevant ones.
+
+These are the files and subdirectories can be found in the directory.
+(Subdirectories are described in detail below.)
+
+igdiscover.yaml
+    The configuration file.
+    Make sure to adjust this to your needs as described above.
+
+reads.1.fastq.gz
+reads.2.fastq.gz
+    Symbolic links to the raw, paired-end input reads.
+
+database/
+    The input V/D/J database (simply three FASTA files).
+    The files are a copy of the ones you selected when running ``igdiscover init``.
+
+reads/
+    Processed reads (merged etc.)
+
+iteration-xx/
+    Iteration-specific analysis directory.
+    Each iteration is run in one of these directories.
+    ``iteration-01`` contains the first iteration, ``iteration-02`` the second etc.
+    Iteration 01 uses the original input database (the one also found in the ``database/`` directory),
+    and creates an updated database from it (with new V genes).
+    The new database is used as input for the next iteration.
+
+final/
+    After the last iteration, IgBLAST is run again on the input sequences, but using the final database (the one created in the very last iteration).
+    This directory contains all the results, such as plots of the repertoire profiles.
+    If you set the number of iterations to 0 in the configuration file, this directory is the only one that is created.
+
+
+Final results
+-------------
+
+Final results can be found in the ``final`` subdirectory of the analysis directory.
+
+final/database/species_V.fasta
+final/database/species_D.fasta
+final/database/species_J.fasta
+    The final, individualized V, D, J database found by IgDiscover.
+    The D and J files are copies of the original starting database;
+    they are not updated by IgDiscover.
+
+final/V_dendrogram.pdf
+    A dendrogram of all V sequences in the individualized database.
+
+final/unique.igblast.txt.gz
+    IgBLAST result (compressed) of running IgBLAST with the discovered database.
+
+final/unique.assigned.tab.gz
+    Parsed IgBLAST results as a table (created from the igblast.txt.gz file).
+    This table contains one row for each input sequence.
+    See below for a detailed description of the columns.
+
+final/unique.filtered.tab.gz
+
+final/V_usage.tab
+final/V_usage.pdf
+    The V gene expression counts, derived from the IgBLAST results.
+    The .tab file contains the counts as a table, while the pdf file contains a plot of the same values.
+
+final/unique.errorhistograms.pdf
+
+final/clusterplots/
+    VH7.21_S4259.png
+
+
+If you are interested in the results of each iteration, you can inspect the iteration-xx/ directories.
+They are structured in the same way as the final/ subdirectory, except that the results are based on the intermediate databases of that iteration.
+They also contain the following additional files.
+
+iteration-xx/candidates.tab
+iteration-xx/new_V_database.fasta
+
+
+
+reads/merged.fastq.gz
+    Reads merged with PEAR or FLASH
+reads/trimmed.fastq.gz
+    Merged reads with 5' and 3' primer sequences removed.
+reads/filtered.fasta
+    Merged, primer-trimmed sequences converted to FASTA, and too short sequences removed.
+reads/unique.fasta
+    Filtered sequences without duplicates (using VSEARCH)
+
+
+stats/unique.readlengths.txt
+stats/merged.readlengths.pdf
+stats/unique.readlengths.pdf
+stats/merged.readlengths.txt
+stats/barcodes.txt
+
+
 Creating a new IgBLAST database
 ===============================
 
@@ -85,119 +185,6 @@ Then copy FASTA files with V, D, J sequences into the directory. The files need
 to be named ``rhesus_monkey_V.fasta``, ``rhesus_monkey_D.fasta`` and
 ``rhesus_monkey_J.fasta``. The ``makeblastdb`` program will be run automatically
 by the pipeline next time it runs.
-
-
-Files
-=====
-
-filtered.fasta
-flash.log
-forward-primer-trimmed.cutadapt.log
-forward-primer-trimmed.fastq.gz
-merged.fastq.gz
-pear.assembled.fastq
-pear.discarded.fastq
-pear.log
-pear.unassembled.forward.fastq
-pear.unassembled.reverse.fastq
-trimmed.cutadapt.log
-trimmed.fastq.gz
-unique.fasta
-
-
-
-reads/merged.fastq.gz -- merged reads
-reads/trimmed.fastq.gz -- primers removed from merged reads
-reads/filtered.fasta  -- too short sequences removed, converted to FASTA
-reads/unique.fasta -- collapsed sequences (duplicates removed)
-unique.igblast.txt.gz -- IgBLAST output
-unique.assigned.tab -- parsed IgBLAST output as a tab-delimited table
-unique.filtered.tab -- filtered version of the above
-groups.tab -- sequences grouped by barcode
-consensus.fasta -- contains one consensus sequence for each group
-consensus.igblast.txt -- consensus sequences sent through IgBLAST
-consensus.assigned.tab -- parsed IgBLAST output
-
-
-reads.1.fastq.gz
-reads.2.fastq.gz
-igdiscover.yaml
-Snakefile
-
-reads/merged.fastq.gz
-reads/forward-primer-trimmed.fastq.gz
-reads/trimmed.fastq.gz
-reads/unique.fasta
-reads/pear.unassembled.reverse.fastq
-reads/pear.unassembled.forward.fastq
-reads/pear.discarded.fastq
-reads/pear.log
-reads/filtered.fasta
-
-iteration-05/consensus.fasta
-iteration-05/unique.fasta
-iteration-05/consensus.assigned.tab.gz
-iteration-05/unique.correlationVJ.pdf
-iteration-05/clusterplots/VH7.21_S4259.png
-iteration-05/clusterplots/done
-iteration-05/consensus.igblast.txt.gz
-iteration-05/candidates.tab
-iteration-05/new_V_database.fasta
-iteration-05/unique.errorhistograms.pdf
-iteration-05/counts.txt
-iteration-05/stats
-iteration-05/stats/groupsizes.pdf
-iteration-05/groups.tab
-iteration-05/unique.V_usage.pdf
-iteration-05/database
-iteration-05/database/rhesus_monkey_J.fasta
-iteration-05/database/rhesus_monkey_D.fasta
-iteration-05/database/rhesus_monkey_V.fasta  (+ .nsi/nin/snq/nhr/nog)
-iteration-05/unique.V_usage.tab
-iteration-05/unique.assigned.tab.gz
-iteration-05/unique.filtered.tab.gz
-iteration-05/unique.igblast.txt.gz
-iteration-05/V_dendrogram.pdf
-iteration-05/unique.consensus.log
-
-final/consensus.V_usage.tab
-final/consensus.fasta
-final/unique.fasta
-final/consensus.assigned.tab.gz
-final/unique.correlationVJ.pdf
-final/clusterplots/VH7.21_S4259.png
-final/clusterplots/done
-final/consensus.igblast.txt.gz
-final/unique.errorhistograms.pdf
-final/consensus.correlationVJ.pdf
-final/counts.txt
-final/stats
-final/stats/groupsizes.pdf
-final/groups.tab
-final/unique.V_usage.pdf
-final/database/rhesus_monkey_J.fasta
-final/database/rhesus_monkey_D.fasta
-final/database/rhesus_monkey_V.fasta
-final/unique.V_usage.tab
-final/consensus.filtered.tab.gz
-final/unique.assigned.tab.gz
-final/unique.filtered.tab.gz
-final/unique.igblast.txt.gz
-final/V_dendrogram.pdf
-final/consensus.V_usage.pdf
-final/unique.consensus.log
-
-stats
-stats/unique.readlengths.txt
-stats/merged.readlengths.pdf
-stats/unique.readlengths.pdf
-stats/merged.readlengths.txt
-stats/barcodes.txt
-database
-database/rhesus_monkey_J.fasta
-database/rhesus_monkey_D.fasta
-database/rhesus_monkey_V.fasta
-
 
 
 
