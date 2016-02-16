@@ -21,9 +21,9 @@ running the program.
 
 2. Initialize the IgDiscover pipeline directory::
 
-	igdiscover init --db igdiscover-test-0.1/db/ --reads igdiscover-test-0.1/reads.1.fastq.gz igdiscovertest
+	igdiscover init --db igdiscover-test-0.1/db/ --reads igdiscover-test-0.1/reads.1.fastq.gz discovertest
 
-   The name ``igdiscovertest`` is the name of the pipeline directory that will be
+   The name ``discovertest`` is the name of the pipeline directory that will be
    created. Note that only the path to the *first* reads file needs to be
    given. The second file is found automatically.
 
@@ -32,7 +32,7 @@ running the program.
    and how to actually run IgDiscover after that.
 
 3. Edit the configuration file. The configuration file is in
-   ``igdiscovertest/igdiscover.yaml``. The configuration is in YAML format, which
+   ``discovertest/igdiscover.yaml``. The configuration is in YAML format, which
    should be straightforward to understand. When editing the file, just follow
    the way it is already structured.
 
@@ -48,8 +48,9 @@ running the program.
    - In the same way, make sure that the ``reverse_primers`` contain
      ``GCAGGCCTTTTTGGCCNNNNNGGGGCATTCTCACAGGAGACGAGGGGGAAAAG``.
 
-4. Run IgDiscover. Change into the pipeline directory and then run the analysis with this command::
+4. Run the analysis by changing into the pipeline directory and runing this command::
 
-	cd igdiscovertest && igdiscover run
+	cd discovertest && igdiscover run
 
-5. Finally, inspect the results.
+5. Finally, inspect the results in the ``discovertest/final`` directory.
+   See the :ref:`explanation of final result files <final-results>`.

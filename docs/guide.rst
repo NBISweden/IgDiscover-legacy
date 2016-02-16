@@ -3,8 +3,8 @@ User guide
 ==========
 
 
-IgDiscover overview
-===================
+Overview
+========
 
 IgDiscover works on a single library at a time. It creates a subdirectory for
 the library, which contains all intermediate and result files.
@@ -15,17 +15,20 @@ To start an analysis, you need:
 2. A database of V/D/J genes (three FASTA files named ``v.fasta``, ``d.fasta``, ``j.fasta``)
 3. A configuration file that describes the library
 
+If you do not have a V/D/J database, yet, you may want to read the section about :ref:`how to obtain V/D/J sequences <obtaining-database>`.
+
 To run an analysis, proceed as follows.
 
 1. Create and initialize the analysis directory.
 
    First, pick a name for your analysis. We will use ``myexperiment`` in the following.
-   Run ``igdiscover init``::
+   Then run ``igdiscover init``::
 
        igdiscover init myexperiment
 
-   A dialog will appear and ask for the file with the *first* reads.
-   Find the ``mylibrary.1.fastq.gz`` file or whatever it is called and select it.
+   A dialog will appear and ask for the file with the *first* (forward) reads.
+   Find your compressed FASTQ file that contains them and select it.
+   Typical file names may be ``Library1_S1_L001_R1_001.fastq.gz`` or ``mylibrary.1.fastq.gz``.
    You do not need to choose the second read file!
    It is found automatically.
 
@@ -49,7 +52,7 @@ To run an analysis, proceed as follows.
    - ``iterations`` and
    - ``species``
 
-   The ``iterations`` specifies the number of rounds of V gene discovery that will be performed.
+   The ``iterations`` settings specifies the number of rounds of V gene discovery that will be performed.
    Four or five rounds are usually sufficient.
    You can also set this to zero, in which case the initial database will be used unchanged.
 
@@ -75,6 +78,22 @@ To run an analysis, proceed as follows.
    Depending on the size of your library, your computer, and the number of iterations, this will now take from a few hours to a day.
 
 
+.. _obtaining-database:
+
+Obtaining a V/D/J database
+==========================
+
+We use the term “database” to refer to three FASTA files that contain the sequences for the VH, DH and JH genes.
+The IMGT provides `sequences for download <http://www.imgt.org/vquest/refseqh.html>`_.
+You need to get the IGHV, IGHD and IGHJ files for your species.
+As IgDiscover uses this only as a starting point, using a similar species will also work.
+
+The files you get from IMGT are not ready to use.
+You should run the script ``edit_imgt_file.pl`` on them that the `IgBLAST authors provide on their FTP server <ftp://ftp.ncbi.nih.gov/blast/executables/igblast/release/>`_.
+Run it for all three downloaded files, and make sure that the files are called ``VH.fasta``, ``DH.fasta`` and ``JH.fasta``.
+
+In case you have used IgBLAST previously, note that there is no need to run the ``makeblastdb`` tool yourself as IgDiscover will do that for you.
+
 
 The analysis directory
 ======================
@@ -82,47 +101,43 @@ The analysis directory
 IgDiscover writes all intermediate files, the final V gene database, statistics and plots into the analysis directory that was created with ``igdiscover init``.
 The files in the ``final/`` subdirectory are likely the most relevant ones.
 
-These are the files and subdirectories can be found in the directory.
-(Subdirectories are described in detail below.)
+These are the files and subdirectories that can be found in the analysis directory.
+Subdirectories are described in detail below.
 
 igdiscover.yaml
     The configuration file.
     Make sure to adjust this to your needs as described above.
 
-reads.1.fastq.gz
-reads.2.fastq.gz
-    Symbolic links to the raw, paired-end input reads.
+reads.1.fastq.gz, reads.2.fastq.gz
+    Symbolic links to the raw paired-end reads.
 
 database/
-    The input V/D/J database (simply three FASTA files).
+    The input V/D/J database (as three FASTA files).
     The files are a copy of the ones you selected when running ``igdiscover init``.
 
 reads/
-    Processed reads (merged etc.)
+    Processed reads (merged, de-duplicated etc.)
 
 iteration-xx/
-    Iteration-specific analysis directory.
+    Iteration-specific analysis directory, where “xx” is a number starting from 01.
     Each iteration is run in one of these directories.
-    ``iteration-01`` contains the first iteration, ``iteration-02`` the second etc.
-    Iteration 01 uses the original input database (the one also found in the ``database/`` directory),
-    and creates an updated database from it (with new V genes).
-    The new database is used as input for the next iteration.
+    The first iteration (in ``iteration-01``) uses the original input database, which is also found in the ``database/`` directory.
+    The database is updated and then used as input for the next iteration.
 
 final/
     After the last iteration, IgBLAST is run again on the input sequences, but using the final database (the one created in the very last iteration).
     This directory contains all the results, such as plots of the repertoire profiles.
     If you set the number of iterations to 0 in the configuration file, this directory is the only one that is created.
 
+.. _final-results:
 
 Final results
 -------------
 
-Final results can be found in the ``final`` subdirectory of the analysis directory.
+Final results are found in the ``final/`` subdirectory of the analysis directory.
 
-final/database/species_V.fasta
-final/database/species_D.fasta
-final/database/species_J.fasta
-    The final, individualized V, D, J database found by IgDiscover.
+final/database/species_(V,D,J).fasta
+    These three files represent the final, individualized V/D/J database found by IgDiscover.
     The D and J files are copies of the original starting database;
     they are not updated by IgDiscover.
 
@@ -133,64 +148,69 @@ final/unique.igblast.txt.gz
     IgBLAST result (compressed) of running IgBLAST with the discovered database.
 
 final/unique.assigned.tab.gz
-    Parsed IgBLAST results as a table (created from the igblast.txt.gz file).
-    This table contains one row for each input sequence.
+    V/D/J gene assignments and other information for each sequence.
+    The file is created by parsing the IgBLAST output in the ``igblast.txt.gz`` file.
+    This is a table that contains one row for each input sequence.
     See below for a detailed description of the columns.
 
 final/unique.filtered.tab.gz
+    Filtered V/D/J gene assignments. This is the same as the assigned.tab file mentioned above, but with low-quality assignments filtered out.
+    Run ``igdiscover filter --help`` to see the filtering criteria.
 
-final/V_usage.tab
-final/V_usage.pdf
+final/V_usage.tab, final/V_usage.pdf
     The V gene expression counts, derived from the IgBLAST results.
     The .tab file contains the counts as a table, while the pdf file contains a plot of the same values.
 
 final/unique.errorhistograms.pdf
+    A PDF with one page per V gene/allele.
+    Each page shows a histogram of the percentage differences for that gene.
 
 final/clusterplots/
-    VH7.21_S4259.png
-
+    This is a directory that contains one PNG file for each discovered gene/allele.
+    Each image shows a clusterplot of all the sequences assigned to that gene.
+    Note that the shown clusterplots are by default restricted to showing only at most 300 sequences,
+    while the actual clustering used by IgDiscover uses 1000 sequences.
 
 If you are interested in the results of each iteration, you can inspect the iteration-xx/ directories.
 They are structured in the same way as the final/ subdirectory, except that the results are based on the intermediate databases of that iteration.
 They also contain the following additional files.
 
 iteration-xx/candidates.tab
+    A table with candidate novel VH alleles (or genes).
+    This is a list of sequences found through the “windowing strategy” or “linkage cluster analysis”, as discussed in our paper.
+
 iteration-xx/new_V_database.fasta
+    The discovered list of V genes for this iteration.
+    The file is created from the ``candidates.tab`` file by applying either the germline or pre-germline filter.
 
 
+Other files
+-----------
+
+For completeness, here is a description of the files in the ``reads/`` in ``stats/`` directories.
+They are created during pre-processing and are not iteration specific.
 
 reads/merged.fastq.gz
     Reads merged with PEAR or FLASH
+
 reads/trimmed.fastq.gz
     Merged reads with 5' and 3' primer sequences removed.
+
 reads/filtered.fasta
     Merged, primer-trimmed sequences converted to FASTA, and too short sequences removed.
+
 reads/unique.fasta
     Filtered sequences without duplicates (using VSEARCH)
 
+stats/merged.readlengths.txt, stats/merged.readlengths.pdf
+    Histogram of the lengths of merged reads (created from ``reads/merged.fastq.gz``)
 
-stats/unique.readlengths.txt
-stats/merged.readlengths.pdf
-stats/unique.readlengths.pdf
-stats/merged.readlengths.txt
-stats/barcodes.txt
-
-
-Creating a new IgBLAST database
-===============================
-
-To reduce confusion, do not modify the database, but create a new version
-instead. Create a new directory in ``igdiscover/databases``.
-Then copy FASTA files with V, D, J sequences into the directory. The files need
-to be named ``rhesus_monkey_V.fasta``, ``rhesus_monkey_D.fasta`` and
-``rhesus_monkey_J.fasta``. The ``makeblastdb`` program will be run automatically
-by the pipeline next time it runs.
+stats/unique.readlengths.txt, stats/unique.readlengths.pdf
+    Histogram of the lengths of pre-processed reads (created from ``reads/unique.fasta``)
 
 
-
-
-Structure of each sequence
-==========================
+Input data requirements
+=======================
 
 IgDiscover assumes that its input data are overlapping paired-end reads. After
 merging, they should have this structure (from 5' to 3'):
@@ -211,12 +231,15 @@ always split off, even if no RACE protocol was used. (This should not be a
 problem in practice.) The leader sequence is detected by looking for a start
 codon near 60 bp upstream of the start of the V gene match.
 
+IgDiscover should also be able to handle 454 data, but we have not tested this.
+Contact us for instructions.
+
 
 Novel VH gene names
 ===================
 
-Each novel VH gene discovered by IgDiscover gets a unique name such as
-“VH4.11_S1234”. The “VH4.11” is the name of the database gene to which the novel
+Each VH gene discovered by IgDiscover gets a unique name such as “VH4.11_S1234”.
+The “VH4.11” is the name of the database gene to which the novel
 VH gene was initially assigned. The number *1234* is derived from the base
 sequence of the novel gene. That is, if you discover the same sequence in two
 different runs of the IgDiscover, or just in different iterations, the number will

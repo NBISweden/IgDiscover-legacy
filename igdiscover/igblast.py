@@ -1,5 +1,5 @@
 """
-Run IgBLAST.
+Run IgBLAST
 
 This is a wrapper for the igblastn tool that has a somewhat simpler command-line
 syntax and can also run IgBLAST in parallel. The result is printed to standard
@@ -60,7 +60,6 @@ def run_igblast(fasta, database, species, penalty=None):
 	# The empty aux suppresses a warning from IgBLAST. /dev/null does not work.
 	empty_aux_path = pkg_resources.resource_filename('igdiscover', 'empty.aux')
 	arguments += [
-		#TODO '-auxiliary_data', '$IGDATA/optional_file/{species}_gl.aux',
 		'-auxiliary_data', empty_aux_path,
 		'-organism', species,
 		'-ig_seqtype', 'Ig',
@@ -108,9 +107,6 @@ class Runner:
 
 
 def main(args):
-	"""
-	Run IgBLAST in parallel
-	"""
 	chunks = chunked_fasta(args.fasta, limit=args.limit)
 	runner = Runner(args.database, args.species, args.penalty)
 	with multiprocessing.Pool(args.threads) as pool:

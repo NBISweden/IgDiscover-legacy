@@ -136,7 +136,7 @@ optionally -- flash.
 
 
 Install IgDiscover
-~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~
 
 If you have an ``igdiscover-....tar.gz`` file, then unpack it, change into the
 created directory and run ::
