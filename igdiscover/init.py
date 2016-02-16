@@ -134,7 +134,9 @@ def main(args):
 		dbpath = args.database
 	else:
 		gui = True
-		databases_path = pkg_resources.resource_filename('igdiscover', 'databases')
+		# TODO as soon as we distribute our own database files, we use this:
+		# database_path = pkg_resources.resource_filename('igdiscover', 'databases')
+		databases_path = None
 		dbpath = tkinter_database_path(databases_path)
 		if not dbpath:
 			logger.error('Cancelled')
