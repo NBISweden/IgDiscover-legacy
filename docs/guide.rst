@@ -95,6 +95,32 @@ Run it for all three downloaded files, and make sure that the files are called `
 In case you have used IgBLAST previously, note that there is no need to run the ``makeblastdb`` tool yourself as IgDiscover will do that for you.
 
 
+Input data requirements
+=======================
+
+IgDiscover assumes that its input data are overlapping paired-end reads. After
+merging, they should have this structure (from 5' to 3'):
+
+* A random barcode (molecular identifier). This is optional. Set the
+  configuration option ``barcode_length`` to 0 if you don’t have random barcodes
+  or if you don’t want the program to use them.
+* A run of G nucleotides. This is an artifact of the RACE protocol (Rapid
+  amplification of cDNA ends).
+* 5' UTR
+* Leader
+* Re-arranged V, D and J gene sequences (in that order)
+
+We use IgBLAST to detect the location of the V, D, J genes (run as part of the
+``igdiscover igblast`` subcommand), and the remaining parts are detected
+subsequently with ``igdiscover parse``. The G nucleotides after the barcode are
+always split off, even if no RACE protocol was used. (This should not be a
+problem in practice.) The leader sequence is detected by looking for a start
+codon near 60 bp upstream of the start of the V gene match.
+
+IgDiscover should also be able to handle 454 data, but we have not tested this.
+Contact us for instructions.
+
+
 Configuration
 =============
 
@@ -103,6 +129,7 @@ The syntax should be mostly self-explanatory.
 The file is in YAML format, but you will not need to learn that.
 Just follow the examples given in the file.
 A few rules that may be good to know are the following ones:
+
 1. Lines starting with the ``#`` symbol are comments (they are ignored)
 2. A configuration option that is meant to be switched on or off will say something like ``stranded: false`` if it is off.
    Change this to ``stranded: true`` to switch the option on (and vice versa).
@@ -199,7 +226,7 @@ They also contain the following additional files.
 
 iteration-xx/candidates.tab
     A table with candidate novel VH alleles (or genes).
-    This is a list of sequences found through the “windowing strategy” or “linkage cluster analysis”, as discussed in our paper.
+    This is a list of sequences found through the *windowing strategy* or *linkage cluster analysis*, as discussed in our paper.
 
 iteration-xx/new_V_database.fasta
     The discovered list of V genes for this iteration.
@@ -231,34 +258,9 @@ stats/unique.readlengths.txt, stats/unique.readlengths.pdf
     Histogram of the lengths of pre-processed reads (created from ``reads/unique.fasta``)
 
 
-Input data requirements
-=======================
-
-IgDiscover assumes that its input data are overlapping paired-end reads. After
-merging, they should have this structure (from 5' to 3'):
-
-* A random barcode (molecular identifier). This is optional. Set the
-  configuration option ``barcode_length`` to 0 if you don’t have random barcodes
-  or if you don’t want the program to use them.
-* A run of G nucleotides. This is an artifact of the RACE protocol (Rapid
-  amplification of cDNA ends).
-* 5' UTR
-* Leader
-* Re-arranged V, D and J gene sequences (in that order)
-
-We use IgBLAST to detect the location of the V, D, J genes (run as part of the
-``igdiscover igblast`` subcommand), and the remaining parts are detected
-subsequently with ``igdiscover parse``. The G nucleotides after the barcode are
-always split off, even if no RACE protocol was used. (This should not be a
-problem in practice.) The leader sequence is detected by looking for a start
-codon near 60 bp upstream of the start of the V gene match.
-
-IgDiscover should also be able to handle 454 data, but we have not tested this.
-Contact us for instructions.
-
-
 Format of output files
 ======================
+
 
 
 Novel VH gene names
@@ -275,41 +277,64 @@ Be aware that you still need to check the sequence itself since even different
 sequences can sometimes lead to the same number (a “hash collision”).
 
 
-The assigned.tab table
-----------------------
+assigned.tab.gz
+---------------
 
-This file is created by ``igdiscover parse`` is written to a file named ``...assigned.tab``. It contains the results of parsing IgBLAST output. Each row describes the result for a single query sequence. The first row is a header row.
+This file is a gzip-compressed table with tab-separated values.
+It is created by ``igdiscover parse`` and is the result of parsing IgBLAST output.
+It contains a few additional columns that do not come directly from IgBLAST.
+In particular, the CDR3 sequence is detected, the sequence before the V gene match is split into *UTR* and *leader*, and the RACE-specific run of G nucleotides is also detected.
+The first row is a header row with column names.
+Each subsequent row describes the IgBLAST results for a single pre-processed input sequence.
 
-Columns
--------
+Note: This file is typically quite large.
+LibreOffice can open the file directly (even though it is compressed), but make sure you have enough RAM.
+
+Columns:
 
 * count: How many copies of input sequence this query sequence represents. Copied from the ``;size=3;`` entry in the FASTA header field that is added by ``VSEARCH -derep_fulllength``.
 * V_gene, D_gene, J_gene: V/D/J gene match for the query sequence
 * stop (yes/no): whether the sequence contains a stop codon
 * productive
-* UTR
-* leader
 * V_covered, D_covered, J_covered: percentage of bases of the reference gene that is covered by the bases of the query sequence
 * V_evalue, D_evalue, J_evalue: E-value of V/D/J hit
 * FR1_SHM, CDR1_SHM, FR2_SHM, CDR2_SHM, FR3_SHM, V_SHM, J_SHM: rate of somatic hypermutation (actually, an error rate)
-* CDR1_nt, CDR1_aa, CDR2_nt, CDR2_aa, CDR3_nt, CDR3_aa
+* V_errors, J_errors: Absolute number of errors (differences) in the V and J gene match
+* UTR: Sequence of the 5' UTR (the part before the V gene match up to, but not including, the start codon)
+* leader: Leader sequence (the part between UTR and the V gene match)
+* CDR1_nt, CDR1_aa, CDR2_nt, CDR2_aa, CDR3_nt, CDR3_aa: nucleotide and amino acid sequence of CDR1/2/3
 * V_nt, V_aa: nucleotide and amino acid sequence of V gene match
-* V_end, VD_junction, D_region, DJ_junction, J_start: nucleotide sequences
-* name
+* V_end, VD_junction, D_region, DJ_junction, J_start: nucleotide sequences for various match regions
+* name: for this and the following columns, see the explanation below
 * barcode
 * race_G
 * genomic_sequence
 
 The UTR, leader, barcode, race_G and genomic_sequence columns are filled in the following way.
 
-1. Split 5' end barcode from the sequence (if barcode length is zero, this will be empty), put it in the **barcode** column.
+1. Split the 5' end barcode from the sequence (if barcode length is zero, this will be empty), put it in the **barcode** column.
 2. Remove the initial run of G bases from the remaining sequence, put that in the **race_G** column.
 3. The remainder is put into the **genomic_sequence** column.
 4. If there is a V gene match, take the sequence *before* it and split it up in the following way. Search for the start codon and write the part before it into the **UTR** column. Write the part starting with the start column into the **leader** column.
 
 
-The discover.tab table
-======================
+filtered.tab.gz
+---------------
+
+This table is the same as the ``assigned.tab.gz`` table, except that rows containing low-quality matches have been filtered out.
+Rows fulfilling any of the following criteria are filtered:
+
+- The J gene was not assigned
+- A stop was codon found
+- The V gene coverage is less than 90%
+- The J gene coverage is less than 60%
+- The V gene E-value is greater than 10\ :sup:`-3`
+
+
+
+
+candidates.tab
+--------------
 
 The output table generated by ``igdiscover discover``, named ``...discover.tab``, has the following columns:
 
@@ -318,7 +343,7 @@ The output table generated by ``igdiscover discover``, named ``...discover.tab``
 Then there are sequence counts for four subsets of all the V sequences assigned to that gene. The groups are:
 
 * ``total``: *all* sequences assigned to this gene
-* ``window`: Those sequences assigned to this gene that are within the specified error rate window (with command-line options ``--left`` and ``--right``). The consensus sequence is computed from these.
+* ``window``: Those sequences assigned to this gene that are within the specified error rate window (with command-line options ``--left`` and ``--right``). The consensus sequence is computed from these.
 * ``exact``: Those sequences assigned to this gene that are identical to the consensus (exact matches)
 * ``approx``: Those sequences assigned to this gene that match the consensus approximately (the allowed error rate is by default 1%, but can be changed with the ``--error-rate`` parameter)
 
