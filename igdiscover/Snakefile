@@ -433,8 +433,7 @@ rule igdiscover_igblast:
 	shell:
 		"igdiscover igblast --threads {threads} {params.penalty} "
 		"--species {config.species} {params.database} {input.fasta} | "
-		"gzip > {output.txtgz}.tmp && "
-		"mv {output.txtgz}.tmp {output.txtgz}"
+		"gzip > {output.txtgz}"
 
 
 rule igdiscover_parse:
@@ -478,8 +477,7 @@ rule igdiscover_count:
 		tab="{dir}/{base}.filtered.tab.gz"
 	shell:
 		"igdiscover count --database {input.reference} --gene {wildcards.gene} "
-		"{input.tab} {output.plot} > {output.counts}.tmp && "
-		"mv {output.counts}.tmp {output.counts}"
+		"{input.tab} {output.plot} > {output.counts}"
 
 
 rule igdiscover_clusterplot:
@@ -507,8 +505,7 @@ rule igdiscover_discover:
 	shell:
 		"igdiscover discover -j {threads} --cluster --subsample {config.subsample} "
 		"--window-width 2 --database {input.v_reference} {params.ignore_j} "
-		"{input.tab} > "
-		"{output.tab}.tmp && mv {output.tab}.tmp {output.tab}"
+		"{input.tab} > {output.tab}"
 
 
 rule igdiscover_compose:
@@ -525,7 +522,7 @@ rule igdiscover_compose:
 			criteria += '--unique-CDR3=3 --consensus-seqs=200'
 		else:
 			criteria += '--unique-CDR3=2'
-		shell("igdiscover compose {criteria} {input.tab} > {output.fasta}.tmp && mv {output.fasta}.tmp {output.fasta}")
+		shell("igdiscover compose {criteria} {input.tab} > {output.fasta}")
 
 
 rule stats_correlation_V_J:
