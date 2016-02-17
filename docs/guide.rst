@@ -95,6 +95,28 @@ Run it for all three downloaded files, and make sure that the files are called `
 In case you have used IgBLAST previously, note that there is no need to run the ``makeblastdb`` tool yourself as IgDiscover will do that for you.
 
 
+Configuration
+=============
+
+The configuration file ``igdiscover.yaml`` needs to be edited with a text editor.
+The syntax should be mostly self-explanatory.
+The file is in YAML format, but you will not need to learn that.
+Just follow the examples given in the file.
+A few rules that may be good to know are the following ones:
+1. Lines starting with the ``#`` symbol are comments (they are ignored)
+2. A configuration option that is meant to be switched on or off will say something like ``stranded: false`` if it is off.
+   Change this to ``stranded: true`` to switch the option on (and vice versa).
+3. The primer sequences are given as a list, and must be written in a certain way - one sequence per line, and a ``-`` (dash) in front, like so::
+
+       forward_primers:
+       - ACGTACGTACGT
+       - AACCGGTTAACC
+
+   Even if you have only one primer sequence, you still need to use this syntax.
+
+To find out what the configuration options achieve, see the explanations in the configuration file itself.
+
+
 The analysis directory
 ======================
 
@@ -235,8 +257,12 @@ IgDiscover should also be able to handle 454 data, but we have not tested this.
 Contact us for instructions.
 
 
+Format of output files
+======================
+
+
 Novel VH gene names
-===================
+-------------------
 
 Each VH gene discovered by IgDiscover gets a unique name such as “VH4.11_S1234”.
 The “VH4.11” is the name of the database gene to which the novel
@@ -249,32 +275,10 @@ Be aware that you still need to check the sequence itself since even different
 sequences can sometimes lead to the same number (a “hash collision”).
 
 
-Subcommands
-===========
-
-commonv             Find common V genes between two different antibody libraries.
-igblast             Run IgBLAST.
-parse               Parse IgBLAST output and write out a tab-separated table.
-filter              Filter table with parsed IgBLAST results
-count               Count and plot V, D, J gene usage.
-group               Group sequences by barcode and V/J assignment and print each group’s consensus
-multidiscover       Find V gene sister sequences shared by multiple libraries.
-compose             Create new V gene database from V gene candidates.
-discover            Discover candidate new V genes within a single antibody library.
-init                Create and initialize a new pipeline directory.
-clusterplot         For each V gene, plot a clustermap of the sequences assigned to it.
-errorplot           Plot histograms of differences to reference V gene
-upstream            Cluster upstream sequences (UTR and leader) for each gene
-dendrogram          Draw a dendrogram of sequences in a FASTA file.
-rename              Rename sequences in a target FASTA file using a template FASTA file
-union               Compute union of sequences in multiple FASTA files
-
-
 The assigned.tab table
-======================
+----------------------
 
-This file is created by
-The file created by ``igdiscover parse`` is written to a file named ``...assigned.tab``. It contains the results of parsing IgBLAST output. Each row describes the result for a single query sequence. The first row is a header row.
+This file is created by ``igdiscover parse`` is written to a file named ``...assigned.tab``. It contains the results of parsing IgBLAST output. Each row describes the result for a single query sequence. The first row is a header row.
 
 Columns
 -------
@@ -331,11 +335,58 @@ Finally, the last columns are:
 * ``consensus``: The consensus sequence itself
 
 
-Configuration
-=============
+Subcommands
+===========
 
-forward_primers, reverse_primers: If any primer sequences are given here, then
-reads that do not have the primer sequence will be discarded.
+The ``igdiscover`` program has multiple subcommands.
+You should already be familiar with the two commands ``init`` and ``run``.
+Each subcommand comes with its own help page that shows how to use that subcommand.
+Run the command with the ``--help`` option to see the help. For example, ::
 
-If you use an unstranded protocol, set the ``stranded`` setting to ``false``.
-The pipeline will then search also reverse-complemented reads for primers.
+    igdiscover run --help
+
+shows the help for the ``run`` subcommand.
+
+The following additional subcommands may be useful for further analysis.
+
+commonv
+    Find common V genes between two different antibody libraries
+
+upstream
+    Cluster upstream sequences (UTR and leader) for each gene
+
+dendrogram
+    Draw a dendrogram of sequences in a FASTA file.
+
+rename
+    Rename sequences in a target FASTA file using a template FASTA file
+
+union
+    Compute union of sequences in multiple FASTA files
+
+
+The following subcommands are used internally, and listed here for completeness.
+
+parse
+    Parse IgBLAST output and write out a tab-separated table
+
+filter
+    Filter table with parsed IgBLAST results
+
+count
+    Count and plot V, D, J gene usage
+
+group
+    Group sequences by barcode and V/J assignment and print each group’s consensus (unused in IgDiscover)
+
+compose
+    Create new V gene database from V gene candidates
+
+discover
+    Discover candidate new V genes within a single antibody library
+
+clusterplot
+    For each V gene, plot a clustermap of the sequences assigned to it
+
+errorplot
+    Plot histograms of differences to reference V gene

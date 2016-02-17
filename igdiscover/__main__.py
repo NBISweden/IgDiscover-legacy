@@ -61,7 +61,7 @@ def main():
 
 	args = parser.parse_args()
 	if not hasattr(args, 'func'):
-		parser.error("Please provide a command")
+		parser.error('Please provide the name of a subcommand to run')
 	else:
 		args.func(args)
 

@@ -1,5 +1,5 @@
 """
-Create and initialize a new pipeline directory.
+Create and initialize a new analysis directory.
 """
 import glob
 import logging
@@ -23,7 +23,7 @@ def add_arguments(parser):
 		help='File with paired-end reads (first file only). If not given, a dialog is shown.')
 	parser.add_argument('--library-name', metavar='NAME', default=None,
 		help='Name of the library. Set library_name in the configuration file.')
-	parser.add_argument('directory', help='New pipeline directory to create')
+	parser.add_argument('directory', help='New analysis directory to create')
 
 
 def tkinter_reads_path(directory=False):
