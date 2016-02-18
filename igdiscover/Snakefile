@@ -31,36 +31,12 @@ class Config:
 	def read_from(self, path):
 		with open(path) as f:
 			content = f.read()
-		# Heuristic to detect whether the configuration is YAML or in the old format
-		# Will be removed after a transition period
-		if 'species:' in content:
-			# It’s YAML
-			self.__dict__.update(yaml.safe_load(content))
-		else:
-			exec(content, self.__dict__)
-			# Convert all-uppercase attributes to lowercase
-			for attribute, value in list(vars(self).items()):
-				if attribute == attribute.upper():
-					setattr(self, attribute.lower(), value)
-			if hasattr(self, 'trim_primers'):
-				if self.trim_primers:
-					if not self.reverse_primers:
-						sys.exit("The list of reverse_primers is empty. This will not work correctly.")
-					if not self.forward_primers:
-						sys.exit("The list of forward_primers is empty. This will not work correctly.")
-				else:
-					self.reverse_primers = None
-					self.forward_primers = None
-				del self.trim_primers
+		self.__dict__.update(yaml.safe_load(content))
 
 try:
 	config = Config('igdiscover.yaml')
 except FileNotFoundError:
-	# For backwards compatibility, try old path also
-	try:
-		config = Config('pipeline.conf')
-	except FileNotFoundError:
-		sys.exit("Pipeline configuration file 'igdiscover.yaml' not found. Please create it!")
+	sys.exit("Pipeline configuration file 'igdiscover.yaml' not found. Please create it!")
 
 print('IgDiscover configuration:')
 for k, v in sorted(vars(config).items()):
