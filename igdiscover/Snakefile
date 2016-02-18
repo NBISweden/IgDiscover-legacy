@@ -298,26 +298,6 @@ rule dereplicate:
 		'vsearch --derep_fulllength {input.fasta} --strand both --output {output.fasta} --sizeout'
 
 
-# TODO this rule is unused
-rule cluster:
-	"""
-	TODO Daniel ran this three times (at 99%, 98% and 97% identity) in order to
-	avoid a specific type of misclustering.
-	"""
-	output:
-		fasta="clustered.fasta",  # centroids
-		uc="clustered.uc"
-	input: fasta=UNIQUE_READS
-	resources: time=36*60, mem=32000
-	threads: 4
-	shell:
-		# TODO -idprefix 5?
-		r"""
-		{config.cluster_program} -threads {threads} -cluster_fast {input.fasta} -id 0.97 -uc {output.uc} \
-			-idprefix 5 -sizeout --centroids {output.fasta}
-		"""
-
-
 rule copy_dj_database:
 	"""Copy D and J gene database into the iteration folder"""
 	output:
