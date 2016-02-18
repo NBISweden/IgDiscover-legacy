@@ -459,8 +459,8 @@ rule igdiscover_discover:
 		ignore_j='--ignore-J' if config.ignore_j else ''
 	threads: 4  # TODO this could be increased up to 6
 	shell:
-		"igdiscover discover -j {threads} --cluster --subsample {config.subsample} "
-		"--window-width 2 --database {input.v_reference} {params.ignore_j} "
+		"igdiscover discover -j {threads} --subsample {config.subsample} "
+		"--database {input.v_reference} {params.ignore_j} "
 		"{input.tab} > {output.tab}"
 
 

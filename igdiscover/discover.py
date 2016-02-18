@@ -50,9 +50,9 @@ def add_arguments(parser):
 	arg('--right', '-r', type=float, metavar='ERROR-RATE',
 		help='For consensus, include only sequences that have at most this error rate (in percent). Default: %(default)s', default=100)
 	arg('--window-width', '-w', type=float, metavar='PERCENT',
-		help='Compute consensus for all PERCENT-wide windows. Default: do not compute', default=None)
-	arg('--cluster', action='store_true', default=False,
-		help='Cluster sequences by similarity and compute consensus')
+		help='Compute consensus for all PERCENT-wide windows. Set to 0 to disable. Default: %(default)s', default=2)
+	arg('--no-cluster', dest='cluster', action='store_false', default=True,
+		help='Do not run linkage cluster analysis.')
 	arg('--max-n-bases', type=int, default=0, metavar='MAXN',
 		help='Remove rows that have more than MAXN "N" nucleotides. If >0, an '
 			'N_bases column is added. Default: 0')
