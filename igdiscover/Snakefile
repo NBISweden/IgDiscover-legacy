@@ -56,7 +56,7 @@ else:
 	READS2 = 'reads.2.fastq.gz'
 
 MERGED_READS = 'reads/merged.fastq.gz'
-UNIQUE_READS = 'reads/unique.fasta'
+UNIQUE_READS = 'reads/unique.fasta.gz'
 
 # Targets for each iteration
 ITERATION_TARGETS = [
@@ -187,9 +187,9 @@ rule stats_numbers:
 		echo -n "Number of barcodes in merged sequences: " >> {output}
 		zcat {input.merged} | awk 'NR % 4 == 2 {{ print substr($1, 1, 12) }}' | sort -u | grep -v N | wc -l >> {output}
 		echo -n "Number of unique sequences: " >> {output}
-		grep -c '^>' {input.unique} >> {output}
+		zgrep -c '^>' {input.unique} >> {output}
 		echo -n "Number of barcodes in unique sequences: " >> {output}
-		grep -A 1 '^>' {input.unique} | awk '!/^>/ && $1 != "--" {{ print substr($1,1,12) }}' | sort -u | grep -v N | wc -l >> {output}
+		zgrep -A 1 '^>' {input.unique} | awk '!/^>/ && $1 != "--" {{ print substr($1,1,12) }}' | sort -u | grep -v N | wc -l >> {output}
 		echo -n "Number of barcodes in unique table: " >> {output}
 		zcat {input.unique_table} | cut -f35 | sed 1d | awk '{{print substr($1, 1, 12) }}' | sort -u | grep -v N | wc -l >>  {output}
 		echo -n "Number of sequences in final consensus table: " >> {output}
@@ -283,7 +283,7 @@ rule fastq_to_fasta:
 	* Remove low-quality sequences
 	* Discard too short sequences
 	"""
-	output: fasta="reads/filtered.fasta"
+	output: fasta=temp("reads/filtered.fasta")
 	input: fastq="reads/trimmed.fastq.gz"
 	params: max_errors="--max-errors {config.maximum_expected_errors}" if config.maximum_expected_errors is not None else ""
 	shell:
@@ -292,10 +292,10 @@ rule fastq_to_fasta:
 
 rule dereplicate:
 	"""Collapse identical sequences with VSEARCH"""
-	output: fasta=UNIQUE_READS
+	output: fastagz=UNIQUE_READS
 	input: fasta="reads/filtered.fasta"
 	shell:
-		'vsearch --derep_fulllength {input.fasta} --strand both --output {output.fasta} --sizeout'
+		'vsearch --derep_fulllength {input.fasta} --strand both  --sizeout --output >(gzip > {output.fastagz})'
 
 
 rule copy_dj_database:
@@ -365,9 +365,9 @@ rule makeblastdb:
 
 rule symlink_iteration_reads:
 	output:
-		fasta='{dir}/unique.fasta'
+		fasta='{dir}/unique.fasta.gz'
 	input:
-		fasta='reads/unique.fasta'
+		fasta='reads/unique.fasta.gz'
 	shell:
 		# Need to use a hard link, otherwise snakemake complains about existing
 		# output file if workflow is re-run
@@ -378,7 +378,7 @@ rule igdiscover_igblast:
 	output:
 		txtgz="{dir}/{base}.igblast.txt.gz"
 	input:
-		fasta='{dir}/{base}.fasta',
+		fasta='{dir}/{base}.fasta.gz',
 		db_v="{{dir}}/database/{species}_V.nhr".format(species=config.species),
 		db_d="{{dir}}/database/{species}_D.nhr".format(species=config.species),
 		db_j="{{dir}}/database/{species}_J.nhr".format(species=config.species)
@@ -397,7 +397,7 @@ rule igdiscover_parse:
 		tabgz="{dir}/{base}.assigned.tab.gz",
 	input:
 		txt="{dir}/{base}.igblast.txt.gz",
-		fasta="{dir}/{base}.fasta"
+		fasta="{dir}/{base}.fasta.gz"
 	shell:
 		"igdiscover parse --barcode-length {config.barcode_length} --rename {config.library_name!r}_ {input.txt} {input.fasta} | gzip > {output.tabgz}"
 
@@ -416,12 +416,12 @@ rule igdiscover_group:
 	output:
 		pdf="{base}/stats/groupsizes.pdf",
 		tab="{base}/groups.tab",
-		fasta="{base}/consensus.fasta"
+		fasta="{base}/consensus.fasta.gz"
 	input:
 		tab="{base}/unique.filtered.tab.gz"
 	log: "{base}/unique.consensus.log"
 	shell:
-		"igdiscover group --program={config.multialign_program} --plot-sizes {output.pdf} --groups-output {output.tab} {input.tab} > {output.fasta} 2> {log}"
+		"igdiscover group --program={config.multialign_program} --plot-sizes {output.pdf} --groups-output {output.tab} {input.tab} 2> {log} | gzip > {output.fasta}"
 
 
 rule igdiscover_count:
