@@ -214,7 +214,7 @@ class Discoverer:
 			# Build the row for the output table
 			# TODO use UniqueNamer here
 			sequence_id = '{}{}_{}'.format(self.prefix, gene.rsplit('_S', 1)[0], sequence_hash(sister))
-			row = [gene, sequence_id, sister_info.name if len(sister_info.group) < len(group) else 'all']
+			row = [sequence_id, gene, sister_info.name if len(sister_info.group) < len(group) else 'all']
 			for key, _ in groups:
 				row.extend([info[key].count, info[key].unique_J, info[key].unique_CDR3])
 			if self.max_n_bases:
@@ -262,18 +262,18 @@ def main(args):
 		consensus_output = None
 	writer = csv.writer(sys.stdout, delimiter='\t')
 	columns = [
-		'source_gene',
 		'name',
-		'consensus_from',
-		'consensus_seqs',
-		'consensus_unique_J',
-		'consensus_unique_CDR3',
-		'exact_seqs',
-		'exact_unique_J',
-		'exact_unique_CDR3',
+		'source',
+		'cluster',
+		'cluster_size',
+		'Js',
+		'CDR3s',
+		'exact',
+		'Js_exact',
+		'CDR3s_exact',
 	]
 	if args.approx:
-		columns += ['approx_seqs', 'approx_unique_J', 'approx_unique_CDR3']
+		columns += ['approx', 'Js_approx', 'CDR3s_approx']
 	if args.max_n_bases:
 		columns += ['N_bases']
 	columns += [

@@ -28,8 +28,8 @@ def plot_difference_histogram(group, gene_name, bins=np.arange(20.1)):
 	Plot a histogram of percentage differences for a specific gene.
 	"""
 	exact_matches = group[group.V_SHM == 0]
-	exact_unique_CDR3 = len(set(s for s in exact_matches.CDR3_nt if s))
-	exact_unique_J = len(set(exact_matches.J_gene))
+	CDR3s_exact = len(set(s for s in exact_matches.CDR3_nt if s))
+	Js_exact = len(set(exact_matches.J_gene))
 
 	fig = Figure(figsize=(100/25.4, 60/25.4))
 	ax = fig.gca()
@@ -41,7 +41,7 @@ def plot_difference_histogram(group, gene_name, bins=np.arange(20.1)):
 	ax.text(0.25, 0.95,
 		'{:,} ({:.1%}) exact matches\n  {} unique CDR3\n  {} unique J'.format(
 			len(exact_matches), len(exact_matches) / len(group),
-			exact_unique_CDR3, exact_unique_J),
+			CDR3s_exact, Js_exact),
 		transform=ax.transAxes, fontsize=10,
 		bbox=dict(boxstyle='round', facecolor='white', alpha=0.5),
 		horizontalalignment='left', verticalalignment='top')

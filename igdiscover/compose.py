@@ -1,14 +1,15 @@
 """
-Create new V gene database from V gene candidates.
+Filter V gene candidates (germline/pre-germline filter)
 
-After potentially new V gene sequences have been discovered with the discover
-subcommand, this script can be used to create a new V gene database. The
-following filtering and processing steps are performed:
+After candidates for novel V genes have been found with the 'discover'
+subcommand, this script is used to filter the candidates and make sure that
+only true germline genes remain ("germline filter" and "pre-germline filter").
+The following filtering and processing steps are performed:
 
 * Discard sequences with N bases
 * Discard sequences that come from a consensus over too few source sequences 
-* Discard sequences with too few unique CDR3s (exact_unique_CDR3 column)
-* Discard sequences identical to one of the database sequences
+* Discard sequences with too few unique CDR3s (CDR3s_exact column)
+* Discard sequences identical to one of the database sequences (if DB given)
 * Discard sequences that do not match a set of known good motifs
 * Merge nearly identical sequences (allowing length differences) into single entries
 """
@@ -27,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 def add_arguments(parser):
 	arg = parser.add_argument
-	arg('--consensus-seqs', type=int, metavar='N', default=0,
+	arg('--cluster-size', type=int, metavar='N', default=0,
 		help='Consensus must represent at least N sequences. '
 		'Default: %(default)s')
 	arg('--max-differences', type=int, metavar='MAXDIFF', default=1,
@@ -38,8 +39,8 @@ def add_arguments(parser):
 		'sequence. Default: %(default)s')
 	arg('--maximum-N', '-N', type=int, metavar='COUNT', default=0,
 		help='Sequences must have at most COUNT "N" bases. Default: %(default)s')
-	arg('--unique-CDR3', type=int, metavar='N', default=1,
-		help='Sequences must have at least N exact unique CDR3s. '
+	arg('--unique-CDR3', '--CDR3s', type=int, metavar='N', default=1,
+		help='Sequences must have at least N CDR3s within exact sequence matches. '
 		'Default: %(default)s')
 	arg('--looks-like-V', action='store_true', default=False,
 		help='Sequences must look like V genes (uses the looks_like_V column). '
@@ -51,7 +52,7 @@ def add_arguments(parser):
 		nargs='+')
 
 
-SequenceInfo = namedtuple('SequenceInfo', 'sequence name exact_unique_CDR3')
+SequenceInfo = namedtuple('SequenceInfo', 'sequence name CDR3s_exact')
 
 
 class SequenceMerger(Merger):
@@ -76,7 +77,7 @@ class SequenceMerger(Merger):
 		s_seq += t_seq[len(s_seq):]
 		t_seq += s_seq[len(t_seq):]
 		if edit_distance(s_seq, t_seq) <= self._max_differences:
-			if s.exact_unique_CDR3 >= t.exact_unique_CDR3:
+			if s.CDR3s_exact >= t.CDR3s_exact:
 				return s
 			return t
 		return None
@@ -96,16 +97,16 @@ def main(args):
 	for path in args.tables:
 		table = pd.read_csv(path, sep='\t')
 		# TODO remove this after deprecation period
-		table.rename(columns=dict(window_seqs='consensus_seqs', subset_seqs='consensus_seqs'), inplace=True)
+		table.rename(columns=dict(consensus_seqs='cluster_size', window_seqs='cluster_size', subset_seqs='cluster_size'), inplace=True)
 
 		unfiltered_length = len(table)
 		table = table[table.database_diff >= args.minimum_db_diff]
 		if 'N_bases' in table.columns:
 			table = table[table.N_bases <= args.maximum_N]
-		table = table[table.exact_unique_CDR3 >= args.unique_CDR3]
+		table = table[table.CDR3s_exact >= args.unique_CDR3]
 		if args.looks_like_V:
 			table = table[table.looks_like_V == 1]
-		table = table[table.consensus_seqs >= args.consensus_seqs]
+		table = table[table.cluster_size >= args.cluster_size]
 		table = table.dropna()
 		logger.info('Table read from %r contains %s candidate V gene sequences. '
 			'%s remain after filtering', path,
@@ -119,7 +120,7 @@ def main(args):
 
 	for table in tables:
 		for _, row in table.iterrows():
-			merger.add(SequenceInfo(row['consensus'], row['name'], row['exact_unique_CDR3']))
+			merger.add(SequenceInfo(row['consensus'], row['name'], row['CDR3s_exact']))
 
 	namer = UniqueNamer()
 	n = 0

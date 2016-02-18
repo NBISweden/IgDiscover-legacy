@@ -475,7 +475,7 @@ rule igdiscover_compose:
 		criteria = '--looks-like-V --max-differences=2 '
 		if nr == config.iterations:
 			# Apply stricter filtering criteria for final iteration
-			criteria += '--unique-CDR3=3 --consensus-seqs=200'
+			criteria += '--unique-CDR3=3 --cluster-size=200'
 		else:
 			criteria += '--unique-CDR3=2'
 		shell("igdiscover compose {criteria} {input.tab} > {output.fasta}")
