@@ -1,6 +1,7 @@
 # kate: syntax Python;
 """
 """
+import shutil
 from sqt.dna import reverse_complement
 from sqt import FastaReader
 import igdiscover
@@ -60,6 +61,13 @@ if config.barcode_length > 0:
 # Add also intermediate files
 TARGETS += [READS1, READS2, MERGED_READS, PREPROCESSED_READS]
 
+
+GZIP = 'gzip'
+# Use pigz (parallel gzip) if available
+if shutil.which('pigz') is not None:
+	GZIP = 'pigz'
+
+
 rule all:
 	input:
 		TARGETS
@@ -70,7 +78,7 @@ if config.limit:
 		output: 'reads/limited-{}.{{nr}}.fastq.gz'.format(config.limit)
 		input: 'reads.{nr}.fastq.gz'
 		shell:
-			'sqt fastxmod --limit {config.limit} {input} | gzip > {output}'
+			'sqt fastxmod --limit {config.limit} {input} | {GZIP} > {output}'
 
 
 if config.merge_program == 'flash':
@@ -83,7 +91,7 @@ if config.merge_program == 'flash':
 		log: 'reads/flash.log'
 		shell:
 			# -M: maximal overlap (2x300, 420-450bp expected fragment size)
-			"flash -t {threads} -c -M {config.flash_maximum_overlap} {input} 2> >(tee {log} >&2) | gzip > {output}"
+			"flash -t {threads} -c -M {config.flash_maximum_overlap} {input} 2> >(tee {log} >&2) | {GZIP} > {output}"
 elif config.merge_program == 'pear':
 	rule pear_merge:
 		"""Use pear to merge paired-end reads"""
@@ -100,7 +108,7 @@ elif config.merge_program == 'pear':
 			r"""
 			pear -j {threads} -f {input[0]} -r {input[1]} -o reads/pear | tee {log}
 			for f in reads/pear.{{unassembled.forward,unassembled.reverse,assembled,discarded}}.fastq; do
-				gzip -f $f
+				{GZIP} -f $f
 			done
 			mv reads/pear.assembled.fastq.gz {output.fastq}
 			"""
@@ -138,7 +146,7 @@ rule barcode_stats:
 	input: fastq=MERGED_READS
 	shell:
 		"""
-		zcat {input} | awk 'NR%4==2 {{print substr($1,1,12)}}' | grep -v N | sort -u | wc -l > {output}
+		{GZIP} -dc {input} | awk 'NR%4==2 {{print substr($1,1,12)}}' | grep -v N | sort -u | wc -l > {output}
 		"""
 
 
@@ -151,16 +159,16 @@ rule reads_stats:
 	run:
 		shell("""
 		echo -n "Number of paired-end reads: " > {output}
-		zcat {input.reads} | awk 'END {{ print NR/4 }}' >> {output}
+		{GZIP} -dc {input.reads} | awk 'END {{ print NR/4 }}' >> {output}
 		echo -n "Number of barcodes (looking at 1st read in pair): " >> {output}
-		zcat {input.reads} | awk 'NR % 4 == 2 {{ print substr($1, 1, 12) }}' | sort -u | grep -v N | wc -l >> {output}
+		{GZIP} -dc {input.reads} | awk 'NR % 4 == 2 {{ print substr($1, 1, 12) }}' | sort -u | grep -v N | wc -l >> {output}
 		echo -n "Number of merged sequences: " >> {output}
-		zcat {input.merged} | awk 'END {{ print NR/4 }}' >> {output}
+		{GZIP} -dc {input.merged} | awk 'END {{ print NR/4 }}' >> {output}
 		""")
 		if config.barcode_length > 0:
 			shell("""
 			echo -n "Number of barcodes in merged sequences: " >> {output}
-			zcat {input.merged} | awk 'NR % 4 == 2 {{ print substr($1, 1, {config.barcode_length}) }}' | sort -u | grep -v N | wc -l >> {output}
+			{GZIP} -dc {input.merged} | awk 'NR % 4 == 2 {{ print substr($1, 1, {config.barcode_length}) }}' | sort -u | grep -v N | wc -l >> {output}
 			echo -n "Number of preprocesed sequences: " >> {output}
 			zgrep -c '^>' {input.sequences} >> {output}
 			echo -n "Number of barcodes in preprocessed sequences: " >> {output}
@@ -266,7 +274,7 @@ rule dereplicate:
 	output: fastagz=PREPROCESSED_READS
 	input: fasta="reads/filtered.fasta"
 	shell:
-		'vsearch --derep_fulllength {input.fasta} --strand both  --sizeout --output >(gzip > {output.fastagz})'
+		'vsearch --derep_fulllength {input.fasta} --strand both  --sizeout --output >({GZIP} > {output.fastagz})'
 
 
 rule copy_dj_database:
@@ -360,7 +368,7 @@ rule igdiscover_igblast:
 	shell:
 		"igdiscover igblast --threads {threads} {params.penalty} "
 		"--species {config.species} {params.database} {input.fasta} | "
-		"gzip > {output.txtgz}"
+		"{GZIP} > {output.txtgz}"
 
 
 rule igdiscover_parse:
@@ -370,7 +378,7 @@ rule igdiscover_parse:
 		txt="{dir}/igblast.txt.gz",
 		fasta="{dir}/sequences.fasta.gz"
 	shell:
-		"igdiscover parse --barcode-length {config.barcode_length} --rename {config.library_name!r}_ {input.txt} {input.fasta} | gzip > {output.tabgz}"
+		"igdiscover parse --barcode-length {config.barcode_length} --rename {config.library_name!r}_ {input.txt} {input.fasta} | {GZIP} > {output.tabgz}"
 
 
 rule igdiscover_filter:
@@ -379,7 +387,7 @@ rule igdiscover_filter:
 	input:
 		assigned="{dir}/assigned.tab.gz"
 	shell:
-		"igdiscover filter {input} | gzip > {output}"
+		"igdiscover filter {input} | {GZIP} > {output}"
 
 
 rule igdiscover_group:
@@ -392,7 +400,7 @@ rule igdiscover_group:
 		tab="{base}/filtered.tab.gz"
 	log: "{base}/consensus.log"
 	shell:
-		"igdiscover group --program={config.multialign_program} --plot-sizes {output.pdf} --groups-output {output.tab} {input.tab} 2> {log} | gzip > {output.fasta}"
+		"igdiscover group --program={config.multialign_program} --plot-sizes {output.pdf} --groups-output {output.tab} {input.tab} 2> {log} | {GZIP} > {output.fasta}"
 
 
 rule igdiscover_count:
