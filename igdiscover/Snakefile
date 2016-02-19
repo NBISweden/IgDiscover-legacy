@@ -49,8 +49,8 @@ DISCOVERY_TARGETS = [
 # Targets for final iteration
 FINAL_TARGETS = [
 	#'consensus.correlationVJ.pdf',
-	'consensus.V_usage.tab',
-	'consensus.V_usage.pdf',
+	#'consensus.V_usage.tab',
+	#'consensus.V_usage.pdf',
 ]
 TARGETS = expand('iteration-{nr:02d}/{path}', nr=range(1, config.iterations+1), path=ITERATION_TARGETS+DISCOVERY_TARGETS)
 TARGETS += expand('final/{path}', path=ITERATION_TARGETS+FINAL_TARGETS)
