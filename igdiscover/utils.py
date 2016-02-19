@@ -5,8 +5,9 @@ import random
 import hashlib
 import os
 from collections import OrderedDict
-import numpy as np
 import re
+import numpy as np
+import yaml
 from sqt.align import edit_distance, multialign, consensus
 from sqt.dna import GENETIC_CODE, amino_acid_regex
 
@@ -210,3 +211,31 @@ def relative_symlink(src, dst):
 	"""
 	target = os.path.relpath(os.path.abspath(src), start=os.path.dirname(dst))
 	os.symlink(target, dst)
+
+
+class Config:
+	PATH = 'igdiscover.yaml'
+	def __init__(self, path=PATH):
+		# Set some defaults.
+		self.merge_program = 'pear'
+		self.flash_maximum_overlap = 300
+		self.limit = None  # or an integer
+		self.cluster_program = 'vsearch'
+		self.multialign_program = 'muscle-fast'
+		self.maximum_expected_errors = None  # or an integer
+		self.minimum_merged_read_length = 300
+		self.mismatch_penalty = None
+		self.barcode_length = 0
+		self.iterations = 1
+		self.ignore_j = False
+		self.subsample = 500
+		self.stranded = False
+		self.forward_primers = None
+		self.reverse_primers = None
+		self.library_name = os.path.basename(os.getcwd())
+		self.read_from(path)
+
+	def read_from(self, path):
+		with open(path) as f:
+			content = f.read()
+		self.__dict__.update(yaml.safe_load(content))
