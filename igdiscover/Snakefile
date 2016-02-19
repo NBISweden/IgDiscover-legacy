@@ -29,16 +29,16 @@ else:
 	READS2 = 'reads.2.fastq.gz'
 
 MERGED_READS = 'reads/merged.fastq.gz'
-UNIQUE_READS = 'reads/unique.fasta.gz'
+UNIQUE_READS = 'reads/preprocessed.fasta.gz'
 
 # Targets for each iteration
 ITERATION_TARGETS = [
 	'clusterplots/done',
 	'counts.txt',
-	#'unique.correlationVJ.pdf',
-	'unique.errorhistograms.pdf',
-	'unique.V_usage.tab',
-	'unique.V_usage.pdf',
+	#'preprocessed.correlationVJ.pdf',
+	'preprocessed.errorhistograms.pdf',
+	'preprocessed.V_usage.tab',
+	'preprocessed.V_usage.pdf',
 	'V_dendrogram.pdf',
 ]
 # Targets for non-final iterations
@@ -54,7 +54,7 @@ FINAL_TARGETS = [
 ]
 TARGETS = expand('iteration-{nr:02d}/{path}', nr=range(1, config.iterations+1), path=ITERATION_TARGETS+DISCOVERY_TARGETS)
 TARGETS += expand('final/{path}', path=ITERATION_TARGETS+FINAL_TARGETS)
-TARGETS += ['stats/barcodes.txt', 'stats/unique.readlengths.pdf', 'stats/merged.readlengths.pdf']
+TARGETS += ['stats/barcodes.txt', 'stats/preprocessed.readlengths.pdf', 'stats/merged.readlengths.pdf']
 
 # Add also intermediate files
 TARGETS += [READS1, READS2, MERGED_READS, UNIQUE_READS]
@@ -117,10 +117,10 @@ rule merged_read_length_histogram:
 		"""sqt readlenhisto --bins 100 --left 300 --title "Lengths of merged reads" --plot {output.pdf} {input}  > {output.txt}"""
 
 
-rule unique_read_length_histogram:
+rule preprocessed_read_length_histogram:
 	output:
-		txt="stats/unique.readlengths.txt",
-		pdf="stats/unique.readlengths.pdf"
+		txt="stats/preprocessed.readlengths.txt",
+		pdf="stats/preprocessed.readlengths.pdf"
 	input:
 		fastq=UNIQUE_READS
 	shell:
@@ -146,9 +146,9 @@ rule stats_numbers:
 	input:
 		reads=READS1,
 		merged=MERGED_READS,
-		unique=UNIQUE_READS,
-		unique_table="{dir}/unique.assigned.tab.gz",
-		consensus_table="{dir}/consensus.assigned.tab.gz",
+		preprocessed=UNIQUE_READS,
+		preprocessed_table="{dir}/preprocessed.assigned.tab.gz",  # TODO
+		#consensus_table="{dir}/consensus.assigned.tab.gz",
 	shell:
 		"""
 		echo -n "Number of paired-end reads: " > {output}
@@ -159,15 +159,15 @@ rule stats_numbers:
 		zcat {input.merged} | awk 'END {{ print NR/4 }}' >> {output}
 		echo -n "Number of barcodes in merged sequences: " >> {output}
 		zcat {input.merged} | awk 'NR % 4 == 2 {{ print substr($1, 1, 12) }}' | sort -u | grep -v N | wc -l >> {output}
-		echo -n "Number of unique sequences: " >> {output}
-		zgrep -c '^>' {input.unique} >> {output}
-		echo -n "Number of barcodes in unique sequences: " >> {output}
-		zgrep -A 1 '^>' {input.unique} | awk '!/^>/ && $1 != "--" {{ print substr($1,1,12) }}' | sort -u | grep -v N | wc -l >> {output}
-		echo -n "Number of barcodes in unique table: " >> {output}
-		zcat {input.unique_table} | cut -f35 | sed 1d | awk '{{print substr($1, 1, 12) }}' | sort -u | grep -v N | wc -l >>  {output}
-		echo -n "Number of sequences in final consensus table: " >> {output}
-		zcat {input.consensus_table} | sed 1d | wc -l >> {output}
+		echo -n "Number of preprocessed sequences: " >> {output}
+		zgrep -c '^>' {input.preprocessed} >> {output}
+		echo -n "Number of barcodes in preprocessed sequences: " >> {output}
+		zgrep -A 1 '^>' {input.preprocessed} | awk '!/^>/ && $1 != "--" {{ print substr($1,1,12) }}' | sort -u | grep -v N | wc -l >> {output}
+		echo -n "Number of barcodes in preprocessed table: " >> {output}
+		zcat {input.preprocessed_table} | cut -f35 | sed 1d | awk '{{print substr($1, 1, 12) }}' | sort -u | grep -v N | wc -l >>  {output}
 		"""
+		#echo -n "Number of sequences in final consensus table: " >> {output}
+		#zcat {input.consensus_table} | sed 1d | wc -l >> {output}
 
 
 # Remove primer sequences
@@ -338,9 +338,9 @@ rule makeblastdb:
 
 rule symlink_iteration_reads:
 	output:
-		fasta='{dir}/unique.fasta.gz'
+		fasta='{dir}/preprocessed.fasta.gz'
 	input:
-		fasta='reads/unique.fasta.gz'
+		fasta='reads/preprocessed.fasta.gz'
 	shell:
 		# Need to use a hard link, otherwise snakemake complains about existing
 		# output file if workflow is re-run
@@ -391,8 +391,8 @@ rule igdiscover_group:
 		tab="{base}/groups.tab",
 		fasta="{base}/consensus.fasta.gz"
 	input:
-		tab="{base}/unique.filtered.tab.gz"
-	log: "{base}/unique.consensus.log"
+		tab="{base}/preprocessed.filtered.tab.gz"
+	log: "{base}/preprocessed.consensus.log"
 	shell:
 		"igdiscover group --program={config.multialign_program} --plot-sizes {output.pdf} --groups-output {output.tab} {input.tab} 2> {log} | gzip > {output.fasta}"
 
@@ -413,7 +413,7 @@ rule igdiscover_clusterplot:
 	output:
 		done="{dir}/clusterplots/done"
 	input:
-		tab="{dir}/unique.filtered.tab.gz"
+		tab="{dir}/preprocessed.filtered.tab.gz"
 	params:
 		clusterplots="{dir}/clusterplots/",
 		ignore_j='--ignore-J' if config.ignore_j else ''
@@ -427,7 +427,7 @@ rule igdiscover_discover:
 		tab="{dir}/candidates.tab"
 	input:
 		v_reference="{{dir}}/database/{species}_V.fasta".format(species=config.species),
-		tab="{dir}/unique.filtered.tab.gz"
+		tab="{dir}/preprocessed.filtered.tab.gz"
 	params:
 		ignore_j='--ignore-J' if config.ignore_j else ''
 	threads: 4  # TODO this could be increased up to 6
