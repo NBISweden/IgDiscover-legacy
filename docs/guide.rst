@@ -194,16 +194,16 @@ final/database/species_(V,D,J).fasta
 final/V_dendrogram.pdf
     A dendrogram of all V sequences in the individualized database.
 
-final/unique.igblast.txt.gz
+final/igblast.txt.gz
     IgBLAST result (compressed) of running IgBLAST with the discovered database.
 
-final/unique.assigned.tab.gz
+final/assigned.tab.gz
     V/D/J gene assignments and other information for each sequence.
     The file is created by parsing the IgBLAST output in the ``igblast.txt.gz`` file.
     This is a table that contains one row for each input sequence.
     See below for a detailed description of the columns.
 
-final/unique.filtered.tab.gz
+final/filtered.tab.gz
     Filtered V/D/J gene assignments. This is the same as the assigned.tab file mentioned above, but with low-quality assignments filtered out.
     Run ``igdiscover filter --help`` to see the filtering criteria.
 
@@ -211,7 +211,7 @@ final/V_usage.tab, final/V_usage.pdf
     The V gene expression counts, derived from the IgBLAST results.
     The .tab file contains the counts as a table, while the pdf file contains a plot of the same values.
 
-final/unique.errorhistograms.pdf
+final/errorhistograms.pdf
     A PDF with one page per V gene/allele.
     Each page shows a histogram of the percentage differences for that gene.
 
@@ -250,15 +250,16 @@ reads/trimmed.fastq.gz
 
 reads/filtered.fasta
     Merged, primer-trimmed sequences converted to FASTA, and too short sequences removed.
+    (This file is automatically removed when it is not needed anymore.)
 
-reads/unique.fasta
-    Filtered sequences without duplicates (using VSEARCH)
+reads/sequences.fasta
+    Fully pre-processed sequences. That is, filtered sequences without duplicates (using VSEARCH)
 
-stats/merged.readlengths.txt, stats/merged.readlengths.pdf
-    Histogram of the lengths of merged reads (created from ``reads/merged.fastq.gz``)
+stats/reads.txt
+    Statistics of pre-processed sequences.
 
-stats/unique.readlengths.txt, stats/unique.readlengths.pdf
-    Histogram of the lengths of pre-processed reads (created from ``reads/unique.fasta``)
+stats/readlengths.txt, stats/readlengths.pdf
+    Histogram of the lengths of pre-processed sequences (created from ``reads/sequences.fasta``)
 
 
 Format of output files
@@ -280,20 +281,46 @@ LibreOffice can open the file directly (even though it is compressed), but make 
 
 Columns:
 
-* count: How many copies of input sequence this query sequence represents. Copied from the ``;size=3;`` entry in the FASTA header field that is added by ``VSEARCH -derep_fulllength``.
-* V_gene, D_gene, J_gene: V/D/J gene match for the query sequence
-* stop (yes/no): whether the sequence contains a stop codon
-* productive
-* V_covered, D_covered, J_covered: percentage of bases of the reference gene that is covered by the bases of the query sequence
-* V_evalue, D_evalue, J_evalue: E-value of V/D/J hit
-* FR1_SHM, CDR1_SHM, FR2_SHM, CDR2_SHM, FR3_SHM, V_SHM, J_SHM: rate of somatic hypermutation (actually, an error rate)
-* V_errors, J_errors: Absolute number of errors (differences) in the V and J gene match
-* UTR: Sequence of the 5' UTR (the part before the V gene match up to, but not including, the start codon)
-* leader: Leader sequence (the part between UTR and the V gene match)
-* CDR1_nt, CDR1_aa, CDR2_nt, CDR2_aa, CDR3_nt, CDR3_aa: nucleotide and amino acid sequence of CDR1/2/3
-* V_nt, V_aa: nucleotide and amino acid sequence of V gene match
-* V_end, VD_junction, D_region, DJ_junction, J_start: nucleotide sequences for various match regions
-* name, barcode, race_G, genomic_sequence: see the following explanation
+count
+    How many copies of input sequence this query sequence represents. Copied from the ``;size=3;`` entry in the FASTA header field that is added by ``VSEARCH -derep_fulllength``.
+
+V_gene, D_gene, J_gene
+    V/D/J gene match for the query sequence
+
+stop
+    whether the sequence contains a stop codon (either “yes” or “no”)
+
+productive
+
+V_covered, D_covered, J_covered
+    percentage of bases of the reference gene that is covered by the bases of the query sequence
+
+V_evalue, D_evalue, J_evalue
+    E-value of V/D/J hit
+
+FR1_SHM, CDR1_SHM, FR2_SHM, CDR2_SHM, FR3_SHM, V_SHM, J_SHM
+    rate of somatic hypermutation (actually, an error rate)
+
+V_errors, J_errors
+    Absolute number of errors (differences) in the V and J gene match
+
+UTR
+    Sequence of the 5' UTR (the part before the V gene match up to, but not including, the start codon)
+
+leader
+    Leader sequence (the part between UTR and the V gene match)
+
+CDR1_nt, CDR1_aa, CDR2_nt, CDR2_aa, CDR3_nt, CDR3_aa
+    nucleotide and amino acid sequence of CDR1/2/3
+
+V_nt, V_aa
+    nucleotide and amino acid sequence of V gene match
+
+V_end, VD_junction, D_region, DJ_junction, J_start
+    nucleotide sequences for various match regions
+
+name, barcode, race_G, genomic_sequence
+    see the following explanation
 
 The UTR, leader, barcode, race_G and genomic_sequence columns are filled in the following way.
 
@@ -321,6 +348,7 @@ candidates.tab
 
 This table contains the candidates for novel V genes found by the ``discover`` subcommand.
 As the other files, it is a text file in tab-separated values format, with the first row containing the column headings.
+It can be opened directly in LibreOffice, for example.
 
 Candidates are found by inspecting all the sequences assigned to a database gene, and clustering them in multiple ways.
 The candidate sequences are found by computing a consensus from each found cluster.
