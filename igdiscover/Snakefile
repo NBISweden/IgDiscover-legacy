@@ -175,7 +175,7 @@ rule stats_numbers:
 if config.forward_primers:
 	# At least one forward primer is to be removed
 	rule trim_forward_primers:
-		output: fastq='reads/forward-primer-trimmed.fastq.gz'
+		output: fastq=temp('reads/forward-primer-trimmed.fastq.gz')
 		input: fastq=MERGED_READS
 		resources: time=120
 		log: 'reads/forward-primer-trimmed.cutadapt.log'
