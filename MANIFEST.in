@@ -1,1 +1,3 @@
-prune igdiscover/databases
+include README.rst CHANGES.rst       
+include doc/*.rst doc/conf.py doc/Makefile
+include tests/*.py
