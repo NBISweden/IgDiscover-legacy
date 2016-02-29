@@ -239,7 +239,7 @@ iteration-xx/new_V_database.fasta
 Other files
 -----------
 
-For completeness, here is a description of the files in the ``reads/`` in ``stats/`` directories.
+For completeness, here is a description of the files in the ``reads/`` and ``stats/`` directories.
 They are created during pre-processing and are not iteration specific.
 
 reads/merged.fastq.gz
@@ -252,7 +252,7 @@ reads/filtered.fasta
     Merged, primer-trimmed sequences converted to FASTA, and too short sequences removed.
     (This file is automatically removed when it is not needed anymore.)
 
-reads/sequences.fasta
+reads/sequences.fasta.gz
     Fully pre-processed sequences. That is, filtered sequences without duplicates (using VSEARCH)
 
 stats/reads.txt

@@ -342,22 +342,11 @@ rule makeblastdb:
 		""")
 
 
-rule symlink_iteration_reads:
-	output:
-		fasta='{dir}/sequences.fasta.gz'
-	input:
-		fasta='reads/sequences.fasta.gz'
-	shell:
-		# Need to use a hard link, otherwise snakemake complains about existing
-		# output file if workflow is re-run
-		'ln -f {input.fasta} {output.fasta}'
-
-
 rule igdiscover_igblast:
 	output:
 		txtgz="{dir}/igblast.txt.gz"
 	input:
-		fasta='{dir}/sequences.fasta.gz',
+		fastagz=PREPROCESSED_READS,
 		db_v="{{dir}}/database/{species}_V.nhr".format(species=config.species),
 		db_d="{{dir}}/database/{species}_D.nhr".format(species=config.species),
 		db_j="{{dir}}/database/{species}_J.nhr".format(species=config.species)
@@ -367,7 +356,7 @@ rule igdiscover_igblast:
 	threads: 16
 	shell:
 		"igdiscover igblast --threads {threads} {params.penalty} "
-		"--species {config.species} {params.database} {input.fasta} | "
+		"--species {config.species} {params.database} {input.fastagz} | "
 		"{GZIP} > {output.txtgz}"
 
 
@@ -376,7 +365,7 @@ rule igdiscover_parse:
 		tabgz="{dir}/assigned.tab.gz",
 	input:
 		txt="{dir}/igblast.txt.gz",
-		fasta="{dir}/sequences.fasta.gz"
+		fasta=PREPROCESSED_READS
 	shell:
 		"igdiscover parse --barcode-length {config.barcode_length} --rename {config.library_name!r}_ {input.txt} {input.fasta} | {GZIP} > {output.tabgz}"
 
