@@ -64,8 +64,6 @@ def add_arguments(parser):
 			'Files will be named <GENE>.tab.')
 	arg('--database', metavar='FASTA', default=None,
 		help='FASTA file with V genes. If provided, differences between consensus and database will be computed.')
-	arg('--consensus-output', '-c', metavar='FASTA', default=None,
-		help='Output consensus sequences in FASTA format to this file.')
 	arg('--ignore-J', action='store_true', default=False,
 		help='Include also rows without J assignment or J%%SHM>0.')
 	arg('--approx', action='store_true', default=False,
@@ -257,11 +255,8 @@ def main(args):
 	if args.approx:
 		logger.info('Approximate comparisons between V gene sequence and consensus allow %.1f%% errors.', v_error_rate*100)
 
-	if args.consensus_output:
-		consensus_output = open(args.consensus_output, 'w')
-	else:
-		consensus_output = None
 	writer = csv.writer(sys.stdout, delimiter='\t')
+
 	columns = [
 		'name',
 		'source',
@@ -309,10 +304,5 @@ def main(args):
 		for rows in pool.imap(discoverer, groups, chunksize=1):
 			writer.writerows(rows)
 			sys.stdout.flush()
-			if consensus_output:
-				for row in rows:
-					print('>{} window:{}\n{}'.format(row[-2], row[1], row[-1]), file=consensus_output)
 			n_consensus += len(rows)
-	if consensus_output:
-		consensus_output.close()
 	logger.info('%s consensus sequences for %s gene(s) computed', n_consensus, len(groups))
