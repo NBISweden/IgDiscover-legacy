@@ -19,7 +19,6 @@ setup(
 	entry_points = {'console_scripts': ['igdiscover = igdiscover.__main__:main']},
 	packages = ['igdiscover'],
 	package_data = {'igdiscover': ['igdiscover.yaml', 'Snakefile', 'empty.aux']},
-	setup_requires = ['numpy'],
 	install_requires = [
 		'sqt>=0.6.1',
 		'pandas>=0.16.2',
