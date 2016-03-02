@@ -9,8 +9,7 @@ import re
 import numpy as np
 import yaml
 from sqt.align import edit_distance, multialign, consensus
-from sqt.dna import GENETIC_CODE, amino_acid_regex
-
+from sqt.dna import GENETIC_CODE
 
 def downsampled(population, size):
 	"""
@@ -71,7 +70,7 @@ def sequence_hash(s, digits=4):
 	"""
 	For a string, return a 'fingerprint' that looks like 'S1234' (the character
 	'S' is fixed). The idea is that this allows one to quickly see whether two
-	sequences are identical.
+	sequences are not identical.
 	"""
 	h = int(hashlib.md5(s.encode()).hexdigest()[-4:], base=16)
 	return 'S' + str(h % 10**digits).rjust(digits, '0')
@@ -79,7 +78,7 @@ def sequence_hash(s, digits=4):
 
 class SerialPool:
 	"""
-	An alternative to multiprocessing.Pool that runs things in parallel for
+	An alternative to multiprocessing.Pool that runs things in serial for
 	easier debugging
 	"""
 	def __init__(self, *args, **kwargs):
@@ -111,13 +110,13 @@ def natural_sort_key(s, _nsre=re.compile('([0-9]+)')):
 
 
 def nt_to_aa(s):
-	"""Translate nucleotide sequence to amino acid sequence"""
+	"""Translate a nucleotide sequence to an amino acid sequence"""
 	return ''.join(GENETIC_CODE.get(s[i:i+3], '*') for i in range(0, len(s), 3))
 
 
 class UniqueNamer:
 	"""
-	Assign unique names by appending letters to already seen ones.
+	Assign unique names by appending letters to already seen names.
 	"""
 	def __init__(self):
 		self._names = set()
@@ -132,42 +131,6 @@ class UniqueNamer:
 			ext = chr(ord(ext) + 1)
 		self._names.add(new_name)
 		return new_name
-
-
-def _build_V_gene_regex():
-	r = '('
-	r += '|'.join(amino_acid_regex(aa) for aa in 'DV EA EM EV LV QV QL QE VE'.split())
-	r += ')' + amino_acid_regex('Q')
-	r += '([ACGT]{3})*'
-
-	#r += '(' + amino_acid_regex('F') + '|' + amino_acid_regex('Y') + ')'
-	#r += '([ACGT]{3})*'  # any codon
-	# beginning of the CDR3 expression
-	#r += '(TT[TC]|TA[CT])(TT[CT]|TA[TC]|CA[TC]|GT[AGCT]|TGG)(TG[TC])(([GA][AGCT])|TC|CG)[AGCT]'
-	#r += '[ACGT]{4,6}$'
-	return re.compile(r)
-
-
-_V_GENE_REGEX = _build_V_gene_regex()
-
-
-def looks_like_V_gene(s):
-	"""
-	Check whether the given sequence matches our expectations of how a V gene
-	should look like.
-	"""
-	s = s.upper()
-	for start in 'CAGGT CAGCT CAGGA GAGGT GAAGT GACGT GAAAT GTGGA GAGGC GAGAT CTGGT'.split():
-		if s.startswith(start):
-			return True #break
-	else:
-		return False
-	for end in 'TATTACTGT TTTTACTGT TATTACTGC TATTACTGC TATTGTGCA TATTACTGC TATTATTGT'.split():
-		if s[-len(end)-13:].find(end) != -1:
-			return True
-	return False
-
-	#return bool(_V_GENE_REGEX.match(s))
 
 
 class Merger:

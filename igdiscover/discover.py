@@ -21,7 +21,8 @@ from sqt.utils import available_cpu_count
 from .table import read_table
 from .utils import iterative_consensus, sequence_hash, downsampled, SerialPool
 from .cluster import cluster_sequences
-from .utils import looks_like_V_gene, Merger
+from .utils import Merger
+from .species import looks_like_V_gene
 
 logger = logging.getLogger(__name__)
 

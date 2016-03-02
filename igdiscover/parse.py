@@ -14,17 +14,18 @@ TODO
 - barcode_length should not be an attribute of IgBlastRecord and barcodes should
   be stripped off before running IgBLAST
 """
-from collections import namedtuple
 import re
 import sys
 import csv
-import logging
 import errno
+import logging
+from collections import namedtuple
 
 import pandas as pd
 from sqt import SequenceReader, xopen
 from sqt.dna import reverse_complement
 from .utils import nt_to_aa
+from .species import CDR3REGEX
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +36,8 @@ def add_arguments(parser):
 	parser.add_argument('--barcode-length', type=int, default=0,
 		help='Default: %(default)s')
 	parser.add_argument('--vdatabase', '--vdb', metavar='FASTA',
-		help="Path to FASTA file with VH genes. Used to fix 5' ends of V gene alignments")
+		help="Path to FASTA file with V genes. If given, it is used to fix the "
+		"5' ends of V gene alignments")
 	parser.add_argument('--hdf5', metavar='FILE',
 		help='Write table in HDF5 format to FILE')
 	parser.add_argument('igblast', help='IgBLAST output')
@@ -120,21 +122,6 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 	"""
 	# TODO move computation of cdr3_span, cdr3_sequence, vdj_sequence into constructor
 	# TODO maybe make all coordinates relative to full sequence
-
-	# This is a slightly improved version of the regular expression by
-	# D’Angelo et al.: The antibody mining toolbox.
-	# http://dx.doi.org/10.4161/mabs.27105
-	# The amino-acid version of the expression is:
-	# [FY][FWVHY]C[ETNGASDRIKVM]X{5,32}W[GAV]
-	CDR3REGEX = re.compile("""
-		(TT[TC] | TA[CT])                            # F or Y
-		(TT[CT] | TA[TC] | CA[TC] | GT[AGCT] | TGG)  # any of F, W, V, H, Y
-		(TG[TC])                                     # C
-		(([GA][AGCT]) | TC | CG) [AGCT]              # any of ETNGASDRIKVM
-		([ACGT]{3}){5,31}                            # between five and 31 codons
-		TGG                                          # W
-		G[GCT][GCTA]                                 # G, A or V
-		""", re.VERBOSE)
 
 	SIZEREGEX = re.compile('(.*);size=(\d+);$')
 
@@ -287,7 +274,7 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		hit_v = self.hits['V']
 		hit_j = self.hits['J']
 
-		match = self.CDR3REGEX.search(self.vdj_sequence)
+		match = CDR3REGEX.search(self.vdj_sequence)
 		if not match:
 			return None
 		# The first three and the last two codons are not part of the CDR3.
