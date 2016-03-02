@@ -176,7 +176,7 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		'VD_junction',
 		'D_region',
 		'DJ_junction',
-		'J_start',
+		'J_nt',
 		'name',
 		'barcode',
 		'race_G',
@@ -359,11 +359,13 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 			d_covered = None
 			d_evalue = None
 		if 'J' in self.hits:
+			j_nt = self.hits['J'].query_sequence
 			j_shm = 100. - self.hits['J'].percent_identity
 			j_errors = self.hits['J'].errors
 			j_covered = 100. * self.hits['J'].covered()
 			j_evalue = self.hits['J'].evalue
 		else:
+			j_nt = None
 			j_shm = None
 			j_errors = None
 			j_covered = None
@@ -372,7 +374,6 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		vd_junction = getattr(self.junction, 'vd_junction', None)
 		d_region = getattr(self.junction, 'd_region', None)
 		dj_junction = getattr(self.junction, 'dj_junction', None)
-		j_start = getattr(self.junction, 'j_start', None)
 		return dict(
 			count=self.size,
 			V_gene=self.v_gene,
@@ -410,7 +411,7 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 			VD_junction=vd_junction,
 			D_region=d_region,
 			DJ_junction=dj_junction,
-			J_start=j_start,
+			J_nt=j_nt,
 			name=self.query_name,
 			barcode=self.barcode,
 			race_G=self.race_g,
