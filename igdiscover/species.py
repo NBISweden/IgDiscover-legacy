@@ -16,8 +16,10 @@ CDR3REGEX = re.compile("""
 	(TT[TC] | TA[CT])                            # F or Y
 	(TT[CT] | TA[TC] | CA[TC] | GT[AGCT] | TGG)  # any of F, W, V, H, Y
 	(TG[TC])                                     # C
-	(([GA][AGCT]) | TC | CG) [AGCT]              # any of ETNGASDRIKVM
-	([ACGT]{3}){5,31}                            # between five and 31 codons
+	(?P<cdr3>                                    # actual CDR3 starts here
+		(([GA][AGCT]) | TC | CG) [AGCT]          # any of ETNGASDRIKVM
+		([ACGT]{3}){5,31}                        # between five and 31 codons
+	)                                            # end of CDR3
 	TGG                                          # W
 	G[GCT][GCTA]                                 # G, A or V
 	""", re.VERBOSE)

@@ -278,8 +278,8 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		if not match:
 			return None
 		# The first three and the last two codons are not part of the CDR3.
-		start = match.start() + 9
-		end = match.end() - 6
+		start = match.start('cdr3')
+		end = match.end('cdr3')
 		assert start < end
 		# Make sure that the match starts within V and ends within J.
 		# This check is disabled for now
