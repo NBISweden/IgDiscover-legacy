@@ -19,9 +19,8 @@ from sqt.align import edit_distance
 from sqt.utils import available_cpu_count
 
 from .table import read_table
-from .utils import iterative_consensus, sequence_hash, downsampled, SerialPool
+from .utils import iterative_consensus, sequence_hash, downsampled, SerialPool, Merger
 from .cluster import cluster_sequences
-from .utils import Merger
 from .species import looks_like_V_gene
 
 logger = logging.getLogger(__name__)
@@ -30,10 +29,6 @@ random.seed(123)
 
 MINGROUPSIZE_CONSENSUS = 5
 MAXIMUM_SUBSAMPLE_SIZE = 1600
-
-Groupinfo = namedtuple('Groupinfo', 'count unique_J unique_CDR3')
-
-SisterInfo = namedtuple('SisterInfo', 'sequence requested name group')
 
 
 def add_arguments(parser):
@@ -71,6 +66,11 @@ def add_arguments(parser):
 	arg('--error-rate', metavar='PERCENT', type=float, default=1,
 		help='When finding approximate V gene matches, allow PERCENT errors. Default: %(default)s.')
 	arg('table', help='Table with parsed IgBLAST results')  # nargs='+'
+
+
+Groupinfo = namedtuple('Groupinfo', 'count unique_J unique_CDR3')
+
+SisterInfo = namedtuple('SisterInfo', 'sequence requested name group')
 
 
 class SisterMerger(Merger):
@@ -180,7 +180,7 @@ class Discoverer:
 				sisters.add(info)
 				cl += 1
 
-		rows = []
+		candidates = []
 		for sister_info in sisters:
 			sister = sister_info.sequence
 			n_bases = sister.count('N')
@@ -195,7 +195,7 @@ class Discoverer:
 				('window', sister_info.group),
 				('exact', group_exact_V))
 			if self.approx_columns:
-				groups +=  (('approx', group_approximate_V), )
+				groups += (('approx', group_approximate_V), )
 			info = dict()
 			for key, g in groups:
 				unique_J = len(set(s for s in g.J_gene if s))
@@ -207,19 +207,39 @@ class Discoverer:
 			else:
 				database_diff = None
 
-			if self.approx_columns:
-				assert info['exact'].count <= info['approx'].count
-
-			# Build the row for the output table
+			# Build the Candidate
 			# TODO use UniqueNamer here
 			sequence_id = '{}{}_{}'.format(self.prefix, gene.rsplit('_S', 1)[0], sequence_hash(sister))
-			row = [sequence_id, gene, sister_info.name if len(sister_info.group) < len(group) else 'all']
-			for key, _ in groups:
-				row.extend([info[key].count, info[key].unique_J, info[key].unique_CDR3])
-			if self.max_n_bases:
-				row += [n_bases]
-			row += [database_diff, int(looks_like_V_gene(sister)), sister]
-			rows.append(row)
+
+			if self.approx_columns:
+				assert info['exact'].count <= info['approx'].count
+				approx = info['approx'].count
+				Js_approx = info['approx'].unique_J
+				CDR3s_approx = info['approx'].unique_CDR3
+			else:
+				approx = None
+				Js_approx = None
+				CDR3s_approx = None
+
+			candidate = Candidate(
+				name=sequence_id,
+				source=gene,
+				cluster=sister_info.name if len(sister_info.group) < len(group) else 'all',
+				cluster_size=info['window'].count,
+				Js=info['window'].unique_J,
+				CDR3s=info['window'].unique_CDR3,
+				exact=info['exact'].count,
+				Js_exact=info['exact'].unique_J,
+				CDR3s_exact=info['exact'].unique_CDR3,
+				approx=approx,
+				Js_approx=Js_approx,
+				CDR3s_approx=CDR3s_approx,
+				N_bases=n_bases,
+				database_diff=database_diff,
+				looks_like_V=int(looks_like_V_gene(sister)),
+				consensus=sister,
+			)
+			candidates.append(candidate)
 
 			# If a window was requested via --left/--right, write the 'approx'
 			# subset to a separate file.
@@ -229,7 +249,27 @@ class Discoverer:
 				path = os.path.join(self.table_output, gene + '.tab')
 				group_approximate_V.sort('consensus_diff').to_csv(path, sep='\t')
 				logger.info('Wrote %s for window %s-%s', path, self.left, self.right)
-		return rows
+		return candidates
+
+
+Candidate = namedtuple('Candidate', [
+	'name',
+	'source',
+	'cluster',
+	'cluster_size',
+	'Js',
+	'CDR3s',
+	'exact',
+	'Js_exact',
+	'CDR3s_exact',
+	'approx',
+	'Js_approx',
+	'CDR3s_approx',
+	'N_bases',
+	'database_diff',
+	'looks_like_V',
+	'consensus'
+])
 
 
 def main(args):
@@ -255,29 +295,14 @@ def main(args):
 	if args.approx:
 		logger.info('Approximate comparisons between V gene sequence and consensus allow %.1f%% errors.', v_error_rate*100)
 
-	writer = csv.writer(sys.stdout, delimiter='\t')
-
-	columns = [
-		'name',
-		'source',
-		'cluster',
-		'cluster_size',
-		'Js',
-		'CDR3s',
-		'exact',
-		'Js_exact',
-		'CDR3s_exact',
-	]
-	if args.approx:
-		columns += ['approx', 'Js_approx', 'CDR3s_approx']
-	if args.max_n_bases:
-		columns += ['N_bases']
-	columns += [
-		'database_diff',
-		'looks_like_V',
-		'consensus'
-	]
-	writer.writerow(columns)
+	columns = list(Candidate._fields)
+	if not args.approx:
+		for col in ['approx', 'Js_approx', 'CDR3s_approx']:
+			columns.remove(col)
+	if not args.max_n_bases:
+		columns.remove('N_bases')
+	writer = csv.DictWriter(sys.stdout, fieldnames=columns, delimiter='\t', extrasaction='ignore')
+	writer.writeheader()
 	genes = set(args.gene)
 	if args.window_width:
 		windows = [ (start, start + args.window_width) for start in np.arange(0, 20, args.window_width) ]
@@ -301,8 +326,9 @@ def main(args):
 
 	Pool = SerialPool if args.threads == 1 else multiprocessing.Pool
 	with Pool(args.threads) as pool:
-		for rows in pool.imap(discoverer, groups, chunksize=1):
-			writer.writerows(rows)
+		for candidates in pool.imap(discoverer, groups, chunksize=1):
+			for candidate in candidates:
+				writer.writerow(candidate._asdict())
 			sys.stdout.flush()
-			n_consensus += len(rows)
+			n_consensus += len(candidates)
 	logger.info('%s consensus sequences for %s gene(s) computed', n_consensus, len(groups))
