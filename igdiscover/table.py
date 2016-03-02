@@ -19,6 +19,7 @@ _STRING_COLUMNS = [
 	'V_gene',  # categorical
 	'D_gene',  # categorical
 	'J_gene',  # categorical
+	'chain',  # categorical
 	'stop',  # bool
 	'productive',  # bool
 	'UTR',

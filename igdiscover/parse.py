@@ -144,6 +144,7 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		'V_gene',
 		'D_gene',
 		'J_gene',
+		'chain',
 		'stop',
 		'productive',
 		'V_covered',
@@ -377,6 +378,7 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 			V_gene=self.v_gene,
 			D_gene=self.d_gene,
 			J_gene=self.j_gene,
+			chain=self.chain,
 			stop=self.has_stop,
 			productive=self.is_productive,
 			V_covered=v_covered,
@@ -655,7 +657,7 @@ def main(args):
 	logger.info('%d records parsed and written', n)
 	if args.hdf5:
 		from igdiscover.table import STRING_COLUMNS, INTEGER_COLUMNS
-		df = pd.DataFrame(rows, columns=IgBlastRecord.columns)
+		df = pd.DataFrame(rows, columns=ExtendedIgBlastRecord.columns)
 		# TODO code below is copied from igdiscover.table
 		# Convert all string columns to str to avoid a PerformanceWarning
 		for col in STRING_COLUMNS:
