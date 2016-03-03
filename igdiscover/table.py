@@ -86,8 +86,6 @@ def read_table(path, log=False):
 	else:
 		d = pd.read_csv(path, sep='\t')
 		_fix_columns(d)
-	if log: logger.info('%s rows in input table', len(d))
-
-	# Allow old-style %SHM column headers
-	d.rename(columns=lambda x: x.replace('%SHM', '_SHM'), inplace=True)
+	if log:
+		logger.info('%s rows in input table', len(d))
 	return d
