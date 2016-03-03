@@ -284,15 +284,10 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		match = CDR3REGEX.search(self.vdj_sequence)
 		if not match:
 			return None
-		# The first three and the last two codons are not part of the CDR3.
 		start = match.start('cdr3')
 		end = match.end('cdr3')
 		assert start < end
-		# Make sure that the match starts within V and ends within J.
-		# This check is disabled for now
-		if False:
-			if not (start <= len(hit_v.query_sequence) and end >= hit_j.query_start - hit_v.query_start):
-				return None
+
 		# Make coordinates relative to query
 		return (start + hit_v.query_start, end + hit_v.query_start)
 
@@ -638,7 +633,6 @@ def main(args):
 		for record in parser:
 			extended_record = ExtendedIgBlastRecord(record, barcode_length=args.barcode_length, v_database=v_database)
 			d = extended_record.asdict()
-			n += 1
 			if args.rename is not None:
 				d['name'] = "{}seq{}".format(args.rename, n)
 			if args.hdf5:
@@ -649,6 +643,7 @@ def main(args):
 				if e.errno == errno.EPIPE:
 					sys.exit(1)
 				raise
+			n += 1
 	logger.info('%d records parsed and written', n)
 	if args.hdf5:
 		from igdiscover.table import STRING_COLUMNS, INTEGER_COLUMNS
