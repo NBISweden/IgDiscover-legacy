@@ -38,7 +38,8 @@ def filtered_table(table,
 	Return the filtered table.
 	"""
 	# Both V and J must be assigned
-	filtered = table.dropna(subset=('V_gene', 'J_gene'))[:]
+	# (Note V_gene and J_gene columns use empty strings instead of NA)
+	filtered = table[(table['V_gene'] != '') & (table['J_gene'] != '')][:]
 	logger.info('%s rows have both V and J assignment', len(filtered))
 	filtered['V_gene'] = pd.Categorical(filtered['V_gene'])
 
