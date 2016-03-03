@@ -278,8 +278,6 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		"""
 		if 'V' not in self.hits or 'J' not in self.hits:
 			return None
-		hit_v = self.hits['V']
-		hit_j = self.hits['J']
 
 		if not self.chain in CDR3REGEX:
 			return None
@@ -291,6 +289,8 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		assert start < end
 
 		# Make coordinates relative to query
+		hit_v = self.hits['V']
+		hit_j = self.hits['J']
 		return (start + hit_v.query_start, end + hit_v.query_start)
 
 	def region_sequence(self, region):
