@@ -8,6 +8,8 @@ A few extra things are done in addition to parsing:
 - The leader is detected within the sequence before the found V gene (by
   searching for the start codon).
 - The RACE-specific run of G in the beginning of the sequence is detected.
+- If the V sequence hit starts at base 2 in the reference, it is extended
+  one to the left.
 """
 """
 TODO
@@ -36,8 +38,8 @@ def add_arguments(parser):
 	parser.add_argument('--barcode-length', type=int, default=0,
 		help='Default: %(default)s')
 	parser.add_argument('--vdatabase', '--vdb', metavar='FASTA',
-		help="Path to FASTA file with V genes. If given, it is used to fix the "
-		"5' ends of V gene alignments")
+		help="Path to FASTA file with V genes. Used to fix the 5' ends of V "
+		"gene alignments. If not given, 'N' bases will be inserted instead.")
 	parser.add_argument('--hdf5', metavar='FILE',
 		help='Write table in HDF5 format to FILE')
 	parser.add_argument('igblast', help='IgBLAST output')
@@ -119,6 +121,8 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 	- The leader is detected within the sequence before the found V gene (by
 	searching for the start codon).
 	- The RACE-specific run of G in the beginning of the sequence is detected.
+	- If the V sequence hit starts at base 2 in the reference, it is extended
+	  one to the left.
 	"""
 	# TODO move computation of cdr3_span, cdr3_sequence, vdj_sequence into constructor
 	# TODO maybe make all coordinates relative to full sequence
@@ -236,7 +240,7 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		"""
 		Return a repaired AlignmentSummary object for the CDR3 region which
 		does not use IgBLAST’s coordinates. IgBLAST does not determine the end
-		of the CDR3 correctly.
+		of the CDR3 correctly, at least when a custom database is used.
 		"""
 		span = self._cdr3_span()
 		if span is None:
@@ -246,8 +250,11 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 			mismatches=None, gaps=None, percent_identity=None)
 
 	def _fixed_v_hit(self, v_database):
+		"""
+		Extend the V hit by one base to the left if it starts at the second
+		base in the V reference.
+		"""
 		hit = self.hits['V']
-		#logger.info('%s %d subject_id %s v hit has subject_start %d. query_start %s', self.query_name, self.size, hit.subject_id, hit.subject_start, hit.query_start)
 		if hit.subject_start != 1 or hit.query_start == 0:
 			return hit
 		d = hit._asdict()
