@@ -76,20 +76,89 @@ _V_GENE_REGEX = _build_V_gene_regex()
 
 
 # TODO this is work in progress
-def looks_like_V_gene(s):
+def looks_like_V_gene(s, chain='VH'):
 	"""
 	Check whether the given sequence matches our expectations of how a V gene
 	should look like.
 	"""
 	s = s.upper()
-	for start in 'CAGGT CAGCT CAGGA GAGGT GAAGT GACGT GAAAT GTGGA GAGGC GAGAT CTGGT'.split():
+	for start in START_MOTIFS[chain]:
 		if s.startswith(start):
 			return True #break
 	else:
 		return False
+
+	# TODO unusued
 	for end in 'TATTACTGT TTTTACTGT TATTACTGC TATTACTGC TATTGTGCA TATTACTGC TATTATTGT'.split():
 		if s[-len(end)-13:].find(end) != -1:
 			return True
 	return False
 
 	#return bool(_V_GENE_REGEX.match(s))
+
+
+# A newly discovered V gene must start with one of these motifs
+START_MOTIFS = {
+	'VH': [
+		'CAGCT',
+		'CAGGA',
+		'CAGGT',
+		'CTGGT',
+		'GAAAT',
+		'GAAGT',
+		'GACGT',
+		'GAGAT',
+		'GAGGC',
+		'GAGGT',
+		'GTGGA',
+	],
+	'VK': [
+		'AACATC',
+		'AATATT',
+		'AATTTC',
+		'CAAGTT',
+		'CAGACT',
+		'GAAACA',
+		'GAAACG',
+		'GAAATA',
+		'GAAATG',
+		'GAAATT',
+		'GACATC',
+		'GACATG',
+		'GACATT',
+		'GAGATT',
+		'GATACT',
+		'GATATC',
+		'GATATT',
+		'GATGCT',
+		'GATGTT',
+		'GATTTC',
+		'GCCATC',
+		'GCTGTT',
+		'GTTATT',
+	],
+	'VL': [
+		'AAGCCT',
+		'AATTTT',
+		'ACATAT',
+		'AGGTCT',
+		'CAAGCT',
+		'CAATCT',
+		'CACCCT',
+		'CAGACT',
+		'CAGCCT',
+		'CAGGCT',
+		'CAGTCT',
+		'CGGTCT',
+		'CTGACT',
+		'CTGTCT',
+		'GAGGCT',
+		'GAGGTT',
+		'GCATCT',
+		'TCCACA',
+		'TCCTAT',
+	]
+}
+
+for _motif_list in START_MOTIFS.values():
+	assert len(set(_motif_list)) == len(_motif_list)
