@@ -28,18 +28,26 @@ CDR3REGEX = {
 		G[CGT][ACGT]                                 # G, A or V
 		""", re.VERBOSE),
 
+
 	# Light chain, kappa.
-	# The amino-acid version is: Y[YNHF][CLW]X{5,15}[FG]
+	# The amino-acid version is: [YFV][YNHFC][CWFGLS]X{5,15}[FL][GR]
 	'VK': re.compile("""
-		TA[CT]                                      # Y
-		(TA[CT] | AA[CT] | CA[CT] | TT[CT] )        # Y, N, H, F
-		(TG[CT] | TGG | TT[CT] |                    # C, W, F ...
-			CT[ACGT] | TT[AG])                      # ... or L,
+		(TA[CT] | TT[CT] | GT[ACGT )                   # Y, F, V
+		(TA[CT] | AA[CT] | CA[CT] | TT[CT] | TG[CT] )  # Y, N, H, F, C
+		(TG[CT] | TGG | TT[CT] | GG[ACGT] |            # C, W, F, G ...
+			TC[ACGT] | AG[CT] |                        # ... or S
+			CT[ACGT] | TT[AG])                         # ... or L,
 		(?P<cdr3>
 			([ACGT]{3}){5,15}   # between five and fifteen codons
 		)
-		TT[CT]                                      # F
-		GG[ACGT]                                    # G
+		(
+			TT[CT]   |                                 # F ...
+			CT[ACGT] | TT[AG]                          # ... or L
+		)
+		(
+			GG[ACGT] |                                 # G ...
+			CG[ACGT] | AG[AG]T                         # ... or R
+		)
 		""", re.VERBOSE),
 
 	# Light chain, lambda.
