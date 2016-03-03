@@ -281,6 +281,8 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		hit_v = self.hits['V']
 		hit_j = self.hits['J']
 
+		if not self.chain in CDR3REGEX:
+			return None
 		match = CDR3REGEX[self.chain].search(self.vdj_sequence)
 		if not match:
 			return None
