@@ -7,48 +7,54 @@ species. Right now, it works for - at least - human, rhesus monkey and mouse.
 import re
 from sqt.dna import amino_acid_regex
 
-# This is a slightly improved version of the regular expression by
-# D’Angelo et al.: The antibody mining toolbox.
-# http://dx.doi.org/10.4161/mabs.27105
-# The amino-acid version of the expression is:
-# [FY][FWVHY]C[ETNGASDRIKVM]X{5,32}W[GAV]
-CDR3REGEX = re.compile("""
-	(TT[CT] | TA[CT])                            # F or Y
-	(TT[CT] | TA[CT] | CA[CT] | GT[ACGT] | TGG)  # any of F, Y, H, V, W
-	(TG[CT])                                     # C
-	(?P<cdr3>                                    # actual CDR3 starts here
-		(([GA][AGCT]) | TC | CG) [ACGT]          # any of ETNGASDRIKVM
-		([ACGT]{3}){5,31}                        # between five and 31 codons
-	)                                            # end of CDR3
-	TGG                                          # W
-	G[CGT][ACGT]                                 # G, A or V
-	""", re.VERBOSE)
+# Regular expressions for CDR3 detection
+CDR3REGEX = {
+	# Heavy chain.
+	#
+	# This is a slightly improved version of the regular expression by
+	# D’Angelo et al.: The antibody mining toolbox.
+	# http://dx.doi.org/10.4161/mabs.27105
+	# The amino-acid version of the expression is:
+	# [FY][FWVHY]C[ETNGASDRIKVM]X{5,32}W[GAV]
+	'VH': re.compile("""
+		(TT[CT] | TA[CT])                            # F or Y
+		(TT[CT] | TA[CT] | CA[CT] | GT[ACGT] | TGG)  # any of F, Y, H, V, W
+		(TG[CT])                                     # C
+		(?P<cdr3>                                    # actual CDR3 starts here
+			(([GA][AGCT]) | TC | CG) [ACGT]          # any of ETNGASDRIKVM
+			([ACGT]{3}){5,31}                        # between five and 31 codons
+		)                                            # end of CDR3
+		TGG                                          # W
+		G[CGT][ACGT]                                 # G, A or V
+		""", re.VERBOSE),
 
+	# Light chain, kappa.
+	# The amino-acid version is: Y[YNHF][CLW]X{5,15}[FG]
+	'VK': re.compile("""
+		TA[CT]                                      # Y
+		(TA[CT] | AA[CT] | CA[CT] | TT[CT] )        # Y, N, H, F
+		(TG[CT] | TGG | TT[CT] |                    # C, W, F ...
+			CT[ACGT] | TT[AG])                      # ... or L,
+		(?P<cdr3>
+			([ACGT]{3}){5,15}   # between five and fifteen codons
+		)
+		TT[CT]                                      # F
+		GG[ACGT]                                    # G
+		""", re.VERBOSE),
 
-# on aa level: Y[YNHF][CLW]X{5,15}[FG]
-CDR3REGEX_KAPPA = re.compile("""
-	TA[CT]                                      # Y
-	(TA[CT] | AA[CT] | CA[CT] | TT[CT] )        # Y, N, H, F
-	(TG[CT] | TGG | TT[CT] |                    # C, W, F ...
-		CT[ACGT] | TT[AG])                      # ... or L,
-	(?P<cdr3>
-		([ACGT]{3}){5,15}   # between five and fifteen codons
-	)
-	TT[CT]                                      # F
-	GG[ACGT]                                    # G
-	""", re.VERBOSE)
-
-
-CDR3REGEX_LAMBDA = re.compile("""
-	TA[CT]  # Y
-	TA[CT]  # Y
-	TG[CT]  # C
-	(?P<cdr3>
-		([ACGT]{3}){5,15}   # between five and fifteen codons
-	)
-	TT[CT]    # F
-	GG[ACGT]  # G
-	""", re.VERBOSE)
+	# Light chain, lambda.
+	# The amino-acid version is: YYCX{5,15}FG
+	'VL': re.compile("""
+		TA[CT]    # Y
+		TA[CT]    # Y
+		TG[CT]    # C
+		(?P<cdr3>
+			([ACGT]{3}){5,15}   # between five and fifteen codons
+		)
+		TT[CT]    # F
+		GG[ACGT]  # G
+		""", re.VERBOSE)
+}
 
 
 def _build_V_gene_regex():
