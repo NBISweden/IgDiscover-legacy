@@ -25,6 +25,32 @@ CDR3REGEX = re.compile("""
 	""", re.VERBOSE)
 
 
+# on aa level: Y[YNHF][CLW]X{5,15}[FG]
+CDR3REGEX_KAPPA = re.compile("""
+	TA[CT]                                      # Y
+	(TA[CT] | AA[CT] | CA[CT] | TT[CT] )        # Y, N, H, F
+	(TG[CT] | TGG | TT[CT] |                    # C, W, F ...
+		CT[ACGT] | TT[AG])                      # ... or L,
+	(?P<cdr3>
+		([ACGT]{3}){5,15})   # between five and fifteen codons
+	)
+	TT[CT]                                      # F
+	GG[ACGT]                                    # G
+	""", re.VERBOSE)
+
+
+CDR3REGEX_LAMBDA = re.compile("""
+	TA[CT]  # Y
+	TA[CT]  # Y
+	TG[CT]  # C
+	(?P<cdr3>
+		([ACGT]{3}){5,15})   # between five and fifteen codons
+	)
+	TT[CT]    # F
+	GG[ACGT]  # G
+	""", re.verbose)
+
+
 def _build_V_gene_regex():
 	r = '('
 	r += '|'.join(amino_acid_regex(aa) for aa in 'DV EA EM EV LV QV QL QE VE'.split())
