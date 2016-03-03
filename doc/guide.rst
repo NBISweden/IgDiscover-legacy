@@ -101,6 +101,7 @@ Input data requirements
 IgDiscover assumes that its input data are overlapping paired-end reads. After
 merging, they should have this structure (from 5' to 3'):
 
+* The forward primer sequence. This is optional.
 * A random barcode (molecular identifier). This is optional. Set the
   configuration option ``barcode_length`` to 0 if you don’t have random barcodes
   or if you don’t want the program to use them.
@@ -109,6 +110,7 @@ merging, they should have this structure (from 5' to 3'):
 * 5' UTR
 * Leader
 * Re-arranged V, D and J gene sequences (in that order)
+* The reverse primer. This is optional.
 
 We use IgBLAST to detect the location of the V, D, J genes (run as part of the
 ``igdiscover igblast`` subcommand), and the remaining parts are detected
