@@ -70,10 +70,10 @@ def add_arguments(parser):
 
 Groupinfo = namedtuple('Groupinfo', 'count unique_J unique_CDR3')
 
-SisterInfo = namedtuple('SisterInfo', 'sequence requested name group')
+SiblingInfo = namedtuple('SiblingInfo', 'sequence requested name group')
 
 
-class SisterMerger(Merger):
+class SiblingMerger(Merger):
 	"""
 	Merge very similar consensus sequences into single entries. This could be
 	seen as a type of clustering using very specific criteria. Two sequences
@@ -102,7 +102,7 @@ class SisterMerger(Merger):
 		name = s.name + ';' + t.name
 		# take union of groups
 		group = pd.concat([s.group, t.group]).groupby(level=0).last()
-		return SisterInfo(seq, requested, name, group)
+		return SiblingInfo(seq, requested, name, group)
 
 
 class Discoverer:
@@ -126,7 +126,7 @@ class Discoverer:
 		self.approx_columns = approx_columns
 		self.max_n_bases = max_n_bases
 
-	def _sister_sequence(self, group):
+	def _sibling_sequence(self, group):
 		"""
 		For a given group, compute a consensus sequence over the V gene sequences
 		in that group.
@@ -142,22 +142,22 @@ class Discoverer:
 		group -- a pandas DataFrame with the group corresponding to the gene
 		"""
 		gene, group = args
-		# Collect all 'sister' sequences (consensus sequences)
-		sisters = SisterMerger()
+		# Collect all 'sibling' sequences (consensus sequences)
+		siblings = SiblingMerger()
 		group = group.copy()
 		for left, right in self.windows:
 			left, right = float(left), float(right)
 			group_in_window = group[(left <= group.V_SHM) & (group.V_SHM < right)]
 			if len(group_in_window) < MINGROUPSIZE_CONSENSUS:
 				continue
-			sister = self._sister_sequence(group_in_window)
+			sibling = self._sibling_sequence(group_in_window)
 			if left == int(left):
 				left = int(left)
 			if right == int(right):
 				right = int(right)
 			requested = (left, right) == (self.left, self.right)
 			name = '{}-{}'.format(left, right)
-			sisters.add(SisterInfo(sister, requested, name, group_in_window))
+			siblings.add(SiblingInfo(sibling, requested, name, group_in_window))
 
 		if self.cluster:
 			indices = downsampled(list(group.index), self.cluster_subsample_size)
@@ -174,25 +174,25 @@ class Discoverer:
 				group_in_window = group.loc[ind]
 				if len(group_in_window) < MINGROUPSIZE_CONSENSUS:
 					continue
-				sister = self._sister_sequence(group_in_window)
+				sibling = self._sibling_sequence(group_in_window)
 				name = 'cl{}'.format(cl)
-				info = SisterInfo(sister, False, name, group_in_window)
-				sisters.add(info)
+				info = SiblingInfo(sibling, False, name, group_in_window)
+				siblings.add(info)
 				cl += 1
 
 		candidates = []
-		for sister_info in sisters:
-			sister = sister_info.sequence
-			n_bases = sister.count('N')
+		for sibling_info in siblings:
+			sibling = sibling_info.sequence
+			n_bases = sibling.count('N')
 			if n_bases > self.max_n_bases:
 				continue
-			group_exact_V = group[group.V_nt == sister]
+			group_exact_V = group[group.V_nt == sibling]
 			if self.approx_columns:
-				group['consensus_diff'] = [ edit_distance(v_nt, sister) for v_nt in group.V_nt ]
-				group_approximate_V = group[group.consensus_diff <= len(sister) * self.v_error_rate]
+				group['consensus_diff'] = [ edit_distance(v_nt, sibling) for v_nt in group.V_nt ]
+				group_approximate_V = group[group.consensus_diff <= len(sibling) * self.v_error_rate]
 
 			groups = (
-				('window', sister_info.group),
+				('window', sibling_info.group),
 				('exact', group_exact_V))
 			if self.approx_columns:
 				groups += (('approx', group_approximate_V), )
@@ -203,13 +203,13 @@ class Discoverer:
 				count = len(g.index)
 				info[key] = Groupinfo(count=count, unique_J=unique_J, unique_CDR3=unique_CDR3)
 			if gene in self.database:
-				database_diff = edit_distance(sister, self.database[gene])
+				database_diff = edit_distance(sibling, self.database[gene])
 			else:
 				database_diff = None
 
 			# Build the Candidate
 			# TODO use UniqueNamer here
-			sequence_id = '{}{}_{}'.format(self.prefix, gene.rsplit('_S', 1)[0], sequence_hash(sister))
+			sequence_id = '{}{}_{}'.format(self.prefix, gene.rsplit('_S', 1)[0], sequence_hash(sibling))
 
 			if self.approx_columns:
 				assert info['exact'].count <= info['approx'].count
@@ -224,7 +224,7 @@ class Discoverer:
 			candidate = Candidate(
 				name=sequence_id,
 				source=gene,
-				cluster=sister_info.name if len(sister_info.group) < len(group) else 'all',
+				cluster=sibling_info.name if len(sibling_info.group) < len(group) else 'all',
 				cluster_size=info['window'].count,
 				Js=info['window'].unique_J,
 				CDR3s=info['window'].unique_CDR3,
@@ -236,14 +236,14 @@ class Discoverer:
 				CDR3s_approx=CDR3s_approx,
 				N_bases=n_bases,
 				database_diff=database_diff,
-				looks_like_V=int(looks_like_V_gene(sister)),
-				consensus=sister,
+				looks_like_V=int(looks_like_V_gene(sibling)),
+				consensus=sibling,
 			)
 			candidates.append(candidate)
 
 			# If a window was requested via --left/--right, write the 'approx'
 			# subset to a separate file.
-			if self.table_output and self.approx_columns and any(si.requested for si in sister_info) and len(group_approximate_V) > 0:
+			if self.table_output and self.approx_columns and any(si.requested for si in sibling_info) and len(group_approximate_V) > 0:
 				if not os.path.exists(self.table_output):
 					os.mkdir(self.table_output)
 				path = os.path.join(self.table_output, gene + '.tab')
