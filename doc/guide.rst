@@ -374,6 +374,9 @@ source
     The original database gene to which the sequences from this row were originally assigned.
     All candidates coming from the same source gene are grouped together.
 
+chain
+    Chain type: *VH* for heavy, *VK* for light chain lambda, *VL* for light chain kappa
+
 cluster
     From which type of cluster or clusters the consensus was computed.
     If there are multiple clusters that give rise to the same consensus sequence, they are all listed here, separated by semicolon.

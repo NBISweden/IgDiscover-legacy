@@ -89,7 +89,7 @@ _V_GENE_REGEX = _build_V_gene_regex()
 
 
 # TODO this is work in progress
-def looks_like_V_gene(s, chain='VH'):
+def looks_like_V_gene(s, chain):
 	"""
 	Check whether the given sequence matches our expectations of how a V gene
 	should look like.

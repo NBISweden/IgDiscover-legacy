@@ -8,7 +8,7 @@ import csv
 import logging
 import sys
 import os.path
-from collections import OrderedDict, namedtuple
+from collections import OrderedDict, namedtuple, Counter
 import multiprocessing
 import random
 from itertools import zip_longest
@@ -135,6 +135,12 @@ class Discoverer:
 			threshold=self.consensus_threshold/100,
 			maximum_subsample_size=self.downsample)
 
+	def _guess_chain(self, group):
+		"""
+		Return a guess for the chain type of a given group
+		"""
+		return Counter(group.chain).most_common()[0][0]
+
 	def _collect_siblings(self, gene, group):
 		group = group.copy()
 		for left, right in self.windows:
@@ -223,9 +229,11 @@ class Discoverer:
 				Js_approx = None
 				CDR3s_approx = None
 
+			chain = self._guess_chain(sibling_info.group)
 			candidate = Candidate(
 				name=sequence_id,
 				source=gene,
+				chain=chain,
 				cluster=sibling_info.name if len(sibling_info.group) < len(group) else 'all',
 				cluster_size=info['window'].count,
 				Js=info['window'].unique_J,
@@ -238,7 +246,7 @@ class Discoverer:
 				CDR3s_approx=CDR3s_approx,
 				N_bases=n_bases,
 				database_diff=database_diff,
-				looks_like_V=int(looks_like_V_gene(sibling)),
+				looks_like_V=int(looks_like_V_gene(sibling, chain)),
 				consensus=sibling,
 			)
 			candidates.append(candidate)
@@ -257,6 +265,7 @@ class Discoverer:
 Candidate = namedtuple('Candidate', [
 	'name',
 	'source',
+	'chain',
 	'cluster',
 	'cluster_size',
 	'Js',
@@ -285,7 +294,7 @@ def main(args):
 		database = dict()
 
 	table = read_table(args.table)
-	table = table.loc[:,('name', 'V_gene', 'J_gene', 'V_nt', 'CDR3_nt', 'V_SHM', 'J_SHM')].copy()
+	table = table.loc[:,('name', 'chain', 'V_gene', 'J_gene', 'V_nt', 'CDR3_nt', 'V_SHM', 'J_SHM')].copy()
 
 	logger.info('%s rows read', len(table))
 	if not args.ignore_J:
