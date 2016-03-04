@@ -637,6 +637,7 @@ def main(args):
 	with xopen(args.fasta) as fasta, xopen(args.igblast) as igblast:
 		parser = IgBlastParser(fasta, igblast)
 		for record in parser:
+			n += 1
 			extended_record = ExtendedIgBlastRecord(record, barcode_length=args.barcode_length, v_database=v_database)
 			d = extended_record.asdict()
 			if args.rename is not None:
@@ -649,7 +650,6 @@ def main(args):
 				if e.errno == errno.EPIPE:
 					sys.exit(1)
 				raise
-			n += 1
 	logger.info('%d records parsed and written', n)
 	if args.hdf5:
 		from igdiscover.table import STRING_COLUMNS, INTEGER_COLUMNS
