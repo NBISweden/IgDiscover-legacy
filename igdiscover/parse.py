@@ -129,7 +129,7 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 	- If the V sequence hit starts at base 2 in the reference, it is extended
 	  one to the left.
 	"""
-	# TODO move computation of cdr3_span, cdr3_sequence, vdj_sequence into constructor
+	# TODO move computation of cdr3_sequence, vdj_sequence into constructor
 	# TODO maybe make all coordinates relative to full sequence
 
 	SIZEREGEX = re.compile('(.*);size=(\d+);$')
@@ -245,13 +245,26 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		"""
 		Return a repaired AlignmentSummary object for the CDR3 region which
 		does not use IgBLAST’s coordinates. IgBLAST does not determine the end
-		of the CDR3 correctly, at least when a custom database is used.
+		of the CDR3 correctly, at least when a custom database is used,
+
+		Return (start, end) of CDR3 relative to query. The CDR3 is detected
+		using a regular expression. Return None if no CDR3 detected.
 		"""
-		span = self._cdr3_span()
-		if span is None:
+		if 'V' not in self.hits or 'J' not in self.hits:
 			return None
-		start, stop = span
-		return AlignmentSummary(start=start, stop=stop, length=None, matches=None,
+		if not self.chain in CDR3_REGEX:
+			return None
+		# Search in a window around the V(D)J junction for the CDR3
+		window_start = max(0, self.hits['V'].query_end - CDR3_SEARCH_START)
+		window_end = self.hits['J'].query_end
+		window = self.full_sequence[window_start:window_end]
+		match = CDR3_REGEX[self.chain].search(window)
+		if not match:
+			return None
+		start = match.start('cdr3') + window_start
+		end = match.end('cdr3') + window_start
+		assert start < end
+		return AlignmentSummary(start=start, stop=end, length=None, matches=None,
 			mismatches=None, gaps=None, percent_identity=None)
 
 	def _fixed_v_hit(self, v_database):
@@ -275,27 +288,6 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		d['subject_sequence'] = preceding_base + d['subject_sequence']  # TODO maybe not needed
 		# TODO one could adjust the no. of errors, percent_identity (and E-value)
 		return Hit(**d)
-
-	def _cdr3_span(self):
-		"""
-		Return (start, end) of CDR3 relative to query. The CDR3 is detected
-		using a regular expression. Return None if no CDR3 detected.
-		"""
-		if 'V' not in self.hits or 'J' not in self.hits:
-			return None
-		if not self.chain in CDR3_REGEX:
-			return None
-
-		# Search in that part of the full sequence where the CDR3 should be
-		v_start = max(0, self.hits['V'].query_end - CDR3_SEARCH_START)
-		j_end = self.hits['J'].query_end
-		match = CDR3_REGEX[self.chain].search(self.full_sequence[v_start:j_end])
-		if not match:
-			return None
-		start = match.start('cdr3') + v_start
-		end = match.end('cdr3') + v_start
-		assert start < end
-		return (start, end)
 
 	def region_sequence(self, region):
 		"""
