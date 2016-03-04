@@ -135,15 +135,7 @@ class Discoverer:
 			threshold=self.consensus_threshold/100,
 			maximum_subsample_size=self.downsample)
 
-	def __call__(self, args):
-		"""
-		Discover new V genes. args is a tuple (gene, group)
-		gene -- name of the gene
-		group -- a pandas DataFrame with the group corresponding to the gene
-		"""
-		gene, group = args
-		# Collect all 'sibling' sequences (consensus sequences)
-		siblings = SiblingMerger()
+	def _collect_siblings(self, gene, group):
 		group = group.copy()
 		for left, right in self.windows:
 			left, right = float(left), float(right)
@@ -157,7 +149,7 @@ class Discoverer:
 				right = int(right)
 			requested = (left, right) == (self.left, self.right)
 			name = '{}-{}'.format(left, right)
-			siblings.add(SiblingInfo(sibling, requested, name, group_in_window))
+			yield SiblingInfo(sibling, requested, name, group_in_window)
 
 		if self.cluster:
 			indices = downsampled(list(group.index), self.cluster_subsample_size)
@@ -176,9 +168,19 @@ class Discoverer:
 					continue
 				sibling = self._sibling_sequence(group_in_window)
 				name = 'cl{}'.format(cl)
-				info = SiblingInfo(sibling, False, name, group_in_window)
-				siblings.add(info)
+				yield SiblingInfo(sibling, False, name, group_in_window)
 				cl += 1
+
+	def __call__(self, args):
+		"""
+		Discover new V genes. args is a tuple (gene, group)
+		gene -- name of the gene
+		group -- a pandas DataFrame with the group corresponding to the gene
+		"""
+		gene, group = args
+		siblings = SiblingMerger()
+		for sibling in self._collect_siblings(gene, group):
+			siblings.add(sibling)
 
 		candidates = []
 		for sibling_info in siblings:
