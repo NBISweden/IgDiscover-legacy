@@ -12,7 +12,7 @@ the library, which contains all intermediate and result files.
 To start an analysis, you need:
 
 1. Two FASTQ files with paired-end reads
-2. A database of V/D/J genes (three FASTA files named ``v.fasta``, ``d.fasta``, ``j.fasta``)
+2. A database of V/D/J genes (three FASTA files named ``V.fasta``, ``D.fasta``, ``J.fasta``)
 3. A configuration file that describes the library
 
 If you do not have a V/D/J database, yet, you may want to read the section about :ref:`how to obtain V/D/J sequences <obtaining-database>`.
@@ -33,8 +33,10 @@ To run an analysis, proceed as follows.
    It is found automatically.
 
    Next, choose the directory with your database.
-   The directory must contain the three files ``v.fasta``, ``d.fasta``, ``j.fasta``.
-   These files contain the VH, DH, JH gene sequences, respectively.
+   The directory must contain the three files ``V.fasta``, ``D.fasta``, ``J.fasta``.
+   These files contain the V, D, J gene sequences, respectively.
+   Even if have have only light chains in your data, a ``D.fasta`` file needs to be provided,
+   just use one with the heavy chain D gene sequences.
 
    If you do not want a graphical user interface, use the two command-line
    parameters ``--db`` and ``--reads`` to provide this information instead::
@@ -83,14 +85,15 @@ To run an analysis, proceed as follows.
 Obtaining a V/D/J database
 ==========================
 
-We use the term “database” to refer to three FASTA files that contain the sequences for the VH, DH and JH genes.
+We use the term “database” to refer to three FASTA files that contain the sequences for the V, D and J genes.
 IMGT provides `sequences for download <http://www.imgt.org/vquest/refseqh.html>`_.
-You need to get the IGHV, IGHD and IGHJ files for your species.
+For discovering new VH genes for example, you need to get the IGHV, IGHD and IGHJ files of your species.
 As IgDiscover uses this only as a starting point, using a similar species will also work.
 
 The files you get from IMGT are not ready to use.
 You should run the script ``edit_imgt_file.pl`` on them that the `IgBLAST authors provide on their FTP server <ftp://ftp.ncbi.nih.gov/blast/executables/igblast/release/>`_.
-Run it for all three downloaded files, and make sure that the files are called ``VH.fasta``, ``DH.fasta`` and ``JH.fasta``.
+Run it for all three downloaded files, and make sure that the files are called ``V.fasta``, ``D.fasta`` and ``J.fasta``.
+You always need a file with D genes even if you analyze light chains.
 
 In case you have used IgBLAST previously, note that there is no need to run the ``makeblastdb`` tool yourself as IgDiscover will do that for you.
 
@@ -109,7 +112,7 @@ merging, they should have this structure (from 5' to 3'):
   amplification of cDNA ends).
 * 5' UTR
 * Leader
-* Re-arranged V, D and J gene sequences (in that order)
+* Re-arranged V, D and J gene sequences for heavy chains; only V and J for light chains
 * The reverse primer. This is optional.
 
 We use IgBLAST to detect the location of the V, D, J genes (run as part of the
@@ -228,7 +231,7 @@ They are structured in the same way as the final/ subdirectory, except that the 
 They also contain the following additional files.
 
 iteration-xx/candidates.tab
-    A table with candidate novel VH alleles (or genes).
+    A table with candidate novel V alleles (or genes).
     This is a list of sequences found through the *windowing strategy* or *linkage cluster analysis*, as discussed in our paper.
 
 iteration-xx/new_V_database.fasta
@@ -454,12 +457,12 @@ CDR3s_approx
 
 .. _gene-names:
 
-Novel VH gene names
+Novel V gene names
 -------------------
 
-Each VH gene discovered by IgDiscover gets a unique name such as “VH4.11_S1234”.
+Each V gene discovered by IgDiscover gets a unique name such as “VH4.11_S1234”.
 The “VH4.11” is the name of the database gene to which the novel
-VH gene was initially assigned. The number *1234* is derived from the base
+V gene was initially assigned. The number *1234* is derived from the nucleotide
 sequence of the novel gene. That is, if you discover the same sequence in two
 different runs of the IgDiscover, or just in different iterations, the number will
 be the same. This may help when manually inspecting results.

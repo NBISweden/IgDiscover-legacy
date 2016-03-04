@@ -7,6 +7,7 @@ IgDiscover
 ==========
 
 IgDiscover analyzes antibody repertoires and discovers new V genes from high-throughput sequencing reads.
+Heavy chains, kappa and lambda light chains are supported (to discover VH, VK and VL genes).
 
 This tool is the result of work within the `Gunilla Karlsson Hedestam group <http://ki.se/en/mtc/gunilla-karlsson-hedestam-group>`_
 at the `Department of Microbiology, Tumor and Cell Biology <http://ki.se/en/mtc/>`_ at `Karolinska Institutet <http://ki.se/en/>`_.
