@@ -2,9 +2,7 @@
 Changes
 =======
 
-v0.1.dev2
----------
+v0.2
+----
 
-*
-
-
+* IgDiscover can now also detect kappa and lambda light chain V genes (VK, VL)
