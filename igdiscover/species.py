@@ -7,8 +7,9 @@ species. Right now, it works for - at least - human, rhesus monkey and mouse.
 import re
 from sqt.dna import amino_acid_regex
 
+
 # Regular expressions for CDR3 detection
-CDR3REGEX = {
+CDR3_REGEX = {
 	# Heavy chain.
 	#
 	# This is a slightly improved version of the regular expression by
@@ -63,6 +64,10 @@ CDR3REGEX = {
 		GG[ACGT]  # G
 		""", re.VERBOSE)
 }
+
+# When searching for the CDR3, start this many bases to the left of the end of
+# the V match.
+CDR3_SEARCH_START = 30
 
 
 def _build_V_gene_regex():

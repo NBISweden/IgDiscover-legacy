@@ -27,7 +27,7 @@ import pandas as pd
 from sqt import SequenceReader, xopen
 from sqt.dna import reverse_complement
 from .utils import nt_to_aa
-from .species import CDR3REGEX
+from .species import CDR3_REGEX, CDR3_SEARCH_START
 
 logger = logging.getLogger(__name__)
 
@@ -100,12 +100,17 @@ class Hit(_Hit):
 	# This avoids having a __dict__ attribute, which is necessary for namedtuple
 	# subclasses that need _asdict() to work (http://bugs.python.org/issue24931)
 	__slots__ = ()
+
 	def covered(self):
 		"""
 		Return fraction of bases in the original subject sequence that are
 		covered by this hit.
 		"""
 		return len(self.subject_sequence) / self.subject_length
+
+	@property
+	def query_end(self):
+		return self.query_start + len(self.query_sequence)
 
 
 IgBlastRecord = namedtuple('IgBlastRecord',
@@ -278,20 +283,19 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		"""
 		if 'V' not in self.hits or 'J' not in self.hits:
 			return None
-
-		if not self.chain in CDR3REGEX:
+		if not self.chain in CDR3_REGEX:
 			return None
-		match = CDR3REGEX[self.chain].search(self.vdj_sequence)
+
+		# Search in that part of the full sequence where the CDR3 should be
+		v_start = max(0, self.hits['V'].query_end - CDR3_SEARCH_START)
+		j_end = self.hits['J'].query_end
+		match = CDR3_REGEX[self.chain].search(self.full_sequence[v_start:j_end])
 		if not match:
 			return None
-		start = match.start('cdr3')
-		end = match.end('cdr3')
+		start = match.start('cdr3') + v_start
+		end = match.end('cdr3') + v_start
 		assert start < end
-
-		# Make coordinates relative to query
-		hit_v = self.hits['V']
-		hit_j = self.hits['J']
-		return (start + hit_v.query_start, end + hit_v.query_start)
+		return (start, end)
 
 	def region_sequence(self, region):
 		"""
