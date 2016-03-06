@@ -12,24 +12,23 @@ from sqt.dna import amino_acid_regex
 CDR3_REGEX = {
 	# Heavy chain.
 	#
-	# This is an extended version of the regular expression by
+	# This is a slightly improved version of the regular expression by
 	# D’Angelo et al.: The antibody mining toolbox.
 	# http://dx.doi.org/10.4161/mabs.27105
-	#
-	# The amino-acid version of this regular expression is:
-	# [FYHED][FYHVWDS][CRGW][ETNGASDRIKVM]X{5,31}[WG][GAVDC]
+	# The amino-acid version of the expression is:
+	# [FY][FWVHY]C[ETNGASDRIKVM]X{5,32}W[GAV]
 	'VH': re.compile("""
-		(TT[CT] | TA[CT] | CA[CT] | GA[AG] | GA[CT] )          # F, Y, H, E, D
-		(TT[CT] | TA[CT] | CA[CT] | GT[ACGT] | TGG | GA[CT] |  # F, Y, H, V, W, D,
-			TC[ACGT]|AG[CT])                         # ... S
-		(TG[CT] | CG[ACGT]|AG[AG] | GG[ACGT] | TGG ) # C, R, G, W
+		(TT[CT] | TA[CT])                            # F or Y
+		(TT[CT] | TA[CT] | CA[CT] | GT[ACGT] | TGG)  # any of F, Y, H, V, W
+		(TG[CT])                                     # C
 		(?P<cdr3>                                    # actual CDR3 starts here
 			(([GA][AGCT]) | TC | CG) [ACGT]          # any of ETNGASDRIKVM
 			([ACGT]{3}){5,31}                        # between five and 31 codons
 		)                                            # end of CDR3
-		(TGG | GG[ACGT])                             # W, G
-		(G[CGT][ACGT] | GA[CT] | TG[CT])             # G, A, V, D, C
+		TGG                                          # W
+		G[CGT][ACGT]                                 # G, A or V
 		""", re.VERBOSE),
+
 
 	# Light chain, kappa.
 	# The amino-acid version is: [YFV][YNHFC][CWFGLS]X{5,15}[FL][GR]
