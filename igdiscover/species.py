@@ -52,18 +52,19 @@ CDR3_REGEX = {
 		""", re.VERBOSE),
 
 	# Light chain, lambda.
-	# The amino-acid version is: YYCX{5,15}FG
+	# The amino-acid version is: [YC][YFSC][CGW]X{5,15}FG
 	'VL': re.compile("""
-		TA[CT]    # Y
-		TA[CT]    # Y
-		TG[CT]    # C
+		(TA[CT] | TG[CT] )                             # Y, C
+		(TA[CT] | TT[CT] | TC[ACGT]|AG[CT] | TG[CT] )  # Y, F, S, C
+		(TG[CT] | GG[ACGT] | TGG )                     # C, G, W
 		(?P<cdr3>
 			([ACGT]{3}){5,15}   # between five and fifteen codons
 		)
-		TT[CT]    # F
-		GG[ACGT]  # G
+		TT[CT]                                         # F
+		GG[ACGT]                                       # G
 		""", re.VERBOSE)
 }
+
 
 # When searching for the CDR3, start this many bases to the left of the end of
 # the V match.
