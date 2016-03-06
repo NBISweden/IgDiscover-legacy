@@ -25,10 +25,14 @@ PIPELINE_CONF = 'igdiscover.yaml'
 def add_arguments(parser):
 	parser.add_argument('--database', '--db', metavar='PATH', default=None,
 		help='Directory with IgBLAST database files. If not given, a dialog is shown.')
-	parser.add_argument('--reads1', default=None,
-		help='File with paired-end reads (first file only). If not given, a dialog is shown.')
+	group = parser.add_mutually_exclusive_group()
+	group.add_argument('--single-reads', default=None, metavar='READS',
+		help='File with single-end reads (.fasta, .fasta.gz, .fastq or .fastq.gz)')
+	group.add_argument('--reads1', default=None,
+		help='First paired-end read file. The second is found automatically. '
+			'Must be a .fastq.gz file. If not given, a dialog is shown.')
 	parser.add_argument('--library-name', metavar='NAME', default=None,
-		help='Name of the library. Set library_name in the configuration file.')
+		help='Name of the library. Sets library_name in the configuration file.')
 	parser.add_argument('directory', help='New analysis directory to create')
 
 
