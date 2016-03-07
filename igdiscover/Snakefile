@@ -78,7 +78,7 @@ if config.limit:
 		output: 'reads/limited-{}.{{nr}}.fastq.gz'.format(config.limit)
 		input: 'reads.{nr}.fastq.gz'
 		shell:
-			'sqt fastxmod --limit {config.limit} {input} | {GZIP} > {output}'
+			'sqt fastxmod -w 0 --limit {config.limit} {input} | {GZIP} > {output}'
 
 
 if config.merge_program == 'flash':
