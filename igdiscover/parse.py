@@ -255,7 +255,10 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		if not self.chain in CDR3_REGEX:
 			return None
 		# Search in a window around the V(D)J junction for the CDR3
-		window_start = max(0, self.hits['V'].query_end - CDR3_SEARCH_START)
+		if 'CDR3' in self.alignments:
+			window_start = self.alignments['CDR3'].start - CDR3_SEARCH_START
+		else:
+			window_start = max(0, self.hits['V'].query_end - CDR3_SEARCH_START)
 		window_end = self.hits['J'].query_end
 		window = self.full_sequence[window_start:window_end]
 		match = CDR3_REGEX[self.chain].search(window)
