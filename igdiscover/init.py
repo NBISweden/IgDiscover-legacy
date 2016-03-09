@@ -9,6 +9,12 @@ import sys
 import shutil
 import subprocess
 import pkg_resources
+try:
+	import tkinter as tk
+	from tkinter import messagebox
+	from tkinter import filedialog
+except ImportError:
+	tk = None
 
 logger = logging.getLogger(__name__)
 
@@ -26,36 +32,30 @@ def add_arguments(parser):
 	parser.add_argument('directory', help='New analysis directory to create')
 
 
-def tkinter_reads_path(directory=False):
-	import tkinter as tk
-	from tkinter import messagebox
-	from tkinter import filedialog
-	root = tk.Tk()
-	root.withdraw()
-	path = filedialog.askopenfilename(title="Choose first reads file",
-		filetypes=[
-			("Reads", "*.fasta *.fastq *.fastq.gz *.fasta.gz"),
-			("Any file", "*")])
-	return path
+class TkinterGui:
+	"""Show a GUI for selecting reads and the database directory"""
+	def __init__(self):
+		if not tk:  # import failed
+			raise ImportError()
+		root = tk.Tk()
+		root.withdraw()
 
+	def yesno(self, title, question):
+		return tk.messagebox.askyesno(title, question)
 
-def tkinter_database_path(initialdir):
-	import tkinter as tk
-	from tkinter import messagebox
-	from tkinter import filedialog
-	root = tk.Tk()
-	root.withdraw()
-	path = filedialog.askdirectory(title="Choose IgBLAST database directory", mustexist=True, initialdir=initialdir)
-	return path
+	def database_path(self, initialdir):
+		path = tk.filedialog.askdirectory(
+			title="Choose IgBLAST database directory", mustexist=True,
+			initialdir=initialdir)
+		return path
 
-
-def yesno(title, question):
-	import tkinter as tk
-	from tkinter import messagebox
-	from tkinter import filedialog
-	root = tk.Tk()
-	root.withdraw()
-	return messagebox.askyesno(title, question)
+	def reads_path(self, directory=False):
+		path = tk.filedialog.askopenfilename(
+			title="Choose first reads file",
+			filetypes=[
+				("Reads", "*.fasta *.fastq *.fastq.gz *.fasta.gz"),
+				("Any file", "*")])
+		return path
 
 
 """
@@ -115,16 +115,25 @@ def guess_paired_path(path):
 
 def main(args):
 	if ' ' in args.directory:
-		sys.exit('The name of the new pipeline directory must not contain spaces')
-	gui = False
+		sys.exit('The name of the analysis directory must not contain spaces')
+	# If reads file or database were not given, we need to show the GUI
+	if args.reads1 is None or args.database is None:
+		try:
+			gui = TkinterGui()
+		except (ImportError, tk.TclError):
+			logger.error('GUI cannot be started. Please provide reads1 file '
+				'and database directory on command line.')
+			sys.exit(1)
+	else:
+		gui = None
 	if args.reads1 is not None:
 		reads1 = args.reads1
 	else:
-		gui = True
-		reads1 = tkinter_reads_path()
-	if not reads1:
-		logger.error('Cancelled')
-		sys.exit(2)
+		reads1 = gui.reads_path()
+		if not reads1:
+			logger.error('Cancelled')
+			sys.exit(2)
+
 	reads2 = guess_paired_path(reads1)
 	if reads2 is None:
 		logger.error('Could not determine second file of paired-end reads')
@@ -133,11 +142,10 @@ def main(args):
 	if args.database is not None:
 		dbpath = args.database
 	else:
-		gui = True
 		# TODO as soon as we distribute our own database files, we use this:
 		# database_path = pkg_resources.resource_filename('igdiscover', 'databases')
 		databases_path = None
-		dbpath = tkinter_database_path(databases_path)
+		dbpath = gui.database_path(databases_path)
 		if not dbpath:
 			logger.error('Cancelled')
 			sys.exit(2)
@@ -161,7 +169,7 @@ def main(args):
 		library_name = args.library_name
 	else:
 		library_name = os.path.basename(os.path.normpath(args.directory))
-	# Write the pipeline configuration
+	# Write the configuration file
 	configuration = pkg_resources.resource_string('igdiscover', PIPELINE_CONF).decode()
 	with open(os.path.join(args.directory, PIPELINE_CONF), 'w') as f:
 		for line in configuration.splitlines(keepends=True):
@@ -179,9 +187,10 @@ def main(args):
 	if n == 0:
 		logger.error('No FASTA files in database directory. Have you selected the correct directory?')
 		sys.exit(2)
-	if gui:
+	if gui is not None:
 		# Only suggest to edit the config file if at least one GUI dialog has been shown
-		if yesno('Directory initialized', 'Do you want to edit the configuration file now?'):
+		if gui.yesno('Directory initialized',
+			   'Do you want to edit the configuration file now?'):
 			subprocess.call(["xdg-open", os.path.join(args.directory, PIPELINE_CONF)])
 	logger.info('Directory %s initialized.', args.directory)
-	logger.info('Edit %s/%s, then run "cd %s && igdiscover run" to start the pipeline', args.directory, PIPELINE_CONF, args.directory)
+	logger.info('Edit %s/%s, then run "cd %s && igdiscover run" to start the analysis', args.directory, PIPELINE_CONF, args.directory)
