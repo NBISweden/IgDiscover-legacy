@@ -198,11 +198,7 @@ else:
 		input: fastq=MERGED_READS
 		resources: time=1
 		run:
-			try:
-				os.remove(output.fastq)
-			except FileNotFoundError:
-				pass
-			relative_symlink(input.fastq, output.fastq)
+			relative_symlink(input.fastaq, output.fastaq, force=True)
 
 
 if config.reverse_primers:
@@ -230,11 +226,7 @@ else:
 		input: fastq='reads/forward-primer-trimmed.fastq.gz'
 		resources: time=1
 		run:
-			try:
-				os.remove(output.fastq)
-			except FileNotFoundError:
-				pass
-			relative_symlink(input.fastq, output.fastq)
+			relative_symlink(input.fastq, output.fastq, force=True)
 
 
 rule fastqc:

@@ -168,10 +168,17 @@ class Merger:
 		raise NotImplementedError("not implemented")
 
 
-def relative_symlink(src, dst):
+def relative_symlink(src, dst, force=False):
 	"""
 	Create a symbolic link in any directory.
+
+	force -- if True, then overwrite an existing file/symlink
 	"""
+	if force:
+		try:
+			os.remove(dst)
+		except FileNotFoundError:
+			pass
 	target = os.path.relpath(os.path.abspath(src), start=os.path.dirname(dst))
 	os.symlink(target, dst)
 
