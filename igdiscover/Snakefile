@@ -22,14 +22,7 @@ for k, v in sorted(vars(config).items()):
 # This command is run before every shell command and helps to catch errors early
 shell.prefix("set -euo pipefail;")
 
-if config.limit:
-	READS1 = 'reads/limited-{}.1.fastq.gz'.format(config.limit)
-	READS2 = 'reads/limited-{}.2.fastq.gz'.format(config.limit)
-else:
-	READS1 = 'reads.1.fastq.gz'
-	READS2 = 'reads.2.fastq.gz'
-
-MERGED_READS = 'reads/merged.fastq.gz'
+READS1, READS2 = 'reads/limited.1.fastq.gz', 'reads/limited.2.fastq.gz'
 PREPROCESSED_READS = 'reads/sequences.fasta.gz'
 
 # Targets for each iteration
@@ -58,10 +51,6 @@ TARGETS += ['stats/readlengths.pdf', 'stats/reads.txt']
 if config.barcode_length > 0:
 	TARGETS += ['stats/barcodes.txt']
 
-# Add also intermediate files
-TARGETS += [READS1, READS2, MERGED_READS, PREPROCESSED_READS]
-
-
 # Use pigz (parallel gzip) if available
 GZIP = 'pigz' if shutil.which('pigz') is not None else 'gzip'
 
@@ -72,17 +61,24 @@ rule all:
 
 if config.limit:
 	rule limit_reads:
-		output: 'reads/limited-{limit,\d+}.{nr,([12]\\.|)}{ext,(fasta|fastq)}.gz'
+		output: 'reads/limited.{nr,([12]\\.|)}{ext,(fasta|fastq)}.gz'
 		input: 'reads.{nr}{ext}.gz'
 		shell:
-			'sqt fastxmod -w 0 --limit {wildcards.limit} {input} | {GZIP} > {output}'
+			'sqt fastxmod -w 0 --limit {config.limit} {input} | {GZIP} > {output}'
+else:
+	rule symlink_limited:
+		output: fastaq='reads/limited.{nr,([12]\\.|)}{ext,(fasta|fastq)}.gz'
+		input: fastaq='reads.{nr}{ext}.gz'
+		resources: time=1
+		run:
+			relative_symlink(input.fastaq, output.fastaq, force=True)
 
 
 if config.merge_program == 'flash':
 	rule flash_merge:
 		"""Use FLASH to merge paired-end reads"""
-		output: MERGED_READS
-		input: READS1, READS2
+		output: 'reads/merged.fastq.gz'
+		input: 'reads/limited.1.fastq.gz', 'reads/limited.2.fastq.gz'
 		resources: time=60
 		threads: 8
 		log: 'reads/flash.log'
@@ -96,8 +92,8 @@ elif config.merge_program == 'pear':
 			unmerged1='reads/pear.unassembled.forward.fastq.gz',
 			unmerged2='reads/pear.unassembled.reverse.fastq.gz',
 			discarded='reads/pear.discarded.fastq.gz',
-			fastq=MERGED_READS,
-		input: READS1, READS2
+			fastq='reads/merged.fastq.gz',
+		input: 'reads/limited.1.fastq.gz', 'reads/limited.2.fastq.gz'
 		resources: time=60
 		threads: 8
 		log: 'reads/pear.log'
@@ -113,12 +109,19 @@ else:
 	sys.exit("merge_program {config.merge_program!r} given in configuration file not recognized".format(config=config))
 
 
+rule symlink_merged:
+	output: fastaq='reads/merged.{ext,(fasta|fastq)}.gz'
+	input: fastaq='reads/limited.{ext}.gz'
+	run:
+		relative_symlink(input.fastaq, output.fastaq, force=True)
+
+
 rule merged_read_length_histogram:
 	output:
 		txt="stats/merged.readlengths.txt",
 		pdf="stats/merged.readlengths.pdf"
 	input:
-		fastq=MERGED_READS
+		fastq='reads/merged.fastq.gz'
 	shell:
 		"""sqt readlenhisto --bins 100 --left 300 --title "Lengths of merged reads" --plot {output.pdf} {input}  > {output.txt}"""
 
@@ -140,7 +143,7 @@ rule barcode_stats:
 	- make sure that a stranded protocol is used
 	"""
 	output: txt="stats/barcodes.txt"
-	input: fastq=MERGED_READS
+	input: fastq='reads/merged.fastq.gz'
 	shell:
 		"""
 		{GZIP} -dc {input} | awk 'NR%4==2 {{print substr($1,1,12)}}' | grep -v N | sort -u | wc -l > {output}
@@ -151,7 +154,7 @@ rule reads_stats:
 	output: txt="stats/reads.txt"
 	input:
 		reads=READS1,
-		merged=MERGED_READS,
+		merged='reads/merged.fastq.gz',
 		sequences=PREPROCESSED_READS,
 	run:
 		shell("""
@@ -178,8 +181,8 @@ rule reads_stats:
 if config.forward_primers:
 	# At least one forward primer is to be removed
 	rule trim_forward_primers:
-		output: fastq=temp('reads/forward-primer-trimmed.fastq.gz')
-		input: fastq=MERGED_READS
+		output: fastaq=temp('reads/forward-primer-trimmed.{ext,(fasta|fastq)}.gz')
+		input: fastaq='reads/merged.{ext}.gz'
 		resources: time=120
 		log: 'reads/forward-primer-trimmed.cutadapt.log'
 		run:
@@ -189,13 +192,13 @@ if config.forward_primers:
 				param += ' ' + ' '.join('-a {}$'.format(reverse_complement(seq)) for seq in config.forward_primers)
 			shell(
 			"""
-			cutadapt --discard-untrimmed {param} -o {output.fastq} {input.fastq} | tee {log}
+			cutadapt --discard-untrimmed {param} -o {output.fastaq} {input.fastaq} | tee {log}
 			""")
 else:
 	# No trimming, just symlink the file
 	rule dont_trim_forward_primers:
-		output: fastq='reads/forward-primer-trimmed.fastq.gz'
-		input: fastq=MERGED_READS
+		output: fastaq=temp('reads/forward-primer-trimmed.{ext,(fasta|fastq)}.gz')
+		input: fastaq='reads/merged.{ext}.gz'
 		resources: time=1
 		run:
 			relative_symlink(input.fastaq, output.fastaq, force=True)
@@ -204,8 +207,8 @@ else:
 if config.reverse_primers:
 	# At least one reverse primer is to be removed
 	rule trim_reverse_primers:
-		output: fastq='reads/trimmed.fastq.gz'
-		input: fastq='reads/forward-primer-trimmed.fastq.gz'
+		output: fastaq='reads/trimmed.{ext,(fasta|fastq)}.gz'
+		input: fastaq='reads/forward-primer-trimmed.{ext,(fasta|fastq)}.gz'
 		resources: time=120
 		log: 'reads/trimmed.cutadapt.log'
 		run:
@@ -217,16 +220,16 @@ if config.reverse_primers:
 				param += ' ' + ' '.join('-g ^{}'.format(seq) for seq in config.reverse_primers)
 			shell(
 			"""
-			cutadapt --discard-untrimmed {param} -o {output.fastq} {input.fastq} | tee {log}
+			cutadapt --discard-untrimmed {param} -o {output.fastaq} {input.fastaq} | tee {log}
 			""")
 else:
 	# No trimming, just symlink the file
 	rule dont_trim_reverse_primers:
-		output: fastq='reads/trimmed.fastq.gz'
-		input: fastq='reads/forward-primer-trimmed.fastq.gz'
+		output: fastaq='reads/trimmed.{ext,(fasta|fastq)}.gz'
+		input: fastaq='reads/forward-primer-trimmed.{ext,(fasta|fastq)}.gz'
 		resources: time=1
 		run:
-			relative_symlink(input.fastq, output.fastq, force=True)
+			relative_symlink(input.fastaq, output.fastaq, force=True)
 
 
 rule fastqc:
@@ -245,17 +248,32 @@ rule fastqc:
 		"""
 
 
-rule fastq_to_fasta:
+rule filter_fasta:
 	"""
-	* Convert from FASTQ to FASTA
 	* Remove low-quality sequences
 	* Discard too short sequences
+
+	Same as fastq_to_fasta, but do not convert from
+	* Remove low-quality sequences
+	* Discard too short sequences
+	"""
+	output: fasta=temp("reads/filtered.fasta")
+	input: fasta="reads/trimmed.fasta.gz"
+	params: max_errors=" --max-errors {config.maximum_expected_errors}" if config.maximum_expected_errors is not None else ""
+	shell:
+		"sqt fastxmod{params.max_errors} --minimum-length {config.minimum_merged_read_length} {input.fasta} > {output.fasta}"
+
+
+rule fastq_to_fasta:
+	"""
+	Same as filter_fasta, but also convert from FASTQ to FASTA
 	"""
 	output: fasta=temp("reads/filtered.fasta")
 	input: fastq="reads/trimmed.fastq.gz"
 	params: max_errors="--max-errors {config.maximum_expected_errors}" if config.maximum_expected_errors is not None else ""
 	shell:
 		"sqt fastxmod {params.max_errors} --minimum-length {config.minimum_merged_read_length} --fasta {input.fastq} > {output.fasta}"
+
 
 
 rule dereplicate:
