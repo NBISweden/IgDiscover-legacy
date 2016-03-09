@@ -11,11 +11,13 @@ the library, which contains all intermediate and result files.
 
 To start an analysis, you need:
 
-1. Two FASTQ files with paired-end reads
+1. A FASTA or FASTQ file with single-end reads or two FASTQ files with
+   paired-end reads (also, the files must be gzip-compressed)
 2. A database of V/D/J genes (three FASTA files named ``V.fasta``, ``D.fasta``, ``J.fasta``)
 3. A configuration file that describes the library
 
-If you do not have a V/D/J database, yet, you may want to read the section about :ref:`how to obtain V/D/J sequences <obtaining-database>`.
+If you do not have a V/D/J database, yet, you may want to read the section about
+:ref:`how to obtain V/D/J sequences <obtaining-database>`.
 
 To run an analysis, proceed as follows.
 
@@ -39,10 +41,13 @@ To run an analysis, proceed as follows.
    just use one with the heavy chain D gene sequences.
 
    If you do not want a graphical user interface, use the two command-line
-   parameters ``--db`` and ``--reads`` to provide this information instead::
+   parameters ``--db`` and ``--reads1`` to provide this information instead::
 
-       igdiscover init --db path/to/my/database/ --reads mylibrary.1.fastq.gz myexperiment
+       igdiscover init --db path/to/my/database/ --reads1 mylibrary.1.fastq.gz myexperiment
 
+   Again, the second reads file will be found automatically.
+   Use ``--single-reads`` instead of ``--reads1`` if you have single-end reads or a dataset with already merged reads.
+   For ``--single-reads``, a FASTA file (not only FASTQ) is also allowed.
    In any case, an analysis directory named ``myexperiment`` will have been created.
 
 2. Adjust the configuration file
@@ -101,8 +106,17 @@ In case you have used IgBLAST previously, note that there is no need to run the 
 Input data requirements
 =======================
 
-IgDiscover assumes that its input data are overlapping paired-end reads. After
-merging, they should have this structure (from 5' to 3'):
+IgDiscover can process input data of three different types:
+
+* Paired-end reads in FASTQ format,
+* Single-end reads in FASTQ format,
+* Single-end reads in FASTA format.
+
+Additionally, all files must (currently) be gzip-compressed!
+
+Paired-end reads are first merged, and then processed in the same way as
+single-end reads. Single-end reads (and merged paired-end reads) are expected to
+follow this structure (from 5' to 3'):
 
 * The forward primer sequence. This is optional.
 * A random barcode (molecular identifier). This is optional. Set the
@@ -122,8 +136,8 @@ always split off, even if no RACE protocol was used. (This should not be a
 problem in practice.) The leader sequence is detected by looking for a start
 codon near 60 bp upstream of the start of the V gene match.
 
-IgDiscover should also be able to handle 454 data, but we have not tested this.
-Contact us for instructions.
+IgDiscover was tested with paired-end Illumina MiSeq reads (2x300bp).
+It should be able to handle 454 data, but we have not tested this.
 
 
 Configuration

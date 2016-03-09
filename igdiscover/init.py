@@ -16,6 +16,8 @@ try:
 except ImportError:
 	tk = None
 
+from cutadapt.xopen import xopen
+
 logger = logging.getLogger(__name__)
 
 
@@ -27,7 +29,7 @@ def add_arguments(parser):
 		help='Directory with IgBLAST database files. If not given, a dialog is shown.')
 	group = parser.add_mutually_exclusive_group()
 	group.add_argument('--single-reads', default=None, metavar='READS',
-		help='File with single-end reads (.fasta, .fasta.gz, .fastq or .fastq.gz)')
+		help='File with single-end reads (.fasta.gz or .fastq.gz)')
 	group.add_argument('--reads1', default=None,
 		help='First paired-end read file. The second is found automatically. '
 			'Must be a .fastq.gz file. If not given, a dialog is shown.')
@@ -49,13 +51,21 @@ class TkinterGui:
 
 	def database_path(self, initialdir):
 		path = tk.filedialog.askdirectory(
-			title="Choose IgBLAST database directory", mustexist=True,
+			title="Choose V/D/J database directory", mustexist=True,
 			initialdir=initialdir)
 		return path
 
-	def reads_path(self, directory=False):
+	def reads1_path(self):
 		path = tk.filedialog.askopenfilename(
 			title="Choose first reads file",
+			filetypes=[
+				("Reads", "*.fastq.gz"),
+				("Any file", "*")])
+		return path
+
+	def single_reads_path(self):
+		path = tk.filedialog.askopenfilename(
+			title="Choose single-end reads file",
 			filetypes=[
 				("Reads", "*.fasta *.fastq *.fastq.gz *.fasta.gz"),
 				("Any file", "*")])
@@ -117,11 +127,35 @@ def guess_paired_path(path):
 	return paths[0]
 
 
+class UnknownFileFormatError(Exception):
+	pass
+
+
+def file_type(path):
+	"""
+	Return 'fasta' or 'fastq' depending on file format. The file may optionally
+	be gzip-compressed.
+	"""
+	if path.endswith('.gz'):
+		file = xopen(path)
+	else:
+		file = open(path)
+	with file as f:
+		first_char = f.read(1)
+		if first_char == '@':
+			return 'fastq'
+		elif first_char == '>':
+			return 'fasta'
+		else:
+			raise UnknownFileFormatError('Cannot recognize format. File starts with neither ">" nor "@"')
+
+
 def main(args):
 	if ' ' in args.directory:
 		sys.exit('The name of the analysis directory must not contain spaces')
-	# If reads file or database were not given, we need to show the GUI
-	if args.reads1 is None or args.database is None:
+
+	# If reads files or database were not given, initialize the GUI
+	if (args.reads1 is None and args.single_reads is None) or args.database is None:
 		try:
 			gui = TkinterGui()
 		except (ImportError, tk.TclError):
@@ -130,23 +164,48 @@ def main(args):
 			sys.exit(1)
 	else:
 		gui = None
-	if args.reads1 is not None:
-		reads1 = args.reads1
-	else:
-		reads1 = gui.reads_path()
-		if not reads1:
+
+	# Find out whether data is paired or single
+	assert not (args.reads1 and args.single_reads)
+	if args.reads1 is None and args.single_reads is None:
+		paired = gui.yesno('Paired end or single-end reads',
+			'Are your reads paired and need to be merged?\n\n'
+			'If you answer "Yes", next select the FASTQ files '
+			'with the <em>first</em> of your paired-end reads.\n'
+			'If you answer "No", next select the FASTA or FASTQ '
+			'file with your sequences.')
+		if paired is None:
 			logger.error('Cancelled')
 			sys.exit(2)
+	else:
+		paired = bool(args.reads1)
 
-	reads2 = guess_paired_path(reads1)
-	if reads2 is None:
-		logger.error('Could not determine second file of paired-end reads')
-		sys.exit(1)
+	# Assign reads1 and (if paired) also reads2
+	if paired:
+		if args.reads1 is not None:
+			reads1 = args.reads1
+		else:
+			reads1 = gui.reads1_path()
+			if not reads1:
+				logger.error('Cancelled')
+				sys.exit(2)
+		reads2 = guess_paired_path(reads1)
+		if reads2 is None:
+			logger.error('Could not determine second file of paired-end reads')
+			sys.exit(1)
+	else:
+		if args.single_reads is not None:
+			reads1 = args.single_reads
+		else:
+			reads1 = gui.single_reads_path()
+			if not reads1:
+				logger.error('Cancelled')
+				sys.exit(2)
 
 	if args.database is not None:
 		dbpath = args.database
 	else:
-		# TODO as soon as we distribute our own database files, we use this:
+		# TODO as soon as we distribute our own database files, we can use this:
 		# database_path = pkg_resources.resource_filename('igdiscover', 'databases')
 		databases_path = None
 		dbpath = gui.database_path(databases_path)
@@ -166,13 +225,22 @@ def main(args):
 		rel = os.path.relpath(readspath, dirname)
 		os.symlink(rel, os.path.join(dirname, target + gz))
 
-	create_symlink(reads1, args.directory, 'reads.1.fastq')
-	create_symlink(reads2, args.directory, 'reads.2.fastq')
+	if paired:
+		create_symlink(reads1, args.directory, 'reads.1.fastq')
+		create_symlink(reads2, args.directory, 'reads.2.fastq')
+	else:
+		try:
+			target = 'reads.' + file_type(reads1)
+		except UnknownFileFormatError:
+			logger.error('Cannot determine whether reads file is FASTA or FASTQ')
+			sys.exit(1)
+		create_symlink(reads1, args.directory, target)
 
 	if args.library_name:
 		library_name = args.library_name
 	else:
 		library_name = os.path.basename(os.path.normpath(args.directory))
+
 	# Write the configuration file
 	configuration = pkg_resources.resource_string('igdiscover', PIPELINE_CONF).decode()
 	with open(os.path.join(args.directory, PIPELINE_CONF), 'w') as f:
