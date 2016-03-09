@@ -136,7 +136,7 @@ rule read_length_histogram:
 		"""sqt readlenhisto --bins 100 --left 300 --title "Lengths of pre-processed reads" --plot {output.pdf} {input}  > {output.txt}"""
 
 
-rule barcode_stats:
+rule barcode_stats_fastq:
 	"""Print out number of random barcodes in the library
 	TODO
 	- run this only if random barcodes are actually used
@@ -149,8 +149,16 @@ rule barcode_stats:
 		{GZIP} -dc {input} | awk 'NR%4==2 {{print substr($1,1,12)}}' | grep -v N | sort -u | wc -l > {output}
 		"""
 
+rule barcode_stats_fasta:
+	"""
+	TODO Implement this
+	"""
+	output: txt="stats/barcodes.txt"
+	input: fasta='reads/1-limited.fasta.gz'
+	shell: "touch {output}"
 
-rule reads_stats:
+
+rule reads_stats_fastq:
 	output: txt="stats/reads.txt"
 	input:
 		reads=READS1,
@@ -174,6 +182,16 @@ rule reads_stats:
 			echo -n "Number of barcodes in preprocessed sequences: " >> {output}
 			zgrep -A 1 '^>' {input.sequences} | awk '!/^>/ && $1 != "--" {{ print substr($1,1,{config.barcode_length}) }}' | sort -u | grep -v N | wc -l >> {output}
 			""")
+
+
+rule reads_stats_fasta:
+	"""
+	TODO implement this
+	"""
+	output: txt="stats/reads.txt"
+	input:
+		merged='reads/1-limited.fasta.gz'
+	shell: "touch {output}"
 
 
 # Remove primer sequences
