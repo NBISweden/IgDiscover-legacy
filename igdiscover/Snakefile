@@ -215,7 +215,7 @@ if config.forward_primers:
 else:
 	# No trimming, just symlink the file
 	rule dont_trim_forward_primers:
-		output: fastaq=temp('reads/3-forward-primer-trimmed.{ext,(fasta|fastq)}.gz')
+		output: fastaq='reads/3-forward-primer-trimmed.{ext,(fasta|fastq)}.gz'
 		input: fastaq='reads/2-merged.{ext}.gz'
 		resources: time=1
 		run:
