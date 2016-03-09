@@ -72,10 +72,10 @@ rule all:
 
 if config.limit:
 	rule limit_reads:
-		output: 'reads/limited-{}.{{nr}}.fastq.gz'.format(config.limit)
-		input: 'reads.{nr}.fastq.gz'
+		output: 'reads/limited-{limit,\d+}.{nr,([12]\\.|)}{ext,(fasta|fastq)}.gz'
+		input: 'reads.{nr}{ext}.gz'
 		shell:
-			'sqt fastxmod -w 0 --limit {config.limit} {input} | {GZIP} > {output}'
+			'sqt fastxmod -w 0 --limit {wildcards.limit} {input} | {GZIP} > {output}'
 
 
 if config.merge_program == 'flash':
