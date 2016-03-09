@@ -62,11 +62,8 @@ if config.barcode_length > 0:
 TARGETS += [READS1, READS2, MERGED_READS, PREPROCESSED_READS]
 
 
-GZIP = 'gzip'
 # Use pigz (parallel gzip) if available
-if shutil.which('pigz') is not None:
-	GZIP = 'pigz'
-
+GZIP = 'pigz' if shutil.which('pigz') is not None else 'gzip'
 
 rule all:
 	input:
