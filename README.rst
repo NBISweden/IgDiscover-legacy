@@ -1,6 +1,7 @@
-..
-    .. image:: https://img.shields.io/pypi/v/igdiscover.svg?branch=master
-        :target: https://pypi.python.org/pypi/igdiscover
+.. image:: https://img.shields.io/pypi/v/igdiscover.svg?branch=master
+    :target: https://pypi.python.org/pypi/igdiscover
+
+
 
 ==========
 IgDiscover
