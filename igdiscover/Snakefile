@@ -60,11 +60,18 @@ rule all:
 
 
 if config.limit:
-	rule limit_reads:
+	rule limit_reads_gz:
 		output: 'reads/1-limited.{nr,([12]\\.|)}{ext,(fasta|fastq)}.gz'
 		input: 'reads.{nr}{ext}.gz'
 		shell:
 			'sqt fastxmod -w 0 --limit {config.limit} {input} | {GZIP} > {output}'
+
+	rule limit_reads:
+		output: 'reads/1-limited.{nr,([12]\\.|)}{ext,(fasta|fastq)}.gz'
+		input: 'reads.{nr}{ext}'
+		shell:
+			'sqt fastxmod -w 0 --limit {config.limit} {input} | {GZIP} > {output}'
+
 else:
 	rule symlink_limited:
 		output: fastaq='reads/1-limited.{nr,([12]\\.|)}{ext,(fasta|fastq)}.gz'
@@ -72,6 +79,13 @@ else:
 		resources: time=1
 		run:
 			relative_symlink(input.fastaq, output.fastaq, force=True)
+
+	# TODO compressing the input file is an unnecessary step
+	rule gzip_limited:
+		output: fastaq='reads/1-limited.{nr,([12]\\.|)}{ext,(fasta|fastq)}.gz'
+		input: fastaq='reads.{nr}{ext}'
+		shell:
+			'{GZIP} < {input} > {output}'
 
 
 if config.merge_program == 'flash':
@@ -270,10 +284,6 @@ rule filter_fasta:
 	"""
 	* Remove low-quality sequences
 	* Discard too short sequences
-
-	Same as fastq_to_fasta, but do not convert from
-	* Remove low-quality sequences
-	* Discard too short sequences
 	"""
 	output: fasta=temp("reads/5-filtered.fasta")
 	input: fasta="reads/4-trimmed.fasta.gz"
@@ -288,10 +298,9 @@ rule fastq_to_fasta:
 	"""
 	output: fasta=temp("reads/5-filtered.fasta")
 	input: fastq="reads/4-trimmed.fastq.gz"
-	params: max_errors="--max-errors {config.maximum_expected_errors}" if config.maximum_expected_errors is not None else ""
+	params: max_errors=" --max-errors {config.maximum_expected_errors}" if config.maximum_expected_errors is not None else ""
 	shell:
-		"sqt fastxmod {params.max_errors} --minimum-length {config.minimum_merged_read_length} --fasta {input.fastq} > {output.fasta}"
-
+		"sqt fastxmod{params.max_errors} --minimum-length {config.minimum_merged_read_length} --fasta {input.fastq} > {output.fasta}"
 
 
 rule dereplicate:
