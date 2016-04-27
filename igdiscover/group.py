@@ -1,22 +1,29 @@
 """
+Group sequences that share a barcode (molecular identifier, MID)
 
-Error-correct sequences that share a barcode (molecular identifier, MID)
-
-Since the same barcode can sometimes be used by different sequences, sequence
-length is used as second criterion for grouping sequences.
+Since the same barcode can sometimes be used by different sequences, a 'pseudo
+CDR3' sequence (defined to be 80 to 60 bases upstream of the 3' end) is used
+to further distinguish sequences.
 
 The barcode is assumed to be in the 5' end of the sequence.
 
 Use --trim-g to remove initial runs of G (at 5' end, artifact from RACE
-protocol). Different lengths cannot be used to distinguish sequences since
-they can come from the polymerase problems in homopolymers.
+protocol).
 
+For all the found groups, one sequence is output to standard output (in FASTA
+format). Which sequence that is depends on the group size:
+- If the group consists of a single sequence, that sequence is output
+- If the group consists of two sequences, one of them is picked randomly
+- If the group has at least three sequences, a consensus is computed. The
+  consensus is output if it contains no ambiguous bases. Otherwise, also here a
+  random sequence is chosen.
 """
 """
 Things to keep in mind
 - There are some indels in homopolymers (probably PCR problem)
-- There are some sequencing errors in the initial run of G nucleotides after the
-  barcode
+- Different lengths of the initial G run cannot be used to distinguish sequences
+  since they can come from polymerase problems in homopolymers.
+- There are also regular sequencing errors in the initial run of G nucleotides.
 - Some paired reads aren’t correctly merged into single reads. They end up being
   too long.
 - When grouping by barcode and pseudo CDR3, sequence lengths vary within groups.
@@ -26,6 +33,8 @@ Things to keep in mind
 - It does not hurt to reduce the minimimum number of sequences per group for
   taking a consensus to 2, but it also does not help much (results in 0.5% more
   sequences). (The consensus is only successful if both sequences are identical.)
+  However, since this is also a simple way to deal with exact duplicates, we do
+  it anyway and can then skip the separate duplicate removal step (VSEARCH).
 
 TODO
 - Use pandas.DataFrame
