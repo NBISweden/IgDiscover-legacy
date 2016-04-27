@@ -32,7 +32,6 @@ COMMANDS = [
 	'parse',
 	'filter',
 	'count',
-	'unbarcode',
 	'group',
 	#'multidiscover',
 	'compose',
