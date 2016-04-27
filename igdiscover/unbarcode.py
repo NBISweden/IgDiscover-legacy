@@ -28,8 +28,6 @@ Things to keep in mind
   sequences). (The consensus is only successful if both sequences are identical.)
 
 TODO
-- Allow plotting of group sizes
-
 - Use pandas.DataFrame
 """
 
@@ -40,6 +38,9 @@ from collections import Counter, defaultdict
 from contextlib import ExitStack
 from itertools import islice
 
+import matplotlib
+matplotlib.use('pdf')
+import matplotlib.pyplot as plt
 from sqt.align import consensus
 from sqt import SequenceReader
 
@@ -54,6 +55,8 @@ logger = logging.getLogger(__name__)
 def add_arguments(parser):
 	parser.add_argument('--groups-output', metavar='FILE', default=None,
 		help='Write tab-separated table with groups to FILE')
+	parser.add_argument('--plot-sizes', metavar='FILE', default=None,
+		help='Plot group sizes to FILE (.png or .pdf)')
 	parser.add_argument('--real-cdr3', action='store_true', default=False,
 		help='Use the real CDR3 (detected with regex) instead of pseudo CDR3')
 	parser.add_argument('--limit', default=None, type=int, metavar='N',
@@ -145,7 +148,6 @@ def main(args):
 	barcodes = defaultdict(list)
 	n = 0
 	too_short = 0
-	group_sizes = Counter()
 	cdr3s = set()
 	regex_fail = 0
 	with SequenceReader(args.fastx) as f:
@@ -162,16 +164,14 @@ def main(args):
 			if args.real_cdr3:
 				match = CDR3_REGEX['VH'].search(unbarcoded.sequence)
 				if match:
-					cdr3_start, cdr3_end = match.start('cdr3'), match.end('cdr3')
-				if not match:
+					cdr3 = match.group('cdr3')
+				else:
 					regex_fail += 1
 					continue
 			else:
-				cdr3_start, cdr3_end = -80, -60
-			cdr3 = unbarcoded.sequence[cdr3_start:cdr3_end]
-			unbarcoded.cdr3 = cdr3  # TODO slightly abuse of Sequence objects
+				cdr3 = unbarcoded.sequence[-80:-60]
+			unbarcoded.cdr3 = cdr3  # TODO slight abuse of Sequence objects
 			barcodes[barcode].append(unbarcoded)
-			group_sizes[(barcode, cdr3)] += 1
 			cdr3s.add(cdr3)
 			n += 1
 
@@ -186,8 +186,6 @@ def main(args):
 	logger.info('%s unique barcodes', len(barcodes))
 	barcode_singletons = sum(1 for seqs in barcodes.values() if len(seqs) == 1)
 	logger.info('%s barcodes used by only a single sequence (singletons)', barcode_singletons)
-	#logger.info('Grouping by barcode and (exact) CDR3 would result in %s groups (%s singletons)',
-		#len(group_sizes), sum(1 for c in group_sizes.values() if c == 1))
 
 	with ExitStack() as stack:
 		if args.groups_output:
@@ -201,10 +199,12 @@ def main(args):
 		n_singletons = 0
 		n_consensus = 0
 		n_ambiguous = 0
+		sizes = []
 		for barcode, sequences in barcodes.items():
 			clusters = cluster_sequences(sequences)
 			n_clusters += len(clusters)
 			for cluster in clusters:
+				sizes.append(len(cluster))
 				if group_out:
 					write_group(group_out, barcode, cluster)
 				if len(cluster) == 1:
@@ -233,5 +233,21 @@ def main(args):
 	logger.info('%d clusters (%d singletons)', n_clusters, n_singletons)
 	logger.info('%d consensus sequences computed (from groups that had at least %d sequences)', n_consensus+n_ambiguous, MIN_CONSENSUS_SEQUENCES)
 	logger.info('%d of those had no ambiguous bases', n_consensus)
+
+	if args.plot_sizes:
+		matplotlib.rcParams.update({'font.size': 14})
+		fig = plt.figure()
+		ax = fig.gca()
+		v, _, _ = ax.hist(sizes, bins=100)
+		ax.set_ylim(0, v[1:].max()*1.1)
+		ax.set_xlabel('Group size')
+		ax.set_ylabel('Read frequency')
+		ax.set_title('Histogram of group sizes (>1)')
+		ax.grid(axis='x')
+		ax.tick_params(direction="outward", top=False, right=False)
+		fig.set_tight_layout(True)
+		fig.savefig(args.plot_sizes)
+		logger.info('Plotted group sizes to %r', args.plot_sizes)
+
 	if args.groups_output:
 		logger.info('Groups written to %r', args.groups_output)
