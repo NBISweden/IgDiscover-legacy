@@ -72,10 +72,10 @@ def add_arguments(parser):
 		help='Limit processing to the first N reads')
 	parser.add_argument('--trim-g', action='store_true', default=False,
 		help="Trim 'G' nucleotides at 5' end")
-	parser.add_argument('--minimum-length', '-l', type=int,
+	parser.add_argument('--minimum-length', '-l', type=int, default=0,
 		help='Minimum sequence length')
 	parser.add_argument('--barcode-length', '-b', type=int, default=12,
-		help="Length of 5' barcode")
+		help="Length of 5' barcode (default: %(default)s")
 	parser.add_argument('fastx', metavar='FASTA/FASTQ',
 		help='FASTA or FASTQ file (can be gzip-compressed) with sequences')
 
