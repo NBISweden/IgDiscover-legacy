@@ -303,12 +303,26 @@ rule fastq_to_fasta:
 		"sqt fastxmod{params.max_errors} --minimum-length {config.minimum_merged_read_length} --fasta {input.fastq} > {output.fasta}"
 
 
-rule dereplicate:
-	"""Collapse identical sequences with VSEARCH"""
-	output: fastagz=PREPROCESSED_READS
-	input: fasta="reads/5-filtered.fasta"
-	shell:
-		'vsearch --derep_fulllength {input.fasta} --strand both  --sizeout --output >({GZIP} > {output.fastagz})'
+if config.barcode_length > 0:
+	rule igdiscover_group:
+		"""Group by barcode and CDR3"""
+		output:
+			fastagz=PREPROCESSED_READS,
+			pdf="stats/groupsizes.pdf"
+		input:
+			fasta="reads/5-filtered.fasta"
+		log: PREPROCESSED_READS + ".log"
+		shell:
+			"igdiscover group --barcode-length {config.barcode_length} --plot-sizes {output.pdf} {input.fasta} 2> {log} | {GZIP} > {output.fastagz}"
+
+else:
+	rule dereplicate:
+		"""Collapse identical sequences with VSEARCH"""
+		output: fastagz=PREPROCESSED_READS
+		input: fasta="reads/5-filtered.fasta"
+		shell:
+			'vsearch --derep_fulllength {input.fasta} --strand both --sizeout --output >({GZIP} > {output.fastagz})'
+
 
 
 rule copy_dj_database:
@@ -411,19 +425,6 @@ rule igdiscover_filter:
 		assigned="{dir}/assigned.tab.gz"
 	shell:
 		"igdiscover filter {input} | {GZIP} > {output}"
-
-
-rule igdiscover_group:
-	"""Group by barcode"""
-	output:
-		pdf="{base}/stats/groupsizes.pdf",
-		tab="{base}/groups.tab",
-		fasta="{base}/consensus.fasta.gz"
-	input:
-		tab="{base}/filtered.tab.gz"
-	log: "{base}/consensus.log"
-	shell:
-		"igdiscover group --program={config.multialign_program} --plot-sizes {output.pdf} --groups-output {output.tab} {input.tab} 2> {log} | {GZIP} > {output.fasta}"
 
 
 rule igdiscover_count:
