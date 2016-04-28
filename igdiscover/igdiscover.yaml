@@ -43,8 +43,9 @@ reverse_primers:
 
 # Work only on this number of reads (for quick test runs). Set to false to
 # process all reads.
-
+#
 # limit: false
+
 
 ##
 ## Advanced settings (usually do not need to be changed)
@@ -56,13 +57,13 @@ minimum_merged_read_length: 300
 
 # When discovering new V genes, ignore whether a J gene has been assigned
 # and also ignore its %SHM.
-
+#
 # ignore_j: false
 
 
 # Read merging program. Choose either 'pear' or 'flash'.
 # pear merges more reads, but is slower.
-
+#
 # merge_program: pear
 
 
@@ -70,30 +71,37 @@ minimum_merged_read_length: 300
 # computing consens sequences.
 # Choose 'mafft', 'clustalo', 'muscle' or 'muscle-fast'.
 # 'muscle-fast' runs muscle with parameters "-maxiters 1 -diags".
-
+#
 # multialign_program: muscle-fast
 
 
 # Maximum overlap (-M) for the flash read merger.
 # If you use pear, this is ignored.
-
+#
 # flash_maximum_overlap: 300
 
 
 # When clustering sequences to discover new genes, subsample to this number of
 # sequences. Higher is slower.
-
+#
 # subsample: 1000
 
 
 # Which program to use for clustering. Use vsearch or usearch (can also be an
 # absolute path).
-
+#
 # cluster_program: vsearch
 
 
 # Filter out reads that have more than this number of expected errors.
 # Set to null to disable.
-
+#
 # maximum_expected_errors: null
 # maximum_expected_errors: 5
+
+
+# Discovered sequences must be derived from a cluster of at least this many
+# sequences. This is the 'germline filter' criterion, that is, it is used
+# only in the final iteration, not in the intermediate ones.
+#
+# minimum_cluster_size: 200
