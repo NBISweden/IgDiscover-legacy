@@ -7,14 +7,8 @@ A few extra things are done in addition to parsing:
 - The CDR3 is detected by using a regular expression
 - The leader is detected within the sequence before the found V gene (by
   searching for the start codon).
-- The RACE-specific run of G in the beginning of the sequence is detected.
 - If the V sequence hit starts at base 2 in the reference, it is extended
   one to the left.
-"""
-"""
-TODO
-- barcode_length should not be an attribute of IgBlastRecord and barcodes should
-  be stripped off before running IgBLAST
 """
 import re
 import sys
@@ -35,8 +29,6 @@ logger = logging.getLogger(__name__)
 def add_arguments(parser):
 	parser.add_argument('--rename', default=None, metavar='PREFIX',
 		help='Rename reads to PREFIXseqN (where N is a number starting at 1)')
-	parser.add_argument('--barcode-length', type=int, default=0,
-		help='Default: %(default)s')
 	parser.add_argument('--vdatabase', '--vdb', metavar='FASTA',
 		help="Path to FASTA file with V genes. Used to fix the 5' ends of V "
 		"gene alignments. If not given, 'N' bases will be inserted instead.")
@@ -113,6 +105,26 @@ class Hit(_Hit):
 		return self.query_start + len(self.query_sequence)
 
 
+def parse_header(header):
+	"""Extract size= and barcode= fields from the FASTA/FASTQ header line"""
+	fields = header.split(maxsplit=1)
+	if len(fields) < 2:
+		return header, None, None
+	query_name, rest = fields
+	fields = rest.split(';')
+	size = barcode = None
+	for field in rest.split(';'):
+		if field == '':
+			continue
+		if '=' in field:
+			key, value = field.split('=', maxsplit=1)
+			if key == 'size':
+				size = int(value)
+			elif key == 'barcode':
+				barcode = value
+	return query_name, size, barcode
+
+
 IgBlastRecord = namedtuple('IgBlastRecord',
 	'full_sequence query_name alignments '
 	'hits v_gene d_gene j_gene chain has_stop in_frame is_productive '
@@ -131,8 +143,6 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 	"""
 	# TODO move computation of cdr3_sequence, vdj_sequence into constructor
 	# TODO maybe make all coordinates relative to full sequence
-
-	SIZEREGEX = re.compile('(.*);size=(\d+);$')
 
 	# Order of columns (use with asdict())
 	columns = [
@@ -178,21 +188,18 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		'race_G',
 		'genomic_sequence',
 	]
-	def __new__(cls, record, barcode_length, v_database):
+	def __new__(cls, record, v_database):
 		d = record._asdict()
-		m = cls.SIZEREGEX.match(record.query_name)
-		if m:
-			d['query_name'] = m.group(1)
-			size = int(m.group(2))
-		else:
-			size = None
+		query_name, size, barcode = parse_header(record.query_name)
+		d['query_name'] = query_name
 		obj = super().__new__(cls, **d)
 		obj.size = size
+		obj.barcode = barcode
 		return obj
 
-	def __init__(self, record, barcode_length, v_database):
-		self.barcode_length = barcode_length
-		self.barcode, self.race_g, self.genomic_sequence = self._split_barcode()
+	def __init__(self, record, v_database):
+		self.genomic_sequence = self.full_sequence
+		self.race_g = None  # TODO since the parse script does not extract the race_G anymore, we don’t have this info available
 		if 'V' in self.hits:
 			self.hits['V'] = self._fixed_v_hit(v_database)
 		self.utr, self.leader = self._utr_leader()
@@ -208,23 +215,6 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		vdj_stop = hit_j.query_start + len(hit_j.query_sequence)
 		return self.full_sequence[vdj_start:vdj_stop]
 
-	def _split_barcode(self):
-		"""
-		Split the full sequence into barcode, RACE-specific run of G nucleotides,
-		and genomic sequence.
-		"""
-		# The RACE protocol leads to a run of non-template Gs in the beginning
-		# of the sequence, after the barcode.
-		barcode = self.full_sequence[:self.barcode_length]
-		rest_with_g = self.full_sequence[self.barcode_length:]
-		for i, base in enumerate(rest_with_g):
-			if base != 'G':
-				break
-		race_g = rest_with_g[:i]
-		genomic = rest_with_g[i:]
-		assert race_g.count('G') == len(race_g)
-		return barcode, race_g, genomic
-
 	def _utr_leader(self):
 		"""
 		Split the sequence before the V gene match into UTR and leader by
@@ -232,7 +222,7 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		"""
 		if 'V' not in self.hits:
 			return None, None
-		before_v = self.full_sequence[len(self.barcode) + len(self.race_g):self.hits['V'].query_start]
+		before_v = self.full_sequence[:self.hits['V'].query_start]
 
 		# Search for the start codon
 		for offset in (0, 1, 2):
@@ -633,7 +623,7 @@ def main(args):
 		parser = IgBlastParser(fasta, igblast)
 		for record in parser:
 			n += 1
-			extended_record = ExtendedIgBlastRecord(record, barcode_length=args.barcode_length, v_database=v_database)
+			extended_record = ExtendedIgBlastRecord(record, v_database=v_database)
 			d = extended_record.asdict()
 			if args.rename is not None:
 				d['name'] = "{}seq{}".format(args.rename, n)

@@ -169,6 +169,8 @@ def main(args):
 			barcode = record.sequence[:args.barcode_length]
 			unbarcoded = record[args.barcode_length:]
 			if args.trim_g:
+				# The RACE protocol leads to a run of non-template Gs in the beginning
+				# of the sequence, after the barcode.
 				unbarcoded.sequence = unbarcoded.sequence.lstrip('G')
 				if unbarcoded.qualities:
 					unbarcoded.qualities = unbarcoded.qualities[-len(unbarcoded.sequence):]

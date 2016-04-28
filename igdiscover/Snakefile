@@ -415,7 +415,7 @@ rule igdiscover_parse:
 		txt="{dir}/igblast.txt.gz",
 		fasta=PREPROCESSED_READS
 	shell:
-		"igdiscover parse --barcode-length {config.barcode_length} --rename {config.library_name!r}_ {input.txt} {input.fasta} | {GZIP} > {output.tabgz}"
+		"igdiscover parse --rename {config.library_name!r}_ {input.txt} {input.fasta} | {GZIP} > {output.tabgz}"
 
 
 rule igdiscover_filter:
