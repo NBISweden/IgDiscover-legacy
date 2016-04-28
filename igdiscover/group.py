@@ -128,13 +128,15 @@ def cluster_sequences(sequences):
 	- and their lengths differs by at most 2.
 	"""
 	graph = Graph(sequences)
-	cdr3_seq = { s.cdr3: s for s in sequences }
+	cdr3_seqs = defaultdict(list)
+	for s in sequences:
+		cdr3_seqs[s.cdr3].append(s)
 	for sequence in sequences:
 		for neighbor in hamming_neighbors(sequence.cdr3):
-			neighbor_seq = cdr3_seq.get(neighbor, None)
-			if neighbor_seq is not None and (
-					abs(len(sequence) - len(neighbor_seq)) <= 2):
-				graph.add_edge(sequence, neighbor_seq)
+			neighbor_seqs = cdr3_seqs.get(neighbor, [])
+			for neighbor_seq in neighbor_seqs:
+				if abs(len(sequence) - len(neighbor_seq)) <= 2:
+					graph.add_edge(sequence, neighbor_seq)
 	components = graph.connected_components()
 	assert sum(len(component) for component in components) == len(sequences)
 	return components
