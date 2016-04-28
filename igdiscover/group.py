@@ -170,7 +170,8 @@ def main(args):
 			unbarcoded = record[args.barcode_length:]
 			if args.trim_g:
 				unbarcoded.sequence = unbarcoded.sequence.lstrip('G')
-				unbarcoded.qualities = unbarcoded.qualities[-len(unbarcoded.sequence):]
+				if unbarcoded.qualities:
+					unbarcoded.qualities = unbarcoded.qualities[-len(unbarcoded.sequence):]
 
 			if args.real_cdr3:
 				match = CDR3_REGEX['VH'].search(unbarcoded.sequence)
