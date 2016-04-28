@@ -241,7 +241,7 @@ def main(args):
 						n_consensus += 1
 						cdr3 = Counter(cl.cdr3 for cl in cluster).most_common(1)[0][0]
 						name = 'consensus{}'.format(n_consensus)
-				print('>{};barcode={};cdr3={};size={};\n{}'.format(name, barcode,
+				print('>{} barcode={};cdr3={};size={};\n{}'.format(name, barcode,
 					cdr3, len(cluster), sequence))
 
 	logger.info('%d clusters (%d singletons)', n_clusters, n_singletons)
