@@ -33,7 +33,7 @@ a list of some packages. If it works, IgDiscover can now be installed.
 
 Install IgDiscover from the bioconda channel with this command::
 
-	conda install -c bioconda igdiscover
+	conda install -c bioconda -c marcelm igdiscover
 
 Then make sure that it works by running ::
 
