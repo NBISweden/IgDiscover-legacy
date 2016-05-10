@@ -215,7 +215,7 @@ def main(args):
 		n_ambiguous = 0
 		sizes = []
 		for barcode, sequences in barcodes.items():
-			if len(sequences) != len(set(sequences)):
+			if len(sequences) != len(set(s.name for s in sequences)):
 				logger.error('Duplicate sequence records detected')
 				sys.exit(1)
 			clusters = cluster_sequences(sequences)
