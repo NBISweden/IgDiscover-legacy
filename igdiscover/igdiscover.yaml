@@ -104,4 +104,4 @@ minimum_merged_read_length: 300
 # sequences. This is the 'germline filter' criterion, that is, it is used
 # only in the final iteration, not in the intermediate ones.
 #
-# minimum_cluster_size: 200
+# minimum_cluster_size: 100

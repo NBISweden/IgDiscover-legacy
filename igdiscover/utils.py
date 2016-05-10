@@ -193,7 +193,7 @@ class Config:
 		self.cluster_program = 'vsearch'
 		self.multialign_program = 'muscle-fast'
 		self.maximum_expected_errors = None  # or an integer
-		self.minimum_cluster_size = 200
+		self.minimum_cluster_size = 100
 		self.minimum_merged_read_length = 300
 		self.mismatch_penalty = None
 		self.barcode_length = 0
