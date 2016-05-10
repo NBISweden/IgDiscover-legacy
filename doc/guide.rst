@@ -261,13 +261,21 @@ Other files
 For completeness, here is a description of the files in the ``reads/`` and ``stats/`` directories.
 They are created during pre-processing and are not iteration specific.
 
-reads/merged.fastq.gz
+reads/1-limited.1.fastq.gz, reads/1-limited.1.fastq.gz
+    Input reads file limited to the first N entries. This is just a symbolic
+    link to the input file if the `limit` configuration option is not set.
+
+reads/2-merged.fastq.gz
     Reads merged with PEAR or FLASH
 
-reads/trimmed.fastq.gz
+reads/3-forward-primer-trimmed.fastq.gz
+    Merged reads with 5' primer sequences removed. (Automatically removed when
+    it is not needed anymore.)
+
+reads/4-trimmed.fastq.gz
     Merged reads with 5' and 3' primer sequences removed.
 
-reads/filtered.fasta
+reads/5-filtered.fasta
     Merged, primer-trimmed sequences converted to FASTA, and too short sequences removed.
     (This file is automatically removed when it is not needed anymore.)
 
