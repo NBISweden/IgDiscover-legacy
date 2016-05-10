@@ -150,6 +150,15 @@ def file_type(path):
 			raise UnknownFileFormatError('Cannot recognize format. File starts with neither ">" nor "@"')
 
 
+def try_open(path):
+	try:
+		with open(path) as f:
+			pass
+	except OSError as e:
+		logger.error('Could not open %r: %s', path, e)
+		sys.exit(1)
+
+
 def main(args):
 	if ' ' in args.directory:
 		sys.exit('The name of the analysis directory must not contain spaces')
@@ -158,7 +167,7 @@ def main(args):
 	if (args.reads1 is None and args.single_reads is None) or args.database is None:
 		try:
 			gui = TkinterGui()
-		except (ImportError, tk.TclError):
+		except ImportError:  # TODO tk.TclError cannot be caught when import of tk fails
 			logger.error('GUI cannot be started. Please provide reads1 file '
 				'and database directory on command line.')
 			sys.exit(1)
@@ -173,7 +182,7 @@ def main(args):
 			'If you answer "Yes", next select the FASTQ files '
 			'with the <em>first</em> of your paired-end reads.\n'
 			'If you answer "No", next select the FASTA or FASTQ '
-			'file with your sequences.')
+			'file with single-end reads.')
 		if paired is None:
 			logger.error('Cancelled')
 			sys.exit(2)
@@ -184,6 +193,7 @@ def main(args):
 	if paired:
 		if args.reads1 is not None:
 			reads1 = args.reads1
+			try_open(reads1)
 		else:
 			reads1 = gui.reads1_path()
 			if not reads1:
@@ -196,6 +206,7 @@ def main(args):
 	else:
 		if args.single_reads is not None:
 			reads1 = args.single_reads
+			try_open(reads1)
 		else:
 			reads1 = gui.single_reads_path()
 			if not reads1:
