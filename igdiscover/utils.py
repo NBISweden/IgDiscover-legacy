@@ -199,7 +199,7 @@ class Config:
 		self.barcode_length = 0
 		self.iterations = 1
 		self.ignore_j = False
-		self.subsample = 500
+		self.subsample = 1000
 		self.stranded = False
 		self.forward_primers = None
 		self.reverse_primers = None
