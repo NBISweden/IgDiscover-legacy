@@ -2,6 +2,7 @@
 """
 """
 import shutil
+import textwrap
 from sqt.dna import reverse_complement
 from sqt import FastaReader
 import igdiscover
@@ -47,7 +48,7 @@ FINAL_TARGETS = [
 ]
 TARGETS = expand('iteration-{nr:02d}/{path}', nr=range(1, config.iterations+1), path=ITERATION_TARGETS+DISCOVERY_TARGETS)
 TARGETS += expand('final/{path}', path=ITERATION_TARGETS+FINAL_TARGETS)
-TARGETS += ['stats/readlengths.pdf', 'stats/reads.txt']
+TARGETS += ['stats/readlengths.pdf', 'stats/merging-successful', 'stats/trimming-successful']
 
 # Use pigz (parallel gzip) if available
 GZIP = 'pigz' if shutil.which('pigz') is not None else 'gzip'
@@ -176,6 +177,12 @@ rule symlink_merged:
 		relative_symlink(input.fastaq, output.fastaq, force=True)
 
 
+def read_int(path):
+	with open(path) as f:
+		value = int(f.read().strip())
+	return value
+
+
 rule check_merging:
 	"""Ensure the merging succeeded"""
 	output: success='stats/merging-successful'
@@ -183,14 +190,12 @@ rule check_merging:
 		total='stats/totalreads.txt',
 		merged='stats/mergedreads.txt',
 	run:
-		with open(input.total) as f:
-			total = int(f.read())
-		with open(input.merged) as f:
-			merged = int(f.read())
+		total = read_int(input.total)
+		merged = read_int(input.merged)
 		if total == 0 or merged / total >= 0.5:
 			with open(output.success, 'w') as f:
 				print('This marker file exists if at least 50% of the input '
-					'reads could be merged.')
+					'reads could be merged.', file=f)
 		else:
 			sys.exit('Less than 50% of the input reads could be merged. Please '
 				'check whether there is an issue with your input data. To skip '
@@ -216,26 +221,6 @@ rule read_length_histogram:
 		fastq=PREPROCESSED_READS
 	shell:
 		"""sqt readlenhisto --bins 100 --left 300 --title "Lengths of pre-processed reads" --plot {output.pdf} {input}  > {output.txt}"""
-
-
-rule reads_stats_fastq:
-	output: txt="stats/reads.txt"
-	input:
-		reads=READS1,
-		merged='reads/2-merged.fastq.gz',
-		sequences=PREPROCESSED_READS,
-	run:
-		shell("""
-		echo -n "Number of paired-end reads: " > {output}
-		{GZIP} -dc {input.reads} | awk 'END {{ print NR/4 }}' >> {output}
-		echo -n "Number of merged sequences: " >> {output}
-		{GZIP} -dc {input.merged} | awk 'END {{ print NR/4 }}' >> {output}
-		""")
-		if config.barcode_length > 0:
-			shell("""
-			echo -n "Number of preprocessed sequences: " >> {output}
-			zgrep -c '^>' {input.sequences} >> {output}
-			""")
 
 
 rule reads_stats_fasta:
@@ -304,6 +289,43 @@ else:
 			relative_symlink(input.fastaq, output.fastaq, force=True)
 
 
+rule trimmed_fasta_stats:
+	output: txt='stats/trimmedreads.txt',
+	input: fastagz='reads/4-trimmed.fasta.gz'
+	shell: "zgrep -c '^>' {input.fastagz} >> {output.txt}"
+
+
+rule trimmed_fastq_stats:
+	output: txt='stats/trimmedreads.txt',
+	input: fastqgz='reads/4-trimmed.fastq.gz'
+	shell: """{GZIP} -dc {input.fastqgz} | awk 'END {{print NR/4}}' > {output.txt}"""
+
+
+rule check_trimming:
+	"""Ensure that some reads are left after trimming"""
+	output: success='stats/trimming-successful'
+	input:
+		total='stats/totalreads.txt',
+		trimmed='stats/trimmedreads.txt',
+	run:
+		with open(input.total) as f:
+			total = int(f.read().strip())
+		with open(input.trimmed) as f:
+			trimmed = int(f.read().strip())
+		if total == 0 or trimmed / total >= 0.1:
+			with open(output.success, 'w') as f:
+				print('This marker file exists if at least 10% of input '
+					'reads contain the required primer sequences.', file=f)
+		else:
+			print(*textwrap.wrap(
+				'Less than 10% of the input reads contain the required primer '
+				'sequences. Please check whether you have specified the '
+				'correct primer sequences in the configuration file. To skip '
+				'this check, create the file "stats/trimming-successful" and '
+				're-start "igdiscover run".'), sep='\n')
+			sys.exit(1)
+
+
 rule fastqc:
 	output:
 		zip='fastqc/{file}.zip',
@@ -326,7 +348,7 @@ rule filter_fasta:
 	* Discard too short sequences
 	"""
 	output: fasta=temp("reads/5-filtered.fasta")
-	input: fasta="reads/4-trimmed.fasta.gz"
+	input: fasta="reads/4-trimmed.fasta.gz", success='stats/trimming-successful'
 	params: max_errors=" --max-errors {config.maximum_expected_errors}" if config.maximum_expected_errors is not None else ""
 	shell:
 		"sqt fastxmod{params.max_errors} --minimum-length {config.minimum_merged_read_length} {input.fasta} > {output.fasta}"
@@ -337,7 +359,7 @@ rule fastq_to_fasta:
 	Same as filter_fasta, but also convert from FASTQ to FASTA
 	"""
 	output: fasta=temp("reads/5-filtered.fasta")
-	input: fastq="reads/4-trimmed.fastq.gz"
+	input: fastq="reads/4-trimmed.fastq.gz", success='stats/trimming-successful'
 	params: max_errors=" --max-errors {config.maximum_expected_errors}" if config.maximum_expected_errors is not None else ""
 	shell:
 		"sqt fastxmod{params.max_errors} --minimum-length {config.minimum_merged_read_length} --fasta {input.fastq} > {output.fasta}"
