@@ -89,14 +89,40 @@ else:
 if config.merge_program == 'flash':
 	rule flash_merge:
 		"""Use FLASH to merge paired-end reads"""
-		output: 'reads/2-merged.fastq.gz'
+		output: fastqgz='reads/2-merged.fastq.gz', log='reads/2-flash.log'
 		input: 'reads/1-limited.1.fastq.gz', 'reads/1-limited.2.fastq.gz'
 		resources: time=60
 		threads: 8
-		log: 'reads/flash.log'
 		shell:
 			# -M: maximal overlap (2x300, 420-450bp expected fragment size)
-			"flash -t {threads} -c -M {config.flash_maximum_overlap} {input} 2> >(tee {log} >&2) | {GZIP} > {output}"
+			"flash -t {threads} -c -M {config.flash_maximum_overlap} {input} 2> "
+			">(tee {output.log} >&2) | {GZIP} > {output.fastqgz}"
+
+	rule parse_flash_stats:
+		input: log='reads/2-flash.log'
+		output:
+			total='stats/totalreads.txt',
+			merged='stats/mergedreads.txt',
+		run:
+			total_ex = re.compile(r'\[FLASH\]\s*Total reads:\s*([0-9]+)')
+			merged_ex = re.compile(r'\[FLASH\]\s*Combined reads:\s*([0-9]+)')
+			with open(input.log) as f:
+				for line in f:
+					match = total_ex.search(line)
+					if match:
+						total = int(match.group(1))
+						continue
+					match = merged_ex.search(line)
+					if match:
+						merged = int(match.group(1))
+						break
+				else:
+					sys.exit('Could not parse the FLASH log file')
+			with open(output.total, 'w') as f:
+				print(total, file=f)
+			with open(output.merged, 'w') as f:
+				print(merged, file=f)
+
 elif config.merge_program == 'pear':
 	rule pear_merge:
 		"""Use pear to merge paired-end reads"""
@@ -105,27 +131,71 @@ elif config.merge_program == 'pear':
 			unmerged2='reads/2-pear.unassembled.reverse.fastq.gz',
 			discarded='reads/2-pear.discarded.fastq.gz',
 			fastq='reads/2-merged.fastq.gz',
+			log='reads/2-pear.log'
 		input: 'reads/1-limited.1.fastq.gz', 'reads/1-limited.2.fastq.gz'
 		resources: time=60
 		threads: 8
-		log: 'reads/2-pear.log'
 		shell:
 			r"""
-			pear -j {threads} -f {input[0]} -r {input[1]} -o reads/2-pear | tee {log}
+			pear -j {threads} -f {input[0]} -r {input[1]} -o reads/2-pear | tee {output.log}
 			for n in unassembled.forward unassembled.reverse assembled discarded; do
 				{GZIP} -f reads/2-pear.$n.fastq
 			done
 			mv reads/2-pear.assembled.fastq.gz {output.fastq}
 			"""
+
+	rule parse_pear_stats:
+		input: log='reads/2-pear.log'
+		output:
+			total='stats/totalreads.txt',
+			merged='stats/mergedreads.txt',
+		run:
+			expression = re.compile(r"Assembled reads \.*: (?P<merged>[0-9,]*) / (?P<total>[0-9,]*)")
+			with open(input.log) as f:
+				for line in f:
+					match = expression.search(line)
+					if match:
+						merged = int(match.group('merged').replace(',', ''))
+						total = int(match.group('total').replace(',', ''))
+						break
+				else:
+					sys.exit('Could not parse the PEAR log file')
+			with open(output.total, 'w') as f:
+				print(total, file=f)
+			with open(output.merged, 'w') as f:
+				print(merged, file=f)
 else:
 	sys.exit("merge_program {config.merge_program!r} given in configuration file not recognized".format(config=config))
 
 
+# This rule applies only when the input is single-end or already merged
 rule symlink_merged:
 	output: fastaq='reads/2-merged.{ext,(fasta|fastq)}.gz'
 	input: fastaq='reads/1-limited.{ext}.gz'
 	run:
 		relative_symlink(input.fastaq, output.fastaq, force=True)
+
+
+rule check_merging:
+	"""Ensure the merging succeeded"""
+	output: success='stats/merging-successful'
+	input:
+		total='stats/totalreads.txt',
+		merged='stats/mergedreads.txt',
+	run:
+		with open(input.total) as f:
+			total = int(f.read())
+		with open(input.merged) as f:
+			merged = int(f.read())
+		if total == 0 or merged / total >= 0.5:
+			with open(output.success, 'w') as f:
+				print('This marker file exists if at least 50% of the input '
+					'reads could be merged.')
+		else:
+			sys.exit('Less than 50% of the input reads could be merged. Please '
+				'check whether there is an issue with your input data. To skip '
+				'this check, create the file "stats/merging-successful" and '
+				're-start "igdiscover run".')
 
 
 rule merged_read_length_histogram:
@@ -163,7 +233,7 @@ rule reads_stats_fastq:
 		""")
 		if config.barcode_length > 0:
 			shell("""
-			echo -n "Number of preprocesed sequences: " >> {output}
+			echo -n "Number of preprocessed sequences: " >> {output}
 			zgrep -c '^>' {input.sequences} >> {output}
 			""")
 
@@ -184,7 +254,7 @@ if config.forward_primers:
 	# At least one forward primer is to be removed
 	rule trim_forward_primers:
 		output: fastaq=temp('reads/3-forward-primer-trimmed.{ext,(fasta|fastq)}.gz')
-		input: fastaq='reads/2-merged.{ext}.gz'
+		input: fastaq='reads/2-merged.{ext}.gz', mergesuccess='stats/merging-successful'
 		resources: time=120
 		log: 'reads/3-forward-primer-trimmed.cutadapt.log'
 		run:
@@ -200,7 +270,7 @@ else:
 	# No trimming, just symlink the file
 	rule dont_trim_forward_primers:
 		output: fastaq='reads/3-forward-primer-trimmed.{ext,(fasta|fastq)}.gz'
-		input: fastaq='reads/2-merged.{ext}.gz'
+		input: fastaq='reads/2-merged.{ext}.gz', mergesuccess='stats/merging-successful'
 		resources: time=1
 		run:
 			relative_symlink(input.fastaq, output.fastaq, force=True)
