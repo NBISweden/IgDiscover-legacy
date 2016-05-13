@@ -48,8 +48,6 @@ FINAL_TARGETS = [
 TARGETS = expand('iteration-{nr:02d}/{path}', nr=range(1, config.iterations+1), path=ITERATION_TARGETS+DISCOVERY_TARGETS)
 TARGETS += expand('final/{path}', path=ITERATION_TARGETS+FINAL_TARGETS)
 TARGETS += ['stats/readlengths.pdf', 'stats/reads.txt']
-if config.barcode_length > 0:
-	TARGETS += ['stats/barcodes.txt']
 
 # Use pigz (parallel gzip) if available
 GZIP = 'pigz' if shutil.which('pigz') is not None else 'gzip'
@@ -150,28 +148,6 @@ rule read_length_histogram:
 		"""sqt readlenhisto --bins 100 --left 300 --title "Lengths of pre-processed reads" --plot {output.pdf} {input}  > {output.txt}"""
 
 
-rule barcode_stats_fastq:
-	"""Print out number of random barcodes in the library
-	TODO
-	- run this only if random barcodes are actually used
-	- make sure that a stranded protocol is used
-	"""
-	output: txt="stats/barcodes.txt"
-	input: fastq='reads/2-merged.fastq.gz'
-	shell:
-		"""
-		{GZIP} -dc {input} | awk 'NR%4==2 {{print substr($1,1,12)}}' | grep -v N | sort -u | wc -l > {output}
-		"""
-
-rule barcode_stats_fasta:
-	"""
-	TODO Implement this
-	"""
-	output: txt="stats/barcodes.txt"
-	input: fasta='reads/1-limited.fasta.gz'
-	shell: "touch {output}"
-
-
 rule reads_stats_fastq:
 	output: txt="stats/reads.txt"
 	input:
@@ -182,19 +158,13 @@ rule reads_stats_fastq:
 		shell("""
 		echo -n "Number of paired-end reads: " > {output}
 		{GZIP} -dc {input.reads} | awk 'END {{ print NR/4 }}' >> {output}
-		echo -n "Number of barcodes (looking at 1st read in pair): " >> {output}
-		{GZIP} -dc {input.reads} | awk 'NR % 4 == 2 {{ print substr($1, 1, 12) }}' | sort -u | grep -v N | wc -l >> {output}
 		echo -n "Number of merged sequences: " >> {output}
 		{GZIP} -dc {input.merged} | awk 'END {{ print NR/4 }}' >> {output}
 		""")
 		if config.barcode_length > 0:
 			shell("""
-			echo -n "Number of barcodes in merged sequences: " >> {output}
-			{GZIP} -dc {input.merged} | awk 'NR % 4 == 2 {{ print substr($1, 1, {config.barcode_length}) }}' | sort -u | grep -v N | wc -l >> {output}
 			echo -n "Number of preprocesed sequences: " >> {output}
 			zgrep -c '^>' {input.sequences} >> {output}
-			echo -n "Number of barcodes in preprocessed sequences: " >> {output}
-			zgrep -A 1 '^>' {input.sequences} | awk '!/^>/ && $1 != "--" {{ print substr($1,1,{config.barcode_length}) }}' | sort -u | grep -v N | wc -l >> {output}
 			""")
 
 
