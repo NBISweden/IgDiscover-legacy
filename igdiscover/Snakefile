@@ -171,10 +171,31 @@ else:
 
 # This rule applies only when the input is single-end or already merged
 rule symlink_merged:
-	output: fastaq='reads/2-merged.{ext,(fasta|fastq)}.gz'
+	output:
+		fastaq='reads/2-merged.{ext,(fasta|fastq)}.gz'
 	input: fastaq='reads/1-limited.{ext}.gz'
 	run:
 		relative_symlink(input.fastaq, output.fastaq, force=True)
+
+
+rule successful_merging_single_fasta:
+	"""Touch the marker file for successful merging if no merging was done"""
+	output:
+		total='stats/totalreads.txt',
+		merged='stats/mergedreads.txt',
+	input: fastagz='reads/1-limited.fasta.gz'
+	shell:
+		"""zgrep -c '^>' {input.fastagz} | tee {output.merged} > {output.total}"""
+
+
+rule successful_merging_single_fastq:
+	"""Touch the marker file for successful merging if no merging was done"""
+	output:
+		total='stats/totalreads.txt',
+		merged='stats/mergedreads.txt',
+	input: fastqgz='reads/1-limited.fastq.gz'
+	shell:
+		"""{GZIP} -dc {input.fastqgz} | awk 'END {{print NR/4}}' | tee {output.merged} > {output.total}"""
 
 
 def read_int(path):
