@@ -51,6 +51,8 @@ def _fix_columns(df):
 	"""
 	# Convert all string columns to str to avoid a PerformanceWarning
 	for col in _STRING_COLUMNS:
+		if not col in df:
+			continue
 		df[col].fillna('', inplace=True)
 		df[col] = df[col].astype('str')
 		# Empty strings have been set to NaN by read_csv. Replacing
@@ -60,7 +62,7 @@ def _fix_columns(df):
 	# int due to a numpy limitation.
 	for col in _INTEGER_COLUMNS:
 		if all(df[col].notnull()):
-				df[col] = df[col].astype(int)
+			df[col] = df[col].astype(int)
 
 
 def read_table(path, log=False):

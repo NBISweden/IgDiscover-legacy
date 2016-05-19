@@ -33,7 +33,7 @@ def add_arguments(parser):
 		'gene match to analyze. Default: %(default)s')
 	arg('--debug', default=False, action='store_true',
 		help='Enable debugging output')
-	arg('table', help='Table with parsed IgBLAST results')
+	arg('table', help='Table with parsed IgBLAST results (usually filtered.tab.gz)')
 
 
 def main(args):
