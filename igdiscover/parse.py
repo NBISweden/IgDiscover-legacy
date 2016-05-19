@@ -493,7 +493,7 @@ class IgBlastParser:
 					hits[gene] = hit
 
 		assert fasta_record.name == query_name
-		full_sequence = fasta_record.sequence
+		full_sequence = fasta_record.sequence.upper()
 		if strand == '-':
 			full_sequence = reverse_complement(full_sequence)
 
