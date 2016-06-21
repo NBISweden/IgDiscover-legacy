@@ -231,7 +231,7 @@ rule merged_read_length_histogram:
 	input:
 		fastq='reads/2-merged.fastq.gz'
 	shell:
-		"""sqt readlenhisto --bins 100 --left 300 --title "Lengths of merged reads" --plot {output.pdf} {input}  > {output.txt}"""
+		"""sqt readlenhisto --bins 100 --left {config.minimum_merged_read_length} --title "Lengths of merged reads" --plot {output.pdf} {input}  > {output.txt}"""
 
 
 rule read_length_histogram:
@@ -241,7 +241,7 @@ rule read_length_histogram:
 	input:
 		fastq=PREPROCESSED_READS
 	shell:
-		"""sqt readlenhisto --bins 100 --left 300 --title "Lengths of pre-processed reads" --plot {output.pdf} {input}  > {output.txt}"""
+		"""sqt readlenhisto --bins 100 --left {config.minimum_merged_read_length} --title "Lengths of pre-processed reads" --plot {output.pdf} {input}  > {output.txt}"""
 
 
 rule reads_stats_fasta:
