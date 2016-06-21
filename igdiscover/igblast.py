@@ -17,18 +17,18 @@ from sqt.utils import available_cpu_count
 
 
 def add_arguments(parser):
-	add = parser.add_argument
-	add('--threads', '-t', '-j', type=int, default=available_cpu_count(),
+	arg = parser.add_argument
+	arg('--threads', '-t', '-j', type=int, default=available_cpu_count(),
 		help='Number of threads. Default: no. of available CPUs (%(default)s)')
-	add('--penalty', type=int, choices=(-1, -2, -3, -4), default=None,
+	arg('--penalty', type=int, choices=(-1, -2, -3, -4), default=None,
 		help='BLAST mismatch penalty (default: -1)')
-	add('--species', default='rhesus_monkey',
+	arg('--species', default='rhesus_monkey',
 		help='Which species (default: %(default)s)')
-	add('--limit', type=int, metavar='N',
+	arg('--limit', type=int, metavar='N',
 		help='Limit processing to first N records')
-	add('database', help='Database directory. Must contain BLAST databases for '
+	arg('database', help='Database directory. Must contain BLAST databases for '
 		'SPECIES_V, SPECIES_D and SPECIES_J.')
-	add('fasta', help='File with original reads')
+	arg('fasta', help='File with original reads')
 
 
 def run_igblast(fasta, database, species, penalty=None):
