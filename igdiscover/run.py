@@ -3,7 +3,7 @@ Run IgDiscover
 
 Calls Snakemake to produce all the output files.
 """
-import os
+import sys
 import logging
 import subprocess
 import pkg_resources
@@ -12,20 +12,24 @@ from sqt.utils import available_cpu_count
 
 logger = logging.getLogger(__name__)
 
+
 def add_arguments(parser):
-	add = parser.add_argument
-	add('--dryrun', '-n', default=False, action='store_true',
+	arg = parser.add_argument
+	arg('--dryrun', '-n', default=False, action='store_true',
 		help='Do not execute anything')
-	add('--cores', '--jobs', '-j', metavar='N', type=int, default=available_cpu_count(),
+	arg('--cores', '--jobs', '-j', metavar='N', type=int, default=available_cpu_count(),
 		help='Run on at most N CPU cores in parallel. '
 		'Default: Use as many cores as available (%(default)s)')
-	add('--keepgoing', '-k', default=False, action='store_true',
+	arg('--keepgoing', '-k', default=False, action='store_true',
 		help='If one job fails, finish the others.')
-	add('--printshellcmds', '-p', default=False, action='store_true',
+	arg('--print-commands', '-p', default=False, action='store_true',
 		help='Print out the shell commands that will be executed.')
+	arg('targets', nargs='*', default=[],
+		help='File(s) to create. If omitted, the full pipeline is run.')
 
 
-def subprocess_snakemake(snakefile_path, dryrun, cores, keepgoing, printshellcmds):
+# TODO unused
+def subprocess_snakemake(snakefile_path, dryrun, cores, print_commands, targets):
 	"""
 	Call snakemake. There are some bugs in its Python API, so this routine
 	just spawns a subprocess.
@@ -33,8 +37,9 @@ def subprocess_snakemake(snakefile_path, dryrun, cores, keepgoing, printshellcmd
 	arguments = ['snakemake', '-s', snakefile_path, '-j', str(cores)]
 	if dryrun:
 		arguments += ['-n']
-	if printshellcmds:
+	if print_commands:
 		arguments += ['-p']
+	arguments.extend(targets)
 	subprocess.call(arguments)
 
 
@@ -44,9 +49,11 @@ def main(args):
 	# for now
 	logger.root.handlers = []
 	snakefile_path = pkg_resources.resource_filename('igdiscover', 'Snakefile')
-	snakemake(snakefile_path,
+	success = snakemake(snakefile_path,
 		dryrun=args.dryrun,
 		cores=args.cores,
 		keepgoing=args.keepgoing,
-		printshellcmds=args.printshellcmds,
+		printshellcmds=args.print_commands,
+		targets=args.targets if args.targets else None,
 	)
+	sys.exit(0 if success else 1)
