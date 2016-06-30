@@ -37,6 +37,8 @@ _STRING_COLUMNS = [
 	'D_region',
 	'DJ_junction',
 	'J_nt',
+	'VDJ_nt',
+	'VDJ_aa',
 	'name',
 	'barcode',
 	'race_G',

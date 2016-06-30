@@ -183,6 +183,8 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		'D_region',
 		'DJ_junction',
 		'J_nt',
+		'VDJ_nt',
+		'VDJ_aa',
 		'name',
 		'barcode',
 		'race_G',
@@ -308,6 +310,8 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		cdr2aa = nt_to_aa(cdr2nt) if cdr2nt else None
 		cdr3nt = self.region_sequence('CDR3')
 		cdr3aa = nt_to_aa(cdr3nt) if cdr3nt else None
+		vdj_nt = self.vdj_sequence
+		vdj_aa = nt_to_aa(vdj_nt) if vdj_nt else None
 
 		def shm(region):
 			if region in self.alignments:
@@ -392,6 +396,8 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 			D_region=d_region,
 			DJ_junction=dj_junction,
 			J_nt=j_nt,
+			VDJ_nt=vdj_nt,
+			VDJ_aa=vdj_aa,
 			name=self.query_name,
 			barcode=self.barcode,
 			race_G=self.race_g,
