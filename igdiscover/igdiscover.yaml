@@ -105,3 +105,10 @@ minimum_merged_read_length: 300
 # only in the final iteration, not in the intermediate ones.
 #
 # minimum_cluster_size: 100
+
+
+# Do not mention the original FASTA or FASTQ sequence names in the
+# assigned.tab files, but instead use names <library_name>_seq<number>,
+# where <number> is a running number starting at 1.
+#
+# rename: true

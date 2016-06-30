@@ -2,6 +2,13 @@
 Changes
 =======
 
+development version
+-------------------
+* Optionally, sequences are not renamed in the ``assigned.tab`` file, but
+  retain their original name as in the FASTA or FASTQ file. Set ``rename:
+  false`` in the configuration file to get this behavior.
+
+
 v0.2
 ----
 

@@ -203,6 +203,7 @@ class Config:
 		self.stranded = False
 		self.forward_primers = None
 		self.reverse_primers = None
+		self.rename = True
 		self.library_name = os.path.basename(os.getcwd())
 		self.read_from(path)
 
