@@ -1,3 +1,5 @@
-__version__ = '0.2.9.dev1'  # setup.py relies on this being the first line in this file
+from ._version import get_versions
+__version__ = get_versions()['version']
+del get_versions
 
 from .table import read_table

@@ -1,8 +1,7 @@
 import sys
 from setuptools import setup
+import versioneer
 
-# set __version__
-exec(next(open('igdiscover/__init__.py')))
 
 if sys.version_info < (3, 3):
 	sys.stdout.write("At least Python 3.3 is required.\n")
@@ -10,10 +9,11 @@ if sys.version_info < (3, 3):
 
 setup(
 	name = 'igdiscover',
-	version = __version__,
+	version = versioneer.get_version(),
+	cmdclass = versioneer.get_cmdclass(),
 	author = 'Marcel Martin',
 	author_email = 'marcel.martin@scilifelab.se',
-	url = '',
+	url = 'https://igdiscover.readthedocs.io/',
 	description = '',
 	license = 'MIT',
 	entry_points = {'console_scripts': ['igdiscover = igdiscover.__main__:main']},

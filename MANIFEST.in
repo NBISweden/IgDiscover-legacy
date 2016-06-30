@@ -1,3 +1,5 @@
 include README.rst CHANGES.rst       
 include doc/*.rst doc/conf.py doc/Makefile
 include tests/*.py
+include versioneer.py
+include igdiscover/_version.py
