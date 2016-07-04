@@ -72,7 +72,7 @@ def main(args):
 			continue
 
 		counter = Counter(group['UTR_length'])
-		logger.debug('Sequence lengths (length: count): %s', ', '.join('{}: {}'.format(l,c) for l, c in counter.most_common()))
+		logger.debug('Sequence length/count table: %s', ', '.join('{}: {}'.format(l,c) for l, c in counter.most_common()))
 
 		if args.part == 'leader':
 			sequences = list(group['leader'])
