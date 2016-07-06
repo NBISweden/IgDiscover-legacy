@@ -551,3 +551,24 @@ clusterplot
 
 errorplot
     Plot histograms of differences to reference V gene
+
+
+Data from Sequence Read Archive (SRA)
+-------------------------------------
+
+To work with datasets from the Sequence Read Archive, you may want to use the
+tool ``fastq-dump``, which can download the reads in the format required by
+IgDiscover. You just need to know the accession number, such as “SRR2905710” and
+then run this command:
+
+    fastq-dump --split-files --gzip SRR2905710
+
+The ``--split-files`` option ensures that the paired-end reads are stored in two
+separate files, one for the forward and one for the reverse read, respectively.
+(If you do not provide it, you will get an interleaved FASTQ file that currently
+cannot be read by IgDiscover). The ``--gzip`` option creates compressed output.
+The command creates two files in the current directory. In the above example, they would be named ``SRR2905710_1.fastq.gz`` and ``SRR2905710_2.fastq.gz``.
+
+The program ``fastq-dump`` is part of the SRA toolkit. On Debian-derived
+Linux distributions, you can typically install it with ``sudo apt-get install
+sra-toolkit``.
