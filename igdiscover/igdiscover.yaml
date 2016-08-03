@@ -11,9 +11,14 @@ species: rhesus_monkey
 iterations: 4
 
 
-# Length of the random barcode sequence, assumed to be in the beginning of each
-# sequence. Set to 0 when you have no random barcode.
-barcode_length: 0
+# If you have a random barcode sequence (unique molecular identifier) at the 5' end,
+# set this to its length. Leave at 0 when you have no 5' barcode.
+barcode_length_5prime: 0
+
+# Same as above, but for the 3' end of the sequence. Leave at 0 when you have no 3' barcode.
+# Currently, you cannot have a barcode in both ends, so at least one of the two settings
+# must be zero.
+barcode_length_3prime: 0
 
 
 ## Primer-related settings

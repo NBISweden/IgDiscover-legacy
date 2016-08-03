@@ -11,6 +11,7 @@ import yaml
 from sqt.align import edit_distance, multialign, consensus
 from sqt.dna import GENETIC_CODE
 
+
 def downsampled(population, size):
 	"""
 	Return a random subsample of the population.
@@ -183,8 +184,13 @@ def relative_symlink(src, dst, force=False):
 	os.symlink(target, dst)
 
 
+class ConfigurationError(Exception):
+	pass
+
+
 class Config:
 	PATH = 'igdiscover.yaml'
+
 	def __init__(self, path=PATH):
 		# Set some defaults.
 		self.merge_program = 'pear'
@@ -210,4 +216,21 @@ class Config:
 	def read_from(self, path):
 		with open(path) as f:
 			content = f.read()
-		self.__dict__.update(yaml.safe_load(content))
+		new_config = self.make_compatible(yaml.safe_load(content))
+		self.__dict__.update(new_config)
+
+	def make_compatible(self, config):
+		"""
+		Convert old-style configuration to new style. Raise ConfigurationError if configuration is invalid.
+		Return updated config dict.
+		"""
+		if 'barcode_length' in config and ('barcode_length_5prime' in config or 'barcode_length_3prime' in config):
+			raise ConfigurationError('Old-style configuration of barcode length via "barcode_length" option cannot be '
+					'used at the same time as new-style configuration via "barcode_length_5prime" or "barcode_length_3prime"')
+		if 'barcode_length_5prime' in config:
+			config['barcode_length'] = config['barcode_length_5prime']
+			del config['barcode_length_5prime']
+		if 'barcode_length_3prime' in config:
+			config['barcode_length'] = -config['barcode_length_3prime']
+			del config['barcode_length_3prime']
+		return config

@@ -75,7 +75,7 @@ def add_arguments(parser):
 	parser.add_argument('--minimum-length', '-l', type=int, default=0,
 		help='Minimum sequence length')
 	parser.add_argument('--barcode-length', '-b', type=int, default=12,
-		help="Length of 5' barcode (default: %(default)s")
+		help="Length of barcode. Positive for 5' barcode, negative for 3' barcode. (default: %(default)s")
 	parser.add_argument('fastx', metavar='FASTA/FASTQ',
 		help='FASTA or FASTQ file (can be gzip-compressed) with sequences')
 
@@ -152,8 +152,8 @@ def write_group(csvfile, barcode, sequences):
 
 
 def main(args):
-	if args.barcode_length < 1:
-		sys.exit("Barcode length must be positive")
+	if args.barcode_length == 0:
+		sys.exit("Barcode length must be non-zero")
 
 	# Map barcodes to lists of sequences
 	barcodes = defaultdict(list)
@@ -166,8 +166,13 @@ def main(args):
 			if len(record) < args.minimum_length:
 				too_short += 1
 				continue
-			barcode = record.sequence[:args.barcode_length]
-			unbarcoded = record[args.barcode_length:]
+			if args.barcode_length > 0:
+				barcode = record.sequence[:args.barcode_length]
+				unbarcoded = record[args.barcode_length:]
+			else:
+				barcode = record.sequence[args.barcode_length:]
+				unbarcoded = record[:args.barcode_length]
+
 			if args.trim_g:
 				# The RACE protocol leads to a run of non-template Gs in the beginning
 				# of the sequence, after the barcode.

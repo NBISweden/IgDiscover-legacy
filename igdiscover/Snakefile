@@ -386,7 +386,7 @@ rule fastq_to_fasta:
 		"sqt fastxmod{params.max_errors} --minimum-length {config.minimum_merged_read_length} --fasta {input.fastq} > {output.fasta}"
 
 
-if config.barcode_length > 0:
+if config.barcode_length != 0:
 	rule igdiscover_group:
 		"""Group by barcode and CDR3 (also implicitly removes duplicates)"""
 		output:
