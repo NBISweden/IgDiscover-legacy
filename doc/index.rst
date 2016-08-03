@@ -8,6 +8,7 @@ Table of contents
    :maxdepth: 2
 
    installation
+   manual-installation
    testing
    guide
    changes
