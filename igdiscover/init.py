@@ -161,7 +161,12 @@ def try_open(path):
 
 def main(args):
 	if ' ' in args.directory:
-		sys.exit('The name of the analysis directory must not contain spaces')
+		logger.error('The name of the analysis directory must not contain spaces')
+		sys.exit(1)
+
+	if os.path.exists(args.directory):
+		logger.error('The target directory {!r} already exists.'.format(args.directory))
+		sys.exit(1)
 
 	# If reads files or database were not given, initialize the GUI
 	if (args.reads1 is None and args.single_reads is None) or args.database is None:
