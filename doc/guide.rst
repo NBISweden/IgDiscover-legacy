@@ -263,13 +263,13 @@ They are created during pre-processing and are not iteration specific.
 
 reads/1-limited.1.fastq.gz, reads/1-limited.1.fastq.gz
     Input reads file limited to the first N entries. This is just a symbolic
-    link to the input file if the `limit` configuration option is not set.
+    link to the input file if the ``limit`` configuration option is not set.
 
 reads/2-merged.fastq.gz
     Reads merged with PEAR or FLASH
 
 reads/3-forward-primer-trimmed.fastq.gz
-    Merged reads with 5' primer sequences removed. (Automatically removed when
+    Merged reads with 5' primer sequences removed. (This file is automatically removed when
     it is not needed anymore.)
 
 reads/4-trimmed.fastq.gz
@@ -299,7 +299,8 @@ assigned.tab.gz
 This file is a gzip-compressed table with tab-separated values.
 It is created by ``igdiscover parse`` and is the result of parsing IgBLAST output.
 It contains a few additional columns that do not come directly from IgBLAST.
-In particular, the CDR3 sequence is detected, the sequence before the V gene match is split into *UTR* and *leader*, and the RACE-specific run of G nucleotides is also detected.
+In particular, the CDR3 sequence is detected, the sequence before the V gene match is split into *UTR* and *leader*, and
+the RACE-specific run of G nucleotides is also detected.
 The first row is a header row with column names.
 Each subsequent row describes the IgBLAST results for a single pre-processed input sequence.
 
@@ -309,7 +310,8 @@ LibreOffice can open the file directly (even though it is compressed), but make 
 Columns:
 
 count
-    How many copies of input sequence this query sequence represents. Copied from the ``;size=3;`` entry in the FASTA header field that is added by ``VSEARCH -derep_fulllength``.
+    How many copies of input sequence this query sequence represents. Copied from the ``;size=3;`` entry in the FASTA
+    header field that is added by ``VSEARCH -derep_fulllength``.
 
 V_gene, D_gene, J_gene
     V/D/J gene match for the query sequence
@@ -553,13 +555,13 @@ errorplot
     Plot histograms of differences to reference V gene
 
 
-Data from Sequence Read Archive (SRA)
--------------------------------------
+Data from the Sequence Read Archive (SRA)
+=========================================
 
 To work with datasets from the Sequence Read Archive, you may want to use the
 tool ``fastq-dump``, which can download the reads in the format required by
 IgDiscover. You just need to know the accession number, such as “SRR2905710” and
-then run this command:
+then run this command to download the files to the current directory::
 
     fastq-dump --split-files --gzip SRR2905710
 

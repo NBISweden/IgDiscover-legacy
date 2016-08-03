@@ -11,4 +11,5 @@ Table of contents
    manual-installation
    testing
    guide
+   advanced
    changes
