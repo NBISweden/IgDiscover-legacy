@@ -185,7 +185,7 @@ def main(args):
 		paired = gui.yesno('Paired end or single-end reads',
 			'Are your reads paired and need to be merged?\n\n'
 			'If you answer "Yes", next select the FASTQ files '
-			'with the <em>first</em> of your paired-end reads.\n'
+			'with the first of your paired-end reads.\n'
 			'If you answer "No", next select the FASTA or FASTQ '
 			'file with single-end reads.')
 		if paired is None:
@@ -228,6 +228,10 @@ def main(args):
 		if not dbpath:
 			logger.error('Cancelled')
 			sys.exit(2)
+
+	if not glob.glob(os.path.join(dbpath, '*.fasta')):
+		logger.error('No FASTA files (.fasta) found in selected database directory %r.', dbpath)
+		sys.exit(2)
 
 	# Create the directory
 	try:
