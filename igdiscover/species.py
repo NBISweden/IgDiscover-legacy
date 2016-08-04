@@ -114,9 +114,13 @@ def looks_like_V_gene(s, chain):
 # A newly discovered V gene must start with one of these motifs
 START_MOTIFS = {
 	'VH': [
+		'CAAAT',
+		'CAGAT',
 		'CAGCT',
 		'CAGGA',
 		'CAGGT',
+		'CGGCT',
+		'CGGGT',
 		'CTGGT',
 		'GAAAT',
 		'GAAGT',
