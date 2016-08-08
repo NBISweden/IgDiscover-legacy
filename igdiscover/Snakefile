@@ -560,7 +560,9 @@ rule igdiscover_compose:
 		tab='iteration-{nr}/candidates.tab'
 	run:
 		nr = int(wildcards.nr, base=10)
-		criteria = '--looks-like-V --max-differences=2 '
+		criteria = '--max-differences=2 '
+		if config.check_motifs:
+			criteria += '--looks-like-V '
 		if nr == config.iterations:
 			# Apply stricter filtering criteria for final iteration
 			criteria += '--unique-CDR3=3 --cluster-size={config.minimum_cluster_size}'.format(config=config)

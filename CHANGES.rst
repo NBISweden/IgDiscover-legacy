@@ -4,8 +4,11 @@ Changes
 
 development version
 -------------------
-* Add column ``has_stop`` to ``candidates.tab`` which indicates whether
-  the candidate sequence contains a stop codon.
+* Add column ``has_stop`` to ``candidates.tab``which indicates whether the
+  candidate sequence contains a stop codon.
+* Add a configuration option that makes it possible to disable the 5' motif
+  check by setting ``check_motifs: false`` (the ``looks_like_V`` column is
+  ignored in this case).
 
 v0.3
 ----

@@ -53,7 +53,7 @@ reverse_primers:
 
 
 ##
-## Advanced settings (usually do not need to be changed)
+## Advanced settings (usually these do not need to be changed)
 ##
 
 # Filter out merged reads that are shorter than this length.
@@ -62,8 +62,10 @@ minimum_merged_read_length: 300
 
 # When discovering new V genes, ignore whether a J gene has been assigned
 # and also ignore its %SHM.
+#  true: yes, ignore the J
+#  false: do not ignore J assignment, do not ignore its %SHM
 #
-#ignore_j: false
+ignore_j: false
 
 
 # Read merging program. Choose either 'pear' or 'flash'.
@@ -83,13 +85,13 @@ minimum_merged_read_length: 300
 # Maximum overlap (-M) for the flash read merger.
 # If you use pear, this is ignored.
 #
-#flash_maximum_overlap: 300
+flash_maximum_overlap: 300
 
 
 # When clustering sequences to discover new genes, subsample to this number of
 # sequences. Higher is slower.
 #
-#subsample: 1000
+subsample: 1000
 
 
 # Which program to use for clustering. Use vsearch or usearch (can also be an
@@ -109,11 +111,22 @@ minimum_merged_read_length: 300
 # sequences. This is the 'germline filter' criterion, that is, it is used
 # only in the final iteration, not in the intermediate ones.
 #
-#minimum_cluster_size: 100
+minimum_cluster_size: 100
 
 
 # Do not mention the original FASTA or FASTQ sequence names in the
 # assigned.tab files, but instead use names <library_name>_seq<number>,
 # where <number> is a running number starting at 1.
+#  true: yes, rename
+#  false: no, do not rename
 #
-#rename: true
+rename: true
+
+
+# Check whether the 5' end of candidate sequences start with a known motif.
+# This controls whether the 'looks_like_V' column in the candidates.tab
+# file is used or not.
+#  true: yes, check
+#  false: no, do not check
+#
+check_motifs: true
