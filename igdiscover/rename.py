@@ -6,11 +6,11 @@ template file. Sequences are considered to be equivalent if one is a prefix of
 the other.
 """
 import logging
-from collections import Counter
 from sqt import FastaReader
 from .utils import natural_sort_key
 
 logger = logging.getLogger(__name__)
+
 
 def add_arguments(parser):
 	arg = parser.add_argument
@@ -63,6 +63,7 @@ class PrefixDict:
 	def __len__(self):
 		return len(self._items)
 
+
 def main(args):
 	with FastaReader(args.template) as fr:
 		template = PrefixDict([])
@@ -78,11 +79,17 @@ def main(args):
 		sequences = list(fr)
 
 	# Rename
+	renamed = 0
 	for record in sequences:
-		record.name = template.get(record.sequence.upper(), record.name + args.not_found)
+		name = template.get(record.sequence.upper())
+		if name is None:
+			name = record.name + args.not_found
+		else:
+			renamed += 1
+		record.name = name
 
 	if args.sort:
 		sequences = sorted(sequences, key=lambda s: natural_sort_key(s.name))
 	for record in sequences:
 		print('>{}\n{}'.format(record.name, record.sequence))
-	logger.info('Wrote %s FASTA records', len(sequences))
+	logger.info('Wrote %s FASTA records (%d sequences found in template)', len(sequences), renamed)
