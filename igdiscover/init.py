@@ -116,7 +116,7 @@ def guess_paired_path(path):
 
 	Return None if no second file was found or if there are too many candidates.
 
-	>>> guess_paired_path('file.1.fastq.gz')
+	>>> guess_paired_path('file.1.fastq.gz')  # doctest: +SKIP
 	'file.2.fastq.gz'  # if that file exists
 	"""
 	base, name = os.path.split(path)

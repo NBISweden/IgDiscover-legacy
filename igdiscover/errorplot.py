@@ -5,9 +5,10 @@ For each gene, a histogram is plotted that shows how often a sequence was
 assigned to that gene at a certain percentage difference.
 """
 import logging
+import matplotlib
+matplotlib.use('pdf')
 from matplotlib.backends.backend_pdf import FigureCanvasPdf, PdfPages
 from matplotlib.figure import Figure
-import seaborn as sns
 import numpy as np
 from .table import read_table
 

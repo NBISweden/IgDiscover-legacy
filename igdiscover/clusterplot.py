@@ -3,6 +3,8 @@ For each V gene, plot a clustermap of the sequences assigned to it.
 """
 import os.path
 import logging
+import matplotlib
+matplotlib.use('pdf')
 import seaborn as sns
 from .table import read_table
 from .utils import downsampled
