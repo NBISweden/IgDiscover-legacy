@@ -1,31 +1,31 @@
 """
-Test the SisterMerger class
+Test the SiblingMerger class
 """
 import pandas as pd
-from igdiscover.discover import SisterMerger, SisterInfo
+from igdiscover.discover import SiblingMerger, SiblingInfo
 from igdiscover.compose import SequenceMerger, SequenceInfo
 from igdiscover.utils import UniqueNamer
 from igdiscover.rename import PrefixDict
 from nose.tools import raises
 
 def test_0():
-	merger = SisterMerger()
+	merger = SiblingMerger()
 	assert list(merger) == []
 
 
 def test_1():
-	merger = SisterMerger()
+	merger = SiblingMerger()
 	group = pd.DataFrame([1, 2, 3])
-	info = SisterInfo('ACCGGT', False, 'name1', group)
+	info = SiblingInfo('ACCGGT', False, 'name1', group)
 	merger.add(info)
 	assert list(merger) == [info]
 
 
 def test_2():
-	merger = SisterMerger()
+	merger = SiblingMerger()
 	group = pd.DataFrame([1, 2, 3])
-	merger.add(SisterInfo('ACCGGT', False, 'name1', group))
-	merger.add(SisterInfo('ACCGGT', False, 'name2', group))
+	merger.add(SiblingInfo('ACCGGT', False, 'name1', group))
+	merger.add(SiblingInfo('ACCGGT', False, 'name2', group))
 	sisters = list(merger)
 	assert len(sisters) == 1
 	assert sisters[0].sequence == 'ACCGGT'
@@ -34,20 +34,20 @@ def test_2():
 
 
 def test_requested():
-	merger = SisterMerger()
+	merger = SiblingMerger()
 	group = pd.DataFrame([1, 2, 3])
-	merger.add(SisterInfo('ACCGGT', True, 'name1', group))
-	merger.add(SisterInfo('ACCGGT', False, 'name2', group))
+	merger.add(SiblingInfo('ACCGGT', True, 'name1', group))
+	merger.add(SiblingInfo('ACCGGT', False, 'name2', group))
 	sisters = list(merger)
 	assert sisters[0].requested
 
 
 def test_prefix():
-	merger = SisterMerger()
+	merger = SiblingMerger()
 	group = pd.DataFrame([1, 2, 3])
-	merger.add(SisterInfo('ACCGGTAACGT', True, 'name1', group))
-	merger.add(SisterInfo('ACCGGT', False, 'name2', group))
-	info2 = SisterInfo('TGATACC', False, 'name3', group)
+	merger.add(SiblingInfo('ACCGGTAACGT', True, 'name1', group))
+	merger.add(SiblingInfo('ACCGGT', False, 'name2', group))
+	info2 = SiblingInfo('TGATACC', False, 'name3', group)
 	merger.add(info2)
 	sisters = list(merger)
 	assert len(sisters) == 2
@@ -57,11 +57,11 @@ def test_prefix():
 
 
 def test_with_N():
-	merger = SisterMerger()
+	merger = SiblingMerger()
 	group = pd.DataFrame([1, 2, 3])
-	merger.add(SisterInfo('ACCNGTAANGT', True, 'name1', group))
-	merger.add(SisterInfo('ANCGGT', False, 'name2', group))
-	info2 = SisterInfo('TGATACC', False, 'name3', group)
+	merger.add(SiblingInfo('ACCNGTAANGT', True, 'name1', group))
+	merger.add(SiblingInfo('ANCGGT', False, 'name2', group))
+	info2 = SiblingInfo('TGATACC', False, 'name3', group)
 	merger.add(info2)
 	sisters = list(merger)
 	assert len(sisters) == 2
