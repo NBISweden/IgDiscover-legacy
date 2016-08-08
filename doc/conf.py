@@ -39,7 +39,16 @@ copyright = u'2015-2016, ' + authors
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
-from igdiscover import __version__ as version
+
+# When generating the documentation, we currently do not require the
+# dependencies to be installed. We therefore cannot 'import' anything from
+# igdiscover since that may fail. The versioneer module can only be imported
+# from the project root (it has extra checks such that even changing sys.path
+# will not work), so the following is what we need to do.
+import subprocess
+version = subprocess.check_output(
+	[sys.executable, '-c', 'import versioneer; print(versioneer.get_version())'],
+	cwd='..').decode().strip()
 
 # Read The Docs modifies the conf.py script and we therefore get 'dirty'
 # version numbers like 0.12+0.g27d0d31.dirty from versioneer.
