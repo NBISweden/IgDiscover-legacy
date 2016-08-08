@@ -14,9 +14,7 @@ The following filtering and processing steps are performed:
 * Merge nearly identical sequences (allowing length differences) into single entries
 """
 import logging
-import re
 from collections import namedtuple
-from itertools import zip_longest
 import pandas as pd
 from sqt import FastaReader
 from sqt.align import edit_distance
