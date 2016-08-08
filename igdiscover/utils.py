@@ -153,7 +153,7 @@ class Merger:
 		self._items = items
 
 	def __iter__(self):
-		yield from self._items
+		yield from sorted(self._items, key=lambda x: x.name)
 
 	def merged(self, existing_item, item):
 		"""
