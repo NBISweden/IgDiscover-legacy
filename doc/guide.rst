@@ -455,6 +455,9 @@ database_diff
     The number of differences between the consensus sequence and the sequence of the source gene.
     (Given as edit distance, that is insertion, deletion, mismatch count as one difference each.)
 
+has_stop
+    Indicates whether the consensus sequence contains a stop codon.
+
 looks_like_V
     Whether the consensus sequence “looks like” a true V gene (1 if yes, 0 if no).
     Currently, this checks whether the 5' end of the sequence matches a known V gene motif.

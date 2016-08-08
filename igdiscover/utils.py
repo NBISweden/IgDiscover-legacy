@@ -110,11 +110,6 @@ def natural_sort_key(s, _nsre=re.compile('([0-9]+)')):
 		for text in re.split(_nsre, s)]
 
 
-def nt_to_aa(s):
-	"""Translate a nucleotide sequence to an amino acid sequence"""
-	return ''.join(GENETIC_CODE.get(s[i:i+3], '*') for i in range(0, len(s), 3))
-
-
 class UniqueNamer:
 	"""
 	Assign unique names by appending letters to already seen names.
@@ -234,3 +229,24 @@ class Config:
 			config['barcode_length'] = -config['barcode_length_3prime']
 			del config['barcode_length_3prime']
 		return config
+
+
+def nt_to_aa(s):
+	"""Translate a nucleotide sequence to an amino acid sequence"""
+	return ''.join(GENETIC_CODE.get(s[i:i+3], '*') for i in range(0, len(s), 3))
+
+
+def has_stop(sequence):
+	"""
+	Return a boolean indicating whether the sequence has an internal stop codon.
+	An incomplete codon at the end is allowed.
+
+	>>> has_stop('GGG')
+	False
+	>>> has_stop('TAA')
+	True
+	>>> has_stop('GGGAC')
+	False
+	"""
+	s = sequence[:len(sequence) // 3 * 3]
+	return '*' in nt_to_aa(s)

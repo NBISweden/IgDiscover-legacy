@@ -4,6 +4,11 @@ Changes
 
 development version
 -------------------
+* Add column ``has_stop`` to ``candidates.tab`` which indicates whether
+  the candidate sequence contains a stop codon.
+
+v0.3
+----
 * Optionally, sequences are not renamed in the ``assigned.tab`` file, but
   retain their original name as in the FASTA or FASTQ file. Set ``rename:
   false`` in the configuration file to get this behavior.

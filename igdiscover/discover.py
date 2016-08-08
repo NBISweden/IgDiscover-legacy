@@ -19,7 +19,7 @@ from sqt.align import edit_distance
 from sqt.utils import available_cpu_count
 
 from .table import read_table
-from .utils import iterative_consensus, sequence_hash, downsampled, SerialPool, Merger
+from .utils import iterative_consensus, sequence_hash, downsampled, SerialPool, Merger, has_stop
 from .cluster import cluster_sequences
 from .species import looks_like_V_gene
 
@@ -246,6 +246,7 @@ class Discoverer:
 				CDR3s_approx=CDR3s_approx,
 				N_bases=n_bases,
 				database_diff=database_diff,
+				has_stop=int(has_stop(sibling)),
 				looks_like_V=int(looks_like_V_gene(sibling, chain)),
 				consensus=sibling,
 			)
@@ -278,6 +279,7 @@ Candidate = namedtuple('Candidate', [
 	'CDR3s_approx',
 	'N_bases',
 	'database_diff',
+	'has_stop',
 	'looks_like_V',
 	'consensus'
 ])
