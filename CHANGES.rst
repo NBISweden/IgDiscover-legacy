@@ -12,6 +12,11 @@ development version
 * It should now be possible to install and run IgDiscover on OS X. This did
   not require changes in IgDiscover itself, but some dependencies needed to
   be made available as Conda packages (IgBLAST in particular).
+* Make it possible to whitelist known sequences: If a found gene candidate
+  appears in that list, the sequence is included in the list of discovered
+  sequences even when it would otherwise not pass filtering criteria. To enable
+  this, just add a ``whitelist.fasta`` file to the project directory before
+  starting the analysis.
 
 v0.3
 ----

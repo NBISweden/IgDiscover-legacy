@@ -552,22 +552,34 @@ rule igdiscover_discover:
 		"{input.tab} > {output.tab}"
 
 
+rule whitelist:
+	output:
+		fasta='whitelist.fasta'
+	shell:
+		"""
+		echo No whitelist.fasta found, creating an empty whitelist
+		touch {output.fasta}
+		"""
+
+
 rule igdiscover_compose:
 	"""Construct a new database out of the discovered sequences"""
 	output:
 		fasta='iteration-{nr}/new_V_database.fasta'
 	input:
-		tab='iteration-{nr}/candidates.tab'
+		tab='iteration-{nr}/candidates.tab',
+		whitelist='whitelist.fasta'
 	run:
 		nr = int(wildcards.nr, base=10)
-		criteria = '--max-differences=2 '
+		criteria = ['--max-differences=2', '--whitelist=' + input.whitelist]
 		if config.check_motifs:
-			criteria += '--looks-like-V '
+			criteria += ['--looks-like-V']
 		if nr == config.iterations:
-			# Apply stricter filtering criteria for final iteration
-			criteria += '--unique-CDR3=3 --cluster-size={config.minimum_cluster_size}'.format(config=config)
+			# Apply stricter filtering criteria in final iteration
+			criteria += ['--unique-CDR3=3', '--cluster-size={config.minimum_cluster_size}'.format(config=config)]
 		else:
-			criteria += '--unique-CDR3=2'
+			criteria += ['--unique-CDR3=2']
+		criteria = ' '.join(criteria)
 		shell("igdiscover compose {criteria} {input.tab} > {output.fasta}")
 
 
