@@ -1,5 +1,5 @@
 """
-Filter V gene candidates (germline/pre-germline filter)
+Filter V gene candidates (germline and pre-germline filter)
 
 After candidates for novel V genes have been found with the 'discover'
 subcommand, this script is used to filter the candidates and make sure that
@@ -12,6 +12,11 @@ The following filtering and processing steps are performed:
 * Discard sequences identical to one of the database sequences (if DB given)
 * Discard sequences that do not match a set of known good motifs
 * Merge nearly identical sequences (allowing length differences) into single entries
+
+If you provide a whitelist of sequences, then the candidates that appear on it
+* are not checked for the cluster size criterion,
+* do not need to match a set of known good motifs,
+* are never merged with nearly identical sequences.
 """
 import logging
 from collections import namedtuple
@@ -45,17 +50,20 @@ def add_arguments(parser):
 		'Default: Column is ignored')
 	arg('--database', metavar='DATABASE.FASTA',
 		help='Existing (to be augmented) database in FASTA format')
+	arg('--whitelist', metavar='FASTA',
+	    help='Sequences that are never discarded or merged with others, '
+			'even if criteria for discarding them would apply.')
 	arg('tables', metavar='DISCOVER.TAB',
 		help='Tables (one or more) created by the "discover" command',
 		nargs='+')
 
 
-SequenceInfo = namedtuple('SequenceInfo', 'sequence name CDR3s_exact')
+SequenceInfo = namedtuple('SequenceInfo', 'sequence name CDR3s_exact whitelisted')
 
 
 class SequenceMerger(Merger):
 	"""
-	Merge sequences where one is a prefix of the other into single entries.
+	Merge sequences that are sufficiently similar into single entries.
 	"""
 	def __init__(self, max_differences):
 		super().__init__()
@@ -63,10 +71,14 @@ class SequenceMerger(Merger):
 
 	def merged(self, s, t):
 		"""
-		Merge two sequences if one is the prefix of the other. If they should
-		not be merged, None is returned.
+		Merge two sequences if one is the prefix of the other or if their
+		edit distance is at most max_differences (see constructor). If they
+		should not be merged, None is returned.
 
-		s and t must have attributes sequence and name.
+		If the sequences are different, but at least one of them is
+		whitelisted, they are not merged.
+
+		s and t should be SequenceInfo objects.
 		"""
 		s_seq = s.sequence
 		t_seq = t.sequence
@@ -74,11 +86,15 @@ class SequenceMerger(Merger):
 		# end gaps
 		s_seq += t_seq[len(s_seq):]
 		t_seq += s_seq[len(t_seq):]
-		if edit_distance(s_seq, t_seq) <= self._max_differences:
-			if s.CDR3s_exact >= t.CDR3s_exact:
-				return s
-			return t
-		return None
+		dist = edit_distance(s_seq, t_seq)
+		if dist > self._max_differences:
+			return None
+		if dist > 0 and (s.whitelisted or t.whitelisted):
+			# Do not merge if whitelisted
+			return None
+		if s.CDR3s_exact >= t.CDR3s_exact:
+			return s
+		return t
 
 
 def main(args):
@@ -87,7 +103,13 @@ def main(args):
 	if args.database:
 		for record in FastaReader(args.database):
 			previous_n += 1
-			merger.add(SequenceInfo(record.sequence.upper(), record.name, 0))  # TODO zero?
+			merger.add(SequenceInfo(record.sequence.upper(), record.name, 0, whitelisted=True))  # TODO zero? whitelisted?
+
+	whitelist = set()
+	if args.whitelist:
+		for record in FastaReader(args.whitelist):
+			whitelist.add(record.sequence)
+		logger.info('%d unique sequences in whitelist', len(whitelist))
 
 	# Read in tables
 	total_unfiltered = 0
@@ -97,18 +119,21 @@ def main(args):
 		# TODO remove this after deprecation period
 		table.rename(columns=dict(consensus_seqs='cluster_size', window_seqs='cluster_size', subset_seqs='cluster_size'), inplace=True)
 
+		table['whitelisted'] = [ (s in whitelist) for s in table['consensus'] ]
 		unfiltered_length = len(table)
 		table = table[table.database_diff >= args.minimum_db_diff]
 		if 'N_bases' in table.columns:
 			table = table[table.N_bases <= args.maximum_N]
 		table = table[table.CDR3s_exact >= args.unique_CDR3]
 		if args.looks_like_V:
-			table = table[table.looks_like_V == 1]
-		table = table[table.cluster_size >= args.cluster_size]
+			table = table[(table.looks_like_V == 1) | table.whitelisted]
+		table = table[(table.cluster_size >= args.cluster_size) | table.whitelisted]
 		table = table.dropna()
 		logger.info('Table read from %r contains %s candidate V gene sequences. '
 			'%s remain after filtering', path,
 			unfiltered_length, len(table))
+		if args.whitelist:
+			logger.info('Of those, %d are protected by the whitelist', sum(table['whitelisted']))
 		total_unfiltered += unfiltered_length
 		tables.append(table)
 	if len(args.tables) > 1:
@@ -118,7 +143,8 @@ def main(args):
 
 	for table in tables:
 		for _, row in table.iterrows():
-			merger.add(SequenceInfo(row['consensus'], row['name'], row['CDR3s_exact']))
+			assert row['whitelisted'] == (row['consensus'] in whitelist)
+			merger.add(SequenceInfo(row['consensus'], row['name'], row['CDR3s_exact'], row['whitelisted']))
 
 	namer = UniqueNamer()
 	n = 0
