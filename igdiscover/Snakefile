@@ -213,12 +213,12 @@ rule check_merging:
 	run:
 		total = read_int(input.total)
 		merged = read_int(input.merged)
-		if total == 0 or merged / total >= 0.5:
+		if total == 0 or merged / total >= 0.3:
 			with open(output.success, 'w') as f:
-				print('This marker file exists if at least 50% of the input '
+				print('This marker file exists if at least 30% of the input '
 					'reads could be merged.', file=f)
 		else:
-			sys.exit('Less than 50% of the input reads could be merged. Please '
+			sys.exit('Less than 30% of the input reads could be merged. Please '
 				'check whether there is an issue with your input data. To skip '
 				'this check, create the file "stats/merging-successful" and '
 				're-start "igdiscover run".')
