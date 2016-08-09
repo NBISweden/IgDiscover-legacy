@@ -9,6 +9,7 @@ The following filtering and processing steps are performed:
 * Discard sequences with N bases
 * Discard sequences that come from a consensus over too few source sequences 
 * Discard sequences with too few unique CDR3s (CDR3s_exact column)
+* Discard sequences with too few unique Js (Js_exact column)
 * Discard sequences identical to one of the database sequences (if DB given)
 * Discard sequences that do not match a set of known good motifs
 * Merge nearly identical sequences (allowing length differences) into single entries
@@ -43,7 +44,12 @@ def add_arguments(parser):
 	arg('--maximum-N', '-N', type=int, metavar='COUNT', default=0,
 		help='Sequences must have at most COUNT "N" bases. Default: %(default)s')
 	arg('--unique-CDR3', '--CDR3s', type=int, metavar='N', default=1,
-		help='Sequences must have at least N CDR3s within exact sequence matches. '
+		help='Sequences must have at least N unique CDR3s within exact sequence matches. '
+		'Default: %(default)s')
+	# The default for unique-J is 0 because we might work on data without
+	# any assigned J genes.
+	arg('--unique-J', type=int, metavar='N', default=0,
+		help='Sequences must have at least N unique Js within exact sequence matches. '
 		'Default: %(default)s')
 	arg('--looks-like-V', action='store_true', default=False,
 		help='Sequences must look like V genes (uses the looks_like_V column). '
@@ -53,7 +59,7 @@ def add_arguments(parser):
 	arg('--whitelist', metavar='FASTA',
 	    help='Sequences that are never discarded or merged with others, '
 			'even if criteria for discarding them would apply.')
-	arg('tables', metavar='DISCOVER.TAB',
+	arg('tables', metavar='CANDIDATES.TAB',
 		help='Tables (one or more) created by the "discover" command',
 		nargs='+')
 
@@ -125,6 +131,7 @@ def main(args):
 		if 'N_bases' in table.columns:
 			table = table[table.N_bases <= args.maximum_N]
 		table = table[table.CDR3s_exact >= args.unique_CDR3]
+		table = table[table.Js_exact >= args.unique_J]
 		if args.looks_like_V:
 			table = table[(table.looks_like_V == 1) | table.whitelisted]
 		table = table[(table.cluster_size >= args.cluster_size) | table.whitelisted]
