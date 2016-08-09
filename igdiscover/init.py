@@ -38,6 +38,15 @@ def add_arguments(parser):
 	parser.add_argument('directory', help='New analysis directory to create')
 
 
+def launch(path):
+	if hasattr(os, 'startfile'):
+		os.startfile(path)
+	elif sys.platform == 'linux':
+		subprocess.call(['xdg-open', path])
+	elif sys.platform == 'darwin':
+		subprocess.call(['open', path])
+
+
 class TkinterGui:
 	"""Show a GUI for selecting reads and the database directory"""
 	def __init__(self):
@@ -283,6 +292,6 @@ def main(args):
 		# Only suggest to edit the config file if at least one GUI dialog has been shown
 		if gui.yesno('Directory initialized',
 			   'Do you want to edit the configuration file now?'):
-			subprocess.call(["xdg-open", os.path.join(args.directory, PIPELINE_CONF)])
+			launch(os.path.join(args.directory, PIPELINE_CONF))
 	logger.info('Directory %s initialized.', args.directory)
 	logger.info('Edit %s/%s, then run "cd %s && igdiscover run" to start the analysis', args.directory, PIPELINE_CONF, args.directory)
