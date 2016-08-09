@@ -194,7 +194,6 @@ class Config:
 		self.cluster_program = 'vsearch'
 		self.multialign_program = 'muscle-fast'
 		self.maximum_expected_errors = None  # or an integer
-		self.minimum_cluster_size = 100
 		self.minimum_merged_read_length = 300
 		self.mismatch_penalty = None
 		self.barcode_length = 0
@@ -205,8 +204,8 @@ class Config:
 		self.forward_primers = None
 		self.reverse_primers = None
 		self.rename = True
-		self.check_motifs = True
-
+		self.pre_germline_filter = dict(unique_cdr3s=2, unique_js=0, check_motifs=True, whitelist=True, cluster_size=0, differences=2)
+		self.germline_filter = dict(unique_cdr3s=3, unique_js=0, check_motifs=True, whitelist=True, cluster_size=100, differences=2)
 		self.library_name = os.path.basename(os.getcwd())
 		self.read_from(path)
 

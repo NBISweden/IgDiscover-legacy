@@ -17,6 +17,9 @@ development version
   sequences even when it would otherwise not pass filtering criteria. To enable
   this, just add a ``whitelist.fasta`` file to the project directory before
   starting the analysis.
+* The criteria for germline filter and pre-germline filter are now configurable:
+  See ``germline_filter`` and ``pre_germline_filter`` sections in the
+  configuration file.
 
 v0.3
 ----

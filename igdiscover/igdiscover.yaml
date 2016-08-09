@@ -107,13 +107,6 @@ subsample: 1000
 #maximum_expected_errors: 5
 
 
-# Discovered sequences must be derived from a cluster of at least this many
-# sequences. This is the 'germline filter' criterion, that is, it is used
-# only in the final iteration, not in the intermediate ones.
-#
-minimum_cluster_size: 100
-
-
 # Do not mention the original FASTA or FASTQ sequence names in the
 # assigned.tab files, but instead use names <library_name>_seq<number>,
 # where <number> is a running number starting at 1.
@@ -123,10 +116,24 @@ minimum_cluster_size: 100
 rename: true
 
 
-# Check whether the 5' end of candidate sequences start with a known motif.
-# This controls whether the 'looks_like_V' column in the candidates.tab
-# file is used or not.
-#  true: yes, check
-#  false: no, do not check
+# Filtering criteria applied to candidate sequences in all iterations except the last.
 #
-check_motifs: true
+pre_germline_filter:
+  unique_cdr3s: 2     # Minimum number of unique CDR3s (within exact matches)
+  unique_js: 0        # Minimum number of unique J genes (within exact matches)
+  check_motifs: true  # Check whether 5' end starts with known motif
+  whitelist: true     # Use the whitelist
+  cluster_size: 0     # Minimum number of sequences assigned to cluster
+  differences: 2      # Merge sequences if they have at most this number of differences
+
+
+# Filtering criteria applied to candidate sequences in the last iteration.
+# These should be more strict than the pre_germline_filter criteria.
+#
+germline_filter:
+  unique_cdr3s: 3     # Minimum number of unique CDR3s (within exact matches)
+  unique_js: 0        # Minimum number of unique J genes (within exact matches)
+  check_motifs: true  # Check whether 5' end starts with known motif
+  whitelist: true     # Use the whitelist
+  cluster_size: 100   # Minimum number of sequences assigned to cluster
+  differences: 2      # Merge sequences if they have at most this number of differences
