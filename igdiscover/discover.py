@@ -40,13 +40,17 @@ def add_arguments(parser):
 	arg('--prefix', default='', metavar='PREFIX',
 		help='Add PREFIX before sequence names')
 	arg('--gene', '-g', action='append', default=[],
-		help='Compute consensus for this gene. Can be given multiple times. Default: Compute for all genes.')
+		help='Compute consensus for this gene. Can be given multiple times. '
+			'Default: Compute for all genes.')
 	arg('--left', '-l', type=float, metavar='ERROR-RATE',
-		help='For consensus, include only sequences that have at least this error rate (in percent). Default: %(default)s', default=0)
+		help='For consensus, include only sequences that have at least this '
+	        'error rate (in percent). Default: %(default)s', default=0)
 	arg('--right', '-r', type=float, metavar='ERROR-RATE',
-		help='For consensus, include only sequences that have at most this error rate (in percent). Default: %(default)s', default=100)
+		help='For consensus, include only sequences that have at most this '
+	        'error rate (in percent). Default: %(default)s', default=100)
 	arg('--window-width', '-w', type=float, metavar='PERCENT',
-		help='Compute consensus for all PERCENT-wide windows. Set to 0 to disable. Default: %(default)s', default=2)
+		help='Compute consensus for all PERCENT-wide windows. Set to 0 to '
+	        'disable. Default: %(default)s', default=2)
 	arg('--no-cluster', dest='cluster', action='store_false', default=True,
 		help='Do not run linkage cluster analysis.')
 	arg('--max-n-bases', type=int, default=0, metavar='MAXN',
@@ -58,7 +62,8 @@ def add_arguments(parser):
 		help='Output tables for all analyzed genes to DIRECTORY. '
 			'Files will be named <GENE>.tab.')
 	arg('--database', metavar='FASTA', default=None,
-		help='FASTA file with V genes. If provided, differences between consensus and database will be computed.')
+		help='FASTA file with V genes. If provided, differences between consensus '
+	        'and database will be computed.')
 	arg('--ignore-J', action='store_true', default=False,
 		help='Include also rows without J assignment or J%%SHM>0.')
 	arg('--approx', action='store_true', default=False,
