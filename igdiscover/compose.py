@@ -77,27 +77,34 @@ class SequenceMerger(Merger):
 
 	def merged(self, s, t):
 		"""
-		Merge two sequences if one is the prefix of the other or if their
-		edit distance is at most max_differences (see constructor). If they
-		should not be merged, None is returned.
+		Given two SequenceInfo objects, decide whether to discard one of them and which one.
+		This is for merging similar sequences.
 
-		If the sequences are different, but at least one of them is
-		whitelisted, they are not merged.
+		Two sequences are considered to be similar if their edit distance is at most
+		max_differences (see constructor). If one of the sequnces is longer, the 'overhanging'
+		bases are ignored (do not count towards the number of differences).
 
-		s and t should be SequenceInfo objects.
+		Sequences that are whitelisted are never discarded.
+		If two sequences are similar and none of them is whitelisted, then the one with the
+		higher number of unique CDR3s is kept.
+
+		Return None if both objects should be kept.
+		Return the object to keep otherwise.
 		"""
-		s_seq = s.sequence
-		t_seq = t.sequence
-		# Make both sequences the same length - cheap trick to not penalize
-		# end gaps
-		s_seq += t_seq[len(s_seq):]
-		t_seq += s_seq[len(t_seq):]
+		s_seq, t_seq = s.sequence, t.sequence
+		# Shorten both sequences to the same length to not penalize end gaps
+		s_seq = s_seq[:len(t_seq)]
+		t_seq = t_seq[:len(s_seq)]
 		dist = edit_distance(s_seq, t_seq)
 		if dist > self._max_differences:
-			return None
-		if dist > 0 and (s.whitelisted or t.whitelisted):
-			# Do not merge if whitelisted
-			return None
+			return None  # keep both
+		if s.whitelisted and t.whitelisted:
+			return None  # keep both
+		if s.whitelisted:
+			return s
+		if t.whitelisted:
+			return t
+		# No sequence is whitelisted if we arrive here
 		if s.CDR3s_exact >= t.CDR3s_exact:
 			return s
 		return t
