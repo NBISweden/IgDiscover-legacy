@@ -309,7 +309,6 @@ def main(args):
 		table = table[table.J_SHM == 0][:]
 		logger.info('%s rows remain after discarding J%%SHM > 0', len(table))
 
-	logger.info('Using an error rate window of %.1f%% to %.1f%%', args.left, args.right)
 	if args.approx:
 		logger.info('Approximate comparisons between V gene sequence and consensus allow %.1f%% errors.', v_error_rate*100)
 
@@ -324,9 +323,10 @@ def main(args):
 	genes = set(args.gene)
 	if args.window_width:
 		windows = [ (start, start + args.window_width) for start in np.arange(0, 20, args.window_width) ]
+		logger.info('Using an error rate window of %.1f%% to %.1f%%', args.left, args.right)
+		windows.append((args.left, args.right))
 	else:
 		windows = []
-	windows.append((args.left, args.right))
 
 	groups = []
 	for gene, group in table.groupby('V_gene'):
