@@ -204,9 +204,11 @@ class Config:
 		self.forward_primers = None
 		self.reverse_primers = None
 		self.rename = True
+		self.seed = None
 		self.pre_germline_filter = dict(unique_cdr3s=2, unique_js=0, check_motifs=True, whitelist=True, cluster_size=0, differences=2)
 		self.germline_filter = dict(unique_cdr3s=3, unique_js=0, check_motifs=True, whitelist=True, cluster_size=100, differences=2)
 		self.library_name = os.path.basename(os.getcwd())
+
 		self.read_from(path)
 
 	def read_from(self, path):

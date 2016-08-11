@@ -116,6 +116,13 @@ subsample: 1000
 rename: true
 
 
+# Set this "seed value" to an arbitrary number in order to get reproducible
+# runs. Two runs that use the same software version, the same seed and the
+# same configuration will result in identical results.
+#
+seed:
+
+
 # Filtering criteria applied to candidate sequences in all iterations except the last.
 #
 pre_germline_filter:

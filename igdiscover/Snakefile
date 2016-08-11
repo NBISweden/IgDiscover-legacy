@@ -545,11 +545,12 @@ rule igdiscover_discover:
 		v_reference="{{dir}}/database/{species}_V.fasta".format(species=config.species),
 		tab="{dir}/filtered.tab.gz"
 	params:
-		ignore_j='--ignore-J' if config.ignore_j else ''
+		ignore_j=' --ignore-J' if config.ignore_j else '',
+		seed=' --seed={}'.format(config.seed) if config.seed is not None else ''
 	threads: 4  # TODO this could be increased up to 6
 	shell:
-		"igdiscover discover -j {threads} --subsample {config.subsample} "
-		"--database {input.v_reference} {params.ignore_j} "
+		"igdiscover discover -j {threads}{params.seed}{params.ignore_j} "
+		"--subsample {config.subsample} --database {input.v_reference} "
 		"{input.tab} > {output.tab}"
 
 
