@@ -231,6 +231,8 @@ class Config:
 		if 'barcode_length_3prime' in config:
 			config['barcode_length'] = -config['barcode_length_3prime']
 			del config['barcode_length_3prime']
+		if 'seed' in config and config['seed'] is False:
+			config['seed'] = None
 		return config
 
 

@@ -116,11 +116,14 @@ subsample: 1000
 rename: true
 
 
-# Set this "seed value" to an arbitrary number in order to get reproducible
-# runs. Two runs that use the same software version, the same seed and the
-# same configuration will result in identical results.
+# The "seed value" is in arbitrary number used to get reproducible
+# runs. Two runs that use the same software version, the same seed
+# and otherwise the same configuration will give identical results.
 #
-seed:
+# Set this to false in order to get non-reproducible runs (then a
+# different seed is used each run).
+#
+seed: 123
 
 
 # Filtering criteria applied to candidate sequences in all iterations except the last.

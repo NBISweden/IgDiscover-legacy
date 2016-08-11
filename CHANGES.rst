@@ -20,6 +20,9 @@ development version
 * The criteria for germline filter and pre-germline filter are now configurable:
   See ``germline_filter`` and ``pre_germline_filter`` sections in the
   configuration file.
+* Different runs of IgDiscover with the same parameters on the same input files
+  will now give the same results. See the ``seed`` parameter in the configuration,
+  also on how to get non-reproducible results as before.
 
 v0.3
 ----
