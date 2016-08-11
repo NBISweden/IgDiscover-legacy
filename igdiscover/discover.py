@@ -5,6 +5,7 @@ Existing V sequences are grouped by their V gene assignment, and within each
 group, consensus sequences are computed.
 """
 import csv
+import hashlib
 import logging
 import sys
 import os.path
@@ -25,7 +26,6 @@ from .species import looks_like_V_gene
 
 logger = logging.getLogger(__name__)
 
-random.seed(123)
 
 MINGROUPSIZE_CONSENSUS = 5
 MAXIMUM_SUBSAMPLE_SIZE = 1600
@@ -35,6 +35,9 @@ def add_arguments(parser):
 	arg = parser.add_argument
 	arg('--threads', '-j', type=int, default=min(4, available_cpu_count()),
 		help='Number of threads. Default: no. of available CPUs, but at most 4')
+	arg('--seed', type=int, default=None,
+		help='Seed value for random numbers for reproducible runs. If omitted, runs'
+		'are not reproducible.')
 	arg('--consensus-threshold', '-t', metavar='PERCENT', type=float, default=60,
 		help='Threshold for consensus computation. Default: %(default)s%%.')
 	arg('--prefix', default='', metavar='PREFIX',
@@ -116,7 +119,7 @@ class Discoverer:
 	"""
 	def __init__(self, database, windows, left, right, cluster, table_output,
 			  prefix, consensus_threshold, v_error_rate, downsample,
-			  cluster_subsample_size, approx_columns, max_n_bases):
+			  cluster_subsample_size, approx_columns, max_n_bases, seed):
 		self.database = database
 		self.windows = windows
 		self.left = left
@@ -130,6 +133,7 @@ class Discoverer:
 		self.cluster_subsample_size = cluster_subsample_size
 		self.approx_columns = approx_columns
 		self.max_n_bases = max_n_bases
+		self.seed = seed
 
 	def _sibling_sequence(self, group):
 		"""
@@ -182,6 +186,12 @@ class Discoverer:
 				yield SiblingInfo(sibling, False, name, group_in_window)
 				cl += 1
 
+	def set_random_seed(self, name):
+		"""Set random seed depending on gene name and seed attribute"""
+		h = hashlib.md5(name.encode()).digest()[:4]
+		n = int.from_bytes(h, byteorder='big')
+		random.seed(n + self.seed)
+
 	def __call__(self, args):
 		"""
 		Discover new V genes. args is a tuple (gene, group)
@@ -189,6 +199,8 @@ class Discoverer:
 		group -- a pandas DataFrame with the group corresponding to the gene
 		"""
 		gene, group = args
+		if self.seed is not None:
+			self.set_random_seed(gene)
 		siblings = SiblingMerger()
 		for sibling in self._collect_siblings(gene, group):
 			siblings.add(sibling)
@@ -339,7 +351,7 @@ def main(args):
 	discoverer = Discoverer(database, windows, args.left, args.right, args.cluster,
 		args.table_output, args.prefix, args.consensus_threshold, v_error_rate,
 		MAXIMUM_SUBSAMPLE_SIZE, cluster_subsample_size=args.subsample,
-		approx_columns=args.approx, max_n_bases=args.max_n_bases)
+		approx_columns=args.approx, max_n_bases=args.max_n_bases, seed=args.seed)
 	n_consensus = 0
 
 	Pool = SerialPool if args.threads == 1 else multiprocessing.Pool
