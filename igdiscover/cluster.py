@@ -1,26 +1,43 @@
 import pandas as pd
-import numpy as np
 from scipy.spatial import distance
 from scipy.cluster import hierarchy
 from .utils import distances, iterative_consensus
 
 
+def all_nodes(root):
+	"""Return a list of all nodes of the tree, from left to right (iterative implementation)."""
+	result = []
+	path = [None]
+	node = root
+	while node is not None:
+		if node.left is not None:
+			path.append(node)
+			node = node.left
+		elif node.right is not None:
+			result.append(node)
+			node = node.right
+		else:
+			result.append(node)
+			node = path.pop()
+			if node is not None:
+				result.append(node)
+				node = node.right
+
+	return result
+
+
 def inner_nodes(root):
 	"""
-	Return a list of all inner nodes of the tree
+	Return a list of all inner nodes of the tree, from left to right.
 	"""
-	if root.is_leaf():
-		return []
-	return inner_nodes(root.left) + [root] + inner_nodes(root.right)
+	return [ node for node in all_nodes(root) if not node.is_leaf() ]
 
 
 def collect_ids(root):
 	"""
 	Return a list of ids of all leaves of the given tree
 	"""
-	if root.is_leaf():
-		return [root.id]
-	return collect_ids(root.left) + collect_ids(root.right)
+	return [ node.id for node in all_nodes(root) if node.is_leaf() ]
 
 
 def cluster_sequences(sequences, minsize=5):
