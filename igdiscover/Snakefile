@@ -484,11 +484,12 @@ rule igdiscover_igblast:
 	params:
 		penalty='--penalty {}'.format(config.mismatch_penalty) if config.mismatch_penalty is not None else '',
 		database='{dir}/database'
+	log: '{dir}/igblast.log'
 	threads: 16
 	shell:
-		"igdiscover igblast --threads {threads} {params.penalty} "
+		"time igdiscover igblast --threads {threads} {params.penalty} "
 		"--species {config.species} {params.database} {input.fastagz} | "
-		"{GZIP} > {output.txtgz}"
+		"{GZIP} 2>&1 > {output.txtgz} | tee {log} >&2"
 
 
 rule igdiscover_parse:
