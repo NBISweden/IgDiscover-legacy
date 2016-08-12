@@ -23,6 +23,7 @@ development version
 * Different runs of IgDiscover with the same parameters on the same input files
   will now give the same results. See the ``seed`` parameter in the configuration,
   also on how to get non-reproducible results as before.
+* IgDiscover is now also available on OS X.
 
 v0.3
 ----

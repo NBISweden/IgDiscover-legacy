@@ -3,11 +3,14 @@
 Manual installation
 ===================
 
-IgDiscover requires quite a few other software tools that are not included in most Linux distributions and which are
-also not available from the Python packaging index (PyPI) because they are not Python tools. If you do not use the
-:ref:`recommended simple installation instructions via Conda <simple-installation>`, you need to install those
-non-Python dependencies manually. Python dependencies are automatically pulled in when IgDiscover itself is installed in
-the last step with the ``pip install`` command.
+IgDiscover requires quite a few other software tools that are not included in most Linux
+distributions (or OS X for that matter) and which are also not available from the Python packaging
+index (PyPI) because they are not Python tools. If you do not use the :ref:`recommended simple
+installation instructions via Conda <simple-installation>`, you need to install those non-Python
+dependencies manually. Regular Python dependencies are automatically pulled in when IgDiscover
+itself is installed in the last step with the ``pip install`` command. The instructions below are
+written for Linux and require if you want to try this on OS X.
+
 
 Install non-Python dependencies
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
