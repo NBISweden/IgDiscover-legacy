@@ -582,6 +582,7 @@ rule igdiscover_compose:
 			criteria += ['--looks-like-V']
 		criteria += ['--unique-CDR3={}'.format(conf['unique_cdr3s'])]
 		criteria += ['--cluster-size={}'.format(conf['cluster_size'])]
+		criteria += ['--unique-J={}'.format(conf['unique_js'])]
 		criteria = ' '.join(criteria)
 		shell("igdiscover compose {criteria} {input.tab} > {output.fasta}")
 
