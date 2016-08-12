@@ -9,6 +9,7 @@ import sys
 import shutil
 import subprocess
 import pkg_resources
+from igdiscover.utils import Config
 try:
 	import tkinter as tk
 	from tkinter import messagebox
@@ -19,9 +20,6 @@ except ImportError:
 from cutadapt.xopen import xopen
 
 logger = logging.getLogger(__name__)
-
-
-PIPELINE_CONF = 'igdiscover.yaml'
 
 
 def add_arguments(parser):
@@ -271,8 +269,8 @@ def main(args):
 		library_name = os.path.basename(os.path.normpath(args.directory))
 
 	# Write the configuration file
-	configuration = pkg_resources.resource_string('igdiscover', PIPELINE_CONF).decode()
-	with open(os.path.join(args.directory, PIPELINE_CONF), 'w') as f:
+	configuration = pkg_resources.resource_string('igdiscover', Config.DEFAULT_PATH).decode()
+	with open(os.path.join(args.directory, Config.DEFAULT_PATH), 'w') as f:
 		for line in configuration.splitlines(keepends=True):
 			if line.startswith('library_name:'):
 				line = 'library_name: ' + library_name + '\n'
@@ -292,6 +290,6 @@ def main(args):
 		# Only suggest to edit the config file if at least one GUI dialog has been shown
 		if gui.yesno('Directory initialized',
 			   'Do you want to edit the configuration file now?'):
-			launch(os.path.join(args.directory, PIPELINE_CONF))
+			launch(os.path.join(args.directory, Config.DEFAULT_PATH))
 	logger.info('Directory %s initialized.', args.directory)
-	logger.info('Edit %s/%s, then run "cd %s && igdiscover run" to start the analysis', args.directory, PIPELINE_CONF, args.directory)
+	logger.info('Edit %s/%s, then run "cd %s && igdiscover run" to start the analysis', args.directory, Config.DEFAULT_PATH, args.directory)

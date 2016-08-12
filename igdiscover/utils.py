@@ -184,10 +184,11 @@ class ConfigurationError(Exception):
 
 
 class Config:
-	PATH = 'igdiscover.yaml'
+	DEFAULT_PATH = 'igdiscover.yaml'
 
-	def __init__(self, path=PATH):
+	def __init__(self, file):
 		# Set some defaults.
+		self.species = 'human'
 		self.merge_program = 'pear'
 		self.flash_maximum_overlap = 300
 		self.limit = None  # or an integer
@@ -197,23 +198,22 @@ class Config:
 		self.minimum_merged_read_length = 300
 		self.mismatch_penalty = None
 		self.barcode_length = 0
-		self.iterations = 1
+		self.iterations = 4
 		self.ignore_j = False
 		self.subsample = 1000
 		self.stranded = False
 		self.forward_primers = None
 		self.reverse_primers = None
 		self.rename = True
-		self.seed = None
-		self.pre_germline_filter = dict(unique_cdr3s=2, unique_js=0, check_motifs=True, whitelist=True, cluster_size=0, differences=2)
-		self.germline_filter = dict(unique_cdr3s=3, unique_js=0, check_motifs=True, whitelist=True, cluster_size=100, differences=2)
+		self.seed = 123
+		self.pre_germline_filter = dict(unique_cdr3s=2, unique_js=2, check_motifs=False, whitelist=True, cluster_size=0, differences=2)
+		self.germline_filter = dict(unique_cdr3s=3, unique_js=2, check_motifs=False, whitelist=True, cluster_size=100, differences=2)
 		self.library_name = os.path.basename(os.getcwd())
 
-		self.read_from(path)
+		self.read_from(file)
 
-	def read_from(self, path):
-		with open(path) as f:
-			content = f.read()
+	def read_from(self, file):
+		content = file.read()
 		new_config = self.make_compatible(yaml.safe_load(content))
 		self.__dict__.update(new_config)
 
@@ -234,6 +234,11 @@ class Config:
 		if 'seed' in config and config['seed'] is False:
 			config['seed'] = None
 		return config
+
+	@classmethod
+	def from_default_path(cls):
+		with open(cls.DEFAULT_PATH) as f:
+			return Config(file=f)
 
 
 def nt_to_aa(s):
