@@ -129,21 +129,21 @@ seed: 123
 # Filtering criteria applied to candidate sequences in all iterations except the last.
 #
 pre_germline_filter:
-  unique_cdr3s: 2     # Minimum number of unique CDR3s (within exact matches)
-  unique_js: 0        # Minimum number of unique J genes (within exact matches)
-  check_motifs: true  # Check whether 5' end starts with known motif
-  whitelist: true     # Use the whitelist
-  cluster_size: 0     # Minimum number of sequences assigned to cluster
-  differences: 2      # Merge sequences if they have at most this number of differences
+  unique_cdr3s: 2      # Minimum number of unique CDR3s (within exact matches)
+  unique_js: 0         # Minimum number of unique J genes (within exact matches)
+  check_motifs: true   # Check whether 5' end starts with known motif
+  whitelist: true      # Use the whitelist
+  cluster_size: 0      # Minimum number of sequences assigned to cluster
+  differences: 2       # Merge sequences if they have at most this number of differences
 
 
 # Filtering criteria applied to candidate sequences in the last iteration.
 # These should be more strict than the pre_germline_filter criteria.
 #
 germline_filter:
-  unique_cdr3s: 3     # Minimum number of unique CDR3s (within exact matches)
-  unique_js: 0        # Minimum number of unique J genes (within exact matches)
-  check_motifs: true  # Check whether 5' end starts with known motif
-  whitelist: true     # Use the whitelist
-  cluster_size: 100   # Minimum number of sequences assigned to cluster
-  differences: 2      # Merge sequences if they have at most this number of differences
+  unique_cdr3s: 3      # Minimum number of unique CDR3s (within exact matches)
+  unique_js: 0         # Minimum number of unique J genes (within exact matches)
+  check_motifs: true   # Check whether 5' end starts with known motif
+  whitelist: true      # Use the whitelist
+  cluster_size: 100    # Minimum number of sequences assigned to cluster
+  differences: 2       # Merge sequences if they have at most this number of differences
