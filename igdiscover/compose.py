@@ -121,7 +121,7 @@ def main(args):
 	whitelist = set()
 	if args.whitelist:
 		for record in FastaReader(args.whitelist):
-			whitelist.add(record.sequence)
+			whitelist.add(record.sequence.upper())
 		logger.info('%d unique sequences in whitelist', len(whitelist))
 
 	# Read in tables
