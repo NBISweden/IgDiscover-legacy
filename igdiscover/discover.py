@@ -39,7 +39,7 @@ def add_arguments(parser):
 		help='Seed value for random numbers for reproducible runs. If omitted, runs'
 		'are not reproducible.')
 	arg('--consensus-threshold', '-t', metavar='PERCENT', type=float, default=60,
-		help='Threshold for consensus computation. Default: %(default)s%%.')
+		help='Threshold for consensus computation. Default: %(default)s%%')
 	arg('--prefix', default='', metavar='PREFIX',
 		help='Add PREFIX before sequence names')
 	arg('--gene', '-g', action='append', default=[],
@@ -58,7 +58,7 @@ def add_arguments(parser):
 		help='Do not run linkage cluster analysis.')
 	arg('--max-n-bases', type=int, default=0, metavar='MAXN',
 		help='Remove rows that have more than MAXN "N" nucleotides. If >0, an '
-			'N_bases column is added. Default: 0')
+			'N_bases column is added. Default: %(default)s')
 	arg('--subsample', metavar='N', type=int, default=1000,
 		help='When clustering, use N randomly chosen sequences. Default: %(default)s')
 	arg('--table-output', '-o', metavar='DIRECTORY',
@@ -72,8 +72,9 @@ def add_arguments(parser):
 	arg('--approx', action='store_true', default=False,
 		help='Count also approximate matches (adds three columns to output table).')
 	arg('--error-rate', metavar='PERCENT', type=float, default=1,
-		help='When finding approximate V gene matches, allow PERCENT errors. Default: %(default)s.')
-	arg('table', help='Table with parsed IgBLAST results')  # nargs='+'
+		help='When finding approximate V gene matches, allow PERCENT errors. '
+			'Default: %(default)s')
+	arg('table', help='Table with parsed IgBLAST results')
 
 
 Groupinfo = namedtuple('Groupinfo', 'count unique_J unique_CDR3')
