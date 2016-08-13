@@ -27,7 +27,7 @@ from .species import looks_like_V_gene
 logger = logging.getLogger(__name__)
 
 
-MINGROUPSIZE_CONSENSUS = 5
+MINGROUPSIZE = 5
 MAXIMUM_SUBSAMPLE_SIZE = 1600
 
 
@@ -156,7 +156,7 @@ class Discoverer:
 		for left, right in self.windows:
 			left, right = float(left), float(right)
 			group_in_window = group[(left <= group.V_SHM) & (group.V_SHM < right)]
-			if len(group_in_window) < MINGROUPSIZE_CONSENSUS:
+			if len(group_in_window) < MINGROUPSIZE:
 				continue
 			sibling = self._sibling_sequence(group_in_window)
 			if left == int(left):
@@ -180,7 +180,7 @@ class Discoverer:
 			cl = 1
 			for ind in cluster_indices:
 				group_in_window = group.loc[ind]
-				if len(group_in_window) < MINGROUPSIZE_CONSENSUS:
+				if len(group_in_window) < MINGROUPSIZE:
 					continue
 				sibling = self._sibling_sequence(group_in_window)
 				name = 'cl{}'.format(cl)
@@ -343,9 +343,9 @@ def main(args):
 
 	groups = []
 	for gene, group in table.groupby('V_gene'):
-		if not ('all' in genes or len(genes) == 0 or gene in genes):
+		if genes and gene not in genes:
 			continue
-		if len(group) < MINGROUPSIZE_CONSENSUS:
+		if len(group) < MINGROUPSIZE:
 			continue
 		groups.append((gene, group))
 
