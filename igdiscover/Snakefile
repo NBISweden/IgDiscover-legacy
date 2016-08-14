@@ -3,6 +3,7 @@
 """
 import shutil
 import textwrap
+import json
 from sqt.dna import reverse_complement
 from sqt import FastaReader
 import igdiscover
@@ -48,7 +49,13 @@ FINAL_TARGETS = [
 ]
 TARGETS = expand('iteration-{nr:02d}/{path}', nr=range(1, config.iterations+1), path=ITERATION_TARGETS+DISCOVERY_TARGETS)
 TARGETS += expand('final/{path}', path=ITERATION_TARGETS+FINAL_TARGETS)
-TARGETS += ['stats/readlengths.pdf', 'stats/merging-successful', 'stats/trimming-successful', 'stats/version.txt']
+TARGETS += [
+	'stats/readlengths.pdf',
+	'stats/merging-successful',
+	'stats/trimming-successful',
+	'stats/version.txt',
+	'stats/stats.json'
+]
 
 # Use pigz (parallel gzip) if available
 GZIP = 'pigz' if shutil.which('pigz') is not None else 'gzip'
@@ -643,3 +650,29 @@ rule version:
 	run:
 		with open(output.txt, 'w') as f:
 			print('IgDiscover version', igdiscover.__version__, file=f)
+
+
+def count_sequences(path):
+	with FastaReader(path) as f:
+		return len(list(f))
+
+
+rule json_stats:
+	output: json='stats/stats.json'
+	input:
+		v_databases=[
+		'{iteration}/database/{species}_V.fasta'.format(species=config.species,
+			iteration='iteration-{:02d}'.format(i+1) if i < config.iterations else 'final')
+			for i in range(config.iterations + 1)]
+	run:
+		d = OrderedDict()
+		d['version'] = igdiscover.__version__
+
+		database_sizes = []
+		for path in input.v_databases:
+			database_sizes.append(count_sequences(path))
+		d['database_sizes'] = database_sizes
+
+		with open(output.json, 'w') as f:
+			json.dump(d, f, indent=2)
+			print(file=f)
