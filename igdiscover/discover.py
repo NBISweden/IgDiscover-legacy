@@ -188,7 +188,7 @@ class Discoverer:
 				cl += 1
 
 	def set_random_seed(self, name):
-		"""Set random seed depending on gene name and seed attribute"""
+		"""Set random seed depending on gene name and seed given to constructor"""
 		h = hashlib.md5(name.encode()).digest()[:4]
 		n = int.from_bytes(h, byteorder='big')
 		random.seed(n + self.seed)
@@ -323,7 +323,8 @@ def main(args):
 		logger.info('%s rows remain after discarding J%%SHM > 0', len(table))
 
 	if args.approx:
-		logger.info('Approximate comparisons between V gene sequence and consensus allow %.1f%% errors.', v_error_rate*100)
+		logger.info('Approximate comparisons between V gene sequence and consensus '
+			'allow %.1f%% errors.', v_error_rate*100)
 
 	columns = list(Candidate._fields)
 	if not args.approx:
