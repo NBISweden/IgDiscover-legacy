@@ -11,7 +11,6 @@ Discard the following rows in the table:
 The filtered table is printed to standard output.
 """
 import logging
-from itertools import islice
 import pandas as pd
 
 from .table import read_table

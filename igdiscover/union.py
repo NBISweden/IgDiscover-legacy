@@ -4,7 +4,6 @@ Compute union of sequences in multiple FASTA files
 import logging
 from collections import namedtuple
 from sqt import FastaReader
-from sqt.align import edit_distance
 
 from .utils import Merger
 
@@ -13,9 +12,9 @@ logger = logging.getLogger(__name__)
 
 def add_arguments(parser):
 	arg = parser.add_argument
-	arg('--max-differences', type=int, metavar='MAXDIFF', default=0,
-		help='Merge sequences if they have at most MAXDIFF differences. '
-		' Default: %(default)s')
+	# arg('--max-differences', type=int, metavar='MAXDIFF', default=0,
+	# 	help='Merge sequences if they have at most MAXDIFF differences. '
+	# 	' Default: %(default)s')
 	arg('fasta', help='FASTA file', nargs='+')
 
 
@@ -26,7 +25,7 @@ class SequenceMerger(Merger):
 	"""
 	Merge sequences where one is a prefix of the other into single entries.
 	"""
-	def __init__(self, max_differences):
+	def __init__(self):
 		super().__init__()
 
 	def merged(self, s, t):
@@ -46,8 +45,9 @@ class SequenceMerger(Merger):
 			return s
 		return None
 
+
 def main(args):
-	merger = SequenceMerger(args.max_differences)
+	merger = SequenceMerger()
 	n_read = 0
 	for path in args.fasta:
 		n = 0
