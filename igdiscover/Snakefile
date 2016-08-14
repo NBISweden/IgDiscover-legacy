@@ -5,7 +5,7 @@ import shutil
 import textwrap
 import json
 from sqt.dna import reverse_complement
-from sqt import FastaReader
+from sqt import FastaReader, SequenceReader
 import igdiscover
 from igdiscover.utils import relative_symlink, Config
 
@@ -53,7 +53,6 @@ TARGETS += [
 	'stats/readlengths.pdf',
 	'stats/merging-successful',
 	'stats/trimming-successful',
-	'stats/version.txt',
 	'stats/stats.json'
 ]
 
@@ -94,6 +93,15 @@ else:
 			'{GZIP} < {input} > {output}'
 
 
+# After the rules above, we either end up with
+#
+# 'reads/1-limited.1.fastq.gz' and 'reads/1-limited.2.fastq.gz'
+# or
+# 'reads/1-limited.fasta.gz'
+# or
+# 'reads/1-limited.fastq.gz'
+
+
 if config.merge_program == 'flash':
 	rule flash_merge:
 		"""Use FLASH to merge paired-end reads"""
@@ -109,8 +117,7 @@ if config.merge_program == 'flash':
 	rule parse_flash_stats:
 		input: log='reads/2-flash.log'
 		output:
-			total='stats/totalreads.txt',
-			merged='stats/mergedreads.txt',
+			json='stats/reads.json'
 		run:
 			total_ex = re.compile(r'\[FLASH\]\s*Total reads:\s*([0-9]+)')
 			merged_ex = re.compile(r'\[FLASH\]\s*Combined reads:\s*([0-9]+)')
@@ -126,10 +133,12 @@ if config.merge_program == 'flash':
 						break
 				else:
 					sys.exit('Could not parse the FLASH log file')
-			with open(output.total, 'w') as f:
-				print(total, file=f)
-			with open(output.merged, 'w') as f:
-				print(merged, file=f)
+			d = OrderedDict({'total': total})
+			d['merged'] = merged
+			d['merging_was_done'] = True
+			with open(output.json, 'w') as f:
+				json.dump(d, f)
+
 
 elif config.merge_program == 'pear':
 	rule pear_merge:
@@ -155,8 +164,7 @@ elif config.merge_program == 'pear':
 	rule parse_pear_stats:
 		input: log='reads/2-pear.log'
 		output:
-			total='stats/totalreads.txt',
-			merged='stats/mergedreads.txt',
+			json='stats/reads.json'
 		run:
 			expression = re.compile(r"Assembled reads \.*: (?P<merged>[0-9,]*) / (?P<total>[0-9,]*)")
 			with open(input.log) as f:
@@ -168,10 +176,11 @@ elif config.merge_program == 'pear':
 						break
 				else:
 					sys.exit('Could not parse the PEAR log file')
-			with open(output.total, 'w') as f:
-				print(total, file=f)
-			with open(output.merged, 'w') as f:
-				print(merged, file=f)
+			d = OrderedDict({'total': total})
+			d['merged'] = merged
+			d['merging_was_done'] = True
+			with open(output.json, 'w') as f:
+				json.dump(d, f)
 else:
 	sys.exit("merge_program {config.merge_program!r} given in configuration file not recognized".format(config=config))
 
@@ -185,41 +194,49 @@ rule symlink_merged:
 		relative_symlink(input.fastaq, output.fastaq, force=True)
 
 
-rule successful_merging_single_fasta:
-	"""Touch the marker file for successful merging if no merging was done"""
-	output:
-		total='stats/totalreads.txt',
-		merged='stats/mergedreads.txt',
+# After the rules above, we end up with
+#
+# 'reads/2-merged.fasta.gz'
+# or
+# 'reads/2-merged.fastq.gz'
+
+
+rule read_stats_single_fasta:
+	"""Compute statistics if no merging was done (FASTA input)"""
+	output: json='stats/reads.json',
 	input: fastagz='reads/1-limited.fasta.gz'
-	shell:
-		"""zgrep -c '^>' {input.fastagz} | tee {output.merged} > {output.total}"""
+	run:
+		total = count_sequences(input.fastagz)
+		d = OrderedDict({'total': total})
+		d['merged'] = total
+		d['merging_was_done'] = False
+		with open(output.json, 'w') as f:
+			json.dump(d, f)
 
 
-rule successful_merging_single_fastq:
-	"""Touch the marker file for successful merging if no merging was done"""
-	output:
-		total='stats/totalreads.txt',
-		merged='stats/mergedreads.txt',
-	input: fastqgz='reads/1-limited.fastq.gz'
-	shell:
-		"""{GZIP} -dc {input.fastqgz} | awk 'END {{print NR/4}}' | tee {output.merged} > {output.total}"""
-
-
-def read_int(path):
-	with open(path) as f:
-		value = int(f.read().strip())
-	return value
+rule read_stats_single_fastq:
+	"""Compute statistics if no merging was done (FASTQ input)"""
+	output: stats='stats/reads.json',
+	input: fastagz='reads/1-limited.fastq.gz'
+	run:
+		total = count_sequences(input.fastagz)
+		d = OrderedDict({'total': total})
+		d['merged'] = total
+		d['merging_was_done'] = False
+		with open(output.json, 'w') as f:
+			json.dump(d, f)
 
 
 rule check_merging:
 	"""Ensure the merging succeeded"""
 	output: success='stats/merging-successful'
 	input:
-		total='stats/totalreads.txt',
-		merged='stats/mergedreads.txt',
+		json='stats/reads.json'
 	run:
-		total = read_int(input.total)
-		merged = read_int(input.merged)
+		with open(input.json) as f:
+			d = json.load(f)
+		total = d['total']
+		merged = d['merged']
 		if total == 0 or merged / total >= 0.3:
 			with open(output.success, 'w') as f:
 				print('This marker file exists if at least 30% of the input '
@@ -318,28 +335,32 @@ else:
 
 
 rule trimmed_fasta_stats:
-	output: txt='stats/trimmedreads.txt',
+	output: json='stats/trimmed.json',
 	input: fastagz='reads/4-trimmed.fasta.gz'
-	shell: "zgrep -c '^>' {input.fastagz} >> {output.txt}"
+	run:
+		with open(output.json, 'w') as f:
+			json.dump({'trimmed': count_sequences(input.fastagz)}, f)
 
 
 rule trimmed_fastq_stats:
-	output: txt='stats/trimmedreads.txt',
+	output: json='stats/trimmed.json',
 	input: fastqgz='reads/4-trimmed.fastq.gz'
-	shell: """{GZIP} -dc {input.fastqgz} | awk 'END {{print NR/4}}' > {output.txt}"""
+	run:
+		with open(output.json, 'w') as f:
+			json.dump({'trimmed': count_sequences(input.fastqgz)}, f)
 
 
 rule check_trimming:
 	"""Ensure that some reads are left after trimming"""
 	output: success='stats/trimming-successful'
 	input:
-		total='stats/totalreads.txt',
-		trimmed='stats/trimmedreads.txt',
+		reads_json='stats/reads.json',
+		trimmed_json='stats/trimmed.json'
 	run:
-		with open(input.total) as f:
-			total = int(f.read().strip())
-		with open(input.trimmed) as f:
-			trimmed = int(f.read().strip())
+		with open(input.reads_json) as f:
+			total = json.load(f)['total']
+		with open(input.trimmed_json) as f:
+			trimmed = json.load(f)['trimmed']
 		if total == 0 or trimmed / total >= 0.1:
 			with open(output.success, 'w') as f:
 				print('This marker file exists if at least 10% of input '
@@ -539,9 +560,9 @@ rule igdiscover_clusterplot:
 		tab="{dir}/filtered.tab.gz"
 	params:
 		clusterplots="{dir}/clusterplots/",
-		ignore_j='--ignore-J' if config.ignore_j else ''
+		ignore_j=' --ignore-J' if config.ignore_j else ''
 	shell:
-		"igdiscover clusterplot {params.ignore_j} {input.tab} {params.clusterplots} && touch {output.done}"
+		"igdiscover clusterplot{params.ignore_j} {input.tab} {params.clusterplots} && touch {output.done}"
 
 
 rule igdiscover_discover:
@@ -653,8 +674,11 @@ rule version:
 
 
 def count_sequences(path):
-	with FastaReader(path) as f:
-		return len(list(f))
+	with SequenceReader(path) as fr:
+		n = 0
+		for record in fr:
+			n += 1
+		return n
 
 
 rule json_stats:
@@ -663,7 +687,9 @@ rule json_stats:
 		v_databases=[
 		'{iteration}/database/{species}_V.fasta'.format(species=config.species,
 			iteration='iteration-{:02d}'.format(i+1) if i < config.iterations else 'final')
-			for i in range(config.iterations + 1)]
+			for i in range(config.iterations + 1)],
+		reads='stats/reads.json',
+		trimmed='stats/trimmed.json'
 	run:
 		d = OrderedDict()
 		d['version'] = igdiscover.__version__
@@ -673,6 +699,10 @@ rule json_stats:
 			database_sizes.append(count_sequences(path))
 		d['database_sizes'] = database_sizes
 
+		with open(input.reads) as f:
+			d['reads'] = json.load(f)
+		with open(input.trimmed) as f:
+			d['reads']['trimmed'] = json.load(f)['trimmed']
 		with open(output.json, 'w') as f:
 			json.dump(d, f, indent=2)
 			print(file=f)
