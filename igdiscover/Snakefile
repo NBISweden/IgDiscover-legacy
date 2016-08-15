@@ -673,12 +673,27 @@ rule version:
 			print('IgDiscover version', igdiscover.__version__, file=f)
 
 
+def get_sequences(path):
+	with SequenceReader(path) as fr:
+		sequences = [ record.sequence.upper() for record in fr ]
+	return sequences
+
+
 def count_sequences(path):
 	with SequenceReader(path) as fr:
 		n = 0
-		for record in fr:
+		for _ in fr:
 			n += 1
-		return n
+	return n
+
+
+def gained_lost(path_before, path_after):
+	before = set(get_sequences(path_before))
+	after = set(get_sequences(path_after))
+	gained = len(after - before)
+	lost = len(before - after)
+
+	return gained, lost
 
 
 rule json_stats:
@@ -694,15 +709,30 @@ rule json_stats:
 		d = OrderedDict()
 		d['version'] = igdiscover.__version__
 
-		database_sizes = []
-		for path in input.v_databases:
-			database_sizes.append(count_sequences(path))
-		d['database_sizes'] = database_sizes
+
+		iterations = []
+		for i, db_path in enumerate(input.v_databases):
+			sequences = set(get_sequences(db_path))
+			info = OrderedDict(total=len(sequences))
+			if i == 0:
+				gained, lost = 0, 0
+			else:
+				gained = len(sequences - prev_sequences)
+				lost = len(prev_sequences - sequences)
+			info['gained'] = gained
+			info['lost'] = lost
+			prev_sequences = sequences
+			iterations.append(info)
+		d['iterations'] = iterations
 
 		with open(input.reads) as f:
-			d['reads'] = json.load(f)
+			d['reads'] = OrderedDict(json.load(f))
 		with open(input.trimmed) as f:
 			d['reads']['trimmed'] = json.load(f)['trimmed']
+
+
+
+
 		with open(output.json, 'w') as f:
 			json.dump(d, f, indent=2)
 			print(file=f)
