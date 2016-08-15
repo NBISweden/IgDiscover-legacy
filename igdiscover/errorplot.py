@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 def add_arguments(parser):
-	parser.add_argument('--minimum-group-size', '-m', metavar='N', default=200,
+	parser.add_argument('--minimum-group-size', '-m', metavar='N', default=200, type=int,
 		help='Do not plot if there are less than N sequences for a gene (default: %(default)s)')
 	parser.add_argument('--ignore-J', action='store_true', default=False,
 		help='Include also rows without J assignment or J%%SHM>0.')
