@@ -241,7 +241,8 @@ class Discoverer:
 			if n_bases > self.max_n_bases:
 				logger.debug('Sibling %s has too many N bases', sibling_info.name)
 				continue
-			group_exact_V = group[group.V_nt == sibling]
+			prefix_identical = group.V_nt.map(lambda s: s.startswith(sibling) or sibling.startswith(s))
+			group_exact_V = group[prefix_identical]
 			if self.approx_columns:
 				group['consensus_diff'] = [ edit_distance(v_nt, sibling) for v_nt in group.V_nt ]
 				group_approximate_V = group[group.consensus_diff <= len(sibling) * self.v_error_rate]
