@@ -136,14 +136,22 @@ class Discoverer:
 		self.max_n_bases = max_n_bases
 		self.seed = seed
 
-	def _sibling_sequence(self, group):
+	def _sibling_sequence(self, gene, group):
 		"""
 		For a given group, compute a consensus sequence over the V gene sequences
 		in that group.
+
+		If the found sibling is slightly longer or shorter than the version in
+		the database, adjust it so it corresponds to the database version exactly.
 		"""
-		return iterative_consensus(list(group.V_nt), program='muscle-medium',
+		sequence = iterative_consensus(list(group.V_nt), program='muscle-medium',
 			threshold=self.consensus_threshold/100,
 			maximum_subsample_size=self.downsample)
+		if gene in self.database:
+			database_sequence = self.database[gene]
+			if sequence.startswith(database_sequence) or database_sequence.startswith(sequence):
+				return database_sequence
+		return sequence
 
 	def _guess_chain(self, group):
 		"""
@@ -152,19 +160,27 @@ class Discoverer:
 		return Counter(group.chain).most_common()[0][0]
 
 	def _collect_siblings(self, gene, group):
+		"""
+		gene -- gene name
+		group -- pandas.DataFrame of sequences assigned to that gene
+		"""
 		group = group.copy()
+		database_sequence = self.database.get(gene, None)
+		database_sequence_found = False
 		for left, right in self.windows:
 			left, right = float(left), float(right)
 			group_in_window = group[(left <= group.V_SHM) & (group.V_SHM < right)]
 			if len(group_in_window) < MINGROUPSIZE:
 				continue
-			sibling = self._sibling_sequence(group_in_window)
+			sibling = self._sibling_sequence(gene, group_in_window)
 			if left == int(left):
 				left = int(left)
 			if right == int(right):
 				right = int(right)
 			requested = (left, right) == (self.left, self.right)
 			name = '{}-{}'.format(left, right)
+			if sibling == database_sequence:
+				database_sequence_found = True
 			yield SiblingInfo(sibling, requested, name, group_in_window)
 
 		if self.cluster:
@@ -181,11 +197,17 @@ class Discoverer:
 			for ind in cluster_indices:
 				group_in_window = group.loc[ind]
 				if len(group_in_window) < MINGROUPSIZE:
+					logger.info('Skipping cluster %d because it is too small', ind)
 					continue
-				sibling = self._sibling_sequence(group_in_window)
+				sibling = self._sibling_sequence(gene, group_in_window)
 				name = 'cl{}'.format(cl)
+				if sibling == database_sequence:
+					database_sequence_found = True
 				yield SiblingInfo(sibling, False, name, group_in_window)
 				cl += 1
+		if database_sequence and not database_sequence_found:
+			logger.info('Original database version not found for %r', gene)
+
 
 	def set_random_seed(self, name):
 		"""Set random seed depending on gene name and seed given to constructor"""
@@ -211,6 +233,7 @@ class Discoverer:
 			sibling = sibling_info.sequence
 			n_bases = sibling.count('N')
 			if n_bases > self.max_n_bases:
+				logger.debug('Sibling %s has too many N bases', sibling_info.name)
 				continue
 			group_exact_V = group[group.V_nt == sibling]
 			if self.approx_columns:
