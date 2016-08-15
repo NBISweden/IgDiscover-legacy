@@ -205,9 +205,15 @@ class Discoverer:
 					database_sequence_found = True
 				yield SiblingInfo(sibling, False, name, group_in_window)
 				cl += 1
-		if database_sequence and not database_sequence_found:
-			logger.info('Original database version not found for %r', gene)
 
+		if database_sequence:
+			# Hard-coded threshold of 1% V SHM
+			group_in_window = group[group.V_SHM <= 1.0]
+			if len(group_in_window) >= MINGROUPSIZE:
+				if not database_sequence_found:
+					logger.info('Database sequence for %r is expressed, but missing from candidates. '
+						'Re-adding it.', gene)
+				yield SiblingInfo(database_sequence, False, 'db', group_in_window)
 
 	def set_random_seed(self, name):
 		"""Set random seed depending on gene name and seed given to constructor"""
