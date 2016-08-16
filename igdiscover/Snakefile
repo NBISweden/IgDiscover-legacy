@@ -691,38 +691,46 @@ def count_sequences(path):
 rule json_stats:
 	output: json='stats/stats.json'
 	input:
-		v_databases=[
-		'{iteration}/database/{species}_V.fasta'.format(species=config.species,
-			iteration='iteration-{:02d}'.format(i+1) if i < config.iterations else 'final')
-			for i in range(config.iterations + 1)],
+		original_db='database/{species}_V.fasta'.format(species=config.species),
+		v_pre_germline=['iteration-{:02d}/new_V_pregermline.fasta'.format(i+1) for i in range(config.iterations)],
+		v_germline=['iteration-{:02d}/new_V_germline.fasta'.format(i+1) for i in range(config.iterations)],
 		reads='stats/reads.json',
 		trimmed='stats/trimmed.json'
 	run:
 		d = OrderedDict()
 		d['version'] = igdiscover.__version__
 
-		iterations = []
-		for i, db_path in enumerate(input.v_databases):
-			sequences = set(get_sequences(db_path))
-			info = OrderedDict(total=len(sequences))
-			if i == 0:
-				gained, lost = 0, 0
-			else:
-				gained = len(sequences - prev_sequences)
-				lost = len(prev_sequences - sequences)
-			info['gained'] = gained
-			info['lost'] = lost
-			prev_sequences = sequences
-			iterations.append(info)
-		d['iterations'] = iterations
-
 		with open(input.reads) as f:
 			d['reads'] = OrderedDict(json.load(f))
 		with open(input.trimmed) as f:
 			d['reads']['trimmed'] = json.load(f)['trimmed']
 
+		iterations = []
+		prev_sequences = set(get_sequences(input.original_db))
+		size = len(prev_sequences)
+		info = OrderedDict(size=size)
+		iterations.append(info)
+		for i, (pre_germline_path, germline_path) in enumerate(
+				zip(input.v_pre_germline, input.v_germline)):
 
+			pre_germline_sequences = set(get_sequences(pre_germline_path))
+			germline_sequences = set(get_sequences(germline_path))
 
+			gained = len(germline_sequences - prev_sequences)
+			lost = len(prev_sequences - germline_sequences)
+			gained_pre = len(pre_germline_sequences - prev_sequences)
+			lost_pre = len(prev_sequences - pre_germline_sequences)
+
+			info = OrderedDict()
+			info['size'] = len(germline_sequences)
+			info['gained'] = gained
+			info['lost'] = lost
+			info['size_pre'] = len(pre_germline_sequences)
+			info['gained_pre'] = gained_pre
+			info['lost_pre'] = lost_pre
+			iterations.append(info)
+			prev_sequences = pre_germline_sequences
+		d['iterations'] = iterations
 
 		with open(output.json, 'w') as f:
 			json.dump(d, f, indent=2)
