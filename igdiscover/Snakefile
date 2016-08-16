@@ -39,7 +39,8 @@ ITERATION_TARGETS = [
 # Targets for non-final iterations
 DISCOVERY_TARGETS = [
 	'candidates.tab',
-	'new_V_database.fasta',
+	'new_V_germline.fasta',
+	'new_V_pregermline.fasta',
 ]
 # Targets for final iteration
 FINAL_TARGETS = [
@@ -461,7 +462,7 @@ for i in range(2, config.iterations + 1):
 		output:
 			fasta='iteration-{nr:02d}/database/{{species}}_V.fasta'.format(nr=i)
 		input:
-			fasta='iteration-{nr:02d}/new_V_database.fasta'.format(nr=i-1)
+			fasta='iteration-{nr:02d}/new_V_pregermline.fasta'.format(nr=i-1)
 		shell:
 			"cp -p {input.fasta} {output.fasta}"
 
@@ -479,7 +480,7 @@ else:
 		output:
 			fasta='final/database/{species}_V.fasta'.format(species=config.species)
 		input:
-			fasta='iteration-{nr:02d}/new_V_database.fasta'.format(nr=config.iterations)
+			fasta='iteration-{nr:02d}/new_V_germline.fasta'.format(nr=config.iterations)
 		shell:
 			"cp -p {input.fasta} {output.fasta}"
 
@@ -595,13 +596,13 @@ rule whitelist:
 rule igdiscover_compose:
 	"""Construct a new database out of the discovered sequences"""
 	output:
-		fasta='iteration-{nr}/new_V_database.fasta'
+		fasta='iteration-{nr}/new_V_{pre,(pre|)}germline.fasta'
 	input:
 		tab='iteration-{nr}/candidates.tab',
 		whitelist='whitelist.fasta'
 	run:
 		nr = int(wildcards.nr, base=10)
-		conf = config.germline_filter if nr == config.iterations else config.pre_germline_filter
+		conf = config.pre_germline_filter if wildcards.pre == 'pre' else config.germline_filter
 		criteria = []
 		criteria += ['--max-differences={}'.format(conf['differences'])]
 		if conf['whitelist']:
@@ -708,7 +709,6 @@ rule json_stats:
 	run:
 		d = OrderedDict()
 		d['version'] = igdiscover.__version__
-
 
 		iterations = []
 		for i, db_path in enumerate(input.v_databases):

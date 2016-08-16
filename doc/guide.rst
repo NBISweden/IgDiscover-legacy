@@ -248,11 +248,11 @@ iteration-xx/candidates.tab
     A table with candidate novel V alleles (or genes).
     This is a list of sequences found through the *windowing strategy* or *linkage cluster analysis*, as discussed in our paper.
 
-iteration-xx/new_V_database.fasta
+iteration-xx/new_V_germline.fasta, iteration-xx/new_V_pregermline.fasta
     The discovered list of V genes for this iteration.
     The file is created from the ``candidates.tab`` file by applying either the germline or pre-germline filter.
-    The germline filter is used in the last iteration only.
-    The pre-germline filter is used in earlier iterations.
+    The file resulting from application of the germline filter is used in the last iteration only.
+    The file resulting from application of the pre-germline filter is used in earlier iterations.
 
 
 Other files

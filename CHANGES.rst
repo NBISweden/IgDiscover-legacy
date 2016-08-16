@@ -23,6 +23,9 @@ development version
 * Different runs of IgDiscover with the same parameters on the same input files
   will now give the same results. See the ``seed`` parameter in the configuration,
   also on how to get non-reproducible results as before.
+* Both the germline and pre-germline filter are now applied in each iteration.
+  Instead of the ``new_V_database.fasta`` file, two files named
+  ``new_V_germline.fasta`` and ``new_V_pregermline.fasta`` are created.
 * IgDiscover is now also available on OS X.
 
 v0.3
