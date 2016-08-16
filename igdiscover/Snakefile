@@ -688,15 +688,6 @@ def count_sequences(path):
 	return n
 
 
-def gained_lost(path_before, path_after):
-	before = set(get_sequences(path_before))
-	after = set(get_sequences(path_after))
-	gained = len(after - before)
-	lost = len(before - after)
-
-	return gained, lost
-
-
 rule json_stats:
 	output: json='stats/stats.json'
 	input:
