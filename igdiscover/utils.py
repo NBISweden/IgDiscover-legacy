@@ -206,6 +206,7 @@ class Config:
 		self.reverse_primers = None
 		self.rename = True
 		self.seed = 123
+		self.exact_copies = None
 		self.pre_germline_filter = dict(unique_cdr3s=2, unique_js=2, check_motifs=False, whitelist=True, cluster_size=0, differences=2)
 		self.germline_filter = dict(unique_cdr3s=3, unique_js=2, check_motifs=False, whitelist=True, cluster_size=100, differences=2)
 		self.library_name = os.path.basename(os.getcwd())

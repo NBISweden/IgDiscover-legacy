@@ -575,10 +575,11 @@ rule igdiscover_discover:
 		tab="{dir}/filtered.tab.gz"
 	params:
 		ignore_j=' --ignore-J' if config.ignore_j else '',
-		seed=' --seed={}'.format(config.seed) if config.seed is not None else ''
+		seed=' --seed={}'.format(config.seed) if config.seed is not None else '',
+		exact_copies=' --exact-copies={}'.format(config.exact_copies) if config.exact_copies is not None else ''
 	threads: 4  # TODO this could be increased up to 6
 	shell:
-		"igdiscover discover -j {threads}{params.seed}{params.ignore_j} "
+		"igdiscover discover -j {threads}{params.seed}{params.ignore_j}{params.exact_copies} "
 		"--subsample {config.subsample} --database {input.v_reference} "
 		"{input.tab} > {output.tab}"
 
