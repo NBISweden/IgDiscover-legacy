@@ -74,6 +74,9 @@ def add_arguments(parser):
 	arg('--error-rate', metavar='PERCENT', type=float, default=1,
 		help='When finding approximate V gene matches, allow PERCENT errors. '
 			'Default: %(default)s')
+	arg('--exact-copies', metavar='N', type=int, default=1,
+		help='When subsampling, first pick rows whose V gene sequences'
+			'have at least N exact copies in the input. Default: %(default)s')
 	arg('table', help='Table with parsed IgBLAST results')
 
 
@@ -119,8 +122,9 @@ class Discoverer:
 	Discover candidates for novel V genes.
 	"""
 	def __init__(self, database, windows, left, right, cluster, table_output,
-			  prefix, consensus_threshold, v_error_rate, downsample,
-			  cluster_subsample_size, approx_columns, max_n_bases, seed):
+			prefix, consensus_threshold, v_error_rate, downsample,
+			cluster_subsample_size, approx_columns, max_n_bases, exact_copies,
+			seed):
 		self.database = database
 		self.windows = windows
 		self.left = left
@@ -134,6 +138,7 @@ class Discoverer:
 		self.cluster_subsample_size = cluster_subsample_size
 		self.approx_columns = approx_columns
 		self.max_n_bases = max_n_bases
+		self.exact_copies = exact_copies
 		self.seed = seed
 
 	def _sibling_sequence(self, gene, group):
@@ -184,7 +189,17 @@ class Discoverer:
 			yield SiblingInfo(sibling, requested, name, group_in_window)
 
 		if self.cluster:
-			indices = downsampled(list(group.index), self.cluster_subsample_size)
+			if self.exact_copies > 1:
+				# Preferentially pick those sequences (for subsampling) that have
+				# multiple exact copies, then fill up with the others
+				exact_group = group[group.copies >= self.exact_copies]
+				indices = downsampled(list(exact_group.index), self.cluster_subsample_size)
+				if len(indices) < self.cluster_subsample_size:
+					not_exact_group = group[group.copies < self.exact_copies]
+					indices.extend(downsampled(list(not_exact_group.index),
+						self.cluster_subsample_size - len(indices)))
+			else:
+				indices = downsampled(list(group.index), self.cluster_subsample_size)
 			sequences = list(group.V_nt.loc[indices])
 			df, linkage, clusters = cluster_sequences(sequences)
 			logger.info('Clustering %d sequences (downsampled to %d) assigned to %r gave %d cluster(s)',
@@ -333,6 +348,33 @@ Candidate = namedtuple('Candidate', [
 ])
 
 
+def count_prefixes(sequences):
+	"""
+	Count how often each sequence occurs in the given list of
+	sequences. If one sequence is the prefix of another one,
+	they are considered to be 'identical'.
+
+	Return a dictionary that maps sequence to count.
+
+	>>> r = count_prefixes(['A', 'BB', 'CD', 'CDE', 'CDEF'])
+	>>> r == {'A': 1, 'BB': 1, 'CD': 3, 'CDE': 3, 'CDEF': 3}
+	True
+	"""
+	sequences = sorted(sequences)
+	sequences.append('GUARD')
+	prev = 'X'
+	start = 0
+	count = dict()
+	for i, s in enumerate(sequences):
+		if not s.startswith(prev):
+			# end of a run
+			for j in range(start, i):
+				count[sequences[j]] = i - start
+			start = i
+		prev = s
+	return count
+
+
 def main(args):
 	v_error_rate = args.error_rate / 100
 	assert 0 <= v_error_rate <= 1
@@ -355,6 +397,12 @@ def main(args):
 	if args.approx:
 		logger.info('Approximate comparisons between V gene sequence and consensus '
 			'allow %.1f%% errors.', v_error_rate*100)
+
+	if args.exact_copies > 1:
+		multiplicities = count_prefixes(table.V_nt)
+		table['copies'] = table.V_nt.map(multiplicities)
+		logger.info('%s rows contain V sequences with at least %s copies',
+			sum(table.copies >= args.exact_copies), args.exact_copies)
 
 	columns = list(Candidate._fields)
 	if not args.approx:
@@ -383,7 +431,8 @@ def main(args):
 	discoverer = Discoverer(database, windows, args.left, args.right, args.cluster,
 		args.table_output, args.prefix, args.consensus_threshold, v_error_rate,
 		MAXIMUM_SUBSAMPLE_SIZE, cluster_subsample_size=args.subsample,
-		approx_columns=args.approx, max_n_bases=args.max_n_bases, seed=args.seed)
+		approx_columns=args.approx, max_n_bases=args.max_n_bases, exact_copies=args.exact_copies,
+		seed=args.seed)
 	n_consensus = 0
 
 	Pool = SerialPool if args.threads == 1 else multiprocessing.Pool
