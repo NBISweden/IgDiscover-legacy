@@ -112,7 +112,7 @@ if config.merge_program == 'flash':
 		threads: 8
 		shell:
 			# -M: maximal overlap (2x300, 420-450bp expected fragment size)
-			"flash -t {threads} -c -M {config.flash_maximum_overlap} {input} 2> "
+			"time flash -t {threads} -c -M {config.flash_maximum_overlap} {input} 2> "
 			">(tee {output.log} >&2) | {GZIP} > {output.fastqgz}"
 
 	rule parse_flash_stats:
@@ -155,7 +155,7 @@ elif config.merge_program == 'pear':
 		threads: 8
 		shell:
 			r"""
-			pear -j {threads} -f {input[0]} -r {input[1]} -o reads/2-pear | tee {output.log}
+			time pear -j {threads} -f {input[0]} -r {input[1]} -o reads/2-pear | tee {output.log}
 			for n in unassembled.forward unassembled.reverse assembled discarded; do
 				{GZIP} -f reads/2-pear.$n.fastq
 			done
@@ -433,7 +433,7 @@ else:
 		output: fastagz=PREPROCESSED_READS
 		input: fasta="reads/5-filtered.fasta"
 		shell:
-			'vsearch --derep_fulllength {input.fasta} --strand both --sizeout --output >({GZIP} > {output.fastagz})'
+			'time vsearch --derep_fulllength {input.fasta} --strand both --sizeout --output >({GZIP} > {output.fastagz})'
 
 
 
@@ -579,7 +579,7 @@ rule igdiscover_discover:
 		exact_copies=' --exact-copies={}'.format(config.exact_copies) if config.exact_copies is not None else ''
 	threads: 4  # TODO this could be increased up to 6
 	shell:
-		"igdiscover discover -j {threads}{params.seed}{params.ignore_j}{params.exact_copies} "
+		"time igdiscover discover -j {threads}{params.seed}{params.ignore_j}{params.exact_copies} "
 		"--subsample {config.subsample} --database {input.v_reference} "
 		"{input.tab} > {output.tab}"
 
