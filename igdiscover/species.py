@@ -33,11 +33,11 @@ CDR3_REGEX = {
 	# Light chain, kappa.
 	# The amino-acid version is: [YFVS][YNHFCV][CWFGDLS]X{5,15}[FLV][GRV]
 	'VK': re.compile("""
-		(TA[CT] | TT[CT] | GT[ACGT | TC[ACGT]|AG[CT] )           # Y, F, V, S
-		(TA[CT] | AA[CT] | CA[CT] | TT[CT] | TG[CT] | GT[ACGT )  # Y, N, H, F, C, V
-		(TG[CT] | TGG | TT[CT] | GG[ACGT] | GA[CT] |             # C, W, F, G, D ...
-			TC[ACGT] | AG[CT] |                                  # ... or S
-			CT[ACGT] | TT[AG] )                                  # ... or L,
+		(TA[CT] | TT[CT] | GT[ACGT] | TC[ACGT]|AG[CT] )           # Y, F, V, S
+		(TA[CT] | AA[CT] | CA[CT] | TT[CT] | TG[CT] | GT[ACGT] )  # Y, N, H, F, C, V
+		(TG[CT] | TGG | TT[CT] | GG[ACGT] | GA[CT] |              # C, W, F, G, D ...
+			TC[ACGT] | AG[CT] |                                   # ... or S
+			CT[ACGT] | TT[AG] )                                   # ... or L,
 		(?P<cdr3>
 			([ACGT]{3}){5,15}   # between five and fifteen codons
 		)
