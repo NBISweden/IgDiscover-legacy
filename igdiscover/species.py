@@ -52,15 +52,15 @@ CDR3_REGEX = {
 		""", re.VERBOSE),
 
 	# Light chain, lambda.
-	# The amino-acid version is: [YC][YFSC][CGW]X{5,15}FG
+	# The amino-acid version is: [CDY][CFHSY][CFGW]X{5,15}[FS]G
 	'VL': re.compile("""
-		(TA[CT] | TG[CT] )                             # Y, C
-		(TA[CT] | TT[CT] | TC[ACGT]|AG[CT] | TG[CT] )  # Y, F, S, C
-		(TG[CT] | GG[ACGT] | TGG )                     # C, G, W
+		(TG[CT] | GA[CT] | TA[CT] )                             # C, D, Y
+		(TG[CT] | TT[CT] | CA[CT] | TC[ACGT]|AG[CT] | TA[CT] )  # C, F, H, S, Y
+		(TG[CT] | TT[CT] | GG[ACGT] | TGG )                     # C, F, G, W
 		(?P<cdr3>
 			([ACGT]{3}){5,15}   # between five and fifteen codons
 		)
-		TT[CT]                                         # F
+		( TT[CT] | TC[ACGT]|AG[CT] )                   # F, S
 		GG[ACGT]                                       # G
 		""", re.VERBOSE)
 }
