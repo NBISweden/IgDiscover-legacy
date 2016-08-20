@@ -31,25 +31,26 @@ CDR3_REGEX = {
 
 
 	# Light chain, kappa.
-	# The amino-acid version is: [YFV][YNHFC][CWFGLS]X{5,15}[FL][GR]
+	# The amino-acid version is: [YFVS][YNHFCV][CWFGDLS]X{5,15}[FLV][GRV]
 	'VK': re.compile("""
-		(TA[CT] | TT[CT] | GT[ACGT )                   # Y, F, V
-		(TA[CT] | AA[CT] | CA[CT] | TT[CT] | TG[CT] )  # Y, N, H, F, C
-		(TG[CT] | TGG | TT[CT] | GG[ACGT] |            # C, W, F, G ...
-			TC[ACGT] | AG[CT] |                        # ... or S
-			CT[ACGT] | TT[AG])                         # ... or L,
+		(TA[CT] | TT[CT] | GT[ACGT | TC[ACGT]|AG[CT] )           # Y, F, V, S
+		(TA[CT] | AA[CT] | CA[CT] | TT[CT] | TG[CT] | GT[ACGT )  # Y, N, H, F, C, V
+		(TG[CT] | TGG | TT[CT] | GG[ACGT] | GA[CT] |             # C, W, F, G, D ...
+			TC[ACGT] | AG[CT] |                                  # ... or S
+			CT[ACGT] | TT[AG] )                                  # ... or L,
 		(?P<cdr3>
 			([ACGT]{3}){5,15}   # between five and fifteen codons
 		)
 		(
-			TT[CT]   |                                 # F ...
-			CT[ACGT] | TT[AG]                          # ... or L
+			TT[CT]   | GT[ACGT] |                                # F, V ...
+			CT[ACGT] | TT[AG]                                    # ... or L
 		)
 		(
-			GG[ACGT] |                                 # G ...
-			CG[ACGT] | AG[AG]T                         # ... or R
+			GG[ACGT] | GT[ACGT] |                                # G, V ...
+			CG[ACGT] | AG[AG]T                                   # ... or R
 		)
 		""", re.VERBOSE),
+
 
 	# Light chain, lambda.
 	# The amino-acid version is: [CDY][CFHSY][CFGW]X{5,15}[FS]G
