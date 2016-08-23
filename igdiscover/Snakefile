@@ -597,6 +597,7 @@ rule whitelist:
 rule igdiscover_compose:
 	"""Construct a new database out of the discovered sequences"""
 	output:
+		tab='iteration-{nr}/new_V_{pre,(pre|)}germline.tab',
 		fasta='iteration-{nr}/new_V_{pre,(pre|)}germline.fasta'
 	input:
 		tab='iteration-{nr}/candidates.tab',
@@ -614,7 +615,7 @@ rule igdiscover_compose:
 		criteria += ['--cluster-size={}'.format(conf['cluster_size'])]
 		criteria += ['--unique-J={}'.format(conf['unique_js'])]
 		criteria = ' '.join(criteria)
-		shell("igdiscover compose {criteria} {input.tab} > {output.fasta}")
+		shell("igdiscover compose {criteria} --fasta={output.fasta} {input.tab} > {output.tab}")
 
 
 rule stats_correlation_V_J:

@@ -18,6 +18,8 @@ If you provide a whitelist of sequences, then the candidates that appear on it
 * are not checked for the cluster size criterion,
 * do not need to match a set of known good motifs,
 * are never considered near-duplicates
+
+The filtered table is written to standard output.
 """
 import logging
 from collections import namedtuple
@@ -57,6 +59,7 @@ def add_arguments(parser):
 	arg('--whitelist', metavar='FASTA',
 	    help='Sequences that are never discarded or merged with others, '
 			'even if criteria for discarding them would apply.')
+	arg('--fasta', metavar='FILE', help='Write new database in FASTA format to FILE')
 	arg('tables', metavar='CANDIDATES.TAB',
 		help='Tables (one or more) created by the "discover" command',
 		nargs='+')
@@ -125,7 +128,8 @@ def main(args):
 		# TODO remove this after deprecation period
 		table.rename(columns=dict(consensus_seqs='cluster_size', window_seqs='cluster_size', subset_seqs='cluster_size'), inplace=True)
 
-		table['whitelisted'] = [ (s in whitelist) for s in table['consensus'] ]
+		i = list(table.columns).index('consensus')
+		table.insert(i, 'whitelisted', [ (s in whitelist) for s in table['consensus'] ])
 		unfiltered_length = len(table)
 		table = table[table.database_diff >= args.minimum_db_diff]
 		if 'N_bases' in table.columns:
@@ -162,11 +166,18 @@ def main(args):
 		overall_table.loc[info.row, 'is_duplicate'] = False
 
 	overall_table = overall_table[~overall_table.is_duplicate].copy()
+	del overall_table['is_duplicate']
 
 	# Name sequences
 	overall_table['name'] = overall_table['name'].apply(UniqueNamer())
+	overall_table.sort_values(['name'], inplace=True)
 
-	for _, row in overall_table.iterrows():
-		print('>{}\n{}'.format(row['name'], row['consensus']))
+	overall_table['whitelisted'] = overall_table['whitelisted'].astype(int)
+	print(overall_table.to_csv(sep='\t', index=False), end='')
+
+	if args.fasta:
+		with open(args.fasta, 'w') as f:
+			for _, row in overall_table.iterrows():
+				print('>{}\n{}'.format(row['name'], row['consensus']), file=f)
 
 	logger.info('%d sequences in new database', len(overall_table))
