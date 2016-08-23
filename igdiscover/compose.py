@@ -173,7 +173,11 @@ def main(args):
 	overall_table.sort_values(['name'], inplace=True)
 
 	overall_table['whitelisted'] = overall_table['whitelisted'].astype(int)
-	print(overall_table.to_csv(sep='\t', index=False), end='')
+
+	i = list(overall_table.columns).index('CDR3s_exact') + 1
+	cdr3_ratio = overall_table['exact'] / overall_table['CDR3s_exact']
+	overall_table.insert(i, 'CDR3_exact_ratio', cdr3_ratio)
+	print(overall_table.to_csv(sep='\t', index=False, float_format='%.1f'), end='')
 
 	if args.fasta:
 		with open(args.fasta, 'w') as f:
