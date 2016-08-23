@@ -54,8 +54,6 @@ def add_arguments(parser):
 	arg('--looks-like-V', action='store_true', default=False,
 		help='Sequences must look like V genes (uses the looks_like_V column). '
 		'Default: Column is ignored')
-	arg('--database', metavar='DATABASE.FASTA',
-		help='Existing (to be augmented) database in FASTA format')
 	arg('--whitelist', metavar='FASTA',
 	    help='Sequences that are never discarded or merged with others, '
 			'even if criteria for discarding them would apply.')
@@ -112,11 +110,6 @@ class SequenceMerger(Merger):
 
 def main(args):
 	merger = SequenceMerger(args.max_differences)
-	previous_n = 0
-	if args.database:
-		for record in FastaReader(args.database):
-			previous_n += 1
-			merger.add(SequenceInfo(record.sequence.upper(), record.name, 0, whitelisted=True))  # TODO zero? whitelisted?
 
 	whitelist = set()
 	if args.whitelist:
@@ -166,7 +159,4 @@ def main(args):
 		n += 1
 		print('>{}\n{}'.format(namer(info.name), info.sequence))
 
-	if args.database:
-		logger.info('Old database had %s sequences, new database has %s sequences (difference: %s)', previous_n, n, n - previous_n)
-	else:
-		logger.info('New database has %s sequences', n)
+	logger.info('New database has %s sequences', n)
