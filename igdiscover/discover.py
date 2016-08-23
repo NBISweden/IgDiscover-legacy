@@ -36,8 +36,7 @@ def add_arguments(parser):
 	arg('--threads', '-j', type=int, default=min(4, available_cpu_count()),
 		help='Number of threads. Default: no. of available CPUs, but at most 4')
 	arg('--seed', type=int, default=None,
-		help='Seed value for random numbers for reproducible runs. If omitted, runs'
-		'are not reproducible.')
+		help='Seed value for random numbers for reproducible runs.')
 	arg('--consensus-threshold', '-t', metavar='PERCENT', type=float, default=60,
 		help='Threshold for consensus computation. Default: %(default)s%%')
 	arg('--prefix', default='', metavar='PREFIX',
@@ -243,8 +242,7 @@ class Discoverer:
 		group -- a pandas DataFrame with the group corresponding to the gene
 		"""
 		gene, group = args
-		if self.seed is not None:
-			self.set_random_seed(gene)
+		self.set_random_seed(gene)
 		siblings = SiblingMerger()
 		for sibling in self._collect_siblings(gene, group):
 			siblings.add(sibling)
@@ -385,6 +383,12 @@ def main(args):
 	else:
 		database = dict()
 
+	if args.seed:
+		seed = args.seed
+	else:
+		seed = random.randrange(10**6)
+	logger.info('Use --seed=%d to reproduce this run', seed)
+
 	table = read_table(args.table)
 	table = table.loc[:,('name', 'chain', 'V_gene', 'J_gene', 'V_nt', 'CDR3_nt', 'V_SHM', 'J_SHM')].copy()
 
@@ -432,7 +436,7 @@ def main(args):
 		args.table_output, args.prefix, args.consensus_threshold, v_error_rate,
 		MAXIMUM_SUBSAMPLE_SIZE, cluster_subsample_size=args.subsample,
 		approx_columns=args.approx, max_n_bases=args.max_n_bases, exact_copies=args.exact_copies,
-		seed=args.seed)
+		seed=seed)
 	n_consensus = 0
 
 	Pool = SerialPool if args.threads == 1 else multiprocessing.Pool
