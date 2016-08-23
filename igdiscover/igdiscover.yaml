@@ -120,10 +120,10 @@ rename: true
 # runs. Two runs that use the same software version, the same seed
 # and otherwise the same configuration will give identical results.
 #
-# Set this to false in order to get non-reproducible runs (then a
-# different seed is used each run).
+# Set this to false in order to use a different seed each run.
+# The results will then be not exactly reproducible.
 #
-seed: 123
+seed: 1
 
 
 # Filtering criteria applied to candidate sequences in all iterations except the last.
