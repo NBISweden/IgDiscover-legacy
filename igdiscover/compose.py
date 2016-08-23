@@ -56,8 +56,8 @@ def add_arguments(parser):
 	arg('--looks-like-V', action='store_true', default=False,
 		help='Sequences must look like V genes (uses the looks_like_V column). '
 		'Default: Column is ignored')
-	arg('--whitelist', metavar='FASTA',
-	    help='Sequences that are never discarded or merged with others, '
+	arg('--whitelist', metavar='FASTA', default=[], action='append',
+		help='Sequences that are never discarded or merged with others, '
 			'even if criteria for discarding them would apply.')
 	arg('--fasta', metavar='FILE', help='Write new database in FASTA format to FILE')
 	arg('tables', metavar='CANDIDATES.TAB',
@@ -115,10 +115,10 @@ def main(args):
 	merger = SequenceMerger(args.max_differences)
 
 	whitelist = set()
-	if args.whitelist:
-		for record in FastaReader(args.whitelist):
+	for path in args.whitelist:
+		for record in FastaReader(path):
 			whitelist.add(record.sequence.upper())
-		logger.info('%d unique sequences in whitelist', len(whitelist))
+	logger.info('%d unique sequences in whitelist', len(whitelist))
 
 	# Read in tables
 	total_unfiltered = 0
