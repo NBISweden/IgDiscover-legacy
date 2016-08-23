@@ -161,10 +161,9 @@ def main(args):
 			row['whitelisted'], row.name))  # row.name is the index of the row. It is not row['name'].
 
 	# Discard near-duplicates
-	overall_table['is_duplicate'] = [True] * len(overall_table)
+	overall_table['is_duplicate'] = pd.Series(True, index=overall_table.index, dtype=bool)
 	for info in merger:
 		overall_table.loc[info.row, 'is_duplicate'] = False
-
 	overall_table = overall_table[~overall_table.is_duplicate].copy()
 	del overall_table['is_duplicate']
 
