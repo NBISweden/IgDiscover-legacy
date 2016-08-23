@@ -198,7 +198,7 @@ class Config:
 		self.minimum_merged_read_length = 300
 		self.mismatch_penalty = None
 		self.barcode_length = 0
-		self.iterations = 4
+		self.iterations = 3
 		self.ignore_j = False
 		self.subsample = 1000
 		self.stranded = False

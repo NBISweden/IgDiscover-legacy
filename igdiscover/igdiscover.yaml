@@ -8,7 +8,7 @@ species: human
 
 # How many discovery iterations to run.
 # If 0, the database will not be updated.
-iterations: 4
+iterations: 3
 
 
 # If you have a random barcode sequence (unique molecular identifier) at the 5' end,
