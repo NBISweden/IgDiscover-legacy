@@ -12,12 +12,12 @@ The following filtering and processing steps are performed:
 * Discard sequences with too few unique Js (Js_exact column)
 * Discard sequences identical to one of the database sequences (if DB given)
 * Discard sequences that do not match a set of known good motifs
-* Merge nearly identical sequences (allowing length differences) into single entries
+* Discard near-duplicate sequences
 
 If you provide a whitelist of sequences, then the candidates that appear on it
 * are not checked for the cluster size criterion,
 * do not need to match a set of known good motifs,
-* are never merged with nearly identical sequences.
+* are never considered near-duplicates
 """
 import logging
 from collections import namedtuple
@@ -62,7 +62,7 @@ def add_arguments(parser):
 		nargs='+')
 
 
-SequenceInfo = namedtuple('SequenceInfo', 'sequence name CDR3s_exact whitelisted')
+SequenceInfo = namedtuple('SequenceInfo', 'sequence name CDR3s_exact whitelisted row')
 
 
 class SequenceMerger(Merger):
@@ -119,7 +119,7 @@ def main(args):
 
 	# Read in tables
 	total_unfiltered = 0
-	tables = []
+	overall_table = None
 	for path in args.tables:
 		table = pd.read_csv(path, sep='\t')
 		# TODO remove this after deprecation period
@@ -142,21 +142,31 @@ def main(args):
 		if args.whitelist:
 			logger.info('Of those, %d are protected by the whitelist', sum(table['whitelisted']))
 		total_unfiltered += unfiltered_length
-		tables.append(table)
+
+		if overall_table is None:
+			overall_table = table
+		else:
+			overall_table.append(table)
 	if len(args.tables) > 1:
 		logger.info('Read %s tables with %s entries total. '
 			'After filtering, %s entries remain.', len(args.tables),
-			total_unfiltered, sum(map(len, tables)))
+			total_unfiltered, len(overall_table))
 
-	for table in tables:
-		for _, row in table.iterrows():
-			assert row['whitelisted'] == (row['consensus'] in whitelist)
-			merger.add(SequenceInfo(row['consensus'], row['name'], row['CDR3s_exact'], row['whitelisted']))
+	for _, row in overall_table.iterrows():
+		merger.add(SequenceInfo(row['consensus'], row['name'], row['CDR3s_exact'],
+			row['whitelisted'], row.name))  # row.name is the index of the row. It is not row['name'].
 
-	namer = UniqueNamer()
-	n = 0
+	# Discard near-duplicates
+	overall_table['is_duplicate'] = [True] * len(overall_table)
 	for info in merger:
-		n += 1
-		print('>{}\n{}'.format(namer(info.name), info.sequence))
+		overall_table.loc[info.row, 'is_duplicate'] = False
 
-	logger.info('New database has %s sequences', n)
+	overall_table = overall_table[~overall_table.is_duplicate].copy()
+
+	# Name sequences
+	overall_table['name'] = overall_table['name'].apply(UniqueNamer())
+
+	for _, row in overall_table.iterrows():
+		print('>{}\n{}'.format(row['name'], row['consensus']))
+
+	logger.info('%d sequences in new database', len(overall_table))
