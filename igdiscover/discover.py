@@ -291,6 +291,10 @@ class Discoverer:
 				CDR3s_approx = None
 
 			chain = self._guess_chain(sibling_info.group)
+			try:
+				ratio = info['exact'].count / info['exact'].unique_CDR3
+			except ZeroDivisionError:
+				ratio = 0
 			candidate = Candidate(
 				name=sequence_id,
 				source=gene,
@@ -302,6 +306,7 @@ class Discoverer:
 				exact=info['exact'].count,
 				Js_exact=info['exact'].unique_J,
 				CDR3s_exact=info['exact'].unique_CDR3,
+				CDR3_exact_ratio='{:.2f}'.format(ratio),
 				approx=approx,
 				Js_approx=Js_approx,
 				CDR3s_approx=CDR3s_approx,
@@ -335,6 +340,7 @@ Candidate = namedtuple('Candidate', [
 	'exact',
 	'Js_exact',
 	'CDR3s_exact',
+	'CDR3_exact_ratio',
 	'approx',
 	'Js_approx',
 	'CDR3s_approx',

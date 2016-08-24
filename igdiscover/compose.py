@@ -189,10 +189,6 @@ def main(args):
 	overall_table['name'] = overall_table['name'].apply(UniqueNamer())
 	overall_table.sort_values(['name'], inplace=True)
 
-	i = list(overall_table.columns).index('CDR3s_exact') + 1
-	cdr3_ratio = overall_table['exact'] / overall_table['CDR3s_exact']
-	overall_table.insert(i, 'CDR3_exact_ratio', cdr3_ratio)
-
 	if not whitelist:
 		overall_table.whitelist_diff.replace(-1, '', inplace=True)
 	print(overall_table.to_csv(sep='\t', index=False, float_format='%.1f'), end='')
