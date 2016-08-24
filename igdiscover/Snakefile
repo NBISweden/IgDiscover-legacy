@@ -580,7 +580,7 @@ rule igdiscover_discover:
 	threads: 4  # TODO this could be increased up to 6
 	shell:
 		"time igdiscover discover -j {threads}{params.seed}{params.ignore_j}{params.exact_copies} "
-		"--subsample {config.subsample} --database {input.v_reference} "
+		"--subsample={config.subsample} --database={input.v_reference} "
 		"{input.tab} > {output.tab}"
 
 
