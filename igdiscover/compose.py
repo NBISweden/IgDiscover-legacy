@@ -114,11 +114,18 @@ class SequenceMerger(Merger):
 def main(args):
 	merger = SequenceMerger(args.max_differences)
 
-	whitelist = set()
+	whitelist = dict()
 	for path in args.whitelist:
 		for record in FastaReader(path):
-			whitelist.add(record.sequence.upper())
+			whitelist[record.sequence.upper()] = record.name
 	logger.info('%d unique sequences in whitelist', len(whitelist))
+
+	def whitelist_dist(sequence):
+		if sequence in whitelist:
+			return 0, whitelist[sequence]
+		distances = [(edit_distance(seq, sequence), name) for seq, name in whitelist.items()]
+		distance, name = min(distances)
+		return distance, name
 
 	# Read in tables
 	total_unfiltered = 0
@@ -126,10 +133,21 @@ def main(args):
 	for path in args.tables:
 		table = pd.read_csv(path, sep='\t')
 		# TODO remove this after deprecation period
-		table.rename(columns=dict(consensus_seqs='cluster_size', window_seqs='cluster_size', subset_seqs='cluster_size'), inplace=True)
+		table.rename(columns=dict(
+			consensus_seqs='cluster_size',
+			window_seqs='cluster_size',
+			subset_seqs='cluster_size'), inplace=True)
 
 		i = list(table.columns).index('consensus')
-		table.insert(i, 'whitelisted', [ (s in whitelist) for s in table['consensus'] ])
+		table.insert(i, 'whitelist_diff', pd.Series(-1, index=table.index, dtype=int))
+		table.insert(i+1, 'closest_whitelist', pd.Series('', index=table.index))
+
+		if whitelist:
+			for row in table.itertuples():
+				distance, name = whitelist_dist(table.loc[row[0], 'consensus'])
+				table.loc[row[0], 'closest_whitelist'] = name
+				table.loc[row[0], 'whitelist_diff'] = distance
+
 		unfiltered_length = len(table)
 		table = table[table.database_diff >= args.minimum_db_diff]
 		if 'N_bases' in table.columns:
@@ -137,14 +155,14 @@ def main(args):
 		table = table[table.CDR3s_exact >= args.unique_CDR3]
 		table = table[table.Js_exact >= args.unique_J]
 		if args.looks_like_V:
-			table = table[(table.looks_like_V == 1) | table.whitelisted]
-		table = table[(table.cluster_size >= args.cluster_size) | table.whitelisted]
+			table = table[(table.looks_like_V == 1) | (table.whitelist_diff == 0)]
+		table = table[(table.cluster_size >= args.cluster_size) | (table.whitelist_diff == 0)]
 		table = table.dropna()
 		logger.info('Table read from %r contains %s candidate V gene sequences. '
 			'%s remain after filtering', path,
 			unfiltered_length, len(table))
 		if args.whitelist:
-			logger.info('Of those, %d are protected by the whitelist', sum(table['whitelisted']))
+			logger.info('Of those, %d are protected by the whitelist', sum(table.whitelist_diff == 0))
 		total_unfiltered += unfiltered_length
 
 		if overall_table is None:
@@ -158,7 +176,7 @@ def main(args):
 
 	for _, row in overall_table.iterrows():
 		merger.add(SequenceInfo(row['consensus'], row['name'], row['CDR3s_exact'],
-			row['whitelisted'], row.name))  # row.name is the index of the row. It is not row['name'].
+			row['whitelist_diff'] == 0, row.name))  # row.name is the index of the row. It is not row['name'].
 
 	# Discard near-duplicates
 	overall_table['is_duplicate'] = pd.Series(True, index=overall_table.index, dtype=bool)
@@ -171,11 +189,12 @@ def main(args):
 	overall_table['name'] = overall_table['name'].apply(UniqueNamer())
 	overall_table.sort_values(['name'], inplace=True)
 
-	overall_table['whitelisted'] = overall_table['whitelisted'].astype(int)
-
 	i = list(overall_table.columns).index('CDR3s_exact') + 1
 	cdr3_ratio = overall_table['exact'] / overall_table['CDR3s_exact']
 	overall_table.insert(i, 'CDR3_exact_ratio', cdr3_ratio)
+
+	if not whitelist:
+		overall_table.whitelist_diff.replace(-1, '', inplace=True)
 	print(overall_table.to_csv(sep='\t', index=False, float_format='%.1f'), end='')
 
 	if args.fasta:
