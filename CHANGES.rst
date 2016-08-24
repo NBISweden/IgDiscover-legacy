@@ -2,16 +2,16 @@
 Changes
 =======
 
-development version
--------------------
+v0.4 (2016-08-24)
+-----------------
+
+* It is now possible to install and run IgDiscover on OS X. Appropriate Conda
+  packages are available on bioconda.
 * Add column ``has_stop`` to ``candidates.tab``, which indicates whether the
   candidate sequence contains a stop codon.
 * Add a configuration option that makes it possible to disable the 5' motif
   check by setting ``check_motifs: false`` (the ``looks_like_V`` column is
   ignored in this case).
-* It should now be possible to install and run IgDiscover on OS X. This did
-  not require changes in IgDiscover itself, but some dependencies needed to
-  be made available as Conda packages (IgBLAST in particular).
 * Make it possible to whitelist known sequences: If a found gene candidate
   appears in that list, the sequence is included in the list of discovered
   sequences even when it would otherwise not pass filtering criteria. To enable
@@ -26,7 +26,11 @@ development version
 * Both the germline and pre-germline filter are now applied in each iteration.
   Instead of the ``new_V_database.fasta`` file, two files named
   ``new_V_germline.fasta`` and ``new_V_pregermline.fasta`` are created.
-* IgDiscover is now also available on OS X.
+* The ``compose`` subcommand now outputs a filtered version of the
+  ``candidates.tab`` file in addition to a FASTA file. The table
+  contains columns **closest_whitelist**, which is the name of the closest
+  whitelist sequence, and **whitelist_diff**, which is the number of differences
+  to that whitelist sequence.
 
 v0.3
 ----
