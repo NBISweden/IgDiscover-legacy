@@ -32,8 +32,9 @@ v0.4 (2016-08-24)
   whitelist sequence, and **whitelist_diff**, which is the number of differences
   to that whitelist sequence.
 
-v0.3
-----
+v0.3 (2016-08-08)
+-----------------
+
 * Optionally, sequences are not renamed in the ``assigned.tab`` file, but
   retain their original name as in the FASTA or FASTQ file. Set ``rename:
   false`` in the configuration file to get this behavior.
