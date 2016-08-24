@@ -584,14 +584,13 @@ rule igdiscover_discover:
 		"{input.tab} > {output.tab}"
 
 
-rule whitelist:
-	output:
-		fasta='whitelist.fasta'
-	shell:
-		"""
-		echo No whitelist.fasta found, creating an empty whitelist
-		touch {output.fasta}
-		"""
+def db_whitelist_or_not(wildcards):
+	filterconf = config.pre_germline_filter if wildcards.pre == 'pre' else config.germline_filter
+	if filterconf['whitelist']:
+		return 'iteration-{nr}/database/{species}_V.fasta'.format(
+			nr=wildcards.nr, species=config.species)
+	else:
+		return []
 
 
 rule igdiscover_compose:
@@ -601,14 +600,16 @@ rule igdiscover_compose:
 		fasta='iteration-{nr}/new_V_{pre,(pre|)}germline.fasta'
 	input:
 		tab='iteration-{nr}/candidates.tab',
-		whitelist='whitelist.fasta'
+		db_whitelist=db_whitelist_or_not,
+		whitelist='whitelist.fasta' if os.path.exists('whitelist.fasta') else []
 	run:
 		nr = int(wildcards.nr, base=10)
 		conf = config.pre_germline_filter if wildcards.pre == 'pre' else config.germline_filter
 		criteria = []
 		criteria += ['--max-differences={}'.format(conf['differences'])]
-		if conf['whitelist']:
-			criteria += ['--whitelist=' + input.whitelist]
+		for path in [input.db_whitelist, input.whitelist]:
+			if path:
+				criteria += ['--whitelist=' + path]
 		if conf['check_motifs']:
 			criteria += ['--looks-like-V']
 		criteria += ['--unique-CDR3={}'.format(conf['unique_cdr3s'])]

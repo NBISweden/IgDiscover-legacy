@@ -2,6 +2,15 @@
 Changes
 =======
 
+development version
+-------------------
+
+* V sequences of the input database are now whitelisted by default.
+  The meaning of the ``whitelist`` configuration option has changed:
+  If set to ``false``, those sequences are no longer whitelisted.
+  To whitelist additional sequences, create a ``whitelist.fasta``
+  file as before.
+
 v0.4 (2016-08-24)
 -----------------
 
