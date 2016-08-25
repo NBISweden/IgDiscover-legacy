@@ -77,9 +77,12 @@ _CDR3_VH_ALTERNATIVE_REGEX = re.compile("""
 def find_cdr3(sequence, chain):
 	"""
 	Find the CDR3 in the given sequence, assuming it comes from the given chain ('VH', 'VK', 'VL').
+	If the chain is not one of 'VH', 'VK', 'VL', return None.
 
 	Return a tuple (start, stop) if found, None otherwise.
 	"""
+	if chain not in _CDR3_REGEX:
+		return None
 	match = _CDR3_REGEX[chain].search(sequence)
 	if match:
 		return match.span('cdr3')
