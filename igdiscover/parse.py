@@ -622,6 +622,7 @@ def main(args):
 	else:
 		v_database = None
 
+	cdr3_recognized = 0
 	writer = TableWriter(sys.stdout)
 	with xopen(args.fasta) as fasta, xopen(args.igblast) as igblast:
 		parser = IgBlastParser(fasta, igblast)
@@ -629,6 +630,8 @@ def main(args):
 			n += 1
 			extended_record = ExtendedIgBlastRecord(record, v_database=v_database)
 			d = extended_record.asdict()
+			if d['CDR3_aa']:
+				cdr3_recognized += 1
 			if args.rename is not None:
 				d['name'] = "{}seq{}".format(args.rename, n)
 			if args.hdf5:
@@ -640,6 +643,7 @@ def main(args):
 					sys.exit(1)
 				raise
 	logger.info('%d records parsed and written', n)
+	logger.info('CDR3s detected in %.1f%% of all sequences', cdr3_recognized / n * 100)
 	if args.hdf5:
 		from igdiscover.table import STRING_COLUMNS, INTEGER_COLUMNS
 		df = pd.DataFrame(rows, columns=ExtendedIgBlastRecord.columns)
