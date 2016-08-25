@@ -21,7 +21,7 @@ import pandas as pd
 from sqt import SequenceReader, xopen
 from sqt.dna import reverse_complement
 from .utils import nt_to_aa
-from .species import CDR3_REGEX, CDR3_SEARCH_START
+from .species import find_cdr3, CDR3_SEARCH_START
 
 logger = logging.getLogger(__name__)
 
@@ -244,8 +244,6 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		"""
 		if 'V' not in self.hits or 'J' not in self.hits:
 			return None
-		if not self.chain in CDR3_REGEX:
-			return None
 		# Search in a window around the V(D)J junction for the CDR3
 		if 'CDR3' in self.alignments:
 			window_start = self.alignments['CDR3'].start - CDR3_SEARCH_START
@@ -253,11 +251,11 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 			window_start = max(0, self.hits['V'].query_end - CDR3_SEARCH_START)
 		window_end = self.hits['J'].query_end
 		window = self.full_sequence[window_start:window_end]
-		match = CDR3_REGEX[self.chain].search(window)
+		match = find_cdr3(window, self.chain)
 		if not match:
 			return None
-		start = match.start('cdr3') + window_start
-		end = match.end('cdr3') + window_start
+		start = match[0] + window_start
+		end = match[1] + window_start
 		assert start < end
 		return AlignmentSummary(start=start, stop=end, length=None, matches=None,
 			mismatches=None, gaps=None, percent_identity=None)

@@ -53,7 +53,7 @@ import matplotlib.pyplot as plt
 from sqt.align import consensus
 from sqt import SequenceReader
 
-from .species import CDR3_REGEX
+from .species import find_cdr3
 
 # minimum number of sequences needed for attempting to compute a consensus
 MIN_CONSENSUS_SEQUENCES = 3
@@ -181,9 +181,9 @@ def main(args):
 					unbarcoded.qualities = unbarcoded.qualities[-len(unbarcoded.sequence):]
 
 			if args.real_cdr3:
-				match = CDR3_REGEX['VH'].search(unbarcoded.sequence)
+				match = find_cdr3(unbarcoded.sequence, chain='VH')
 				if match:
-					cdr3 = match.group('cdr3')
+					cdr3 = unbarcoded.sequence[match[0]:match[1]]
 				else:
 					regex_fail += 1
 					continue

@@ -1,5 +1,5 @@
 # Tests for CDR3 detection
-from igdiscover.species import CDR3_REGEX
+from igdiscover.species import find_cdr3
 from igdiscover.utils import nt_to_aa
 
 
@@ -12,9 +12,9 @@ def split(s):
 
 def assert_cdr3_detection(chain, s):
 	for amino_acids, sequence in split(s):
-		match = CDR3_REGEX[chain].search(sequence)
-		assert match
-		assert nt_to_aa(match.group('cdr3')) == amino_acids
+		match = find_cdr3(sequence, chain)
+		assert match is not None
+		assert nt_to_aa(sequence[match[0]:match[1]]) == amino_acids
 
 
 def test_cdr3_detection_heavy():

@@ -9,7 +9,7 @@ from sqt.dna import amino_acid_regex
 
 
 # Regular expressions for CDR3 detection
-CDR3_REGEX = {
+_CDR3_REGEX = {
 	# Heavy chain.
 	#
 	# This is a slightly improved version of the regular expression by
@@ -65,6 +65,16 @@ CDR3_REGEX = {
 		GG[ACGT]                                       # G
 		""", re.VERBOSE)
 }
+
+
+def find_cdr3(sequence, chain):
+	"""
+	Find the CDR3 in the given sequence, assuming it comes from the given chain ('VH', 'VK', 'VL').
+
+	Return a tuple (start, stop) if found, None otherwise.
+	"""
+	match = _CDR3_REGEX[chain].search(sequence)
+	return match.span('cdr3') if match else None
 
 
 # When searching for the CDR3, start this many bases to the left of the end of
