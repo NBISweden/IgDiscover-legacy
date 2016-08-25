@@ -6,6 +6,7 @@ species. Right now, it works for - at least - human, rhesus monkey and mouse.
 """
 import re
 from sqt.dna import amino_acid_regex
+from .utils import nt_to_aa
 
 
 # Regular expressions for CDR3 detection
@@ -66,6 +67,12 @@ _CDR3_REGEX = {
 		""", re.VERBOSE)
 }
 
+_CDR3_VH_ALTERNATIVE_REGEX = re.compile("""
+		C
+		(?P<cdr3> . [RK] .{3,30})
+		[WF]G.G
+""", re.VERBOSE)
+
 
 def find_cdr3(sequence, chain):
 	"""
@@ -74,7 +81,18 @@ def find_cdr3(sequence, chain):
 	Return a tuple (start, stop) if found, None otherwise.
 	"""
 	match = _CDR3_REGEX[chain].search(sequence)
-	return match.span('cdr3') if match else None
+	if match:
+		return match.span('cdr3')
+	if chain == 'VH':
+		for offset in 0, 1, 2:
+			aa = nt_to_aa(sequence[offset:])
+			match = _CDR3_VH_ALTERNATIVE_REGEX.search(aa)
+			if match:
+				start, stop = match.span('cdr3')
+				start = start * 3 + offset
+				stop = stop * 3 + offset
+				return start, stop
+	return None
 
 
 # When searching for the CDR3, start this many bases to the left of the end of
