@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 def add_arguments(parser):
 	arg = parser.add_argument
-	arg('--minimum-group-size', '-m', metavar='N', default=200,
+	arg('--minimum-group-size', '-m', metavar='N', type=int, default=200,
 		help='Do not plot if there are less than N sequences for a gene. Default: %(default)s')
 	arg('--gene', '-g', action='append', default=[],
 		help='Compute consensus for this gene. Can be given multiple times. Default: Compute for all genes.')
@@ -80,6 +80,7 @@ def main(args):
 		table = table[table.J_SHM == 0][:]
 		logger.info('%s rows remain after discarding J%%SHM > 0', len(table))
 
+	path_sanitizer = { ord(c): None for c in "\\/*?[]=\"'" }
 	genes = frozenset(args.gene)
 	n = 0
 	too_few = 0
@@ -90,7 +91,8 @@ def main(args):
 			too_few += 1
 			continue
 		title = gene if args.title else None
-		n_clusters = plot_clustermap(group, title, os.path.join(args.directory, gene + '.png'), size=args.size, dpi=args.dpi)
+		path = os.path.join(args.directory, gene.translate(path_sanitizer) + '.png')
+		n_clusters = plot_clustermap(group, title, path, size=args.size, dpi=args.dpi)
 		n += 1
 		logger.info('Plotted %r with %d cluster%s', gene, n_clusters, plural_s(n_clusters))
 		#for i, cons in enumerate(consensus_sequences):
