@@ -149,14 +149,11 @@ def main(args):
 			subset_seqs='cluster_size'), inplace=True)
 
 		i = list(table.columns).index('consensus')
-		table.insert(i, 'whitelist_diff', pd.Series(-1, index=table.index, dtype=int))
+		# whitelist_diff distinguishes between 0 and >0 only
+		# at this point. Accurate edit distances are computed later.
+		whitelist_diff = [ (0 if s in whitelist else -1) for s in table['consensus'] ]
+		table.insert(i, 'whitelist_diff', pd.Series(whitelist_diff, index=table.index, dtype=int))
 		table.insert(i+1, 'closest_whitelist', pd.Series('', index=table.index))
-
-		if whitelist:
-			for row in table.itertuples():
-				distance, name = whitelist_dist(table.loc[row[0], 'consensus'])
-				table.loc[row[0], 'closest_whitelist'] = name
-				table.loc[row[0], 'whitelist_diff'] = distance
 
 		unfiltered_length = len(table)
 		table = table[table.database_diff >= args.minimum_db_diff]
@@ -179,6 +176,7 @@ def main(args):
 			overall_table = table
 		else:
 			overall_table.append(table)
+	del table
 	if len(args.tables) > 1:
 		logger.info('Read %s tables with %s entries total. '
 			'After filtering, %s entries remain.', len(args.tables),
@@ -199,7 +197,14 @@ def main(args):
 	overall_table['name'] = overall_table['name'].apply(UniqueNamer())
 	overall_table.sort_values(['name'], inplace=True)
 
-	if not whitelist:
+	# Because whitelist_dist() is expensive, this is run when
+	# all of the filtering has already been done
+	if whitelist:
+		for row in overall_table.itertuples():
+			distance, name = whitelist_dist(overall_table.loc[row[0], 'consensus'])
+			overall_table.loc[row[0], 'closest_whitelist'] = name
+			overall_table.loc[row[0], 'whitelist_diff'] = distance
+	else:
 		overall_table.whitelist_diff.replace(-1, '', inplace=True)
 	print(overall_table.to_csv(sep='\t', index=False, float_format='%.1f'), end='')
 
