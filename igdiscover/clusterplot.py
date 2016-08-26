@@ -7,7 +7,7 @@ import matplotlib
 matplotlib.use('pdf')
 import seaborn as sns
 from .table import read_table
-from .utils import downsampled
+from .utils import downsampled, plural_s
 from .cluster import cluster_sequences
 
 logger = logging.getLogger(__name__)
@@ -92,7 +92,7 @@ def main(args):
 		title = gene if args.title else None
 		n_clusters = plot_clustermap(group, title, os.path.join(args.directory, gene + '.png'), size=args.size, dpi=args.dpi)
 		n += 1
-		logger.info('Plotted %r with %d clusters', gene, n_clusters)
+		logger.info('Plotted %r with %d cluster%s', gene, n_clusters, plural_s(n_clusters))
 		#for i, cons in enumerate(consensus_sequences):
 			#print('>{}_cluster{}\n{}'.format(gene, ('red', 'blue')[i], cons))
 			#print('number of Ns:', cons.count('N'))

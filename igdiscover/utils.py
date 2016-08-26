@@ -261,3 +261,7 @@ def has_stop(sequence):
 	"""
 	s = sequence[:len(sequence) // 3 * 3]
 	return '*' in nt_to_aa(s)
+
+
+def plural_s(n):
+	return 's' if n != 1 else ''
