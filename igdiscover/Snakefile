@@ -587,7 +587,8 @@ rule igdiscover_discover:
 def db_whitelist_or_not(wildcards):
 	filterconf = config.pre_germline_filter if wildcards.pre == 'pre' else config.germline_filter
 	if filterconf['whitelist']:
-		return 'iteration-{nr}/database/{species}_V.fasta'.format(
+	    # Use original (non-iteration-specific) database as whitelist
+		return 'database/{species}_V.fasta'.format(
 			nr=wildcards.nr, species=config.species)
 	else:
 		return []
