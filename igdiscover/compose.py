@@ -123,7 +123,17 @@ def main(args):
 	def whitelist_dist(sequence):
 		if sequence in whitelist:
 			return 0, whitelist[sequence]
-		distances = [(edit_distance(seq, sequence), name) for seq, name in whitelist.items()]
+		mindist = len(sequence)
+		distances = []
+		for seq, name in whitelist.items():
+			ed = edit_distance(seq, sequence, maxdiff=mindist)
+			distances.append((ed, name))
+			if ed == 1:
+				# We know ed does not get smaller because the
+				# 'sequence in whitelist' check
+				# above covers that
+				return ed, name
+			mindist = min(mindist, ed)
 		distance, name = min(distances)
 		return distance, name
 
