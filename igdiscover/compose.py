@@ -83,7 +83,8 @@ class SequenceMerger(Merger):
 
 		Two sequences are considered to be similar if their edit distance is at most
 		max_differences (see constructor). If one of the sequences is longer, the 'overhanging'
-		bases are ignored (do not count towards the number of differences).
+		bases are ignored at either the 5' end or the 3' end, whichever gives the lower
+		edit distance.
 
 		Sequences that are whitelisted are never discarded.
 		If two sequences are similar and none of them is whitelisted, then the one with the
@@ -92,11 +93,18 @@ class SequenceMerger(Merger):
 		Return None if both objects should be kept.
 		Return the object to keep otherwise.
 		"""
-		s_seq, t_seq = s.sequence, t.sequence
-		# Shorten both sequences to the same length to not penalize end gaps
-		s_seq = s_seq[:len(t_seq)]
-		t_seq = t_seq[:len(s_seq)]
-		dist = edit_distance(s_seq, t_seq, self._max_differences)
+		if len(s.sequence) > len(t.sequence):
+			s, t = t, s  # make s always the shorter sequence
+		s_seq = s.sequence
+		if len(s_seq) != len(t.sequence):
+			t_prefix = t.sequence[:len(s_seq)]
+			t_suffix = t.sequence[-len(s_seq):]
+			dist_prefix = edit_distance(s_seq, t_prefix, self._max_differences)
+			dist_suffix = edit_distance(s_seq, t_suffix, self._max_differences)
+			dist = min(dist_prefix, dist_suffix)
+		else:
+			dist = edit_distance(s_seq, t.sequence, self._max_differences)
+
 		if dist > self._max_differences:
 			return None  # keep both
 		if s.whitelisted and t.whitelisted:
@@ -106,6 +114,8 @@ class SequenceMerger(Merger):
 		if t.whitelisted:
 			return t
 		# No sequence is whitelisted if we arrive here
+		if len(s_seq) < len(t.sequence):
+			return t
 		if s.CDR3s_exact >= t.CDR3s_exact:
 			return s
 		return t
