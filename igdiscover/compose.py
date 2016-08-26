@@ -82,7 +82,7 @@ class SequenceMerger(Merger):
 		This is for merging similar sequences.
 
 		Two sequences are considered to be similar if their edit distance is at most
-		max_differences (see constructor). If one of the sequnces is longer, the 'overhanging'
+		max_differences (see constructor). If one of the sequences is longer, the 'overhanging'
 		bases are ignored (do not count towards the number of differences).
 
 		Sequences that are whitelisted are never discarded.
@@ -96,7 +96,7 @@ class SequenceMerger(Merger):
 		# Shorten both sequences to the same length to not penalize end gaps
 		s_seq = s_seq[:len(t_seq)]
 		t_seq = t_seq[:len(s_seq)]
-		dist = edit_distance(s_seq, t_seq)
+		dist = edit_distance(s_seq, t_seq, self._max_differences)
 		if dist > self._max_differences:
 			return None  # keep both
 		if s.whitelisted and t.whitelisted:
