@@ -293,10 +293,7 @@ if config.forward_primers:
 			param = ' '.join('-g ^{}'.format(seq) for seq in primers)
 			if not config.stranded:
 				param += ' ' + ' '.join('-a {}$'.format(reverse_complement(seq)) for seq in config.forward_primers)
-			shell(
-			"""
-			cutadapt --discard-untrimmed {param} -o {output.fastaq} {input.fastaq} | tee {log}
-			""")
+			shell("cutadapt --discard-untrimmed {param} -o {output.fastaq} {input.fastaq} | tee {log}")
 else:
 	# No trimming, just symlink the file
 	rule dont_trim_forward_primers:
@@ -321,10 +318,8 @@ if config.reverse_primers:
 			param = ' '.join('-a {}$'.format(reverse_complement(seq)) for seq in primers)
 			if not config.stranded:
 				param += ' ' + ' '.join('-g ^{}'.format(seq) for seq in config.reverse_primers)
-			shell(
-			"""
-			cutadapt --discard-untrimmed {param} -o {output.fastaq} {input.fastaq} | tee {log}
-			""")
+			shell("cutadapt --discard-untrimmed {param} -o {output.fastaq} {input.fastaq} | tee {log}")
+
 else:
 	# No trimming, just symlink the file
 	rule dont_trim_reverse_primers:
@@ -496,10 +491,10 @@ rule makeblastdb:
 			sequences = list(fr)
 		if not sequences:
 			raise ValueError("The FASTA file {} is empty, cannot continue!".format(input.fasta))
-		shell(r"""
-		makeblastdb -parse_seqids -dbtype nucl -in {input.fasta} -out {params.dbname} >& {log}
-		grep 'Error: ' {log} && {{ echo "makeblastdb failed when creating {params.dbname}"; false; }} || true
-		""")
+		shell("makeblastdb -parse_seqids -dbtype nucl -in {input.fasta} -out {params.dbname} >& {log}")
+		with open(log[0]) as f:
+		    if 'Error: ' in f.read():
+		        sys.exit("makeblastdb failed when creating {}".format(params.dbname))
 
 
 rule igdiscover_igblast:
