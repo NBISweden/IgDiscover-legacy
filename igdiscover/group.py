@@ -249,11 +249,16 @@ def main(args):
 						n_consensus += 1
 						cdr3 = Counter(cl.cdr3 for cl in cluster).most_common(1)[0][0]
 						name = 'consensus{}'.format(n_consensus)
-				print('>{} barcode={};cdr3={};size={};\n{}'.format(name, barcode,
+
+				name = name.split(maxsplit=1)[0]
+				if name.endswith(';'):
+					name = name[:-1]
+				print('>{};barcode={};cdr3={};size={};\n{}'.format(name, barcode,
 					cdr3, len(cluster), sequence))
 
 	logger.info('%d clusters (%d singletons)', n_clusters, n_singletons)
-	logger.info('%d consensus sequences computed (from groups that had at least %d sequences)', n_consensus+n_ambiguous, MIN_CONSENSUS_SEQUENCES)
+	logger.info('%d consensus sequences computed (from groups that had at least %d sequences)',
+		n_consensus + n_ambiguous, MIN_CONSENSUS_SEQUENCES)
 	logger.info('%d of those had no ambiguous bases', n_consensus)
 
 	if args.plot_sizes:

@@ -106,14 +106,18 @@ class Hit(_Hit):
 
 
 def parse_header(header):
-	"""Extract size= and barcode= fields from the FASTA/FASTQ header line"""
-	fields = header.split(maxsplit=1)
-	if len(fields) < 2:
-		return header, None, None
-	query_name, rest = fields
-	fields = rest.split(';')
+	"""
+	Extract size= and barcode= fields from the FASTA/FASTQ header line
+
+	>>> parse_header("name;size=12;barcode=ACG;")
+	('name', 12, 'ACG')
+	>>> parse_header("another name;size=200;foo=bar;")
+	('another name', 200, None)
+	"""
+	fields = header.split(';')
+	query_name = fields[0]
 	size = barcode = None
-	for field in rest.split(';'):
+	for field in fields[1:]:
 		if field == '':
 			continue
 		if '=' in field:
