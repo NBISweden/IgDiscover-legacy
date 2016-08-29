@@ -141,8 +141,8 @@ pre_germline_filter:
 # These should be more strict than the pre_germline_filter criteria.
 #
 germline_filter:
-  unique_cdr3s: 3      # Minimum number of unique CDR3s (within exact matches)
-  unique_js: 2         # Minimum number of unique J genes (within exact matches)
+  unique_cdr3s: 5      # Minimum number of unique CDR3s (within exact matches)
+  unique_js: 3         # Minimum number of unique J genes (within exact matches)
   check_motifs: false  # Check whether 5' end starts with known motif
   whitelist: true      # Add database sequences to the whitelist
   cluster_size: 100    # Minimum number of sequences assigned to cluster
