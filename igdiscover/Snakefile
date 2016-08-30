@@ -152,7 +152,7 @@ elif config.merge_program == 'pear':
 			log='reads/2-pear.log'
 		input: 'reads/1-limited.1.fastq.gz', 'reads/1-limited.2.fastq.gz'
 		resources: time=60
-		threads: 8
+		threads: 16
 		shell:
 			r"""
 			time pear -j {threads} -f {input[0]} -r {input[1]} -o reads/2-pear | tee {output.log}
@@ -572,7 +572,7 @@ rule igdiscover_discover:
 		ignore_j=' --ignore-J' if config.ignore_j else '',
 		seed=' --seed={}'.format(config.seed) if config.seed is not None else '',
 		exact_copies=' --exact-copies={}'.format(config.exact_copies) if config.exact_copies is not None else ''
-	threads: 4  # TODO this could be increased up to 6
+	threads: 6
 	shell:
 		"time igdiscover discover -j {threads}{params.seed}{params.ignore_j}{params.exact_copies} "
 		"--subsample={config.subsample} --database={input.v_reference} "
