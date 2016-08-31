@@ -216,6 +216,10 @@ class Config:
 	def read_from(self, file):
 		content = file.read()
 		new_config = self.make_compatible(yaml.safe_load(content))
+		for key in ('pre_germline_filter', 'germline_filter'):
+			if key in new_config:
+				self.__dict__[key].update(new_config[key])
+				del new_config[key]
 		self.__dict__.update(new_config)
 
 	def make_compatible(self, config):
