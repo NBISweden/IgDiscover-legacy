@@ -249,8 +249,11 @@ def main(args):
 
 	def create_symlink(readspath, dirname, target):
 		gz = '.gz' if readspath.endswith('.gz') else ''
-		rel = os.path.relpath(readspath, dirname)
-		os.symlink(rel, os.path.join(dirname, target + gz))
+		if not os.path.isabs(readspath):
+			src = os.path.relpath(readspath, dirname)
+		else:
+			src = readspath
+		os.symlink(src, os.path.join(dirname, target + gz))
 
 	if paired:
 		create_symlink(reads1, args.directory, 'reads.1.fastq')
@@ -289,7 +292,7 @@ def main(args):
 	if gui is not None:
 		# Only suggest to edit the config file if at least one GUI dialog has been shown
 		if gui.yesno('Directory initialized',
-			   'Do you want to edit the configuration file now?'):
+				'Do you want to edit the configuration file now?'):
 			launch(os.path.join(args.directory, Config.DEFAULT_PATH))
 	logger.info('Directory %s initialized.', args.directory)
 	logger.info('Edit %s/%s, then run "cd %s && igdiscover run" to start the analysis', args.directory, Config.DEFAULT_PATH, args.directory)
