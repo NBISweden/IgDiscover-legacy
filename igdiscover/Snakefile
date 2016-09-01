@@ -217,7 +217,7 @@ rule read_stats_single_fasta:
 
 rule read_stats_single_fastq:
 	"""Compute statistics if no merging was done (FASTQ input)"""
-	output: stats='stats/reads.json',
+	output: json='stats/reads.json',
 	input: fastagz='reads/1-limited.fastq.gz'
 	run:
 		total = count_sequences(input.fastagz)
