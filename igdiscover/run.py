@@ -6,6 +6,7 @@ Calls Snakemake to produce all the output files.
 import sys
 import logging
 import subprocess
+import resource
 import pkg_resources
 from snakemake import snakemake
 from sqt.utils import available_cpu_count
@@ -56,4 +57,12 @@ def main(args):
 		printshellcmds=args.print_commands,
 		targets=args.targets if args.targets else None,
 	)
+
+	if sys.platform == 'linux' and not args.dryrun:
+		cputime = resource.getrusage(resource.RUSAGE_SELF).ru_utime
+		cputime += resource.getrusage(resource.RUSAGE_CHILDREN).ru_utime
+		h = int(cputime // 3600)
+		m = (cputime - h * 3600) / 60
+		print('Total CPU time: {}h {:.2f}m'.format(h, m))
+
 	sys.exit(0 if success else 1)
