@@ -135,6 +135,7 @@ pre_germline_filter:
   whitelist: true      # Add database sequences to the whitelist
   cluster_size: 0      # Minimum number of sequences assigned to cluster
   differences: 2       # Merge sequences if they have at most this number of differences
+  allow_stop: true     # Whether to allow non-productive sequences containing stop codons
 
 
 # Filtering criteria applied to candidate sequences in the last iteration.
@@ -147,3 +148,4 @@ germline_filter:
   whitelist: true      # Add database sequences to the whitelist
   cluster_size: 100    # Minimum number of sequences assigned to cluster
   differences: 2       # Merge sequences if they have at most this number of differences
+  allow_stop: false    # Whether to allow non-productive sequences containing stop codons

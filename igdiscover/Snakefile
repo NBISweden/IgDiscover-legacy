@@ -602,12 +602,14 @@ rule igdiscover_compose:
 		nr = int(wildcards.nr, base=10)
 		conf = config.pre_germline_filter if wildcards.pre == 'pre' else config.germline_filter
 		criteria = []
-		criteria += ['--max-differences={}'.format(conf['differences'])]
 		for path in [input.db_whitelist, input.whitelist]:
 			if path:
 				criteria += ['--whitelist=' + path]
 		if conf['check_motifs']:
 			criteria += ['--looks-like-V']
+		if conf['allow_stop']:
+			criteria += ['--allow-stop']
+		criteria += ['--max-differences={}'.format(conf['differences'])]
 		criteria += ['--unique-CDR3={}'.format(conf['unique_cdr3s'])]
 		criteria += ['--cluster-size={}'.format(conf['cluster_size'])]
 		criteria += ['--unique-J={}'.format(conf['unique_js'])]

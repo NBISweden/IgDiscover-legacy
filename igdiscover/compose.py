@@ -12,12 +12,14 @@ The following filtering and processing steps are performed:
 * Discard sequences with too few unique Js (Js_exact column)
 * Discard sequences identical to one of the database sequences (if DB given)
 * Discard sequences that do not match a set of known good motifs
+* Discard sequences that contain a stop codon (has_stop column)
 * Discard near-duplicate sequences
 
 If you provide a whitelist of sequences, then the candidates that appear on it
 * are not checked for the cluster size criterion,
 * do not need to match a set of known good motifs,
-* are never considered near-duplicates
+* are never considered near-duplicates,
+* are allowed to contain a stop codon.
 
 The filtered table is written to standard output.
 """
@@ -56,6 +58,9 @@ def add_arguments(parser):
 	arg('--looks-like-V', action='store_true', default=False,
 		help='Sequences must look like V genes (uses the looks_like_V column). '
 		'Default: Column is ignored')
+	arg('--allow-stop', action='store_true', default=False,
+		help='Allow stop codons in sequences (uses the has_stop column).'
+			'Default: Do not allow stop codons.')
 	arg('--whitelist', metavar='FASTA', default=[], action='append',
 		help='Sequences that are never discarded or merged with others, '
 			'even if criteria for discarding them would apply.')
@@ -173,6 +178,8 @@ def main(args):
 		table = table[table.Js_exact >= args.unique_J]
 		if args.looks_like_V:
 			table = table[(table.looks_like_V == 1) | (table.whitelist_diff == 0)]
+		if not args.allow_stop:
+			table = table[(table.has_stop == 0) | (table.whitelist_diff == 0)]
 		table = table[(table.cluster_size >= args.cluster_size) | (table.whitelist_diff == 0)]
 		table = table.dropna()
 		logger.info('Table read from %r contains %s candidate V gene sequences. '

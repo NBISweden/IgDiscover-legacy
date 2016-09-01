@@ -10,6 +10,7 @@ development version
   If set to ``false``, those sequences are no longer whitelisted.
   To whitelist additional sequences, create a ``whitelist.fasta``
   file as before.
+* Sequences with stop codons are now filtered out by default.
 
 v0.4 (2016-08-24)
 -----------------
