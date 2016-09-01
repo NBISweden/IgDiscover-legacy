@@ -2,8 +2,8 @@
 Changes
 =======
 
-development version
--------------------
+v0.5 (2016-09-01)
+-----------------
 
 * V sequences of the input database are now whitelisted by default.
   The meaning of the ``whitelist`` configuration option has changed:
@@ -11,6 +11,7 @@ development version
   To whitelist additional sequences, create a ``whitelist.fasta``
   file as before.
 * Sequences with stop codons are now filtered out by default.
+* Use more stringent germline filtering parameters by default.
 
 v0.4 (2016-08-24)
 -----------------
