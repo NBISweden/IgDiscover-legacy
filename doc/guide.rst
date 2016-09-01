@@ -416,6 +416,8 @@ cluster
     Since the ``cl`` clusters are created from a random subsample of the data (in order to keep computation time down),
     they are never larger than the size of the subsample (currently 1000).
 
+    The name ``db`` represents a cluster that is identical to the database sequence.
+    If no actual cluster corresponding to the database sequence is found, but the database sequence is expressed, a ``db`` cluster is inserted artificially in order to make sure that the sequence is not lost.
     The cluster name ``all`` represents the set of all sequences assigned to the source gene.
     This means that an unambiguous consensus could be computed from all the sequences.
     Typically, this happens during later iterations when there are no more novel sequences among the sequences assigned to the database gene.
