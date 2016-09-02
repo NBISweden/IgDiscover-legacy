@@ -579,3 +579,32 @@ The command creates two files in the current directory. In the above example, th
 The program ``fastq-dump`` is part of the SRA toolkit. On Debian-derived
 Linux distributions, you can typically install it with ``sudo apt-get install
 sra-toolkit``.
+
+
+Does random subsampling influence results?
+==========================================
+
+Random subsampling indeed influences somewhat which sequences are found by the cluster analysis,
+particularly in the beginning. However, the probability is large that all highly expressed
+sequences are represented in the random sample. Also, due to the database growing with subsequent
+iterations, the set of sequences assigned to a single database gene becomes smaller and more
+homogeneous. This makes it increasingly likely that also sequences expressed at lower levels
+result in a cluster since they now make up a larger fraction of each subsample.
+
+Also, many of the clusters which are captured in one subsample but not in the other are artifacts
+that are then filtered out anyway by the pre-germline or germline filter.
+
+On human data with a nearly complete starting database, the subsampling seems to have no influence
+at all, as we determined experimentally. We repeated a run of the program four
+times on the same human dataset, using identical parameters each time except that the subsampling
+was done in a different way. Although intermediate results differed, all four personalized
+databases that the program produced were exactly identical.
+
+Concordance is lower, though, when the input database is not as complete as the human one.
+
+The way in which random subsampling is done is modified by the ``seed``configuration setting,
+which is set to 1 by default. If its value is the same for two different runs of the program with
+otherwise identical settings, the numbers chosen by the random number generator will be the same
+and therefore also subsampling will be done in an identical way. This makes runs of the program
+reproducible. In order to test how results differ when subsampling is done in a different way,
+change the ``seed`` to a different value.
