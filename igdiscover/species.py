@@ -10,60 +10,39 @@ from .utils import nt_to_aa
 
 
 # Regular expressions for CDR3 detection
+#
+# The idea comes from D’Angelo et al.: The antibody mining toolbox.
+# http://dx.doi.org/10.4161/mabs.27105
+# The heavy-chain regex was taken directly from there, but the difference
+# is that we express everything in terms of amino acids, not nucleotides.
+# This simplifies the expressions and makes them more readable.
+#
 _CDR3_REGEX = {
-	# Heavy chain.
-	#
-	# This is a slightly improved version of the regular expression by
-	# D’Angelo et al.: The antibody mining toolbox.
-	# http://dx.doi.org/10.4161/mabs.27105
-	# The amino-acid version of the expression is:
-	# [FY][FWVHY]C[ETNGASDRIKVM]X{5,32}W[GAV]
+	# Heavy chain
 	'VH': re.compile("""
-		(TT[CT] | TA[CT])                            # F or Y
-		(TT[CT] | TA[CT] | CA[CT] | GT[ACGT] | TGG)  # any of F, Y, H, V, W
-		(TG[CT])                                     # C
-		(?P<cdr3>                                    # actual CDR3 starts here
-			(([GA][AGCT]) | TC | CG) [ACGT]          # any of ETNGASDRIKVM
-			([ACGT]{3}){5,31}                        # between five and 31 codons
-		)                                            # end of CDR3
-		TGG                                          # W
-		G[CGT][ACGT]                                 # G, A or V
+		[FY] [FHVWY] C
+		(?P<cdr3>
+			[ADEGIKMNRSTV] .{5,31}
+		)
+		W[GAV]
 		""", re.VERBOSE),
 
-
-	# Light chain, kappa.
-	# The amino-acid version is: [YFVS][YNHFCV][CWFGDLS]X{5,15}[FLV][GRV]
+	# Light chain, kappa
 	'VK': re.compile("""
-		(TA[CT] | TT[CT] | GT[ACGT] | TC[ACGT]|AG[CT] )           # Y, F, V, S
-		(TA[CT] | AA[CT] | CA[CT] | TT[CT] | TG[CT] | GT[ACGT] )  # Y, N, H, F, C, V
-		(TG[CT] | TGG | TT[CT] | GG[ACGT] | GA[CT] |              # C, W, F, G, D ...
-			TC[ACGT] | AG[CT] |                                   # ... or S
-			CT[ACGT] | TT[AG] )                                   # ... or L,
+		[FSVY] [CFHNVY] [CDFGLSW]
 		(?P<cdr3>
-			([ACGT]{3}){5,15}   # between five and fifteen codons
+			.{5,15}
 		)
-		(
-			TT[CT]   | GT[ACGT] |                                # F, V ...
-			CT[ACGT] | TT[AG]                                    # ... or L
-		)
-		(
-			GG[ACGT] | GT[ACGT] |                                # G, V ...
-			CG[ACGT] | AG[AG]T                                   # ... or R
-		)
+		[FLV][GRV]
 		""", re.VERBOSE),
 
-
-	# Light chain, lambda.
-	# The amino-acid version is: [CDY][CFHSY][CFGW]X{5,15}[FS]G
+	# Light chain, lambda
 	'VL': re.compile("""
-		(TG[CT] | GA[CT] | TA[CT] )                             # C, D, Y
-		(TG[CT] | TT[CT] | CA[CT] | TC[ACGT]|AG[CT] | TA[CT] )  # C, F, H, S, Y
-		(TG[CT] | TT[CT] | GG[ACGT] | TGG )                     # C, F, G, W
+		[CDY][CFHSY][CFGW]
 		(?P<cdr3>
-			([ACGT]{3}){5,15}   # between five and fifteen codons
+			.{5,15}
 		)
-		( TT[CT] | TC[ACGT]|AG[CT] )                   # F, S
-		GG[ACGT]                                       # G
+		[FS]G
 		""", re.VERBOSE)
 }
 
@@ -81,21 +60,20 @@ def find_cdr3(sequence, chain):
 
 	Return a tuple (start, stop) if found, None otherwise.
 	"""
-	if chain not in _CDR3_REGEX:
+	try:
+		regex = _CDR3_REGEX[chain]
+	except KeyError:
 		return None
-	match = _CDR3_REGEX[chain].search(sequence)
-	if match:
-		return match.span('cdr3')
-	if chain == 'VH':
-		for offset in 0, 1, 2:
-			aa = nt_to_aa(sequence[offset:])
+	matches = []
+	for offset in 0, 1, 2:
+		aa = nt_to_aa(sequence[offset:])
+		match = regex.search(aa)
+		if not match and chain == 'VH':
 			match = _CDR3_VH_ALTERNATIVE_REGEX.search(aa)
-			if match:
-				start, stop = match.span('cdr3')
-				start = start * 3 + offset
-				stop = stop * 3 + offset
-				return start, stop
-	return None
+		if match:
+			start, stop = match.span('cdr3')
+			matches.append((start * 3 + offset, stop * 3 + offset))
+	return min(matches, default=None)
 
 
 # When searching for the CDR3, start this many bases to the left of the end of
