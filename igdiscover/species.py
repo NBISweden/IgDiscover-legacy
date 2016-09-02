@@ -38,7 +38,8 @@ _CDR3_REGEX = {
 
 	# Light chain, lambda
 	'VL': re.compile("""
-		[CDY][CFHSY][CFGW]
+		# the negative lookahead assertion ensures that the rightmost start is found
+		[CDY](?![CDY][CFHSY][CFGW])[CFHSY][CFGW]
 		(?P<cdr3>
 			.{5,15}
 		)
