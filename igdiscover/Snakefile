@@ -24,13 +24,16 @@ for k, v in sorted(vars(config).items()):
 # This command is run before every shell command and helps to catch errors early
 shell.prefix("set -euo pipefail;")
 
+# Use pigz (parallel gzip) if available
+GZIP = 'pigz' if shutil.which('pigz') is not None else 'gzip'
+
 READS1, READS2 = 'reads/1-limited.1.fastq.gz', 'reads/1-limited.2.fastq.gz'
 PREPROCESSED_READS = 'reads/sequences.fasta.gz'
+
 
 # Targets for each iteration
 ITERATION_TARGETS = [
 	'clusterplots/done',
-	#'correlationVJ.pdf',
 	'errorhistograms.pdf',
 	'V_usage.tab',
 	'V_usage.pdf',
@@ -42,25 +45,23 @@ DISCOVERY_TARGETS = [
 	'new_V_germline.fasta',
 	'new_V_pregermline.fasta',
 ]
-# Targets for final iteration
-FINAL_TARGETS = [
-	#'consensus/correlationVJ.pdf',
-	#'consensus/V_usage.tab',
-	#'consensus/V_usage.pdf',
-]
-TARGETS = expand('iteration-{nr:02d}/{path}', nr=range(1, config.iterations+1), path=ITERATION_TARGETS+DISCOVERY_TARGETS)
-TARGETS += expand('final/{path}', path=ITERATION_TARGETS+FINAL_TARGETS)
+TARGETS = expand('iteration-{nr:02d}/{path}', nr=range(1, config.iterations+1), path=ITERATION_TARGETS + DISCOVERY_TARGETS)
 TARGETS += [
 	'stats/readlengths.pdf',
 	'stats/merging-successful',
 	'stats/trimming-successful',
 	'stats/stats.json'
 ]
+FINAL_TARGETS = expand('final/{path}', path=ITERATION_TARGETS)
 
-# Use pigz (parallel gzip) if available
-GZIP = 'pigz' if shutil.which('pigz') is not None else 'gzip'
 
 rule all:
+	input:
+		TARGETS + FINAL_TARGETS
+	message: "IgDiscover finished."
+
+
+rule nofinal:
 	input:
 		TARGETS
 
