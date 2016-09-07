@@ -21,6 +21,9 @@ If you do not have a V/D/J database, yet, you may want to read the section about
 
 To run an analysis, proceed as follows.
 
+.. note::
+  If you are on OS X, it may be necessary to run ``export SHELL=/bin/bash`` before continuing.
+
 1. Create and initialize the analysis directory.
 
    First, pick a name for your analysis. We will use ``myexperiment`` in the following.
