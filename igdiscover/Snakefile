@@ -520,13 +520,14 @@ rule igdiscover_igblast:
 rule igdiscover_parse:
 	output:
 		tabgz="{dir}/assigned.tab.gz",
+		json="{dir}/stats/assigned.json"
 	input:
 		txt="{dir}/igblast.txt.gz",
 		fasta=PREPROCESSED_READS
 	params:
-		extra="--rename {config.library_name!r}_".format(config=config) if config.rename else ""
+		extra=" --rename {config.library_name!r}_".format(config=config) if config.rename else ""
 	shell:
-		"igdiscover parse {params.extra} {input.txt} {input.fasta} | {GZIP} > {output.tabgz}"
+		"igdiscover parse{params.extra} --stats={output.json} {input.txt} {input.fasta} | {GZIP} > {output.tabgz}"
 
 
 rule igdiscover_filter:

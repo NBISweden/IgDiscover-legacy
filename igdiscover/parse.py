@@ -10,10 +10,10 @@ A few extra things are done in addition to parsing:
 - If the V sequence hit starts at base 2 in the reference, it is extended
   one to the left.
 """
-import re
 import sys
 import csv
 import errno
+import json
 import logging
 from collections import namedtuple
 
@@ -34,6 +34,8 @@ def add_arguments(parser):
 		"gene alignments. If not given, 'N' bases will be inserted instead.")
 	parser.add_argument('--hdf5', metavar='FILE',
 		help='Write table in HDF5 format to FILE')
+	parser.add_argument('--stats', metavar='FILE',
+		help='Write statistics in JSON format to FILE')
 	parser.add_argument('igblast', help='IgBLAST output')
 	parser.add_argument('fasta', help='File with original reads')
 
@@ -626,7 +628,7 @@ def main(args):
 	else:
 		v_database = None
 
-	cdr3_recognized = 0
+	detected_cdr3s = 0
 	writer = TableWriter(sys.stdout)
 	with xopen(args.fasta) as fasta, xopen(args.igblast) as igblast:
 		parser = IgBlastParser(fasta, igblast)
@@ -635,7 +637,7 @@ def main(args):
 			extended_record = ExtendedIgBlastRecord(record, v_database=v_database)
 			d = extended_record.asdict()
 			if d['CDR3_aa']:
-				cdr3_recognized += 1
+				detected_cdr3s += 1
 			if args.rename is not None:
 				d['name'] = "{}seq{}".format(args.rename, n)
 			if args.hdf5:
@@ -646,8 +648,15 @@ def main(args):
 				if e.errno == errno.EPIPE:
 					sys.exit(1)
 				raise
-	logger.info('%d records parsed and written', n)
-	logger.info('CDR3s detected in %.1f%% of all sequences', cdr3_recognized / n * 100)
+	logger.info('%d IgBLAST assignments parsed and written', n)
+	logger.info('CDR3s detected in %.1f%% of all sequences', detected_cdr3s / n * 100)
+
+	if args.stats:
+		stats = {'detected_cdr3s': detected_cdr3s}
+		with open(args.stats, 'w') as f:
+			json.dump(stats, f)
+			print(file=f)
+
 	if args.hdf5:
 		from igdiscover.table import STRING_COLUMNS, INTEGER_COLUMNS
 		df = pd.DataFrame(rows, columns=ExtendedIgBlastRecord.columns)
