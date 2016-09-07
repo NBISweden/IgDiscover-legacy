@@ -507,13 +507,13 @@ rule igdiscover_igblast:
 		db_d="{{dir}}/database/{species}_D.nhr".format(species=config.species),
 		db_j="{{dir}}/database/{species}_J.nhr".format(species=config.species)
 	params:
-		penalty='--penalty {}'.format(config.mismatch_penalty) if config.mismatch_penalty is not None else '',
+		penalty=' --penalty {}'.format(config.mismatch_penalty) if config.mismatch_penalty is not None else '',
 		database='{dir}/database'
 	log: '{dir}/igblast.log'
 	threads: 16
 	shell:
-		"time igdiscover igblast --threads {threads} {params.penalty} "
-		"--species {config.species} {params.database} {input.fastagz} | "
+		"time igdiscover igblast{params.penalty} --threads={threads} "
+		"--species={config.species} {params.database} {input.fastagz} | "
 		"{GZIP} 2>&1 > {output.txtgz} | tee {log} >&2"
 
 
