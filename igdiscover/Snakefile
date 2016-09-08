@@ -155,13 +155,10 @@ elif config.merge_program == 'pear':
 		resources: time=60
 		threads: 16
 		shell:
-			r"""
-			time pear -j {threads} -f {input[0]} -r {input[1]} -o reads/2-pear | tee {output.log}
-			for n in unassembled.forward unassembled.reverse assembled discarded; do
-				{GZIP} -f reads/2-pear.$n.fastq
-			done
-			mv reads/2-pear.assembled.fastq.gz {output.fastq}
-			"""
+			"time pear -j {threads} -f {input[0]} -r {input[1]} -o reads/2-pear | tee {output.log}\n"
+			"for n in unassembled.forward unassembled.reverse assembled discarded; do "
+			"{GZIP} -f reads/2-pear.$n.fastq; done\n"
+			"mv reads/2-pear.assembled.fastq.gz {output.fastq}"
 
 	rule parse_pear_stats:
 		input: log='reads/2-pear.log'
@@ -530,13 +527,43 @@ rule igdiscover_parse:
 		"igdiscover parse{params.extra} --stats={output.json} {input.txt} {input.fasta} | {GZIP} > {output.tabgz}"
 
 
+rule check_parsing:
+	output:
+		success="{dir}/stats/parsing-successful"
+	input:
+		json="{dir}/stats/assigned.json"
+	run:
+		with open(input.json) as f:
+			d = json.load(f)
+		n = d['total']
+		detected_cdr3s = d['detected_cdr3s']
+		if n == 0:
+			print('No IgBLAST assignments found, something is wrong.')
+			sys.exit(1)
+		elif detected_cdr3s / n >= 0.1:
+			with open(output.success, 'w') as f:
+				print('This marker file exists if a CDR3 sequence could be '
+					'detected for at least 10% of IgBLAST-assigned sequences.',
+					file=f)
+		else:
+			print(*textwrap.wrap(
+				'A CDR3 sequence could be detected in less than 10% of the '
+				'IgBLAST-assigned sequences. Possibly there is a problem with '
+				'the starting database. To skip this check and continue anyway, '
+				'create the file "{}" and re-start "igdiscover run".'.format(
+					output.success), sep='\n'))
+			sys.exit(1)
+
+
+
 rule igdiscover_filter:
 	output:
 		filtered="{dir}/filtered.tab.gz"
 	input:
-		assigned="{dir}/assigned.tab.gz"
+		assigned="{dir}/assigned.tab.gz",
+		success="{dir}/stats/parsing-successful"
 	shell:
-		"igdiscover filter {input} | {GZIP} > {output}"
+		"igdiscover filter {input.assigned} | {GZIP} > {output}"
 
 
 rule igdiscover_count:

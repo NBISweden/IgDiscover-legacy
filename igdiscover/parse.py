@@ -652,7 +652,7 @@ def main(args):
 	logger.info('CDR3s detected in %.1f%% of all sequences', detected_cdr3s / n * 100)
 
 	if args.stats:
-		stats = {'detected_cdr3s': detected_cdr3s}
+		stats = {'total': n, 'detected_cdr3s': detected_cdr3s}
 		with open(args.stats, 'w') as f:
 			json.dump(stats, f)
 			print(file=f)
