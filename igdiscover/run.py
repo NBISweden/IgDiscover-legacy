@@ -29,21 +29,6 @@ def add_arguments(parser):
 		help='File(s) to create. If omitted, the full pipeline is run.')
 
 
-# TODO unused
-def subprocess_snakemake(snakefile_path, dryrun, cores, print_commands, targets):
-	"""
-	Call snakemake. There are some bugs in its Python API, so this routine
-	just spawns a subprocess.
-	"""
-	arguments = ['snakemake', '-s', snakefile_path, '-j', str(cores)]
-	if dryrun:
-		arguments += ['-n']
-	if print_commands:
-		arguments += ['-p']
-	arguments.extend(targets)
-	subprocess.call(arguments)
-
-
 def main(args):
 	# snakemake sets up its own logging and this cannot be easily changed
 	# (setting keep_logger=True crashes), so remove our own log handler
