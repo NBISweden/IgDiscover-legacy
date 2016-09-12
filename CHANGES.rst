@@ -2,6 +2,12 @@
 Changes
 =======
 
+development version
+-------------------
+
+* More helpful warning message when no sequences were discovered in an
+  iteration.
+
 v0.5 (2016-09-01)
 -----------------
 
