@@ -611,3 +611,17 @@ otherwise identical settings, the numbers chosen by the random number generator 
 and therefore also subsampling will be done in an identical way. This makes runs of the program
 reproducible. In order to test how results differ when subsampling is done in a different way,
 change the ``seed`` to a different value.
+
+
+Logging the program’s output to a file
+======================================
+
+When you report a bug or unusual behavior to us, we might ask you to send us the output of
+``igdiscover run``. You can send its output to a file by running the program like this::
+
+    igdiscover run >& logfile.txt
+
+And here is how to send the logging output to a file *and* also see the output in your terminal
+at the same time (but you lose the colors)::
+
+  igdiscover run |& tee logfile.txt
