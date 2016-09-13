@@ -232,12 +232,17 @@ class Config:
 		if 'barcode_length' in config and ('barcode_length_5prime' in config or 'barcode_length_3prime' in config):
 			raise ConfigurationError('Old-style configuration of barcode length via "barcode_length" option cannot be '
 					'used at the same time as new-style configuration via "barcode_length_5prime" or "barcode_length_3prime"')
-		if 'barcode_length_5prime' in config:
-			config['barcode_length'] = config['barcode_length_5prime']
-			del config['barcode_length_5prime']
-		if 'barcode_length_3prime' in config:
-			config['barcode_length'] = -config['barcode_length_3prime']
-			del config['barcode_length_3prime']
+		barcode_length_5prime = config.get('barcode_length_5prime', 0)
+		barcode_length_3prime = config.get('barcode_length_3prime', 0)
+		if barcode_length_5prime > 0 and barcode_length_3prime > 0:
+			raise ConfigurationError('barcode_length_5prime and barcode_length_3prime can currently not both be greater than zero.')
+		if barcode_length_5prime > 0:
+			config['barcode_length'] = barcode_length_5prime
+		elif barcode_length_3prime > 0:
+			config['barcode_length'] = -barcode_length_3prime
+		config.pop('barcode_length_5prime', None)
+		config.pop('barcode_length_3prime', None)
+
 		if 'seed' in config and config['seed'] is False:
 			config['seed'] = None
 		return config
