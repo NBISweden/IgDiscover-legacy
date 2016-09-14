@@ -17,7 +17,7 @@ try:
 except ImportError:
 	tk = None
 
-from cutadapt.xopen import xopen
+from xopen import xopen
 
 logger = logging.getLogger(__name__)
 

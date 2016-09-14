@@ -52,6 +52,7 @@ matplotlib.use('pdf')
 import matplotlib.pyplot as plt
 from sqt.align import consensus
 from sqt import SequenceReader
+from xopen import xopen
 
 from .species import find_cdr3
 
@@ -209,7 +210,7 @@ def main(args):
 	with ExitStack() as stack:
 		if args.groups_output:
 			group_out = csv.writer(stack.enter_context(
-				open(args.groups_output, 'w')), delimiter='\t', lineterminator='\n')
+				xopen(args.groups_output, 'w')), delimiter='\t', lineterminator='\n')
 			group_out.writerow(GROUPS_HEADER)
 		else:
 			group_out = None
