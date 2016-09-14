@@ -413,12 +413,13 @@ if config.barcode_length != 0:
 		"""Group by barcode and CDR3 (also implicitly removes duplicates)"""
 		output:
 			fastagz=PREPROCESSED_READS,
-			pdf="stats/groupsizes.pdf"
+			pdf="stats/groupsizes.pdf",
+			groups="reads/groups.tab.gz"
 		input:
 			fasta="reads/5-filtered.fasta"
 		log: PREPROCESSED_READS + ".log"
 		shell:
-			"igdiscover group --barcode-length {config.barcode_length} --trim-g --plot-sizes {output.pdf} {input.fasta} 2> {log} | {GZIP} > {output.fastagz}"
+			"igdiscover group --groups-output={output.groups} --barcode-length={config.barcode_length} --trim-g --plot-sizes={output.pdf} {input.fasta} 2> {log} | {GZIP} > {output.fastagz}"
 
 else:
 	rule dereplicate:
