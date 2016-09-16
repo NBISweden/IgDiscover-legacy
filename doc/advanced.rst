@@ -33,7 +33,7 @@ This will enumerate the columns in the file. Take a note of the index
 that the V_errors column has. In newer pipeline versions, the index is
 21. Then extract all rows of the file where that field is equal to zero:
 
-    zcat filtered.tab.gz | awk '$21 == 0 || NR == 1' > exact.tab
+    zcat filtered.tab.gz | awk -vFS="\t" '$21 == 0 || NR == 1' > exact.tab
 
 If the column wasn’t 21, then replace the ``$21`` appropriately. The part
 where it says ``NR == 1`` ensures that the column headings are also printed.
