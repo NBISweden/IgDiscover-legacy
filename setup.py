@@ -7,6 +7,9 @@ if sys.version_info < (3, 3):
 	sys.stdout.write("At least Python 3.3 is required.\n")
 	sys.exit(1)
 
+with open('README.rst') as f:
+	long_description = f.read()
+
 setup(
 	name = 'igdiscover',
 	version = versioneer.get_version(),
@@ -14,7 +17,8 @@ setup(
 	author = 'Marcel Martin',
 	author_email = 'marcel.martin@scilifelab.se',
 	url = 'https://igdiscover.readthedocs.io/',
-	description = '',
+	description = 'Analyze antibody repertoires and discover new V genes',
+	long_description = long_description,
 	license = 'MIT',
 	entry_points = {'console_scripts': ['igdiscover = igdiscover.__main__:main']},
 	packages = ['igdiscover'],
