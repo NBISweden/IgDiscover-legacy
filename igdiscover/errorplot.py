@@ -16,8 +16,9 @@ logger = logging.getLogger(__name__)
 
 
 def add_arguments(parser):
-	parser.add_argument('--minimum-group-size', '-m', metavar='N', default=200, type=int,
-		help='Do not plot if there are less than N sequences for a gene (default: %(default)s)')
+	parser.add_argument('--minimum-group-size', '-m', metavar='N', default=None, type=int,
+		help="Plot only genes with at least N assigned sequences. "
+		"Default: 0.1% of assigned sequences or 100, whichever is smaller.")
 	parser.add_argument('--ignore-J', action='store_true', default=False,
 		help='Include also rows without J assignment or J%%SHM>0.')
 	parser.add_argument('table', help='Table with parsed IgBLAST results')
@@ -60,11 +61,17 @@ def main(args):
 		table = table[table.J_SHM == 0][:]
 		logger.info('%s rows remain after discarding J%%SHM > 0', len(table))
 
+	if args.minimum_group_size is None:
+		total = len(table)
+		minimum_group_size = min(total // 1000, 100)
+		logger.info('Skipping genes with less than %s assignments', minimum_group_size)
+	else:
+		minimum_group_size = args.minimum_group_size
 	n = 0
 	too_few = 0
 	with PdfPages(args.pdf) as pages:
 		for gene, group in table.groupby('V_gene'):
-			if len(group) < args.minimum_group_size:
+			if len(group) < minimum_group_size:
 				too_few += 1
 				continue
 			fig = plot_difference_histogram(group, gene)
