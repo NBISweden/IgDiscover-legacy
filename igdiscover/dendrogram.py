@@ -2,7 +2,6 @@
 Draw a dendrogram of sequences in a FASTA file.
 """
 import logging
-import sys
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
@@ -14,6 +13,7 @@ from igdiscover.utils import distances
 
 
 logger = logging.getLogger(__name__)
+
 
 def add_arguments(parser):
 	arg = parser.add_argument
