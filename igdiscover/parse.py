@@ -27,17 +27,18 @@ logger = logging.getLogger(__name__)
 
 
 def add_arguments(parser):
-	parser.add_argument('--rename', default=None, metavar='PREFIX',
+	arg = parser.add_argument
+	arg('--rename', default=None, metavar='PREFIX',
 		help='Rename reads to PREFIXseqN (where N is a number starting at 1)')
-	parser.add_argument('--vdatabase', '--vdb', metavar='FASTA',
+	arg('--vdatabase', '--vdb', metavar='FASTA',
 		help="Path to FASTA file with V genes. Used to fix the 5' ends of V "
 		"gene alignments. If not given, 'N' bases will be inserted instead.")
-	parser.add_argument('--hdf5', metavar='FILE',
+	arg('--hdf5', metavar='FILE',
 		help='Write table in HDF5 format to FILE')
-	parser.add_argument('--stats', metavar='FILE',
+	arg('--stats', metavar='FILE',
 		help='Write statistics in JSON format to FILE')
-	parser.add_argument('igblast', help='IgBLAST output')
-	parser.add_argument('fasta', help='File with original reads')
+	arg('igblast', help='IgBLAST output')
+	arg('fasta', help='File with original reads')
 
 
 def none_if_na(s):

@@ -10,10 +10,11 @@ logger = logging.getLogger(__name__)
 
 
 def add_arguments(parser):
-	parser.add_argument('--minimum-frequency', '-n', type=int, metavar='N',
+	arg = parser.add_argument
+	arg('--minimum-frequency', '-n', type=int, metavar='N',
 		default=None,
 		help='Minimum number of datasets in which sequence must occur (default is no. of files divided by two)')
-	parser.add_argument('table', help='Tables with parsed and filtered IgBLAST results (give at least two)', nargs='+')
+	arg('table', help='Tables with parsed and filtered IgBLAST results (give at least two)', nargs='+')
 
 
 def main(args):

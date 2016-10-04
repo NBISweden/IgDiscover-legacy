@@ -16,13 +16,14 @@ logger = logging.getLogger(__name__)
 
 
 def add_arguments(parser):
-	parser.add_argument('--minimum-group-size', '-m', metavar='N', default=None, type=int,
+	arg = parser.add_argument
+	arg('--minimum-group-size', '-m', metavar='N', default=None, type=int,
 		help="Plot only genes with at least N assigned sequences. "
 		"Default: 0.1% of assigned sequences or 100, whichever is smaller.")
-	parser.add_argument('--ignore-J', action='store_true', default=False,
+	arg('--ignore-J', action='store_true', default=False,
 		help='Include also rows without J assignment or J%%SHM>0.')
-	parser.add_argument('table', help='Table with parsed IgBLAST results')
-	parser.add_argument('pdf', help='Plot error frequency histograms to this PDF file', default=None)
+	arg('table', help='Table with parsed IgBLAST results')
+	arg('pdf', help='Plot error frequency histograms to this PDF file', default=None)
 
 
 def plot_difference_histogram(group, gene_name, bins=np.arange(20.1)):

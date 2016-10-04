@@ -63,21 +63,22 @@ MIN_CONSENSUS_SEQUENCES = 3
 logger = logging.getLogger(__name__)
 
 def add_arguments(parser):
-	parser.add_argument('--groups-output', metavar='FILE', default=None,
+	arg = parser.add_argument
+	arg('--groups-output', metavar='FILE', default=None,
 		help='Write tab-separated table with groups to FILE')
-	parser.add_argument('--plot-sizes', metavar='FILE', default=None,
+	arg('--plot-sizes', metavar='FILE', default=None,
 		help='Plot group sizes to FILE (.png or .pdf)')
-	parser.add_argument('--real-cdr3', action='store_true', default=False,
+	arg('--real-cdr3', action='store_true', default=False,
 		help='Use the real CDR3 (detected with regex) instead of pseudo CDR3')
-	parser.add_argument('--limit', default=None, type=int, metavar='N',
+	arg('--limit', default=None, type=int, metavar='N',
 		help='Limit processing to the first N reads')
-	parser.add_argument('--trim-g', action='store_true', default=False,
+	arg('--trim-g', action='store_true', default=False,
 		help="Trim 'G' nucleotides at 5' end")
-	parser.add_argument('--minimum-length', '-l', type=int, default=0,
+	arg('--minimum-length', '-l', type=int, default=0,
 		help='Minimum sequence length')
-	parser.add_argument('--barcode-length', '-b', type=int, default=12,
+	arg('--barcode-length', '-b', type=int, default=12,
 		help="Length of barcode. Positive for 5' barcode, negative for 3' barcode. (default: %(default)s")
-	parser.add_argument('fastx', metavar='FASTA/FASTQ',
+	arg('fastx', metavar='FASTA/FASTQ',
 		help='FASTA or FASTQ file (can be gzip-compressed) with sequences')
 
 

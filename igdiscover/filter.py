@@ -18,7 +18,8 @@ from .table import read_table
 logger = logging.getLogger(__name__)
 
 def add_arguments(parser):
-	parser.add_argument('table', help='Table with filtered IgBLAST results.')
+	arg = parser.add_argument
+	arg('table', help='Table with filtered IgBLAST results.')
 
 
 def filtered_table(table,

@@ -16,13 +16,14 @@ from igdiscover.utils import distances
 logger = logging.getLogger(__name__)
 
 def add_arguments(parser):
-	parser.add_argument('--mark', '--db',
+	arg = parser.add_argument
+	arg('--mark', '--db',
 		help='Path to a FASTA file with a set of "known" sequences. Sequences '
 		'in the main file that do *not* occur here will be marked with (new). '
 		'If not given, no sequences will be marked (use this to compare two '
 		'databases.')
-	parser.add_argument('fasta', help='Path to input FASTA file')
-	parser.add_argument('plot', help='Path to output PDF or PNG')
+	arg('fasta', help='Path to input FASTA file')
+	arg('plot', help='Path to output PDF or PNG')
 
 
 class PrefixComparer:
