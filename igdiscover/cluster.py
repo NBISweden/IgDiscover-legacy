@@ -58,7 +58,7 @@ def cluster_sequences(sequences, minsize=5):
 	clusters = [0] * len(sequences)
 	cl = 1
 	for n in inner:
-		if prev/n.dist < 0.8 and n.left.count >= minsize and n.right.count >= minsize:
+		if n.dist > 0 and prev/n.dist < 0.8 and n.left.count >= minsize and n.right.count >= minsize:
 			for id in collect_ids(n.left):
 				# Do not overwrite previously assigned ids
 				if clusters[id] == 0:
