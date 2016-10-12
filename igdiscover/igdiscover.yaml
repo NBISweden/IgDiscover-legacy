@@ -21,6 +21,20 @@ barcode_length_5prime: 0
 barcode_length_3prime: 0
 
 
+# When barcoding is enabled, sequences are automatically grouped by barcode
+# and by their CDR3 sequence. The CDR3 location is either detected with a
+# regular expressions or a 'pseudo' CDR3 sequence is used, which is at a
+# pre-defined position within the sequence. Seting this configuration option to
+# [-80, -60] (which is the default) means that a pseudo CDR3 is to be used,
+# located at bases 80 to 60 counted from the 3' end. (Use negative numbers to
+# count from the 3' end, positive ones to count from the 5' end. The most 5'
+# base has index 0.)
+# Set the value to 'detect' (with quotation marks) in order to use CDR3s
+# detected by regular expression.
+#
+cdr3_location: [-80, -60]
+
+
 ## Primer-related settings
 
 # If set to true, it is assumed that the forward primer is always at the 5' end

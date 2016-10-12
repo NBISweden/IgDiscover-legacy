@@ -1,14 +1,13 @@
 """
 Group sequences that share a barcode (molecular identifier, MID)
 
-Since the same barcode can sometimes be used by different sequences, a 'pseudo
-CDR3' sequence (defined to be 80 to 60 bases upstream of the 3' end) is used
-to further distinguish sequences.
+Since the same barcode can sometimes be used by different sequences, a 'pseudo CDR3' sequence is
+used to further distinguish sequences. The pseudo CDR3 encompasses by default bases 80 to 61 counted
+from the 3' end.
 
-The barcode is assumed to be in the 5' end of the sequence.
+The barcode can be in the 5' end or the 3' end of the sequence.
 
-Use --trim-g to remove initial runs of G (at 5' end, artifact from RACE
-protocol).
+Use --trim-g to remove initial runs of G at the 5' end (artifact from RACE protocol).
 
 For all the found groups, one sequence is output to standard output (in FASTA
 format). Which sequence that is depends on the group size:
@@ -62,6 +61,12 @@ MIN_CONSENSUS_SEQUENCES = 3
 
 logger = logging.getLogger(__name__)
 
+
+def slice_arg(s):
+	start, end = s.split(':')
+	return slice(int(start), int(end))
+
+
 def add_arguments(parser):
 	arg = parser.add_argument
 	arg('--groups-output', metavar='FILE', default=None,
@@ -70,6 +75,9 @@ def add_arguments(parser):
 		help='Plot group sizes to FILE (.png or .pdf)')
 	arg('--real-cdr3', action='store_true', default=False,
 		help='Use the real CDR3 (detected with regex) instead of pseudo CDR3')
+	arg('--pseudo-cdr3-range', type=slice_arg, default=slice(-80, -60),
+		metavar='START:END',
+		help='Location of pseudo CDR3. Ignored if --real-cdr3 is used. Default: -80:-60')
 	arg('--limit', default=None, type=int, metavar='N',
 		help='Limit processing to the first N reads')
 	arg('--trim-g', action='store_true', default=False,
@@ -77,7 +85,7 @@ def add_arguments(parser):
 	arg('--minimum-length', '-l', type=int, default=0,
 		help='Minimum sequence length')
 	arg('--barcode-length', '-b', type=int, default=12,
-		help="Length of barcode. Positive for 5' barcode, negative for 3' barcode. (default: %(default)s")
+		help="Length of barcode. Positive for 5' barcode, negative for 3' barcode. Default: %(default)s")
 	arg('fastx', metavar='FASTA/FASTQ',
 		help='FASTA or FASTQ file (can be gzip-compressed) with sequences')
 
@@ -146,6 +154,7 @@ def cluster_sequences(sequences):
 
 GROUPS_HEADER = ['barcode', 'cdr3', 'name', 'sequence']
 
+
 def write_group(csvfile, barcode, sequences):
 	for sequence in sequences:
 		row = [barcode, sequence.cdr3, sequence.name.split(maxsplit=1)[0], sequence.sequence]
@@ -190,7 +199,7 @@ def main(args):
 					regex_fail += 1
 					continue
 			else:
-				cdr3 = unbarcoded.sequence[-80:-60]
+				cdr3 = unbarcoded.sequence[args.pseudo_cdr3_range]
 			unbarcoded.cdr3 = cdr3  # TODO slight abuse of Sequence objects
 			barcodes[barcode].append(unbarcoded)
 			cdr3s.add(cdr3)

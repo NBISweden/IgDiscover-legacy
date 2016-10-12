@@ -211,6 +211,7 @@ class Config:
 			whitelist=True, cluster_size=0, differences=2, allow_stop=True)
 		self.germline_filter = dict(unique_cdr3s=5, unique_js=3, check_motifs=False,
 			whitelist=True, cluster_size=100, differences=2, allow_stop=False)
+		self.cdr3_location = (-80, -60)
 		self.library_name = os.path.basename(os.getcwd())
 
 		self.read_from(file)

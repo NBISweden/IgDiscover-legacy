@@ -418,9 +418,11 @@ if config.barcode_length != 0:
 			groups="reads/groups.tab.gz"
 		input:
 			fasta="reads/5-filtered.fasta"
+		params:
+			cdr3_arg='--real-cdr3' if config.cdr3_location == 'detect' else '--pseudo-cdr3-range={}:{}'.format(*config.cdr3_location)
 		log: PREPROCESSED_READS + ".log"
 		shell:
-			"igdiscover group --groups-output={output.groups} --barcode-length={config.barcode_length} --trim-g --plot-sizes={output.pdf} {input.fasta} 2> {log} | {GZIP} > {output.fastagz}"
+			"igdiscover group {params.cdr3_arg} --groups-output={output.groups} --barcode-length={config.barcode_length} --trim-g --plot-sizes={output.pdf} {input.fasta} 2> {log} | {GZIP} > {output.fastagz}"
 
 else:
 	rule dereplicate:
