@@ -455,8 +455,12 @@ rule v_database_iteration_1:
 
 def ensure_fasta_not_empty(path):
 	with FastaReader(path) as fr:
-		sequences = list(fr)
-	if not sequences:
+		for record in fr:
+			has_records = True
+			break
+		else:
+			has_records = False
+	if has_records:
 		print(
 			'ERROR: No V genes were discovered in this iteration (file '
 			'{!r} is empty)! Cannot continue.\n'
