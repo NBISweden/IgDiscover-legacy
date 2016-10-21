@@ -460,7 +460,7 @@ def ensure_fasta_not_empty(path):
 			break
 		else:
 			has_records = False
-	if has_records:
+	if not has_records:
 		print(
 			'ERROR: No V genes were discovered in this iteration (file '
 			'{!r} is empty)! Cannot continue.\n'
