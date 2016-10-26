@@ -1,0 +1,9 @@
+image: python:3.5.2
+pipelines:
+  default:
+    - step:
+        script:
+          - pip3 install -U nose
+          - pip3 --version
+          - pip3 install .
+          - nosetests --with-doctest -P tests/testcluster.py igdiscover/
