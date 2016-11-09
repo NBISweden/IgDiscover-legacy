@@ -28,11 +28,16 @@ def test_main():
 	assert exc.exception.code == 0
 
 
-def test_group():
-	args = ['group', '-b', '4', '--pseudo-cdr3-range=-5:-2', '--trim-g', datapath('ungrouped.fasta')]
+def test_group_by_barcode_only():
+	args = ['group', '-b', '4', datapath('ungrouped.fasta')]
+	run(args,  resultpath('grouped-by-barcode-only.fasta'))
+
+
+def test_group_by_pseudo_cdr3():
+	args = ['group', '-b', '4', '--pseudo-cdr3=-5:-2', '--trim-g', datapath('ungrouped.fasta')]
 	run(args,  resultpath('grouped.fasta'))
 
 
-def test_group_barcode_end():
-	args = ['group', '-b', '-4', '--pseudo-cdr3-range=1:3', datapath('ungrouped.fasta')]
+def test_group_by_pseudo_cdr3_barcode_at_end():
+	args = ['group', '-b', '-4', '--pseudo-cdr3=1:3', datapath('ungrouped.fasta')]
 	run(args, resultpath('grouped2.fasta'))

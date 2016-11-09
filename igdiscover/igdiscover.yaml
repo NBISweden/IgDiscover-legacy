@@ -29,9 +29,11 @@ barcode_length_3prime: 0
 # located at bases 80 to 60 counted from the 3' end. (Use negative numbers to
 # count from the 3' end, positive ones to count from the 5' end. The most 5'
 # base has index 0.)
-# Set the value to 'detect' (with quotation marks) in order to use CDR3s
+#
+# Set this to 'detect' (with quotation marks) in order to use CDR3s
 # detected by regular expression.
 #
+# Set this to false (no quotation marks) in order to *only* group by barcode, not by CDR3.
 cdr3_location: [-80, -60]
 
 
