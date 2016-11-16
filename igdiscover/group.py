@@ -42,7 +42,7 @@ TODO
 import csv
 import sys
 import logging
-from collections import Counter, defaultdict
+from collections import Counter, defaultdict, OrderedDict
 from contextlib import ExitStack
 from itertools import islice
 
@@ -93,7 +93,9 @@ def add_arguments(parser):
 class Graph:
 	"""Graph that can find connected components"""
 	def __init__(self, nodes):
-		self._nodes = { node: [] for node in nodes }
+		self._nodes = OrderedDict()
+		for node in nodes:
+			self._nodes[node] = []
 
 	def add_edge(self, node1, node2):
 		self._nodes[node1].append(node2)
