@@ -6,4 +6,4 @@ pipelines:
           - pip3 install -U nose
           - pip3 --version
           - pip3 install .
-          - nosetests --with-doctest -P tests/testcluster.py igdiscover/
+          - nosetests --with-doctest -P tests/ igdiscover/
