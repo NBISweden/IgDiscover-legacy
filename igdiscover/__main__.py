@@ -46,7 +46,8 @@ COMMANDS = [
 
 logger = logging.getLogger(__name__)
 
-def main():
+
+def main(arguments=None):
 	logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 	parser = HelpfulArgumentParser(description=__doc__, prog='igdiscover')
 	parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
@@ -59,7 +60,7 @@ def main():
 		subparser.set_defaults(func=module.main)
 		module.add_arguments(subparser)
 
-	args = parser.parse_args()
+	args = parser.parse_args(arguments)
 	if not hasattr(args, 'func'):
 		parser.error('Please provide the name of a subcommand to run')
 	else:
