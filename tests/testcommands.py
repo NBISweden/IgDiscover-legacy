@@ -5,6 +5,23 @@ from tempfile import TemporaryDirectory
 import os
 import sys
 
+
+def run(args, expected):
+	"""
+	Run IgDiscover, redirecting stdout to a temporary file.
+	Then compare the output with the contents of an expected file.
+	"""
+	with TemporaryDirectory() as td:
+		outpath = os.path.join(td, 'output')
+		print('Running:', ' '.join(args))
+		with open(outpath, 'w') as f:
+			old_stdout = sys.stdout
+			sys.stdout = f
+			main(args)
+			sys.stdout = old_stdout
+		assert files_equal(expected, outpath)
+
+
 def test_main():
 	with assert_raises(SystemExit) as exc:
 		main(['--version'])
@@ -12,13 +29,10 @@ def test_main():
 
 
 def test_group():
-	with TemporaryDirectory() as td:
-		path = os.path.join(td, 'grouped.fasta')
-		cmd = ['group', '-b', '4', '--pseudo-cdr3-range=-5:-2', '--trim-g', datapath('ungrouped.fasta')]
-		print('Running:', ' '.join(cmd))
-		with open(path, 'w') as f:
-			old_stdout = sys.stdout
-			sys.stdout = f
-			main(cmd)
-			sys.stdout = old_stdout
-		assert files_equal(resultpath('grouped.fasta'), path)
+	args = ['group', '-b', '4', '--pseudo-cdr3-range=-5:-2', '--trim-g', datapath('ungrouped.fasta')]
+	run(args,  resultpath('grouped.fasta'))
+
+
+def test_group_barcode_end():
+	args = ['group', '-b', '-4', '--pseudo-cdr3-range=1:3', datapath('ungrouped.fasta')]
+	run(args, resultpath('grouped2.fasta'))
