@@ -45,6 +45,7 @@ import logging
 from collections import Counter, defaultdict, OrderedDict
 from contextlib import ExitStack
 from itertools import islice
+import random
 
 import matplotlib
 matplotlib.use('pdf')
@@ -232,11 +233,12 @@ def main(args):
 		n_consensus = 0
 		n_ambiguous = 0
 		sizes = []
-		for barcode, sequences in barcodes.items():
+		for barcode in sorted(barcodes):
+			sequences = barcodes[barcode]
 			if len(sequences) != len(set(s.name for s in sequences)):
 				logger.error('Duplicate sequence records detected')
 				sys.exit(1)
-			clusters = cluster_sequences(sequences)
+			clusters = cluster_sequences(sequences)  # it’s a list of lists
 			n_clusters += len(clusters)
 			for cluster in clusters:
 				sizes.append(len(cluster))

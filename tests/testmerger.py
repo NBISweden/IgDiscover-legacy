@@ -8,6 +8,7 @@ from igdiscover.utils import UniqueNamer
 from igdiscover.rename import PrefixDict
 from nose.tools import raises
 
+
 def test_0():
 	merger = SiblingMerger()
 	assert list(merger) == []
