@@ -84,7 +84,7 @@ class SequenceMerger(Merger):
 	def merged(self, s, t):
 		"""
 		Given two SequenceInfo objects, decide whether to discard one of them and which one.
-		This is for merging similar sequences.
+		This is used for merging similar candidate sequences.
 
 		Two sequences are considered to be similar if their edit distance is at most
 		max_differences (see constructor). If one of the sequences is longer, the 'overhanging'
@@ -119,10 +119,10 @@ class SequenceMerger(Merger):
 		if t.whitelisted:
 			return t
 		# No sequence is whitelisted if we arrive here
-		if len(s_seq) < len(t.sequence):
-			return t
 		if s.CDR3s_exact >= t.CDR3s_exact:
 			return s
+		if len(s_seq) < len(t.sequence):
+			return t
 		return t
 
 
