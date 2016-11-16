@@ -15,11 +15,11 @@ def capture_stdout():
 
 
 def datapath(path):
-    return os.path.join(os.path.dirname(__file__), 'data', path)
+	return os.path.join(os.path.dirname(__file__), 'data', path)
 
 
 def resultpath(path):
-    return os.path.join(os.path.dirname(__file__), 'results', path)
+	return os.path.join(os.path.dirname(__file__), 'results', path)
 
 
 def files_equal(path1, path2):
