@@ -205,6 +205,7 @@ class Config:
 		self.forward_primers = None
 		self.reverse_primers = None
 		self.rename = True
+		self.race_g = False
 		self.seed = 1
 		self.exact_copies = None
 		self.pre_germline_filter = dict(unique_cdr3s=2, unique_js=2, check_motifs=False,

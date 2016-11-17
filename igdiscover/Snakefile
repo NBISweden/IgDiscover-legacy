@@ -426,7 +426,8 @@ if config.barcode_length != 0:
 				cdr3_arg = ' --real-cdr3'
 			else:
 				cdr3_arg = ' --pseudo-cdr3={}:{}'.format(*config.cdr3_location)
-			shell("igdiscover group{cdr3_arg} --groups-output={output.groups} --barcode-length={config.barcode_length} --trim-g --plot-sizes={output.pdf} {input.fasta} 2> {log} | {GZIP} > {output.fastagz}")
+			race_arg = ' --trim-g' if config.race_g else ''
+			shell("igdiscover group{cdr3_arg} --groups-output={output.groups} --barcode-length={config.barcode_length}{race_arg} --plot-sizes={output.pdf} {input.fasta} 2> {log} | {GZIP} > {output.fastagz}")
 
 else:
 	rule dereplicate:

@@ -11,9 +11,13 @@ species: human
 iterations: 3
 
 
+## Barcoding settings
+
+
 # If you have a random barcode sequence (unique molecular identifier) at the 5' end,
 # set this to its length. Leave at 0 when you have no 5' barcode.
 barcode_length_5prime: 0
+
 
 # Same as above, but for the 3' end of the sequence. Leave at 0 when you have no 3' barcode.
 # Currently, you cannot have a barcode in both ends, so at least one of the two settings
@@ -35,6 +39,13 @@ barcode_length_3prime: 0
 #
 # Set this to false (no quotation marks) in order to *only* group by barcode, not by CDR3.
 cdr3_location: [-80, -60]
+
+
+# When you use a RACE protocol, then the sequences have a run of G nucleotides in the beginning
+# which need to be removed when barcodes are used. If you use RACE, set this to true.
+# The G nucleotides are assumed to be in the 5' end (but after the barcode if it exists).
+#
+race_g: false
 
 
 ## Primer-related settings
