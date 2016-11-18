@@ -670,6 +670,7 @@ rule igdiscover_compose:
 		criteria += ['--unique-CDR3={}'.format(conf['unique_cdr3s'])]
 		criteria += ['--cluster-size={}'.format(conf['cluster_size'])]
 		criteria += ['--unique-J={}'.format(conf['unique_js'])]
+		criteria += ['--cross-mapping-ratio={}'.format(conf['cross_mapping_ratio'])]
 		criteria = ' '.join(criteria)
 		shell("igdiscover compose {criteria} --fasta={output.fasta} {input.tab} > {output.tab}")
 

@@ -123,13 +123,15 @@ follow this structure (from 5' to 3'):
 
 * The forward primer sequence. This is optional.
 * A random barcode (molecular identifier). This is optional. Set the
-  configuration option ``barcode_length`` to 0 if you don’t have random barcodes
+  configuration option ``barcode_length_5p`` to 0 if you don’t have random barcodes
   or if you don’t want the program to use them.
-* A run of G nucleotides. This is an artifact of the RACE protocol (Rapid
-  amplification of cDNA ends).
+* Optionally, a run of G nucleotides. This is an artifact of the RACE protocol (Rapid
+  amplification of cDNA ends). If you have this, set ``race_g`` to ``true`` in the configuration file.
 * 5' UTR
 * Leader
 * Re-arranged V, D and J gene sequences for heavy chains; only V and J for light chains
+* An optional random barcode. Set the configuration option ``barcode_length_3p`` to the length of
+  this barcode. You can currently not have both a 5' and a 3' barcode.
 * The reverse primer. This is optional.
 
 We use IgBLAST to detect the location of the V, D, J genes (run as part of the
@@ -140,7 +142,7 @@ problem in practice.) The leader sequence is detected by looking for a start
 codon near 60 bp upstream of the start of the V gene match.
 
 IgDiscover was tested with paired-end Illumina MiSeq reads (2x300bp).
-It should be able to handle 454 data, but we have not tested this.
+It should be able to handle 454 data, but we have not tested this thoroughly.
 
 
 Configuration
@@ -170,7 +172,7 @@ The analysis directory
 ======================
 
 IgDiscover writes all intermediate files, the final V gene database, statistics and plots into the analysis directory that was created with ``igdiscover init``.
-The files in the ``final/`` subdirectory are likely the most relevant ones.
+Inside that directory, there is a ``final/`` subdirectory that contains the analysis results.
 
 These are the files and subdirectories that can be found in the analysis directory.
 Subdirectories are described in detail below.
@@ -561,6 +563,64 @@ clusterplot
 
 errorplot
     Plot histograms of differences to reference V gene
+
+
+Germline and pre-germline filtering
+===================================
+
+V gene sequences found by the clustering step of the program (the ``discover`` subcommand) are
+stored in the ``candidates.tab`` file. The entries are “candidates” because many of these will be
+PCR or other artifacts and therefore do not represent true novel V genes. The germline and
+pre-germline filters take care of removing artifacts. They germline filter is the “real” filter and
+used only in the last iteration in order to obtain the final gene database. The pre-germline filter
+is less strict and used in all the earlier iterations.
+
+The germline filters are implemented in the ``igdiscover compose`` subcommand. It performs the
+following filtering and processing steps:
+
+* Discard sequences with ``N`` bases
+* Discard sequences that come from a consensus over too few source sequences
+* Discard sequences with too few unique CDR3s (CDR3s_exact column)
+* Discard sequences with too few unique Js (Js_exact column)
+* Discard sequences identical to one of the database sequences (if DB given)
+* Discard sequences that do not match a set of known good motifs
+* Discard sequences that contain a stop codon (has_stop column)
+* Discard near-duplicate sequences
+* Discard cross-mapping artifacts
+
+If a whitelist of sequences is provided (by default, this is the input V gene database), then the
+candidates that appear on it
+
+* are not checked for the cluster size criterion,
+* do not need to match a set of known good motifs,
+* are never considered near-duplicates (but they are checked for cross-mapping),
+* are allowed to contain a stop codon.
+
+(This section is incomplete.)
+
+Cross-mapping artifacts
+-----------------------
+
+If two very similar sequences appear in the database used by IgBLAST,
+then sequencing errors may lead to one sequence incorrectly being assigned
+to the other. This is particularly problematic if one of the sequences is
+highly expressed while the other is not expressed at all. The not expressed
+sequence is even included in the list of V gene candidates because it is
+in the input database and therefore whitelisted. We call this a “cross-mapping
+artifact”.
+
+The germline filtering step of IgDiscover therefore aims to eliminate
+cross-mapping artifacts by checking all pairs of sequences for the following:
+
+* The two sequences have a distance of 1,
+* they are both in the database for that particular iteration (only then
+can cross-mapping occur)
+* the ratio between the expression levels of the two sequences (using
+the cluster_size field in the ``candidates.tab`` file) is less than the value
+  ``cross_mapping_ratio`` defined in the configuration file (0.02 by default).
+
+If all that is the case, then the sequence with the lower expression is
+discarded.
 
 
 Data from the Sequence Read Archive (SRA)

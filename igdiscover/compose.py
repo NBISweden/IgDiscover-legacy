@@ -42,6 +42,8 @@ def add_arguments(parser):
 	arg('--max-differences', type=int, metavar='MAXDIFF', default=1,
 		help='Merge sequences if they have at most MAXDIFF differences. '
 		'The one with more CDR3s is kept. Default: %(default)s')
+	arg('--cross-mapping-ratio', type=float, metavar='RATIO', default=0.02,
+		help='Ratio for detection of cross-mapping artifacts. Default: %(default)s')
 	arg('--minimum-db-diff', '-b', type=int, metavar='N', default=0,
 		help='Sequences must have at least N differences to the database '
 		'sequence. Default: %(default)s')
@@ -63,23 +65,25 @@ def add_arguments(parser):
 			'Default: Do not allow stop codons.')
 	arg('--whitelist', metavar='FASTA', default=[], action='append',
 		help='Sequences that are never discarded or merged with others, '
-			'even if criteria for discarding them would apply.')
+			'even if criteria for discarding them would apply (except cross-mapping artifact '
+			'removal, which is always performed).')
 	arg('--fasta', metavar='FILE', help='Write new database in FASTA format to FILE')
 	arg('tables', metavar='CANDIDATES.TAB',
 		help='Tables (one or more) created by the "discover" command',
 		nargs='+')
 
 
-SequenceInfo = namedtuple('SequenceInfo', 'sequence name CDR3s_exact whitelisted row')
+SequenceInfo = namedtuple('SequenceInfo', 'sequence name CDR3s_exact cluster_size whitelisted is_database cluster_size_is_accurate row')
 
 
 class SequenceMerger(Merger):
 	"""
 	Merge sequences that are sufficiently similar into single entries.
 	"""
-	def __init__(self, max_differences):
+	def __init__(self, max_differences, cross_mapping_ratio):
 		super().__init__()
 		self._max_differences = max_differences
+		self._cross_mapping_ratio = cross_mapping_ratio
 
 	def merged(self, s, t):
 		"""
@@ -104,20 +108,30 @@ class SequenceMerger(Merger):
 		if len(s_seq) != len(t.sequence):
 			t_prefix = t.sequence[:len(s_seq)]
 			t_suffix = t.sequence[-len(s_seq):]
-			dist_prefix = edit_distance(s_seq, t_prefix, self._max_differences)
-			dist_suffix = edit_distance(s_seq, t_suffix, self._max_differences)
+			dist_prefix = edit_distance(s_seq, t_prefix, max(self._max_differences, 1))
+			dist_suffix = edit_distance(s_seq, t_suffix, max(self._max_differences, 1))
 			dist = min(dist_prefix, dist_suffix)
 		else:
-			dist = edit_distance(s_seq, t.sequence, self._max_differences)
+			dist = edit_distance(s_seq, t.sequence, max(self._max_differences, 1))
+
+		# Check for possible cross-mapping
+		if self._cross_mapping_ratio and dist == 1 and s.is_database and t.is_database:
+			total_count = (s.cluster_size + t.cluster_size)
+			for u, v in [(s, t), (t, s)]:
+				if u.cluster_size_is_accurate and u.cluster_size / total_count < self._cross_mapping_ratio:
+					# u is probably a cross-mapping artifact of the higher-expressed v
+					return v
 
 		if dist > self._max_differences:
 			return None  # keep both
+
 		if s.whitelisted and t.whitelisted:
 			return None  # keep both
 		if s.whitelisted:
 			return s
 		if t.whitelisted:
 			return t
+
 		# No sequence is whitelisted if we arrive here
 		if s.CDR3s_exact >= t.CDR3s_exact:
 			return s
@@ -127,7 +141,7 @@ class SequenceMerger(Merger):
 
 
 def main(args):
-	merger = SequenceMerger(args.max_differences)
+	merger = SequenceMerger(args.max_differences, args.cross_mapping_ratio)
 
 	whitelist = dict()
 	for path in args.whitelist:
@@ -164,7 +178,7 @@ def main(args):
 			subset_seqs='cluster_size'), inplace=True)
 
 		i = list(table.columns).index('consensus')
-		# whitelist_diff distinguishes between 0 and >0 only
+		# whitelist_diff distinguishes between 0 and !=0 only
 		# at this point. Accurate edit distances are computed later.
 		whitelist_diff = [ (0 if s in whitelist else -1) for s in table['consensus'] ]
 		table.insert(i, 'whitelist_diff', pd.Series(whitelist_diff, index=table.index, dtype=int))
@@ -199,9 +213,14 @@ def main(args):
 			'After filtering, %s entries remain.', len(args.tables),
 			total_unfiltered, len(overall_table))
 
+	def cluster_size_is_accurate(row):
+		return bool(set(row.cluster.split(';')) & set(['all', 'db']))
+
 	for _, row in overall_table.iterrows():
 		merger.add(SequenceInfo(row['consensus'], row['name'], row['CDR3s_exact'],
-			row['whitelist_diff'] == 0, row.name))  # row.name is the index of the row. It is not row['name'].
+			row['cluster_size'], row['whitelist_diff'] == 0, row['database_diff'] == 0,
+			cluster_size_is_accurate(row),
+			row.name))  # row.name is the index of the row. It is not row['name'].
 
 	# Discard near-duplicates
 	overall_table['is_duplicate'] = pd.Series(True, index=overall_table.index, dtype=bool)

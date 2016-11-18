@@ -82,13 +82,18 @@ def test_unique_namer():
 	assert namer('NameC') == 'NameCA'
 
 
+def SI(sequence, name, CDR3s_exact, whitelisted=False):
+	return SequenceInfo(sequence, name, CDR3s_exact, cluster_size=100, whitelisted=whitelisted,
+		is_database=False, cluster_size_is_accurate=True, row=None)
+
+
 def test_sequence_merger_withCDR3():
-	merger = SequenceMerger(max_differences=1)
+	merger = SequenceMerger(max_differences=1, cross_mapping_ratio=0)
 	infos = [
-		SequenceInfo('ACGTTA', 'Name1', 15, whitelisted=False, row=None),
-		SequenceInfo('ACGTTAT', 'Name2', 100, whitelisted=False, row=None),  # kept because it is longer
-		SequenceInfo('ACGCCAT', 'Name3', 15, whitelisted=False, row=None),  # kept because edit distance > 1
-		SequenceInfo('ACGGTAT', 'Name5', 120, whitelisted=False, row=None),  # kept because more CDR3s
+		SI('ACGTTA', 'Name1', 15),
+		SI('ACGTTAT', 'Name2', 100),  # kept because it is longer
+		SI('ACGCCAT', 'Name3', 15),   # kept because edit distance > 1
+		SI('ACGGTAT', 'Name5', 120),  # kept because it has more CDR3s
 	]
 	merger.add(infos[0]); merged = list(merger)
 	assert len(merged) == 1 and merged[0] == infos[0]
@@ -103,10 +108,10 @@ def test_sequence_merger_withCDR3():
 
 
 def test_sequence_merger_prefix():
-	merger = SequenceMerger(max_differences=1)
+	merger = SequenceMerger(max_differences=1, cross_mapping_ratio=0)
 	infos = [
-		SequenceInfo('AAATAA', 'Name1', 117, whitelisted=False, row=None),
-		SequenceInfo('AAACAAG', 'Name2', 10, whitelisted=False, row=None),
+		SI('AAATAA', 'Name1', 117),
+		SI('AAACAAG', 'Name2', 10),
 	]
 	merger.add(infos[0])
 	merger.add(infos[1])
@@ -116,12 +121,12 @@ def test_sequence_merger_prefix():
 
 
 def test_merger_check_all_previous():
-	merger = SequenceMerger(max_differences=1)
+	merger = SequenceMerger(max_differences=1, cross_mapping_ratio=0)
 	infos = [
-		SequenceInfo('ATAAAA', 's1', 11, whitelisted=False, row=None),
-		SequenceInfo('AAGAAA', 's2', 12, whitelisted=False, row=None),
-		SequenceInfo('AAACAA', 's3', 13, whitelisted=False, row=None),
-		SequenceInfo('AAAAAA', 'Final', 200, whitelisted=False, row=None)
+		SI('ATAAAA', 's1', 11),
+		SI('AAGAAA', 's2', 12),
+		SI('AAACAA', 's3', 13),
+		SI('AAAAAA', 'Final', 200),
 	]
 	for info in infos:
 		merger.add(info)
