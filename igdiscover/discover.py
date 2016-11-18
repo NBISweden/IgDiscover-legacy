@@ -275,7 +275,10 @@ class Discoverer:
 
 			# Build the Candidate
 			# TODO use UniqueNamer here
-			sequence_id = '{}_{}'.format(gene.rsplit('_S', 1)[0], sequence_hash(sibling))
+			if database_diff is not None and database_diff != 0:
+				sequence_id = '{}_{}'.format(gene.rsplit('_S', 1)[0], sequence_hash(sibling))
+			else:
+				sequence_id = gene
 
 			if self.approx_columns:
 				assert info['exact'].count <= info['approx'].count
@@ -390,7 +393,7 @@ def main(args):
 		seed = args.seed
 	else:
 		seed = random.randrange(10**6)
-	logger.info('Use --seed=%d to reproduce this run', seed)
+		logger.info('Use --seed=%d to reproduce this run', seed)
 
 	table = read_table(args.table)
 	table = table.loc[:,('name', 'chain', 'V_gene', 'J_gene', 'V_nt', 'CDR3_nt', 'V_SHM', 'J_SHM')].copy()
