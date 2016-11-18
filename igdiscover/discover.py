@@ -39,8 +39,6 @@ def add_arguments(parser):
 		help='Seed value for random numbers for reproducible runs.')
 	arg('--consensus-threshold', '-t', metavar='PERCENT', type=float, default=60,
 		help='Threshold for consensus computation. Default: %(default)s%%')
-	arg('--prefix', default='', metavar='PREFIX',
-		help='Add PREFIX before sequence names')
 	arg('--gene', '-g', action='append', default=[],
 		help='Compute consensus for this gene. Can be given multiple times. '
 			'Default: Compute for all genes.')
@@ -121,7 +119,7 @@ class Discoverer:
 	Discover candidates for novel V genes.
 	"""
 	def __init__(self, database, windows, left, right, cluster, table_output,
-			prefix, consensus_threshold, v_error_rate, downsample,
+			consensus_threshold, v_error_rate, downsample,
 			cluster_subsample_size, approx_columns, max_n_bases, exact_copies,
 			seed):
 		self.database = database
@@ -130,7 +128,6 @@ class Discoverer:
 		self.right = right
 		self.cluster = cluster
 		self.table_output = table_output
-		self.prefix = prefix
 		self.consensus_threshold = consensus_threshold
 		self.v_error_rate = v_error_rate
 		self.downsample = downsample
@@ -278,7 +275,7 @@ class Discoverer:
 
 			# Build the Candidate
 			# TODO use UniqueNamer here
-			sequence_id = '{}{}_{}'.format(self.prefix, gene.rsplit('_S', 1)[0], sequence_hash(sibling))
+			sequence_id = '{}_{}'.format(gene.rsplit('_S', 1)[0], sequence_hash(sibling))
 
 			if self.approx_columns:
 				assert info['exact'].count <= info['approx'].count
@@ -439,7 +436,7 @@ def main(args):
 		groups.append((gene, group))
 
 	discoverer = Discoverer(database, windows, args.left, args.right, args.cluster,
-		args.table_output, args.prefix, args.consensus_threshold, v_error_rate,
+		args.table_output, args.consensus_threshold, v_error_rate,
 		MAXIMUM_SUBSAMPLE_SIZE, cluster_subsample_size=args.subsample,
 		approx_columns=args.approx, max_n_bases=args.max_n_bases, exact_copies=args.exact_copies,
 		seed=seed)
