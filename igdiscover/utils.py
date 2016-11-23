@@ -9,7 +9,7 @@ import re
 import numpy as np
 import yaml
 from sqt.align import edit_distance, multialign, consensus
-from sqt.dna import GENETIC_CODE
+from sqt.dna import GENETIC_CODE, nt_to_aa as _nt_to_aa
 
 
 def downsampled(population, size):
@@ -257,7 +257,12 @@ class Config:
 
 def nt_to_aa(s):
 	"""Translate a nucleotide sequence to an amino acid sequence"""
-	return ''.join(GENETIC_CODE.get(s[i:i+3], '*') for i in range(0, len(s), 3))
+	try:
+		# try fast version first
+		return _nt_to_aa(s)
+	except ValueError:
+		# failure because there was an unknown nucleotide
+		return ''.join(GENETIC_CODE.get(s[i:i+3], '*') for i in range(0, len(s), 3))
 
 
 def has_stop(sequence):

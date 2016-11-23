@@ -24,7 +24,7 @@ setup(
 	packages = ['igdiscover'],
 	package_data = {'igdiscover': ['igdiscover.yaml', 'Snakefile', 'empty.aux']},
 	install_requires = [
-		'sqt>=0.6.1',
+		'sqt>=0.7.0',
 		'pandas>=0.16.2',
 		'numpy',
 		'matplotlib>=1.5.0',
