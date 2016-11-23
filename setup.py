@@ -28,7 +28,7 @@ setup(
 		'pandas>=0.16.2',
 		'numpy',
 		'matplotlib>=1.5.0',
-		'snakemake<3.8.0',  # avoid time granularity bug, see https://bitbucket.org/snakemake/snakemake/pull-requests/112
+		'snakemake>=3.9.0',
 		'cutadapt',
 		'seaborn>=0.6.0',
 		'scipy>=0.16.1',
