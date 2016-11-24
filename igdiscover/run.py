@@ -36,6 +36,7 @@ def main(args):
 	logger.root.handlers = []
 	snakefile_path = pkg_resources.resource_filename('igdiscover', 'Snakefile')
 	success = snakemake(snakefile_path,
+		snakemakepath='snakemake',  # Needed in snakemake 3.9.0
 		dryrun=args.dryrun,
 		cores=args.cores,
 		keepgoing=args.keepgoing,
