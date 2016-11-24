@@ -5,11 +5,14 @@ Calls Snakemake to produce all the output files.
 """
 import sys
 import logging
-import subprocess
 import resource
+import platform
 import pkg_resources
 from snakemake import snakemake
 from sqt.utils import available_cpu_count
+from . import __version__
+
+from igdiscover.utils import Config
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +33,19 @@ def add_arguments(parser):
 
 
 def main(args):
+	try:
+		config = Config.from_default_path()
+	except FileNotFoundError as e:
+		sys.exit("Pipeline configuration file {!r} not found. Please create it!".format(e.filename))
+
+	print('IgDiscover version {} with Python {}. Configuration:'.format(__version__,
+		platform.python_version()))
+	for k, v in sorted(vars(config).items()):
+		# TODO the following line is only necessary for non-YAML configurations
+		if k.startswith('_'):
+			continue
+		print('   ', k, ': ', repr(v), sep='')
+
 	# snakemake sets up its own logging and this cannot be easily changed
 	# (setting keep_logger=True crashes), so remove our own log handler
 	# for now
