@@ -5,8 +5,21 @@ Changes
 development version
 -------------------
 
+* Novel sequences identical to a database sequence no longer get the
+  ``_S1234`` suffix.
+* IgBLAST 1.5.0 output can now be parsed. Parsing is also faster by 25%.
+* No longer trim trim the initial ``G`` run in sequences (due to RACE) by
+  default. It is now a configuration setting.
+* Add ``cdr3_location`` configuration setting: It allows to set whether to
+  use a CDR3 in addition to the barcode for grouping sequences.
+* Create a ``groups.tab.gz`` file by default (describing the de-barcoding
+  groups)
+* Many improvements to the documentation
+* Extended and fixed unit tests. These are now run via a CI system.
+* Statistics in JSON format are written to ``stats/stats.json``.
 * More helpful warning message when no sequences were discovered in an
   iteration.
+* Drop support for Python 3.3.
 
 v0.5 (2016-09-01)
 -----------------
