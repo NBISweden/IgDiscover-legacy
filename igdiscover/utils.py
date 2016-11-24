@@ -209,6 +209,7 @@ class Config:
 		self.race_g = False
 		self.seed = 1
 		self.exact_copies = None
+		self.preprocessing_filter = dict(v_coverage=90, j_coverage=60, v_evalue=1E-3)
 		self.pre_germline_filter = dict(unique_cdr3s=2, unique_js=2, check_motifs=False,
 			whitelist=True, cluster_size=0, differences=1, allow_stop=True, cross_mapping_ratio=0.02)
 		self.germline_filter = dict(unique_cdr3s=5, unique_js=3, check_motifs=False,
@@ -221,7 +222,7 @@ class Config:
 	def read_from(self, file):
 		content = file.read()
 		new_config = self.make_compatible(yaml.safe_load(content))
-		for key in ('pre_germline_filter', 'germline_filter'):
+		for key in ('preprocessing_filter', 'pre_germline_filter', 'germline_filter'):
 			if key in new_config:
 				self.__dict__[key].update(new_config[key])
 				del new_config[key]

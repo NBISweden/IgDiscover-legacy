@@ -160,6 +160,15 @@ debug: false
 seed: 1
 
 
+# Preprocessing filter settings. This filter is always applied directly after running IgBLAST,
+# even if no gene discovery is requested.
+#
+preprocessing_filter:
+  v_coverage: 90   # Match must cover V gene by at least this percentage
+  j_coverage: 60   # Match must cover J gene by at least this percentage
+  v_evalue: 0.001  # Highest allowed V gene match E-value
+
+
 # Filtering criteria applied to candidate sequences in all iterations except the last.
 #
 pre_germline_filter:

@@ -4,8 +4,8 @@ Filter table with parsed IgBLAST results
 Discard the following rows in the table:
 - no J assigned
 - stop codon found
-- V gene coverage less than 90
-- J gene coverage less than 60
+- V gene coverage less than 90%
+- J gene coverage less than 60%
 - V gene E-value greater than 1E-3
 
 The filtered table is printed to standard output.
@@ -17,18 +17,28 @@ from .table import read_table
 
 logger = logging.getLogger(__name__)
 
+
 def add_arguments(parser):
 	arg = parser.add_argument
+	arg('--v-coverage', type=float, default=90, metavar='PERCENT',
+		help='Require that the sequence covers at least PERCENT of the V gene. '
+		'Default: %(default)s')
+	arg('--v-evalue', type=float, default=1E-3, metavar='EVALUE',
+		help='Require that the E-value for the V gene match is at most EVALUE. '
+		'Default: %(default)s')
+	arg('--j-coverage', type=float, default=60, metavar='PERCENT',
+		help='Require that the sequence covers at least PERCENT of the J gene. '
+		'Default: %(default)s')
 	arg('table', help='Table with filtered IgBLAST results.')
 
 
 def filtered_table(table,
-		v_gene_coverage=90,  # at least
-		j_gene_coverage=60,  # at least
-		v_gene_evalue=1E-3,  # at most
+		v_gene_coverage,  # at least
+		j_gene_coverage,  # at least
+		v_gene_evalue,  # at most
 	):
 	"""
-	Discard the following rows in the table (read in by read_table):
+	Discard the following rows in the table:
 	- no J assigned
 	- stop codon found
 	- V gene coverage less than v_gene_coverage
@@ -64,6 +74,7 @@ def filtered_table(table,
 
 def main(args):
 	d = read_table(args.table, log=True)
-	d = filtered_table(d)
+	d = filtered_table(d, v_gene_coverage=args.v_coverage,
+		j_gene_coverage=args.j_coverage, v_gene_evalue=args.v_evalue)
 	print(d.to_csv(sep='\t', index=False), end='')
 	logger.info('%d rows written', len(d))
