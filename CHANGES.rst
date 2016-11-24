@@ -14,6 +14,8 @@ development version
   use a CDR3 in addition to the barcode for grouping sequences.
 * Create a ``groups.tab.gz`` file by default (describing the de-barcoding
   groups)
+* The pre-processing filter is now configurable. See the
+  ``preprocesing_filter`` sectin in the configuration file.
 * Many improvements to the documentation
 * Extended and fixed unit tests. These are now run via a CI system.
 * Statistics in JSON format are written to ``stats/stats.json``.
