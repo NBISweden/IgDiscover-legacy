@@ -31,6 +31,9 @@ GZIP = 'pigz' if shutil.which('pigz') is not None else 'gzip'
 READS1, READS2 = 'reads/1-limited.1.fastq.gz', 'reads/1-limited.2.fastq.gz'
 PREPROCESSED_READS = 'reads/sequences.fasta.gz'
 
+if config.debug:
+	# Do not delete intermediate files when debugging
+	temp = lambda x: x
 
 # Targets for each iteration
 ITERATION_TARGETS = [

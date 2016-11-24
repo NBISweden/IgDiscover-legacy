@@ -143,6 +143,13 @@ subsample: 1000
 rename: true
 
 
+# Whether debugging is enabled or not. Currently, if this is set to true,
+# some large intermediate files that would otherwise be deleted will be
+# kept.
+#
+debug: false
+
+
 # The "seed value" is in arbitrary number used to get reproducible
 # runs. Two runs that use the same software version, the same seed
 # and otherwise the same configuration will give identical results.
