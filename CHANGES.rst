@@ -5,22 +5,33 @@ Changes
 development version
 -------------------
 
+* The FASTA files of the input V/D/J gene lists now need to be
+  named ``V.fasta``, ``D.fasta`` and ``J.fasta``. The species name
+  is no longer part of the file name. This should reduce confusion
+  when working with species not supported by IgBLAST.
+* The ``species:`` configuration setting in the configuration can
+  (and should) now be left empty. Its only use was that it is passed
+  to IgBLAST, but since IgDiscover provides IgBLAST with its own
+  V/D/J sequences anyway, it does not seem to make a difference.
+* A “cross-mapping” detection has been added, which should reduce
+  the number of false positives.
+  :ref:`See the documentation for an explanation <cross-mapping>`.
 * Novel sequences identical to a database sequence no longer get the
   ``_S1234`` suffix.
-* IgBLAST 1.5.0 output can now be parsed. Parsing is also faster by 25%.
 * No longer trim trim the initial ``G`` run in sequences (due to RACE) by
   default. It is now a configuration setting.
 * Add ``cdr3_location`` configuration setting: It allows to set whether to
   use a CDR3 in addition to the barcode for grouping sequences.
-* Create a ``groups.tab.gz`` file by default (describing the de-barcoding
+* Create a ``groups.tab.gz`` file by default (describing the de-barcoded
   groups)
 * The pre-processing filter is now configurable. See the
-  ``preprocesing_filter`` sectin in the configuration file.
+  ``preprocessing_filter`` section in the configuration file.
 * Many improvements to the documentation
 * Extended and fixed unit tests. These are now run via a CI system.
 * Statistics in JSON format are written to ``stats/stats.json``.
-* More helpful warning message when no sequences were discovered in an
-  iteration.
+* IgBLAST 1.5.0 output can now be parsed. Parsing is also faster by 25%.
+* More helpful warning message when no sequences were discovered in
+  an iteration.
 * Drop support for Python 3.3.
 
 v0.5 (2016-09-01)

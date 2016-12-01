@@ -598,6 +598,8 @@ candidates that appear on it
 
 (This section is incomplete.)
 
+.. _cross-mapping:
+
 Cross-mapping artifacts
 -----------------------
 
@@ -614,9 +616,9 @@ cross-mapping artifacts by checking all pairs of sequences for the following:
 
 * The two sequences have a distance of 1,
 * they are both in the database for that particular iteration (only then
-can cross-mapping occur)
+  can cross-mapping occur)
 * the ratio between the expression levels of the two sequences (using
-the cluster_size field in the ``candidates.tab`` file) is less than the value
+  the cluster_size field in the ``candidates.tab`` file) is less than the value
   ``cross_mapping_ratio`` defined in the configuration file (0.02 by default).
 
 If all that is the case, then the sequence with the lower expression is
@@ -637,7 +639,8 @@ The ``--split-files`` option ensures that the paired-end reads are stored in two
 separate files, one for the forward and one for the reverse read, respectively.
 (If you do not provide it, you will get an interleaved FASTQ file that currently
 cannot be read by IgDiscover). The ``--gzip`` option creates compressed output.
-The command creates two files in the current directory. In the above example, they would be named ``SRR2905710_1.fastq.gz`` and ``SRR2905710_2.fastq.gz``.
+The command creates two files in the current directory. In the above example,
+they would be named ``SRR2905710_1.fastq.gz`` and ``SRR2905710_2.fastq.gz``.
 
 The program ``fastq-dump`` is part of the SRA toolkit. On Debian-derived
 Linux distributions, you can typically install it with ``sudo apt-get install
