@@ -65,5 +65,8 @@ def cluster_sequences(sequences, minsize=5):
 					clusters[id] = cl
 			cl += 1
 		prev = n.dist
+	# At the end of the above loop, we have not processed the rightmost
+	# subtree. In our experiments, it never contains true novel sequences,
+	# so we omit it.
 
 	return pd.DataFrame(matrix), linkage, clusters
