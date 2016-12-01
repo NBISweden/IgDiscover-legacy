@@ -18,7 +18,7 @@ def add_arguments(parser):
 	arg('--minimum-group-size', '-m', metavar='N', type=int, default=200,
 		help='Do not plot if there are less than N sequences for a gene. Default: %(default)s')
 	arg('--gene', '-g', action='append', default=[],
-		help='Compute consensus for this gene. Can be given multiple times. Default: Compute for all genes.')
+		help='Plot GENE. Can be given multiple times. Default: Plot all genes.')
 	arg('--size', metavar='N', type=int, default=300,
 		help='Show at most N sequences (with a matrix of size N x N). Default: %(default)s')
 	arg('--ignore-J', action='store_true', default=False,
