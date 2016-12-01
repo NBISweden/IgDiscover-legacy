@@ -436,9 +436,9 @@ else:
 rule copy_dj_database:
 	"""Copy D and J gene database into the iteration folder"""
 	output:
-		fasta="{base}/database/{species}_{gene,[DJ]}.fasta"
+		fasta="{base}/database/{gene,[DJ]}.fasta"
 	input:
-		fasta="database/{species}_{gene}.fasta"
+		fasta="database/{gene}.fasta"
 	shell:
 		"cp -p {input} {output}"
 
@@ -446,9 +446,9 @@ rule copy_dj_database:
 rule v_database_iteration_1:
 	"""Copy original V gene database into the iteration 1 folder"""
 	output:
-		fasta="iteration-01/database/{species}_V.fasta"
+		fasta="iteration-01/database/V.fasta"
 	input:
-		fasta="database/{species}_V.fasta"
+		fasta="database/V.fasta"
 	shell:
 		"cp -p {input} {output}"
 
@@ -473,7 +473,7 @@ def ensure_fasta_not_empty(path):
 for i in range(2, config.iterations + 1):
 	rule:
 		output:
-			fasta='iteration-{nr:02d}/database/{{species}}_V.fasta'.format(nr=i)
+			fasta='iteration-{nr:02d}/database/V.fasta'.format(nr=i)
 		input:
 			fasta='iteration-{nr:02d}/new_V_pregermline.fasta'.format(nr=i-1)
 		run:
@@ -485,15 +485,15 @@ if config.iterations == 0:
 	# Copy over the input database (would be nice to avoid this)
 	rule copy_database:
 		output:
-			fasta='final/database/{species}_V.fasta'
+			fasta='final/database/V.fasta'
 		input:
-			fasta='database/{species}_V.fasta'
+			fasta='database/V.fasta'
 		shell:
 			"cp -p {input.fasta} {output.fasta}"
 else:
 	rule copy_final_v_database:
 		output:
-			fasta='final/database/{species}_V.fasta'.format(species=config.species)
+			fasta='final/database/V.fasta'
 		input:
 			fasta='iteration-{nr:02d}/new_V_germline.fasta'.format(nr=config.iterations)
 		run:
@@ -502,10 +502,10 @@ else:
 
 
 rule makeblastdb:
-	output: "{dir}/{species}_{gene,[VDJ]}.nhr"  # and nin nog nsd nsi nsq
-	input: fasta="{dir}/{species}_{gene}.fasta"
-	params: dbname="{dir}/{species}_{gene}"
-	log: '{dir}/{species}_{gene}.log'
+	output: "{dir}/{gene,[VDJ]}.nhr"  # and nin nog nsd nsi nsq
+	input: fasta="{dir}/{gene}.fasta"
+	params: dbname="{dir}/{gene}"
+	log: '{dir}/{gene}.log'
 	threads: 100  # force to run as single job
 	run:
 		with FastaReader(input.fasta) as fr:
@@ -523,9 +523,9 @@ rule igdiscover_igblast:
 		txtgz="{dir}/igblast.txt.gz"
 	input:
 		fastagz=PREPROCESSED_READS,
-		db_v="{{dir}}/database/{species}_V.nhr".format(species=config.species),
-		db_d="{{dir}}/database/{species}_D.nhr".format(species=config.species),
-		db_j="{{dir}}/database/{species}_J.nhr".format(species=config.species)
+		db_v="{dir}/database/V.nhr",
+		db_d="{dir}/database/D.nhr",
+		db_j="{dir}/database/J.nhr"
 	params:
 		penalty=' --penalty {}'.format(config.mismatch_penalty) if config.mismatch_penalty is not None else '',
 		database='{dir}/database',
@@ -600,7 +600,7 @@ rule igdiscover_count:
 		plot="{dir}/{gene,[VDJ]}_usage.pdf",
 		counts="{dir}/{gene}_usage.tab"
 	input:
-		reference="{{dir}}/database/{species}_{{gene}}.fasta".format(species=config.species),
+		reference="{dir}/database/{gene}.fasta",
 		tab="{dir}/filtered.tab.gz"
 	shell:
 		"igdiscover count --database {input.reference} --gene {wildcards.gene} "
@@ -624,7 +624,7 @@ rule igdiscover_discover:
 	output:
 		tab="{dir}/candidates.tab"
 	input:
-		v_reference="{{dir}}/database/{species}_V.fasta".format(species=config.species),
+		v_reference="{dir}/database/V.fasta",
 		tab="{dir}/filtered.tab.gz"
 	params:
 		ignore_j=' --ignore-J' if config.ignore_j else '',
@@ -641,8 +641,7 @@ def db_whitelist_or_not(wildcards):
 	filterconf = config.pre_germline_filter if wildcards.pre == 'pre' else config.germline_filter
 	if filterconf['whitelist']:
 	    # Use original (non-iteration-specific) database as whitelist
-		return 'database/{species}_V.fasta'.format(
-			nr=wildcards.nr, species=config.species)
+		return 'database/V.fasta'
 	else:
 		return []
 
@@ -722,9 +721,9 @@ rule dendrogram:
 	output:
 		pdf='{dir}/{gene}_dendrogram.pdf'
 	input:
-		fasta='{{dir}}/database/{species}_{{gene}}.fasta'.format(species=config.species)
+		fasta='{dir}/database/{gene}.fasta'
 	shell:
-		'igdiscover dendrogram --mark database/{config.species}_{wildcards.gene}.fasta {input.fasta} {output.pdf}'
+		'igdiscover dendrogram --mark database/{wildcards.gene}.fasta {input.fasta} {output.pdf}'
 
 
 rule version:
@@ -751,7 +750,7 @@ def count_sequences(path):
 rule json_stats:
 	output: json='stats/stats.json'
 	input:
-		original_db='database/{species}_V.fasta'.format(species=config.species),
+		original_db='database/V.fasta',
 		v_pre_germline=['iteration-{:02d}/new_V_pregermline.fasta'.format(i+1) for i in range(config.iterations)],
 		v_germline=['iteration-{:02d}/new_V_germline.fasta'.format(i+1) for i in range(config.iterations)],
 		reads='stats/reads.json',

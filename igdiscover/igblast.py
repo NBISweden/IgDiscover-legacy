@@ -27,7 +27,7 @@ def add_arguments(parser):
 	arg('--limit', type=int, metavar='N',
 		help='Limit processing to first N records')
 	arg('database', help='Database directory. Must contain BLAST databases for '
-		'SPECIES_V, SPECIES_D and SPECIES_J.')
+		'V, D and J.')
 	arg('fasta', help='File with original reads')
 
 
@@ -40,13 +40,6 @@ def run_igblast(fasta, database, species, penalty=None):
 
 	Return IgBLAST’s output as a string.
 	"""
-
-	"""
-	TODO
-	Igblastwrapper has the databases in files named like this:
-	$IGDATA/database/rhesus_monkey_IG_H_J
-	Should we also include the _IG_H part?
-	"""
 	if fasta.startswith('>'):
 		fasta_input = '-'
 	else:
@@ -54,7 +47,7 @@ def run_igblast(fasta, database, species, penalty=None):
 	arguments = ['igblastn']
 	for gene in 'V', 'D', 'J':
 		arguments += ['-germline_db_{gene}'.format(gene=gene),
-			os.path.join(database, '{species}_{gene}'.format(species=species, gene=gene))]
+			os.path.join(database, '{gene}'.format(gene=gene))]
 	if penalty is not None:
 		arguments += ['-penalty', str(penalty)]
 	# The empty aux suppresses a warning from IgBLAST. /dev/null does not work.
@@ -72,7 +65,8 @@ def run_igblast(fasta, database, species, penalty=None):
 		'-query', fasta_input,
 		'-out', '-',  # write to stdout
 	]
-	result = subprocess.check_output(arguments, input=fasta if fasta_input == '-' else None, universal_newlines=True)
+	result = subprocess.check_output(arguments,
+		input=fasta if fasta_input == '-' else None, universal_newlines=True)
 	return result
 
 
