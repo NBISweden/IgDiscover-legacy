@@ -197,7 +197,7 @@ class Discoverer:
 			else:
 				indices = downsampled(list(group.index), self.cluster_subsample_size)
 			sequences = list(group.V_nt.loc[indices])
-			df, linkage, clusters = cluster_sequences(sequences)
+			df, linkage, clusters = cluster_sequences(sequences, MINGROUPSIZE)
 			logger.info('Clustering %d sequences (downsampled to %d) assigned to %r gave %d cluster(s)',
 				len(group), len(indices), gene, len(set(clusters)))
 			cluster_indices = [ [] for _ in range(max(clusters) + 1) ]
@@ -208,7 +208,7 @@ class Discoverer:
 			for ind in cluster_indices:
 				group_in_window = group.loc[ind]
 				if len(group_in_window) < MINGROUPSIZE:
-					logger.info('Skipping cluster %d because it is too small', ind)
+					logger.info('Skipping a cluster because it is too small', ind)
 					continue
 				sibling = self._sibling_sequence(gene, group_in_window)
 				name = 'cl{}'.format(cl)
