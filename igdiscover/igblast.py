@@ -22,7 +22,7 @@ def add_arguments(parser):
 		help='Number of threads. Default: no. of available CPUs (%(default)s)')
 	arg('--penalty', type=int, choices=(-1, -2, -3, -4), default=None,
 		help='BLAST mismatch penalty (default: -1)')
-	arg('--species', default='rhesus_monkey',
+	arg('--species', default='mouse',
 		help='Which species (default: %(default)s)')
 	arg('--limit', type=int, metavar='N',
 		help='Limit processing to first N records')

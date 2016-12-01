@@ -2,12 +2,10 @@
 
 library_name:
 
-# Choose a species support by IgBLAST, such as 'human', 'mouse' or 'rhesus_monkey'
-species: human
-
 
 # How many discovery iterations to run.
-# If 0, the database will not be updated.
+# If 0, no updated database is created, but expression
+# profiles are still computed.
 iterations: 3
 
 
@@ -160,7 +158,15 @@ debug: false
 seed: 1
 
 
-# Preprocessing filter settings. This filter is always applied directly after running IgBLAST,
+# Leave empty or choose a species name supported by IgBLAST:
+# human, mouse, rabbit, rat, rhesus_monkey
+# This setting is not used anywhere except that it is passed
+# to IgBLAST. Since we provide IgBLAST with our own gene
+# databases, it seems this has no effect.
+species:
+
+
+# The preprocessing filter is always applied directly after running IgBLAST,
 # even if no gene discovery is requested.
 #
 preprocessing_filter:
@@ -180,6 +186,7 @@ pre_germline_filter:
   differences: 1       # Merge sequences if they have at most this number of differences
   allow_stop: true     # Whether to allow non-productive sequences containing stop codons
   cross_mapping_ratio: 0.02  # Threshold for removal of cross-mapping artifacts (set to 0 to disable)
+
 
 # Filtering criteria applied to candidate sequences in the last iteration.
 # These should be more strict than the pre_germline_filter criteria.
