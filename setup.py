@@ -24,7 +24,7 @@ setup(
 	packages = ['igdiscover'],
 	package_data = {'igdiscover': ['igdiscover.yaml', 'Snakefile', 'empty.aux']},
 	install_requires = [
-		'sqt>=0.7.0',
+		'sqt>=0.8.0',
 		'pandas>=0.16.2',
 		'numpy',
 		'matplotlib>=1.5.0',
@@ -32,7 +32,7 @@ setup(
 		'cutadapt',
 		'seaborn>=0.6.0',
 		'scipy>=0.16.1',
-		'xopen>=0.1.0',
+		'xopen>=0.1.1',
 		'PyYAML',
 	],
 	classifiers = [
