@@ -189,7 +189,7 @@ class Config:
 	def __init__(self, file):
 		# Set some defaults.
 		self.debug = False
-		self.species = 'human'
+		self.species = None
 		self.merge_program = 'pear'
 		self.flash_maximum_overlap = 300
 		self.limit = None  # or an integer
