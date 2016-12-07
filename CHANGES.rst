@@ -2,7 +2,7 @@
 Changes
 =======
 
-development version
+v0.6.0 (2016-12-07)
 -------------------
 
 * The FASTA files of the input V/D/J gene lists now need to be
