@@ -2,6 +2,31 @@
 Installation
 ============
 
+.. _quickstart:
+
+Quickstart
+----------
+
+On OS X or Linux, open a terminal window and run these commands. Copy and paste
+each line separately::
+
+	wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
+	bash Miniconda3-latest-Linux-x86_64.sh
+
+Close the terminal window and open a new one. Then run::
+
+	conda install -c bioconda igdiscover
+	igdiscover --version
+
+If the last command outputs the current version of IgDiscover, it worked! Keep
+reading if you have problems.
+
+
+.. _simple-installation:
+
+Conda
+-----
+
 IgDiscover is written in Python 3 and runs on Linux and OS X. Be aware that running on OS X is not
 as well tested as on Linux, yet.
 
@@ -11,12 +36,6 @@ with a single command, but Conda itself needs to be installed first. Since IgDis
 many programs that are not available in most Linux distributions (or OS X for that matter), we
 recommend using Conda, but :ref:`non-Conda installation instructions <manual-installation>` are
 also available.
-
-
-.. _simple-installation:
-
-Simple installation with Conda
-------------------------------
 
 First, `download and install miniconda <http://conda.pydata.org/docs/install/quick.html>`_.
 That page has instructions for both Linux and OS X. If you are on Linux, either follow the
