@@ -25,3 +25,10 @@ Links
 * `Source code <https://bitbucket.org/igdiscover/igdiscover/>`_
 * `Report an issue <https://bitbucket.org/igdiscover/igdiscover/issues?status=new&status=open>`_
 * `Project page on PyPI (Python package index) <https://pypi.python.org/pypi/igdiscover/>`_
+
+
+|
+
+.. image:: clusterplot.jpeg
+
+|
