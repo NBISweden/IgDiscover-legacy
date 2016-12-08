@@ -1,8 +1,8 @@
 .. include:: ../README.rst
 
-=================
-Table of contents
-=================
+========
+Contents
+========
 
 .. toctree::
    :maxdepth: 2
