@@ -12,4 +12,5 @@ Table of contents
    testing
    guide
    advanced
+   develop
    changes
