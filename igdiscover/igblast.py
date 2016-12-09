@@ -90,7 +90,11 @@ def chunked_fasta(path, chunksize=500, limit=None):
 
 
 class Runner:
-	"""nested functions cannot be pickled"""
+	"""
+	This is the target of a multiprocessing pool. The target needs to
+	be pickleable, and because nested functions cannot be pickled,
+	we need this separate class.
+	"""
 	def __init__(self, dbpath, species, penalty):
 		self.dbpath = dbpath
 		self.species = species

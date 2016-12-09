@@ -1,5 +1,5 @@
 """
-For each V gene, plot a clustermap of the sequences assigned to it.
+Plot a clustermap of all sequences assigned to a gene
 """
 import os.path
 import logging
@@ -19,6 +19,8 @@ def add_arguments(parser):
 		help='Do not plot if there are less than N sequences for a gene. Default: %(default)s')
 	arg('--gene', '-g', action='append', default=[],
 		help='Plot GENE. Can be given multiple times. Default: Plot all genes.')
+	arg('--type', choices=('V', 'D', 'J'), default='V',
+		help='Gene type. Default: %(default)s')
 	arg('--size', metavar='N', type=int, default=300,
 		help='Show at most N sequences (with a matrix of size N x N). Default: %(default)s')
 	arg('--ignore-J', action='store_true', default=False,
@@ -30,16 +32,16 @@ def add_arguments(parser):
 	arg('directory', help='Save clustermaps as PNG into this directory', default=None)
 
 
-def plot_clustermap(group, title, plotpath, size=300, dpi=200):
+def plot_clustermap(sequences, title, plotpath, size=300, dpi=200):
 	"""
-	Plot a clustermap for a specific V gene.
+	Plot a clustermap of the given sequences
 
 	size -- Downsample to this many sequences
-	title
+	title -- plot title
 
 	Return the number of clusters.
 	"""
-	sequences = list(group.V_nt)
+	logger.info('Clustering %d sequences (downsampled to at most %d)', len(sequences), size)
 	sequences = downsampled(sequences, size)
 	df, linkage, clusters = cluster_sequences(sequences)
 
@@ -84,7 +86,7 @@ def main(args):
 	genes = frozenset(args.gene)
 	n = 0
 	too_few = 0
-	for gene, group in table.groupby('V_gene'):
+	for gene, group in table.groupby(args.type + '_gene'):
 		if genes and gene not in genes:
 			continue
 		if len(group) < args.minimum_group_size:
@@ -92,7 +94,8 @@ def main(args):
 			continue
 		title = gene if args.title else None
 		path = os.path.join(args.directory, gene.translate(path_sanitizer) + '.png')
-		n_clusters = plot_clustermap(group, title, path, size=args.size, dpi=args.dpi)
+		sequences = list(group[args.type + '_nt'])
+		n_clusters = plot_clustermap(sequences, title, path, size=args.size, dpi=args.dpi)
 		n += 1
 		logger.info('Plotted %r with %d cluster%s', gene, n_clusters, plural_s(n_clusters))
 		#for i, cons in enumerate(consensus_sequences):
