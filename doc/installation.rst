@@ -50,9 +50,18 @@ answer ``yes``. If you don’t, you need to note down the ``export PATH=...``
 that the installer prints somewhere and type it in every time before using
 Conda or IgDiscover.
 
+.. note::
+    If you use ``zsh`` instead of ``bash`` (applies to Bio-Linux, for example),
+    then you need to manually add the ``export PATH=...`` line to the end of
+    the file ``/home/your-user-name/.zshrc`` instead. The conda installer does
+    not do this for you!
+
+    Alternatively, change your default shell to bash by running
+    ``chsh -s /bin/bash``.
+
 Next, close the terminal window and open a new one. Make sure that Conda is
 installed by typing in ``conda list``. If everything is working, you should see
-a list of some packages. If it works, IgDiscover can now be installed.
+a list of some packages andd IgDiscover can now be installed.
 
 Install IgDiscover from `the bioconda channel <https://bioconda.github.io/bioconda>`_
 with this command::
