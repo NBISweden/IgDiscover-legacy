@@ -302,7 +302,7 @@ if config.reverse_primers:
 	# At least one reverse primer is to be removed
 	rule trim_reverse_primers:
 		output: fastaq='reads/4-trimmed.{ext,(fasta|fastq)}.gz'
-		input: fastaq='reads/3-forward-primer-trimmed.{ext,(fasta|fastq)}.gz'
+		input: fastaq='reads/3-forward-primer-trimmed.{ext}.gz'
 		resources: time=120
 		log: 'reads/4-trimmed.cutadapt.log'
 		run:
@@ -318,7 +318,7 @@ else:
 	# No trimming, just symlink the file
 	rule dont_trim_reverse_primers:
 		output: fastaq='reads/4-trimmed.{ext,(fasta|fastq)}.gz'
-		input: fastaq='reads/3-forward-primer-trimmed.{ext,(fasta|fastq)}.gz'
+		input: fastaq='reads/3-forward-primer-trimmed.{ext}.gz'
 		resources: time=1
 		run:
 			relative_symlink(input.fastaq, output.fastaq, force=True)
