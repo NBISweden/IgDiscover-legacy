@@ -11,9 +11,13 @@ import multiprocessing
 import subprocess
 from itertools import islice
 import pkg_resources
+import logging
 
 from sqt import SequenceReader
 from sqt.utils import available_cpu_count
+
+
+logger = logging.getLogger(__name__)
 
 
 def add_arguments(parser):
@@ -50,7 +54,7 @@ def run_igblast(fasta, database, species, penalty=None):
 			os.path.join(database, '{gene}'.format(gene=gene))]
 	if penalty is not None:
 		arguments += ['-penalty', str(penalty)]
-	# The empty aux suppresses a warning from IgBLAST. /dev/null does not work.
+	# An empty .aux suppresses a warning from IgBLAST. /dev/null does not work.
 	empty_aux_path = pkg_resources.resource_filename('igdiscover', 'empty.aux')
 	arguments += [
 		'-auxiliary_data', empty_aux_path,
@@ -70,23 +74,23 @@ def run_igblast(fasta, database, species, penalty=None):
 	return result
 
 
-def chunked_fasta(path, chunksize=500, limit=None):
+def chunked_fasta(path, chunksize=1000, limit=None):
 	"""
 	Split a FASTA file into chunks that contain at most chunksize records.
 	Take only the first 'limit' records, or all if limit is None.
 	"""
 	def buf_to_fasta(b):
 		return ''.join(">{}\n{}\n".format(r.name, r.sequence) for r in b)
-	sr = SequenceReader(path)
-	buf = []
-	for record in islice(sr, 0, limit):
-		buf.append(record)
-		if len(buf) == chunksize:
+
+	with SequenceReader(path) as sr:
+		buf = []
+		for record in islice(sr, 0, limit):
+			buf.append(record)
+			if len(buf) == chunksize:
+				yield buf_to_fasta(buf)
+				buf = []
+		if len(buf) > 0:
 			yield buf_to_fasta(buf)
-			buf = []
-	if len(buf) > 0:
-		yield buf_to_fasta(buf)
-	sr.close()
 
 
 class Runner:
