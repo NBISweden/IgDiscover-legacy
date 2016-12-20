@@ -15,6 +15,15 @@ at the `Department of Microbiology, Tumor and Cell Biology <http://ki.se/en/mtc/
 Sweden and the `Bioinformatics Long-Term Support <https://www.scilifelab.se/facilities/wabi/>`_ facility
 at `Science for Life Laboratory (SciLifeLab) <https://www.scilifelab.se/>`_, Sweden.
 
+If you use IgDiscover, please cite:
+
+    Corcoran, Martin M. and Phad, Ganesh E. and Bernat, Néstor Vázquez and Stahl-Hennig,
+    Christiane and Sumida, Noriyuki and Persson, Mats A.A. and Martin, Marcel and
+    Hedestam, Gunilla B. Karlsson.
+    Production of individualized V gene databases reveals high levels of immunoglobulin genetic diversity.
+    Nature Communications 7:13642 (2016)
+    https://dx.doi.org/10.1038/ncomms13642
+
 
 Links
 -----
