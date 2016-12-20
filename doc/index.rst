@@ -11,6 +11,7 @@ Contents
    manual-installation
    testing
    guide
+   faq
    advanced
    develop
    changes
