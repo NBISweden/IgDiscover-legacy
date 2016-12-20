@@ -6,8 +6,9 @@ User guide
 Overview
 ========
 
-IgDiscover works on a single library at a time. It creates a subdirectory for
-the library, which contains all intermediate and result files.
+IgDiscover works on a single library at a time. It works within an
+“analysis directory” for the library, which contains all intermediate
+and result files.
 
 To start an analysis, you need:
 
@@ -55,35 +56,16 @@ To run an analysis, proceed as follows.
 
 2. Adjust the configuration file
 
-   The previous step created a configuration file named ``myexperiment/igdiscover.yaml``.
-   Use a text editor to modify the file.
-   The settings you should make sure to check are:
-
-   - ``iterations`` and
-   - ``species``
-
-   The ``iterations`` settings specifies the number of rounds of V gene discovery that will be performed.
-   Four or five rounds are usually sufficient.
-   You can also set this to zero, in which case the initial database will be used unchanged.
-
-   The ``species`` must be set to a value supported by IgBLAST.
-   As IgDiscover uses custom V/D/J databases, this setting does not influence results too much.
-
-   Setting the parameters ``stranded``, ``forward_primers`` and ``reverse_primers`` to the correct values can be used to remove 5' and 3' primers from the sequences.
-   Doing this is not strictly necessary for IgDiscover!
-   It is simplest if you do not specify any primer sequences.
+   The previous step created a configuration file named ``myexperiment/igdiscover.yaml``, which
+   you may :ref:`need to adjust <configuration>`. In particular, the number of discovery rounds
+   is set to 3 by default, which takes a long time. Reducing this to 2 or even 1 often works just
+   as well.
 
 3. Run the analysis
 
    Change into the newly created analysis directory and run the analysis::
 
        igdiscover run
-
-   This will use `snakemake <http://snakemake.bitbucket.org/>`_ to run the pipeline on all available CPU cores.
-
-   Add the ``-p`` parameter to print out slightly more information::
-
-       igdiscover run -p
 
    Depending on the size of your library, your computer, and the number of iterations, this will now take from a few hours to a day.
 
@@ -93,33 +75,58 @@ To run an analysis, proceed as follows.
 Obtaining a V/D/J database
 ==========================
 
-We use the term “database” to refer to three FASTA files that contain the sequences for the V, D and J genes.
+We use the term “database” to refer to three FASTA files that contain the sequences for the V, D
+and J genes.
 IMGT provides `sequences for download <http://www.imgt.org/vquest/refseqh.html>`_.
-For discovering new VH genes for example, you need to get the IGHV, IGHD and IGHJ files of your species.
+For discovering new VH genes, for example, you need to get the IGHV, IGHD and IGHJ files of your species.
 As IgDiscover uses this only as a starting point, using a similar species will also work.
 
-The files you get from IMGT are not ready to use.
-You should run the script ``edit_imgt_file.pl`` on them that the `IgBLAST authors provide on their FTP server <ftp://ftp.ncbi.nih.gov/blast/executables/igblast/release/>`_.
-Run it for all three downloaded files, and make sure that the files are called ``V.fasta``, ``D.fasta`` and ``J.fasta``.
+When using an IMGT database, it is very important to change the long IMGT sequence headers to
+short headers as IgBLAST does not accept the long headers. We recommend using the program
+``edit_imgt_file.pl``. If you installed IgDiscover from Conda, the script is already installed and
+you can run it by typing the name. It is also
+`available on the IgBlast FTP site <ftp://ftp.ncbi.nih.gov/blast/executables/igblast/release/>`_.
+
+Run it for all three downloaded files, and then rename files appropritely to make sure that they
+named ``V.fasta``, ``D.fasta`` and ``J.fasta``.
+
 You always need a file with D genes even if you analyze light chains.
 
-In case you have used IgBLAST previously, note that there is no need to run the ``makeblastdb`` tool yourself as IgDiscover will do that for you.
+In case you have used IgBLAST previously, note that there is *no need* to run the ``makeblastdb``
+tool as IgDiscover will do that for you.
 
+
+.. _input-requirements:
 
 Input data requirements
 =======================
 
+Paired-end or single-end data
+-----------------------------
+
 IgDiscover can process input data of three different types:
 
-* Paired-end reads in FASTQ format,
-* Single-end reads in FASTQ format,
-* Single-end reads in FASTA format.
+* Paired-end reads in gzipped FASTQ format,
+* Single-end reads in gzipped FASTQ format,
+* Single-end reads in gzipped FASTA format.
 
-Additionally, all files must (currently) be gzip-compressed!
+IgDiscover was tested mainly on paired-end Illumina MiSeq reads (2x300bp), but it can also handle
+454 and Ion Torrent data.
 
-Paired-end reads are first merged, and then processed in the same way as
-single-end reads. Single-end reads (and merged paired-end reads) are expected to
-follow this structure (from 5' to 3'):
+Depending on the input file type, use a variant of one of the following commands to initialize
+the analysis directory::
+
+    igdiscover init --single-reads=file.fasta.gz  --database=my-database-dir/ myexperiment
+    igdiscover init --reads1=file.1.fasta.gz  --database=my-database-dir/ myexperiment
+    igdiscover init --reads1=file.1.fastq.gz  --database=my-database-dir/ myexperiment
+
+
+Read layout
+-----------
+
+Paired-end reads are first merged and then processed in the same way as single-end reads. Reads
+that could not be merged are discarded. Single-end reads and merged paired-end reads are expected
+to follow this structure (from 5' to 3'):
 
 * The forward primer sequence. This is optional.
 * A random barcode (molecular identifier). This is optional. Set the
@@ -134,21 +141,26 @@ follow this structure (from 5' to 3'):
   this barcode. You can currently not have both a 5' and a 3' barcode.
 * The reverse primer. This is optional.
 
-We use IgBLAST to detect the location of the V, D, J genes (run as part of the
-``igdiscover igblast`` subcommand), and the remaining parts are detected
-subsequently with ``igdiscover parse``. The G nucleotides after the barcode are
-always split off, even if no RACE protocol was used. (This should not be a
-problem in practice.) The leader sequence is detected by looking for a start
+We use IgBLAST to detect the location of the V, D, J genes (run as
+part of the ``igdiscover igblast`` subcommand), and the remaining parts
+are detected subsequently with ``igdiscover parse``. The G nucleotides
+after the barcode are split off if the configuration specifies
+``race_g: true``. The leader sequence is detected by looking for a start
 codon near 60 bp upstream of the start of the V gene match.
 
-IgDiscover was tested with paired-end Illumina MiSeq reads (2x300bp).
-It should be able to handle 454 data, but we have not tested this thoroughly.
 
+
+.. _configuration:
 
 Configuration
 =============
 
-The configuration file ``igdiscover.yaml`` needs to be edited with a text editor.
+The ``igdiscover init`` command creates a configuration file
+``igdiscover.yaml`` in the analysis directory. To configure
+your analysis, change that file with a text editor before
+running the analysis with ``igdiscover run``.
+
+
 The syntax should be mostly self-explanatory.
 The file is in YAML format, but you will not need to learn that.
 Just follow the examples given in the file.
@@ -167,11 +179,91 @@ A few rules that may be good to know are the following ones:
 
 To find out what the configuration options achieve, see the explanations in the configuration file itself.
 
+The main parameters parameters that may require adjusting are the following.
+
+The ``iterations`` option sets the number of rounds of V gene discovery
+that will be performed. By default, three iterations are run. Even with a very restricted
+starting V database (for example with only a single V gene sequence),
+this is usually sufficient to identify most novel germline sequences.
+
+When the starting database is more complete, for example, when analyzing
+a human IgM library with the current IMGT heavy chain database, a single
+iteration may be sufficient to produce an individualized database.
+
+If you do not want to discover any new genes and only want to produce an
+expression profile, for example, then use ``iterations: 0``.
+
+The ``ignore_j`` option should be set to ``true`` when producing a V gene
+database for a species where J sequences are unknown::
+
+    ignore_j: true
+
+Setting the parameters ``stranded``, ``forward_primers`` and ``reverse_primers``
+to the correct values can be used to remove 5' and 3' primers from the sequences.
+Doing this is not strictly necessary for IgDiscover. It is simplest
+if you do not specify any primer sequences.
+
+
+Pregermline and Germline filter criteria
+----------------------------------------
+
+This provides IgDiscover with stringency requirements for V gene discovery
+that enable the program to filter out false positives. Usually the ”pregermline
+filter” can be used in the default mode since all these sequences will be
+subsequently passed to the higher stringency ”germline filter” where the
+criteria are set to maximize stringency. Here is how it looks in the configuration
+file::
+
+   pre_germline_filter:
+     unique_cdr3s: 2      # Minimum number of unique CDR3s (within exact matches)
+     unique_js: 2         # Minimum number of unique J genes (within exact matches)
+     check_motifs: false  # Check whether 5' end starts with known motif
+     whitelist: true      # Add database sequences to the whitelist
+     cluster_size: 0      # Minimum number of sequences assigned to cluster
+     differences: 1       # Merge sequences if they have at most this number of differences
+     allow_stop: true     # Whether to allow non-productive sequences containing stop codons
+     cross_mapping_ratio: 0.02  # Threshold for removal of cross-mapping artifacts (set to 0 to disable)
+
+
+   # Filtering criteria applied to candidate sequences in the last iteration.
+   # These should be more strict than the pre_germline_filter criteria.
+   #
+   germline_filter:
+     unique_cdr3s: 5      # Minimum number of unique CDR3s (within exact matches)
+     unique_js: 3         # Minimum number of unique J genes (within exact matches)
+     check_motifs: false  # Check whether 5' end starts with known motif
+     whitelist: true      # Add database sequences to the whitelist
+     cluster_size: 100    # Minimum number of sequences assigned to cluster
+     differences: 1       # Merge sequences if they have at most this number of differences
+     allow_stop: false    # Whether to allow non-productive sequences containing stop codons
+     cross_mapping_ratio: 0.02  # Threshold for removal of cross-mapping artifacts (set to 0 to disable)
+
+Factors that affect germline discovery include library source (IgM vs IgK, IgL or IgG)
+library size, sequence error rate and individual genomic factors (for example the
+number of J segments present in an individual).
+
+In general, setting a higher cutoff of ``unique_cdr3s`` and ``unique_js`` will minimize the number
+of false positives in the output. Example::
+
+   unique_cdr3s: 10      # Minimum number of unique CDR3s (within exact matches)
+   unique_js: 4          # Minimum number of unique J genes (within exact matches)
+
+The germline filter also inspects clusters of sequences that are closely related and retains only
+the most common sequence of each cluster. This procedure removes false positives due to
+accumulated random sequence errors of highly expressed alleles that otherwise would pass the
+cutoff criteria.
+
+Read also about the :ref:`cross mapping <cross-mapping>`, for which germline filtering corrects, and
+about the :ref:`germline filters <germline-filters>`.
+
+
+.. _analysis-directory:
 
 The analysis directory
 ======================
 
-IgDiscover writes all intermediate files, the final V gene database, statistics and plots into the analysis directory that was created with ``igdiscover init``.
+IgDiscover writes all intermediate files, the final V gene database, statistics and plots into
+the analysis directory that was created with ``igdiscover init``.
 Inside that directory, there is a ``final/`` subdirectory that contains the analysis results.
 
 These are the files and subdirectories that can be found in the analysis directory.
@@ -565,6 +657,8 @@ errorplot
     Plot histograms of differences to reference V gene
 
 
+.. _germline-filters:
+
 Germline and pre-germline filtering
 ===================================
 
@@ -596,7 +690,12 @@ candidates that appear on it
 * are never considered near-duplicates (but they are checked for cross-mapping),
 * are allowed to contain a stop codon.
 
-(This section is incomplete.)
+Whitelisting allows IgDiscover to identify known germline sequences that are expressed at low
+levels in a library. If enabled with ``whitelist: true`` (the default) in the pregermline and
+germline filter sections of the configuration file, the sequences present in the starting database
+are treated as validated germline sequences and will not be discarded if due to too small cluster
+size as long as they fulfill the remaining criteria (unique_cdr3s, unique_js etc.).
+
 
 .. _cross-mapping:
 
@@ -668,7 +767,7 @@ databases that the program produced were exactly identical.
 
 Concordance is lower, though, when the input database is not as complete as the human one.
 
-The way in which random subsampling is done is modified by the ``seed``configuration setting,
+The way in which random subsampling is done is modified by the ``seed`` configuration setting,
 which is set to 1 by default. If its value is the same for two different runs of the program with
 otherwise identical settings, the numbers chosen by the random number generator will be the same
 and therefore also subsampling will be done in an identical way. This makes runs of the program
@@ -688,3 +787,16 @@ And here is how to send the logging output to a file *and* also see the output i
 at the same time (but you lose the colors)::
 
   igdiscover run |& tee logfile.txt
+
+
+Terms
+=====
+
+Analysis directory
+    The directory that was created with ``igdiscover init``. Separate ones are created for
+    each experiment. When you used ``igdiscover init myexperiment``, the analysis directory
+    would be ``myexperiment/``.
+
+Starting database
+    The initial list of V/D/J genes. These are expected to be in FASTA format and are copied into
+    the ``database/`` directory within each analysis directory.
