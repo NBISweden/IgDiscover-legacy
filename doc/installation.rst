@@ -79,3 +79,15 @@ You should now :ref:`run IgDiscover on the test data set <test>`.
 
 If you cannot or do not want to use Conda, you need to follow the
 :ref:`manual installation instructions <manual-installation>`.
+
+
+Troubleshooting on OS X
+-----------------------
+
+If you get the error ::
+
+    ValueError: unknown locale: UTF-8
+
+Then follow `these instructions <http://conda.pydata.org/docs/troubleshooting.html#unknown-locale>`_.
+
+
