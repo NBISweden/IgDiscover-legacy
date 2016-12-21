@@ -9,7 +9,8 @@ import sys
 import shutil
 import subprocess
 import pkg_resources
-from igdiscover.utils import Config
+from .utils import Config, validate_fasta, FastaValidationError
+
 try:
 	import tkinter as tk
 	from tkinter import messagebox
@@ -78,6 +79,9 @@ class TkinterGui:
 				("Any file", "*")])
 		return path
 
+	def error(self, title, message):
+		tk.messagebox.showerror(title, message)
+
 
 """
 # Works, but let’s not introduce the PySide dependency for now.
@@ -109,7 +113,7 @@ def is_1_2(s, t):
 			differences += 1
 			if differences == 2:
 				return False
-			if set([c1, c2]) != one_two:
+			if {c1, c2} != one_two:
 				return False
 	return differences == 1
 
@@ -236,9 +240,20 @@ def main(args):
 			logger.error('Cancelled')
 			sys.exit(2)
 
-	if not glob.glob(os.path.join(dbpath, '*.fasta')):
-		logger.error('No FASTA files (.fasta) found in selected database directory %r.', dbpath)
-		sys.exit(2)
+	for g in ['V', 'D', 'J']:
+		path = os.path.join(dbpath, g + '.fasta')
+		if not os.path.exists(path):
+			logger.error(
+				'The database directory %r must contain the three files '
+				'V.fasta, D.fasta and J.fasta', dbpath)
+			logger.error(
+				'A dummy D.fasta is necessary even if analyzing light chains (see manual)')
+			sys.exit(2)
+		try:
+			validate_fasta(path)
+		except FastaValidationError as e:
+			logger.error('Error in %r: %s', path, e)
+			sys.exit(2)
 
 	# Create the directory
 	try:
@@ -279,16 +294,12 @@ def main(args):
 				line = 'library_name: ' + library_name + '\n'
 			f.write(line)
 
-	# Copy database
+	# Copy database files
 	os.mkdir(os.path.join(args.directory, 'database'))
-	n = 0
-	for f in os.listdir(dbpath):
-		if f.endswith('.fasta'):
-			shutil.copyfile(os.path.join(dbpath, f), os.path.join(args.directory, 'database', f))
-			n += 1
-	if n == 0:
-		logger.error('No FASTA files in database directory. Have you selected the correct directory?')
-		sys.exit(2)
+	for gene in ['V', 'D', 'J']:
+		fasta = gene + '.fasta'
+		shutil.copyfile(os.path.join(dbpath, fasta), os.path.join(args.directory, 'database', fasta))
+
 	if gui is not None:
 		# Only suggest to edit the config file if at least one GUI dialog has been shown
 		if gui.yesno('Directory initialized',
