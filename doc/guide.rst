@@ -752,7 +752,7 @@ they would be named ``SRR2905710_1.fastq.gz`` and ``SRR2905710_2.fastq.gz``.
 
 The program ``fastq-dump`` is part of the SRA toolkit. On Debian-derived
 Linux distributions, you can typically install it with ``sudo apt-get install
-sra-toolkit``.
+sra-toolkit``. On Conda, install it with ``conda install -c bioconda sra-tools``.
 
 
 Does random subsampling influence results?
