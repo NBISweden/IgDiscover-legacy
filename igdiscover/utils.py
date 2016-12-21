@@ -10,6 +10,7 @@ import numpy as np
 import yaml
 from sqt.align import edit_distance, multialign, consensus
 from sqt.dna import GENETIC_CODE, nt_to_aa as _nt_to_aa
+from sqt import SequenceReader
 
 
 def downsampled(population, size):
@@ -285,3 +286,34 @@ def has_stop(sequence):
 
 def plural_s(n):
 	return 's' if n != 1 else ''
+
+
+class FastaValidationError(Exception):
+	pass
+
+
+def validate_fasta(path):
+	"""
+	Ensure that the FASTA file is suitable for use with makeblastdb.
+	Raise a FastaValidationError if any of the following are true:
+
+	- a record is empty
+	- a record name occurs more than once
+	- a sequence occurs more than once
+	"""
+	with SequenceReader(path) as sr:
+		records = list(sr)
+
+	names = set()
+	sequences = dict()
+	for r in records:
+		if len(r.sequence) == 0:
+			raise FastaValidationError("Record {!r} is empty".format(r.name))
+		if r.name in names:
+			raise FastaValidationError("Record name {!r} occurs more than once".format(r.name))
+		s = r.sequence.upper()
+		if s in sequences:
+			raise FastaValidationError("Records {!r} and {!r} contain the same sequence".format(
+				r.name, sequences[s]))
+		sequences[s] = r.name
+		names.add(r.name)

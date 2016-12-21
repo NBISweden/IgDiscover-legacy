@@ -1,7 +1,7 @@
 from io import StringIO
 import pkg_resources
-from igdiscover.utils import has_stop
-from igdiscover.utils import Config
+from nose.tools import raises
+from igdiscover.utils import has_stop, Config, validate_fasta, FastaValidationError
 
 
 def test_has_stop():
@@ -28,3 +28,18 @@ def test_config():
 	for k in e:
 		assert e[k] == p[k], '{}: {} vs {}'.format(k, e[k], p[k])
 	# assert empty_config == packaged_config
+
+
+@raises(FastaValidationError)
+def test_validate_empty_record():
+	validate_fasta('tests/data/empty-record.fasta')
+
+
+@raises(FastaValidationError)
+def test_validate_duplicate_name():
+	validate_fasta('tests/data/duplicate-name.fasta')
+
+
+@raises(FastaValidationError)
+def test_validate_duplicate_sequence():
+	validate_fasta('tests/data/duplicate-sequence.fasta')
