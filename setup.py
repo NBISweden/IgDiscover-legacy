@@ -33,7 +33,7 @@ setup(
 		'seaborn>=0.6.0',
 		'scipy>=0.16.1',
 		'xopen>=0.1.1',
-		'PyYAML',
+		'ruamel.yaml',
 	],
 	classifiers = [
 		"Development Status :: 3 - Alpha",

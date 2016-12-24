@@ -27,6 +27,7 @@ warnings.filterwarnings('ignore', 'The `IPython.html` package')
 COMMANDS = [
 	'init',
 	'run',
+	'config',
 	'commonv',
 	'igblast',
 	'parse',

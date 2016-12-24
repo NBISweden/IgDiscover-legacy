@@ -9,7 +9,8 @@ import sys
 import shutil
 import subprocess
 import pkg_resources
-from .utils import Config, validate_fasta, FastaValidationError
+from .utils import validate_fasta, FastaValidationError
+from .config import Config
 
 try:
 	import tkinter as tk

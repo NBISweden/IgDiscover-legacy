@@ -12,7 +12,7 @@ from snakemake import snakemake
 from sqt.utils import available_cpu_count
 from . import __version__
 
-from igdiscover.utils import Config
+from .config import Config
 
 logger = logging.getLogger(__name__)
 
