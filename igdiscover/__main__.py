@@ -43,6 +43,7 @@ COMMANDS = [
 	'dendrogram',
 	'rename',
 	'union',
+	'clonotypes',
 ]
 
 logger = logging.getLogger(__name__)
