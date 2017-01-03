@@ -5,8 +5,8 @@ Changes
 development version
 -------------------
 
-* Add a ``config`` subcommand, which changes the configuration file
-  from the command-line.
+* Add a ``config`` subcommand, which can be used to change the
+  configuration file from the command-line.
 
 v0.6.0 (2016-12-07)
 -------------------

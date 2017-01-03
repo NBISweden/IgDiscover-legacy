@@ -76,5 +76,6 @@ def main(args):
 	d = read_table(args.table, log=True)
 	d = filtered_table(d, v_gene_coverage=args.v_coverage,
 		j_gene_coverage=args.j_coverage, v_gene_evalue=args.v_evalue)
+	d.sort_values(['V_gene', 'J_gene', 'CDR3_nt'], inplace=True)
 	print(d.to_csv(sep='\t', index=False), end='')
 	logger.info('%d rows written', len(d))
