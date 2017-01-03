@@ -1,7 +1,8 @@
 from io import StringIO
 import pkg_resources
 from nose.tools import raises
-from igdiscover.utils import has_stop, Config, validate_fasta, FastaValidationError
+from igdiscover.utils import has_stop, validate_fasta, FastaValidationError
+from igdiscover.config import Config
 
 
 def test_has_stop():
