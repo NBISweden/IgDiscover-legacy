@@ -66,11 +66,10 @@ class Config:
 		Convert old-style configuration to new style. Raise ConfigurationError if configuration is invalid.
 		Return updated config dict.
 		"""
-		if 'barcode_length' in config and ('barcode_length_5prime' in config or 'barcode_length_3prime' in config):
+		if 'barcode_length' in config:
 			raise ConfigurationError(
 				'Old-style configuration of barcode length via "barcode_length"'
-				'option cannot be used at the same time as new-style configuration '
-				'via "barcode_length_5prime" or "barcode_length_3prime"')
+				'is no longer supported.')
 		barcode_length_5prime = config.get('barcode_length_5prime', 0)
 		barcode_length_3prime = config.get('barcode_length_3prime', 0)
 		if barcode_length_5prime > 0 and barcode_length_3prime > 0:
@@ -117,5 +116,3 @@ def main(args):
 		with open(args.file) as f:
 			config = ruamel.yaml.safe_load(f)
 		print(ruamel.yaml.dump(config), end='')
-
-
