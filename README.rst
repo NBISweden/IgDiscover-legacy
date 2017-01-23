@@ -28,11 +28,10 @@ If you use IgDiscover, please cite:
 Links
 -----
 
-* `Documentation <https://igdiscover.readthedocs.io/>`_
+* `Documentation <http://docs.igdiscover.se/>`_
 * `Source code <https://bitbucket.org/igdiscover/igdiscover/>`_
 * `Report an issue <https://bitbucket.org/igdiscover/igdiscover/issues?status=new&status=open>`_
 * `Project page on PyPI (Python package index) <https://pypi.python.org/pypi/igdiscover/>`_
-
 
 |
 
