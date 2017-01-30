@@ -154,11 +154,19 @@ class Discoverer:
 				return database_sequence
 		return sequence
 
-	def _guess_chain(self, group):
+	@staticmethod
+	def _guess_chain(group):
 		"""
 		Return a guess for the chain type of a given group
 		"""
 		return Counter(group.chain).most_common()[0][0]
+
+	@staticmethod
+	def _guess_cdr3_start(group):
+		"""
+		Return a guess for the CDR3 start within sequences in the given group
+		"""
+		return Counter(group.V_CDR3_start).most_common()[0][0]
 
 	def _collect_siblings(self, gene, group):
 		"""
@@ -166,6 +174,7 @@ class Discoverer:
 		group -- pandas.DataFrame of sequences assigned to that gene
 		"""
 		group = group.copy()
+		# the original reference sequence for all the IgBLAST assignments in this group
 		database_sequence = self.database.get(gene, None)
 		database_sequence_found = False
 		for left, right in self.windows:
@@ -196,8 +205,9 @@ class Discoverer:
 						self.cluster_subsample_size - len(indices)))
 			else:
 				indices = downsampled(list(group.index), self.cluster_subsample_size)
-			sequences = list(group.V_nt.loc[indices])
-			df, linkage, clusters = cluster_sequences(sequences, MINGROUPSIZE)
+			# Ignore CDR3 part of the V sequence for clustering
+			sequences_no_cdr3 = list(group.V_no_CDR3.loc[indices])
+			df, linkage, clusters = cluster_sequences(sequences_no_cdr3, MINGROUPSIZE)
 			logger.info('Clustering %d sequences (downsampled to %d) assigned to %r gave %d cluster(s)',
 				len(group), len(indices), gene, len(set(clusters)))
 			cluster_indices = [[] for _ in range(max(clusters) + 1)]
@@ -218,7 +228,7 @@ class Discoverer:
 				cl += 1
 
 		if database_sequence:
-			# Hard-coded threshold of 1% V SHM
+			# Are there any assignments with <= 1% V SHM?
 			group_in_window = group[group.V_SHM <= 1.0]
 			if len(group_in_window) >= MINGROUPSIZE:
 				if not database_sequence_found:
@@ -251,11 +261,15 @@ class Discoverer:
 			if n_bases > self.max_n_bases:
 				logger.debug('Sibling %s has too many N bases', sibling_info.name)
 				continue
-			prefix_identical = group.V_nt.map(lambda s: s.startswith(sibling) or sibling.startswith(s))
-			group_exact_V = group[prefix_identical]
+
+			sibling_cdr3_start = self._guess_cdr3_start(group)
+			sibling_no_cdr3 = sibling[:sibling_cdr3_start]
+			group_exact_V = group[group.V_no_CDR3 == sibling_no_cdr3]
 			if self.approx_columns:
-				group['consensus_diff'] = [edit_distance(v_nt, sibling) for v_nt in group.V_nt]
-				group_approximate_V = group[group.consensus_diff <= len(sibling) * self.v_error_rate]
+				group['consensus_diff'] = [edit_distance(v_no_cdr3, sibling_no_cdr3)
+					for v_no_cdr3 in group.V_no_CDR3]
+				group_approximate_V = group[group.consensus_diff <= len(sibling_no_cdr3) * self.v_error_rate]
+			del sibling_no_cdr3
 
 			groups = (
 				('window', sibling_info.group),
@@ -385,7 +399,7 @@ def main(args):
 
 	if args.database:
 		with SequenceReader(args.database) as sr:
-			database = { record.name: record.sequence.upper() for record in sr }
+			database = {record.name: record.sequence.upper() for record in sr}
 	else:
 		database = dict()
 
@@ -396,7 +410,10 @@ def main(args):
 		logger.info('Use --seed=%d to reproduce this run', seed)
 
 	table = read_table(args.table)
-	table = table.loc[:,('name', 'chain', 'V_gene', 'J_gene', 'V_nt', 'CDR3_nt', 'V_SHM', 'J_SHM')].copy()
+	table = table.loc[:, ('name', 'chain', 'V_gene', 'J_gene', 'V_nt', 'CDR3_nt', 'V_CDR3_start',
+		'V_SHM', 'J_SHM')].copy()
+	table['V_no_CDR3'] = [s[:start] if start != 0 else s for s, start in
+		zip(table.V_nt, table.V_CDR3_start)]
 
 	logger.info('%s rows read', len(table))
 	if not args.ignore_J:
@@ -409,8 +426,8 @@ def main(args):
 			'allow %.1f%% errors.', v_error_rate*100)
 
 	if args.exact_copies > 1:
-		multiplicities = count_prefixes(table.V_nt)
-		table['copies'] = table.V_nt.map(multiplicities)
+		multiplicities = count_prefixes(table.V_no_CDR3)
+		table['copies'] = table.V_no_CDR3.map(multiplicities)
 		logger.info('%s rows contain V sequences with at least %s copies',
 			sum(table.copies >= args.exact_copies), args.exact_copies)
 
@@ -424,7 +441,8 @@ def main(args):
 	writer.writeheader()
 	genes = set(args.gene)
 	if args.window_width:
-		windows = [ (start, start + args.window_width) for start in np.arange(0, 20, args.window_width) ]
+		windows = [(start, start + args.window_width)
+			for start in np.arange(0, 20, args.window_width)]
 		logger.info('Using an error rate window of %.1f%% to %.1f%%', args.left, args.right)
 		windows.append((args.left, args.right))
 	else:
