@@ -3,7 +3,7 @@ Test the SiblingMerger class
 """
 import pandas as pd
 from igdiscover.discover import SiblingMerger, SiblingInfo
-from igdiscover.compose import SequenceMerger, SequenceInfo
+from igdiscover.germlinefilter import SequenceMerger, SequenceInfo
 from igdiscover.utils import UniqueNamer
 from igdiscover.rename import PrefixDict
 from nose.tools import raises

@@ -648,8 +648,9 @@ count
 group
     Group sequences by barcode and V/J assignment and print each group’s consensus (unused in IgDiscover)
 
-compose
-    Create new V gene database from V gene candidates
+germlinefilter
+    Create new V gene database from V gene candidates using the germline and pre-germline filter
+    criteria.
 
 discover
     Discover candidate new V genes within a single antibody library
@@ -673,7 +674,7 @@ pre-germline filters take care of removing artifacts. They germline filter is th
 used only in the last iteration in order to obtain the final gene database. The pre-germline filter
 is less strict and used in all the earlier iterations.
 
-The germline filters are implemented in the ``igdiscover compose`` subcommand. It performs the
+The germline filters are implemented in the ``igdiscover germlinefilter`` subcommand. It performs the
 following filtering and processing steps:
 
 * Discard sequences with ``N`` bases

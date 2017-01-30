@@ -648,7 +648,7 @@ def db_whitelist_or_not(wildcards):
 		return []
 
 
-rule igdiscover_compose:
+rule igdiscover_germlinefilter:
 	"""Construct a new database out of the discovered sequences"""
 	output:
 		tab='iteration-{nr}/new_V_{pre,(pre|)}germline.tab',
@@ -674,7 +674,7 @@ rule igdiscover_compose:
 		criteria += ['--unique-J={}'.format(conf['unique_js'])]
 		criteria += ['--cross-mapping-ratio={}'.format(conf['cross_mapping_ratio'])]
 		criteria = ' '.join(criteria)
-		shell("igdiscover compose {criteria} --fasta={output.fasta} {input.tab} > {output.tab}")
+		shell("igdiscover germlinefilter {criteria} --fasta={output.fasta} {input.tab} > {output.tab}")
 
 
 rule stats_correlation_V_J:

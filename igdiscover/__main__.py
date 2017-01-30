@@ -35,7 +35,7 @@ COMMANDS = [
 	'count',
 	'group',
 	#'multidiscover',
-	'compose',
+	'germlinefilter',
 	'discover',
 	'clusterplot',
 	'errorplot',
