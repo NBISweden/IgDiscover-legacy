@@ -73,7 +73,8 @@ def add_arguments(parser):
 		nargs='+')
 
 
-SequenceInfo = namedtuple('SequenceInfo', 'sequence name CDR3s_exact cluster_size whitelisted is_database cluster_size_is_accurate row')
+SequenceInfo = namedtuple('SequenceInfo', ['sequence', 'name', 'CDR3s_exact', 'cluster_size',
+	'whitelisted', 'is_database', 'cluster_size_is_accurate', 'row'])
 
 
 class SequenceMerger(Merger):
@@ -85,7 +86,7 @@ class SequenceMerger(Merger):
 		self._max_differences = max_differences
 		self._cross_mapping_ratio = cross_mapping_ratio
 
-	def merged(self, s, t):
+	def merged(self, s: SequenceInfo, t: SequenceInfo):
 		"""
 		Given two SequenceInfo objects, decide whether to discard one of them and which one.
 		This is used for merging similar candidate sequences.
@@ -214,7 +215,7 @@ def main(args):
 			total_unfiltered, len(overall_table))
 
 	def cluster_size_is_accurate(row):
-		return bool(set(row.cluster.split(';')) & set(['all', 'db']))
+		return bool(set(row.cluster.split(';')) & {'all', 'db'})
 
 	for _, row in overall_table.iterrows():
 		merger.add(SequenceInfo(row['consensus'], row['name'], row['CDR3s_exact'],

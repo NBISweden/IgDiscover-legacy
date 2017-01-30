@@ -262,8 +262,7 @@ class Discoverer:
 				logger.debug('Sibling %s has too many N bases', sibling_info.name)
 				continue
 
-			sibling_cdr3_start = self._guess_cdr3_start(group)
-			sibling_no_cdr3 = sibling[:sibling_cdr3_start]
+			sibling_no_cdr3 = sibling[:self._guess_cdr3_start(group)]
 			group_exact_V = group[group.V_no_CDR3 == sibling_no_cdr3]
 			if self.approx_columns:
 				group['consensus_diff'] = [edit_distance(v_no_cdr3, sibling_no_cdr3)
