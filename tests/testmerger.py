@@ -84,7 +84,7 @@ def test_unique_namer():
 
 def SI(sequence, name, CDR3s_exact, whitelisted=False):
 	return SequenceInfo(sequence, name, CDR3s_exact, cluster_size=100, whitelisted=whitelisted,
-		is_database=False, cluster_size_is_accurate=True, row=None)
+		is_database=False, cluster_size_is_accurate=True, CDR3_start=len(sequence), row=None)
 
 
 def test_sequence_merger_withCDR3():
