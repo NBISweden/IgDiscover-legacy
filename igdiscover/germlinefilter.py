@@ -73,8 +73,8 @@ def add_arguments(parser):
 		nargs='+')
 
 
-SequenceInfo = namedtuple('SequenceInfo', ['sequence', 'name', 'CDR3s_exact', 'cluster_size',
-	'whitelisted', 'is_database', 'cluster_size_is_accurate', 'row'])
+SequenceInfo = namedtuple('_SequenceInfo', ['sequence', 'name', 'CDR3s_exact', 'cluster_size',
+	'whitelisted', 'is_database', 'cluster_size_is_accurate', 'CDR3_start', 'row'])
 
 
 class SequenceMerger(Merger):
@@ -105,15 +105,16 @@ class SequenceMerger(Merger):
 		"""
 		if len(s.sequence) > len(t.sequence):
 			s, t = t, s  # make s always the shorter sequence
-		s_seq = s.sequence
-		if len(s_seq) != len(t.sequence):
-			t_prefix = t.sequence[:len(s_seq)]
-			t_suffix = t.sequence[-len(s_seq):]
-			dist_prefix = edit_distance(s_seq, t_prefix, max(self._max_differences, 1))
-			dist_suffix = edit_distance(s_seq, t_suffix, max(self._max_differences, 1))
+		s_no_cdr3 = s.sequence[:s.CDR3_start]
+		t_no_cdr3 = t.sequence[:t.CDR3_start]
+		if len(s_no_cdr3) != len(t_no_cdr3):
+			t_prefix = t_no_cdr3[:len(s_no_cdr3)]
+			t_suffix = t_no_cdr3[-len(s_no_cdr3):]
+			dist_prefix = edit_distance(s_no_cdr3, t_prefix, max(self._max_differences, 1))
+			dist_suffix = edit_distance(s_no_cdr3, t_suffix, max(self._max_differences, 1))
 			dist = min(dist_prefix, dist_suffix)
 		else:
-			dist = edit_distance(s_seq, t.sequence, max(self._max_differences, 1))
+			dist = edit_distance(s_no_cdr3, t_no_cdr3, max(self._max_differences, 1))
 
 		# Check for possible cross-mapping
 		if self._cross_mapping_ratio and dist == 1 and s.is_database and t.is_database:
@@ -136,7 +137,7 @@ class SequenceMerger(Merger):
 		# No sequence is whitelisted if we arrive here
 		if s.CDR3s_exact >= t.CDR3s_exact:
 			return s
-		if len(s_seq) < len(t.sequence):
+		if len(s.sequence) < len(t.sequence):
 			return t
 		return t
 
@@ -220,7 +221,7 @@ def main(args):
 	for _, row in overall_table.iterrows():
 		merger.add(SequenceInfo(row['consensus'], row['name'], row['CDR3s_exact'],
 			row['cluster_size'], row['whitelist_diff'] == 0, row['database_diff'] == 0,
-			cluster_size_is_accurate(row),
+			cluster_size_is_accurate(row), row.get('CDR3_start', 10000),  # TODO backwards compatibility
 			row.name))  # row.name is the index of the row. It is not row['name'].
 
 	# Discard near-duplicates

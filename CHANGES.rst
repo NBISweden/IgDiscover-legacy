@@ -13,6 +13,7 @@ development version
   file describing where the CDR3 starts within a discovered V sequence.
   It is computed by using the most common CDR3 start of the
   sequences within the cluster.
+* Ignore the CDR3-encoding bases whenever comparing two V gene sequences.
 * Rename ``compose`` subcommand to ``germlinefilter``.
 
 v0.6.0 (2016-12-07)
