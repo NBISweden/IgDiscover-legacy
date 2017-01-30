@@ -9,6 +9,10 @@ development version
   configuration file from the command-line.
 * Add a ``V_CDR3_start`` column to the ``assigned.tab``/``filtered.tab``
   tables. It describes where the CDR3 starts within the V sequence.
+* Similarly, add a ``CDR3_start`` column to the ``new_V_germline.tab``
+  file describing where the CDR3 starts within a discovered V sequence.
+  It is computed by using the most common CDR3 start of the
+  sequences within the cluster.
 * Rename ``compose`` subcommand to ``germlinefilter``.
 
 v0.6.0 (2016-12-07)

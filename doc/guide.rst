@@ -565,6 +565,10 @@ looks_like_V
     Whether the consensus sequence “looks like” a true V gene (1 if yes, 0 if no).
     Currently, this checks whether the 5' end of the sequence matches a known V gene motif.
 
+CDR3_start
+    Where the CDR3 starts within the discovered V gene sequence. This uses the most common
+    CDR3 start location among the sequences from which this consensus is derived.
+
 consensus
     The consensus sequence itself.
 

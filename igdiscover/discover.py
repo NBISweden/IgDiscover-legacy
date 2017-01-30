@@ -304,6 +304,7 @@ class Discoverer:
 				CDR3s_approx = None
 
 			chain = self._guess_chain(sibling_info.group)
+			cdr3_start = self._guess_cdr3_start(sibling_info.group)
 			try:
 				ratio = info['exact'].count / info['exact'].unique_CDR3
 			except ZeroDivisionError:
@@ -327,6 +328,7 @@ class Discoverer:
 				database_diff=database_diff,
 				has_stop=int(has_stop(sibling)),
 				looks_like_V=int(looks_like_V_gene(sibling, chain)),
+				CDR3_start=cdr3_start,
 				consensus=sibling,
 			)
 			candidates.append(candidate)
@@ -361,7 +363,8 @@ Candidate = namedtuple('Candidate', [
 	'database_diff',
 	'has_stop',
 	'looks_like_V',
-	'consensus'
+	'CDR3_start',
+	'consensus',
 ])
 
 
