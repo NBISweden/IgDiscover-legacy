@@ -45,7 +45,8 @@ _STRING_COLUMNS = [
 	'genomic_sequence',
 ]
 
-_INTEGER_COLUMNS = ('V_errors', 'J_errors')
+_INTEGER_COLUMNS = ('V_errors', 'J_errors', 'V_CDR3_start')
+
 
 def _fix_columns(df):
 	"""
@@ -53,7 +54,7 @@ def _fix_columns(df):
 	"""
 	# Convert all string columns to str to avoid a PerformanceWarning
 	for col in _STRING_COLUMNS:
-		if not col in df:
+		if col not in df:
 			continue
 		df[col].fillna('', inplace=True)
 		df[col] = df[col].astype('str')
@@ -82,7 +83,7 @@ def read_table(path, log=False):
 			# it atomically.
 			with TemporaryDirectory(dir=os.path.dirname(h5path)) as tempdir:
 				temp_h5 = os.path.join(tempdir, 'db.h5')
-				df = pd.read_csv(path, sep='\t') #true_values=['yes'], false_values=['no'])
+				df = pd.read_csv(path, sep='\t')  #true_values=['yes'], false_values=['no'])
 				_fix_columns(df)
 				df.to_hdf(temp_h5, 'table', complevel=3, complib='zlib')
 				os.rename(temp_h5, h5path)

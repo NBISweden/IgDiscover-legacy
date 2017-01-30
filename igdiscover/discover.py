@@ -200,7 +200,7 @@ class Discoverer:
 			df, linkage, clusters = cluster_sequences(sequences, MINGROUPSIZE)
 			logger.info('Clustering %d sequences (downsampled to %d) assigned to %r gave %d cluster(s)',
 				len(group), len(indices), gene, len(set(clusters)))
-			cluster_indices = [ [] for _ in range(max(clusters) + 1) ]
+			cluster_indices = [[] for _ in range(max(clusters) + 1)]
 			for i, cluster_id in enumerate(clusters):
 				cluster_indices[cluster_id].append(indices[i])
 
@@ -254,7 +254,7 @@ class Discoverer:
 			prefix_identical = group.V_nt.map(lambda s: s.startswith(sibling) or sibling.startswith(s))
 			group_exact_V = group[prefix_identical]
 			if self.approx_columns:
-				group['consensus_diff'] = [ edit_distance(v_nt, sibling) for v_nt in group.V_nt ]
+				group['consensus_diff'] = [edit_distance(v_nt, sibling) for v_nt in group.V_nt]
 				group_approximate_V = group[group.consensus_diff <= len(sibling) * self.v_error_rate]
 
 			groups = (

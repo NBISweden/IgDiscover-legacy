@@ -7,6 +7,8 @@ development version
 
 * Add a ``config`` subcommand, which can be used to change the
   configuration file from the command-line.
+* Add a ``V_CDR3_start`` column to the ``assigned.tab``/``filtered.tab``
+  tables. It describes where the CDR3 starts within the V sequence.
 
 v0.6.0 (2016-12-07)
 -------------------

@@ -440,7 +440,11 @@ CDR1_nt, CDR1_aa, CDR2_nt, CDR2_aa, CDR3_nt, CDR3_aa
     nucleotide and amino acid sequence of CDR1/2/3
 
 V_nt, V_aa
-    nucleotide and amino acid sequence of V gene match
+    Nucleotide and amino acid sequence of V gene match
+
+V_CDR3_start
+    Start coordinate of CDR3 within ``V_nt``. Set to zero if no CDR3 was detected.
+    Comparisons involving the V gene ignore those V bases that are part of the CDR3.
 
 V_end, VD_junction, D_region, DJ_junction, J_start
     nucleotide sequences for various match regions

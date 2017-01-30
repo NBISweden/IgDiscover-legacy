@@ -186,6 +186,7 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		'V_nt',
 		'V_aa',
 		'V_end',
+		'V_CDR3_start',
 		'VD_junction',
 		'D_region',
 		'DJ_junction',
@@ -197,6 +198,7 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		'race_G',
 		'genomic_sequence',
 	]
+
 	def __new__(cls, record, v_database):
 		d = record._asdict()
 		query_name, size, barcode = parse_header(record.query_name)
@@ -223,6 +225,15 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		vdj_start = hit_v.query_start
 		vdj_stop = hit_j.query_start + len(hit_j.query_sequence)
 		return self.full_sequence[vdj_start:vdj_stop]
+
+	@property
+	def v_cdr3_start(self):
+		"""Start of CDR3 within V"""
+		if 'V' not in self.hits or self.alignments['CDR3'] is None:
+			return 0
+		v_start = self.hits['V'].query_start
+		cdr3_start = self.alignments['CDR3'].start
+		return cdr3_start - v_start
 
 	def _utr_leader(self):
 		"""
@@ -397,6 +408,7 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 			V_nt=v_nt,
 			V_aa=v_aa,
 			V_end=v_end,
+			V_CDR3_start=self.v_cdr3_start,
 			VD_junction=vd_junction,
 			D_region=d_region,
 			DJ_junction=dj_junction,
