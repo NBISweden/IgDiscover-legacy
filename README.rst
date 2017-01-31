@@ -30,8 +30,8 @@ Links
 -----
 
 * `Documentation <http://docs.igdiscover.se/>`_
-* `Source code <https://bitbucket.org/igdiscover/igdiscover/>`_
-* `Report an issue <https://bitbucket.org/igdiscover/igdiscover/issues?status=new&status=open>`_
+* `Source code <https://github.com/NBISweden/IgDiscover/>`_
+* `Report an issue <https://github.com/NBISweden/IgDiscover/issues>`_
 * `Project page on PyPI (Python package index) <https://pypi.python.org/pypi/igdiscover/>`_
 
 |
