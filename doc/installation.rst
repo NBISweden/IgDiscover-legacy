@@ -7,7 +7,13 @@ Installation
 Quickstart
 ----------
 
-On OS X or Linux, open a terminal window and run these commands. Copy and paste
+Try these instructions first. If they don’t work, continue reading below.
+
+
+Linux
+~~~~~
+
+On Linux, open a terminal window and run these commands. Copy and paste
 each line separately::
 
 	wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
@@ -18,8 +24,21 @@ Close the terminal window and open a new one. Then run::
 	conda install -c bioconda igdiscover
 	igdiscover --version
 
-If the last command outputs the current version of IgDiscover, it worked! Keep
-reading if you have problems.
+If the last command outputs the current version of IgDiscover, it worked! Skip
+to the next section if you have problems.
+
+
+OS X/macOS
+~~~~~~~~~~
+
+On macOS, `follow the miniconda <https://conda.io/docs/install/quick.html#os-x-miniconda-install>`_
+installation instructions. Then open a terminal window and run::
+
+	conda install -c bioconda igdiscover
+	igdiscover --version
+
+If the last command outputs the current version of IgDiscover, it worked!
+Keep reading if you have problems.
 
 
 .. _simple-installation:
@@ -91,3 +110,8 @@ If you get the error ::
 Then follow `these instructions <http://conda.pydata.org/docs/troubleshooting.html#unknown-locale>`_.
 
 
+Development version
+-------------------
+
+To install IgDiscover directly from the most recent source code,
+:ref:`read the developer installation instructions <developer-install>`.
