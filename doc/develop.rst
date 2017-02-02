@@ -32,7 +32,7 @@ regular installation instructions <quickstart>`. Then do the following:
 3. Install IgDiscover::
 
        cd IgDiscover
-       pip3 install -e .
+       python3 -m pip install -e .
 
 If you are a developer, you may also want to look into Conda environments and
 use those.
@@ -42,7 +42,7 @@ Whenever you want to update the software::
     cd IgDiscover
     git pull
 
-It may also be necessary to repeat the ``pip install -e .`` step.
+It may also be necessary to repeat the ``python3 -m pip install -e .`` step.
 
 
 Building the documentation
