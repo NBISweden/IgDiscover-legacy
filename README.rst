@@ -35,7 +35,5 @@ Links
 * `Project page on PyPI (Python package index) <https://pypi.python.org/pypi/igdiscover/>`_
 
 |
-
-.. image:: clusterplot.jpeg
-
+.. image:: https://raw.githubusercontent.com/NBISweden/IgDiscover/master/doc/clusterplot.jpeg
 |
