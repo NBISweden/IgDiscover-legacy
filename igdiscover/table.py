@@ -64,6 +64,8 @@ def _fix_columns(df):
 	# Columns that have any NaN values in them cannot be converted to
 	# int due to a numpy limitation.
 	for col in _INTEGER_COLUMNS:
+		if col not in df.columns:
+			continue
 		if all(df[col].notnull()):
 			df[col] = df[col].astype(int)
 
