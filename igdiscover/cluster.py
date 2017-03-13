@@ -1,7 +1,7 @@
 import pandas as pd
 from scipy.spatial import distance
 from scipy.cluster import hierarchy
-from .utils import distances, iterative_consensus
+from .utils import distances
 
 
 def all_nodes(root):
@@ -30,14 +30,14 @@ def inner_nodes(root):
 	"""
 	Return a list of all inner nodes of the tree, from left to right.
 	"""
-	return [ node for node in all_nodes(root) if not node.is_leaf() ]
+	return [node for node in all_nodes(root) if not node.is_leaf()]
 
 
 def collect_ids(root):
 	"""
 	Return a list of ids of all leaves of the given tree
 	"""
-	return [ node.id for node in all_nodes(root) if node.is_leaf() ]
+	return [node.id for node in all_nodes(root) if node.is_leaf()]
 
 
 def cluster_sequences(sequences, minsize=5):
@@ -54,11 +54,12 @@ def cluster_sequences(sequences, minsize=5):
 	# Linkage columns are:
 	# 0, 1: merged clusters, 2: distance, 3: number of nodes in cluster
 	inner = inner_nodes(hierarchy.to_tree(linkage))
-	prev = linkage[:,2].max()  # highest distance
+	prev = linkage[:, 2].max()  # highest distance
 	clusters = [0] * len(sequences)
 	cl = 1
 	for n in inner:
-		if n.dist > 0 and prev/n.dist < 0.8 and n.left.count >= minsize and n.right.count >= minsize:
+		if n.dist > 0 and prev / n.dist < 0.8 \
+				and n.left.count >= minsize and n.right.count >= minsize:
 			for id in collect_ids(n.left):
 				# Do not overwrite previously assigned ids
 				if clusters[id] == 0:
