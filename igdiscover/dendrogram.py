@@ -22,6 +22,9 @@ def add_arguments(parser):
 		'in the main file that do *not* occur here will be marked with (new). '
 		'If not given, no sequences will be marked (use this to compare two '
 		'databases.')
+	arg('--method', choices=('single', 'complete', 'weighted', 'average'),
+		default='average',
+		help='Linkage method. Default: "average" (=UPGMA)')
 	arg('fasta', help='Path to input FASTA file')
 	arg('plot', help='Path to output PDF or PNG')
 
@@ -73,7 +76,7 @@ def main(args):
 		for i,j in np.argwhere(m == y.min()):
 			if i < j:
 				logger.info('%s and %s', labels[i], labels[j])
-		l = hierarchy.average(y)  # UPGMA
+		l = hierarchy.linkage(y, method=args.method)
 		hierarchy.dendrogram(l, labels=labels, leaf_font_size=font_size, orientation='right', color_threshold=0.95*max(l[:,2]))
 	else:
 		ax.text(0.5, 0.5, 'no sequences', fontsize='xx-large')
