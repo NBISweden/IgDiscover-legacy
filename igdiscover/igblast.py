@@ -60,7 +60,7 @@ def run_igblast(fasta, database, species, penalty=None):
 		'-auxiliary_data', empty_aux_path,
 		'-organism', species,
 		'-ig_seqtype', 'Ig',
-		'-num_threads' , '1',
+		'-num_threads', '1',
 		'-domain_system', 'imgt',
 		'-num_alignments_V', '1',
 		'-num_alignments_D', '1',
