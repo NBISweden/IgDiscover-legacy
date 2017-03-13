@@ -155,6 +155,9 @@ class Merger:
 	def __iter__(self):
 		yield from sorted(self._items, key=lambda x: x.name)
 
+	def __len__(self):
+		return len(self._items)
+
 	def merged(self, existing_item, item):
 		"""
 		If existing_item and item can be returned, this method must return
