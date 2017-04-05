@@ -17,11 +17,11 @@ logger = logging.getLogger(__name__)
 
 def add_arguments(parser):
 	arg = parser.add_argument
-	arg('--mark', '--db',
+	arg('--mark', '--db', metavar='FASTA',
 		help='Path to a FASTA file with a set of "known" sequences. Sequences '
 		'in the main file that do *not* occur here will be marked with (new). '
 		'If not given, no sequences will be marked (use this to compare two '
-		'databases.')
+		'databases).')
 	arg('--method', choices=('single', 'complete', 'weighted', 'average'),
 		default='average',
 		help='Linkage method. Default: "average" (=UPGMA)')
