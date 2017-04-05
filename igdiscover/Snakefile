@@ -1,4 +1,4 @@
-# kate: syntax Python;
+# kate: syntax Python; space-indent off; tab-width 4; indent-width 4;
 """
 """
 import shutil
@@ -577,7 +577,7 @@ rule check_parsing:
 				'IgBLAST-assigned sequences. Possibly there is a problem with '
 				'the starting database. To skip this check and continue anyway, '
 				'create the file "{}" and re-start "igdiscover run".'.format(
-					output.success), sep='\n'))
+					output.success)), sep='\n')
 			sys.exit(1)
 
 
