@@ -71,3 +71,35 @@ a Git tag::
 The ``v`` prefix is mandatory.
 
 
+Removing IgDiscover from a Linux system
+---------------------------------------
+
+If you have been playing around with different installation methods (``pip``,
+``conda``, ``git``, ``python3 setup.py install`` etc.) you may have multiple
+copies of IgDiscover on your system and you will likely run into problems
+on updates. Here is a list you can follow in order to get rid of the
+installations as preparation for a clean re-install. *Do not* add ``sudo`` to
+the commands below if you get permission problems, unless explicitly told to do
+so! If one of the steps does not work, that is fine, just continue.
+
+1. Delete miniconda: Run the command ``which conda``. The output will be
+   something like ``/home/myusername/miniconda3/bin/conda``. The part before
+   ``bin/conda`` is the miniconda installation directory. Delete that one. In
+   this case, you would need to delete ``/home/myusername/miniconda3``.
+2. Run ``pip3 uninstall igdiscover``. If this runs successfully and prints some
+   messages about removing files, then *repeat the same command*! Do this
+   until you get a message telling you that the package cannot be uninstalled
+   because it is not installed.
+3. Do the same as in the previous step, but with ``pip3 uninstall sqt``.
+4. If you have a directory named ``.local`` within your home directory, you may
+   want to rename it: ``mv .local dot-local-backup`` You can also delete it, but
+   there is a small risk that other software (not IgDiscover) uses that
+   directory.
+5. If you have ever used ``sudo`` to install IgDiscover, you may have an
+   installation in ``/usr/local/``. You can try to remove it with
+   ``sudo pip3 uninstall igdiscover``.
+6. Delete the cloned Git repository if you have one. This is the directory in
+   which you run ``git pull``.
+
+Finally, you can follow the normal installation instructions and then the
+developer installation instructions.
