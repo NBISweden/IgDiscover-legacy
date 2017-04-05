@@ -10,6 +10,7 @@ import numpy as np
 from sqt.align import edit_distance, multialign, consensus
 from sqt.dna import GENETIC_CODE, nt_to_aa as _nt_to_aa
 from sqt import SequenceReader
+from cutadapt.align import Aligner
 
 
 def downsampled(population, size):
@@ -142,7 +143,6 @@ class Merger:
 		# was made explicit.
 
 		items = []
-		m = None
 		for existing_item in self._items:
 			m = self.merged(existing_item, item)
 			if m is None:
@@ -241,3 +241,47 @@ def validate_fasta(path):
 				r.name, sequences[s]))
 		sequences[s] = r.name
 		names.add(r.name)
+
+
+def find_overlap(s, t, min_overlap=1):
+	"""
+	Detect if s and t overlap.
+
+	Returns:
+
+	None if no overlap was detected.
+	0 if s is a prefix of t or t is a prefix of s.
+	Positive int gives index where t starts within s.
+	Negative int gives -index where s starts within t.
+
+	>>> find_overlap('ABCDE', 'CDE')
+	2
+	>>> find_overlap('CDE', 'ABCDEFG')
+	-2
+	>>> find_overlap('ABC', 'X')
+	None
+	"""
+	aligner = Aligner(s, max_error_rate=0)
+	aligner.min_overlap = min_overlap
+	result = aligner.locate(t)
+	if result is None:
+		return None
+	s_start, _, t_start, _, _, _ = result
+	return s_start - t_start
+
+
+def merge_overlapping(s, t):
+	i = find_overlap(s, t, min_overlap=max(1, min(len(s), len(t)) // 2))
+	if i is None:
+		return None
+
+	if i >= 0:
+		# positive: index of t in s
+		if i + len(t) < len(s):
+			# t is in s
+			return s
+		return s[:i] + t
+	if -i + len(s) < len(t):
+		# s is in t
+		return t
+	return t[:-i] + s

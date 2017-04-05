@@ -1,7 +1,7 @@
 from io import StringIO
 import pkg_resources
 from nose.tools import raises
-from igdiscover.utils import has_stop, validate_fasta, FastaValidationError
+from igdiscover.utils import has_stop, validate_fasta, FastaValidationError, find_overlap, merge_overlapping
 from igdiscover.config import Config
 
 
@@ -44,3 +44,27 @@ def test_validate_duplicate_name():
 @raises(FastaValidationError)
 def test_validate_duplicate_sequence():
 	validate_fasta('tests/data/duplicate-sequence.fasta')
+
+
+def test_find_overlap():
+	assert find_overlap('', '') is None
+	assert find_overlap('A', '') is None
+	assert find_overlap('ABC', 'X') is None
+	assert find_overlap('X', 'ABC') is None
+	assert find_overlap('A', 'A') == 0
+	assert find_overlap('ABCD', 'A') == 0
+	assert find_overlap('A', 'ABC') == 0
+	assert find_overlap('AB', 'BD') == 1
+	assert find_overlap('ABCDE', 'CDE') == 2
+	assert find_overlap('ABCDEFGH', 'CDE') == 2
+	assert find_overlap('CDE', 'XABCDEFG') == -3
+	assert find_overlap('EFGHI', 'ABCDEFG') == -4
+
+
+def test_merge_overlapping():
+	assert merge_overlapping('', '') is None  # TODO
+	assert merge_overlapping('ABC', 'DEF') is None
+	assert merge_overlapping('HELLOW', 'LOWORLD') == 'HELLOWORLD'
+	assert merge_overlapping('LOWORLD', 'HELLOW') == 'HELLOWORLD'
+	assert merge_overlapping('HELLOWORLD', 'LOWO') == 'HELLOWORLD'
+	assert merge_overlapping('LOWO', 'HELLOWORLD') == 'HELLOWORLD'
