@@ -153,7 +153,10 @@ class Merger:
 		self._items = items
 
 	def __iter__(self):
-		yield from sorted(self._items, key=lambda x: x.name)
+		if self._items and hasattr(self._items, 'name'):
+			yield from sorted(self._items, key=lambda x: x.name)
+		else:
+			yield from self._items
 
 	def __len__(self):
 		return len(self._items)

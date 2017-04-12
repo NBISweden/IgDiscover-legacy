@@ -9,8 +9,12 @@ from collections import Counter, namedtuple
 import pandas as pd
 from .utils import Merger, merge_overlapping
 from .table import read_table
+import types
 
 logger = logging.getLogger(__name__)
+
+
+MIN_COUNT = 100
 
 
 def add_arguments(parser):
@@ -18,7 +22,18 @@ def add_arguments(parser):
 	arg('table', help='Table with parsed and filtered IgBLAST results')
 
 
-SequenceInfo = namedtuple('SequenceInfo', 'name sequence groups frequency')
+class SequenceInfo:
+	def __init__(self, sequence, count=0, max_count=0, cdr3s=None, v_genes=None):
+		self.name = 'name'
+		self.sequence = sequence
+		self.count = count
+		self.max_count = max_count  # an upper bound for the count
+		self.cdr3s = cdr3s if cdr3s is not None else set()
+		self.v_genes = v_genes if v_genes is not None else set()
+
+	def __repr__(self):
+		return 'SequenceInfo({sequence!r}, count={count}, max_count={max_count}, ...)'.format(**vars(self))
+	# def __lt__(self, other): ...
 
 
 class SequenceMerger(Merger):
@@ -32,48 +47,58 @@ class SequenceMerger(Merger):
 		"""
 		Merge two sequences if they overlap. If they should not be merged,
 		None is returned.
-
-		s and t must have attributes sequence and frequency
 		"""
 		m = merge_overlapping(s.sequence, t.sequence)
 		if m is not None:
-			return SequenceInfo('name', m, s.groups + t.groups, t.frequency + s.frequency)
+			return SequenceInfo(m, max_count=t.max_count + s.max_count)
 		else:
 			return None
 
 
 def main(args):
 	table = read_table(args.table)
+	logger.info('Table with %s rows read', len(table))
 	table = table[table.V_errors == 0]
+	logger.info('Keeping %s rows with zero V mismatches', len(table))
 
-	sequences = Counter(table.J_nt)
-	logger.info('Table contains %s rows with %s distinct J sequences', len(table), len(sequences))
-
+	# Merge candidate sequences that overlap. If one candidate is longer than
+	# another, this is typically a sign that IgBLAST has not extended the
+	# alignment long enough.
 	merger = SequenceMerger()
-	# Note that the merging result depends on the order in which we iterate.
-	# groupby returns keys in sorted order.
 	for sequence, group in table.groupby('J_nt'):
-		# TODO len(group) should perhaps be sum(group.count)
-		merger.add(SequenceInfo('name', sequence, [group], len(group)))
-	logger.info('After merging, %s sequences remain', len(merger))
+		merger.add(SequenceInfo(sequence, max_count=len(group)))
+	logger.info('After merging overlapping sequences, %s remain', len(merger))
 
+	# Use only records that have a chance of reaching the required MIN_COUNT
+	records = {info.sequence: info for info in merger if info.max_count >= MIN_COUNT}
+
+	# Speed up search by looking for most common sequences first
+	search_order = sorted(records, key=lambda s: records[s].max_count, reverse=True)
+
+	# Count full-text occurrences in the genomic_sequence, circumventing
+	# inaccurate IgBLAST alignment boundaries
+	for row in table.itertuples():
+		# print('current row', row)
+		for needle in search_order:
+			# print('current needle', needle)
+			if needle in row.genomic_sequence:
+				record = records[needle]
+				record.count += 1
+				record.v_genes.add(row.V_gene)
+				record.cdr3s.add(row.CDR3_nt)
+				break
+
+	# Print output table
 	print('sequence', 'count', 'V_genes', 'CDR3s', 'name', sep='\t')
 	i = 0
-	for record in sorted(merger, key=lambda r: r.sequence):
-		group = pd.concat(record.groups)
-		if record.frequency < 100:  # TODO
-			continue
-		names = Counter(group.J_gene)
-		if len(names) > 1:
-			name = ', '.join('{}({})'.format(name, names[name]) for name in sorted(names))
-		else:
-			name = next(iter(names))
+	for record in sorted(records.values(), key=lambda r: r.count, reverse=True):
+		# TODO
+		# if record.count < MIN_COUNT:
+		# 	break
 		print(record.sequence,
-			record.frequency,
-			len(set(group.V_gene)),
-			len(set(group.CDR3_nt)),
-			name,
+			record.count,
+			len(set(record.v_genes)),
+			len(set(record.cdr3s)),
+			record.name,
 			sep='\t')
 		i += 1
-		if i == 100:
-			break
