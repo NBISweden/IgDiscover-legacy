@@ -280,24 +280,23 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 
 	def _fixed_v_hit(self, v_database):
 		"""
-		Extend the V hit by one base to the left if it starts at the second
-		base in the V reference.
+		Extend the V hit to the left if it does not starts at the first of the V gene.
 		"""
 		hit = self.hits['V']
-		if hit.subject_start != 1 or hit.query_start == 0:
-			return hit
 		d = hit._asdict()
-		assert self.full_sequence[d['query_start']:d['query_start'] + len(d['query_sequence'])] == d['query_sequence']
-		d['query_start'] -= 1
-		d['subject_start'] -= 1
-		d['query_sequence'] = self.full_sequence[d['query_start']:d['query_start'] + len(d['query_sequence']) + 1]
-		if v_database:
-			reference = v_database[hit.subject_id]
-			preceding_base = reference[d['subject_start']]
-		else:
-			preceding_base = 'N'
-		d['subject_sequence'] = preceding_base + d['subject_sequence']  # TODO maybe not needed
-		# TODO one could adjust the no. of errors, percent_identity (and E-value)
+		while d['subject_start'] > 0 and d['query_start'] > 0:
+			d['query_start'] -= 1
+			d['subject_start'] -= 1
+			preceding_query_base = self.full_sequence[d['query_start']]
+			d['query_sequence'] = preceding_query_base + d['query_sequence']
+			if v_database:
+				reference = v_database[hit.subject_id]
+				preceding_base = reference[d['subject_start']]
+			else:
+				preceding_base = 'N'
+			d['subject_sequence'] = preceding_base + d['subject_sequence']
+			if preceding_base != preceding_query_base:
+				d['errors'] += 1
 		return Hit(**d)
 
 	def region_sequence(self, region):
