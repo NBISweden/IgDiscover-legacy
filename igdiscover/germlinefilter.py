@@ -105,6 +105,9 @@ class SequenceMerger(Merger):
 		"""
 		if len(s.sequence) > len(t.sequence):
 			s, t = t, s  # make s always the shorter sequence
+
+		# When computing edit distance between the two sequences, ignore the
+		# bases in the 3' end that correspond to the CDR3
 		s_no_cdr3 = s.sequence[:s.CDR3_start]
 		t_no_cdr3 = t.sequence[:t.CDR3_start]
 		if len(s_no_cdr3) != len(t_no_cdr3):
