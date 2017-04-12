@@ -9,7 +9,8 @@ import sys
 import shutil
 import subprocess
 import pkg_resources
-from .utils import validate_fasta, FastaValidationError
+from sqt import SequenceReader
+from .utils import FastaValidationError
 from .config import Config
 
 try:
@@ -133,7 +134,7 @@ def guess_paired_path(path):
 	"""
 	base, name = os.path.split(path)
 	glob_pattern = os.path.join(base, name.replace('1', '?'))
-	paths = [ p for p in glob.glob(glob_pattern) if is_1_2(p, path) and '_R1_' not in p ]
+	paths = [p for p in glob.glob(glob_pattern) if is_1_2(p, path) and '_R1_' not in p]
 	if len(paths) != 1:
 		return None
 	return paths[0]
@@ -169,6 +170,42 @@ def try_open(path):
 	except OSError as e:
 		logger.error('Could not open %r: %s', path, e)
 		sys.exit(1)
+
+
+def read_and_repair_fasta(path):
+	"""
+	Read a FASTA file and make sure it is suitable for use with makeblastdb.
+	It repairs the following issues:
+
+	- If a record is empty, it is skipped
+	- If a record name occurs more than once, the second record name gets a suffix
+	- If a sequence occurs more than once, occurrences after the first are skipped
+	"""
+	with SequenceReader(path) as sr:
+		records = list(sr)
+
+	names = set()
+	sequences = dict()
+	for r in records:
+		r.sequence = r.sequence.upper()
+		if len(r.sequence) == 0:
+			logger.info("Record %r is empty, skipping it.", r.name)
+			continue
+		name = r.name
+		i = 0
+		while name in names:
+			i += 1
+			name = r.name + '_{}'.format(i)
+		if name != r.name:
+			logger.info("Record name %r occurs more than once, replaced with %r", r.name, name)
+		if r.sequence in sequences:
+			logger.info('Records %r and %r contain the same sequence, skipping %r',
+				sequences[r.sequence], r.name, r.name)
+			continue
+		sequences[r.sequence] = name
+		names.add(name)
+		r.name = name
+		yield r
 
 
 def main(args):
@@ -241,6 +278,7 @@ def main(args):
 			logger.error('Cancelled')
 			sys.exit(2)
 
+	database = dict()
 	for g in ['V', 'D', 'J']:
 		path = os.path.join(dbpath, g + '.fasta')
 		if not os.path.exists(path):
@@ -250,11 +288,7 @@ def main(args):
 			logger.error(
 				'A dummy D.fasta is necessary even if analyzing light chains (see manual)')
 			sys.exit(2)
-		try:
-			validate_fasta(path)
-		except FastaValidationError as e:
-			logger.error('Error in %r: %s', path, e)
-			sys.exit(2)
+		database[g] = list(read_and_repair_fasta(path))
 
 	# Create the directory
 	try:
@@ -295,11 +329,13 @@ def main(args):
 				line = 'library_name: ' + library_name + '\n'
 			f.write(line)
 
-	# Copy database files
-	os.mkdir(os.path.join(args.directory, 'database'))
+	# Create database files
+	database_dir = os.path.join(args.directory, 'database')
+	os.mkdir(database_dir)
 	for gene in ['V', 'D', 'J']:
-		fasta = gene + '.fasta'
-		shutil.copyfile(os.path.join(dbpath, fasta), os.path.join(args.directory, 'database', fasta))
+		with open(os.path.join(database_dir, gene + '.fasta'), 'w') as db_file:
+			for record in database[gene]:
+				print('>{}\n{}'.format(record.name, record.sequence), file=db_file)
 
 	if gui is not None:
 		# Only suggest to edit the config file if at least one GUI dialog has been shown
