@@ -94,8 +94,8 @@ so! If one of the steps does not work, that is fine, just continue.
 4. If you have a directory named ``.local`` within your home directory, you may
    want to rename it: ``mv .local dot-local-backup`` You can also delete it, but
    there is a small risk that other software (not IgDiscover) uses that
-   directory. It is possible that this directory is hidden (check by running the 
-   command ``ll -l`` while in your home  directory.
+   directory. The directory is hidden, so a normal ``ls`` will not show it.
+   Use ``ls -la`` while in your home directory to see it.
 5. If you have ever used ``sudo`` to install IgDiscover, you may have an
    installation in ``/usr/local/``. You can try to remove it with
    ``sudo pip3 uninstall igdiscover``.
