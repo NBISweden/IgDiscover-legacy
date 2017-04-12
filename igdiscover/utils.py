@@ -78,6 +78,17 @@ def sequence_hash(s, digits=4):
 	return 'S' + str(h % 10**digits).rjust(digits, '0')
 
 
+def unique_name(name, sequence):
+	"""Create a unique name based on the current name and the sequence
+
+	The returned name looks like name_S1234. If the current name contains
+	already a S_.... suffix, it is removed before the new suffix is appended.
+
+	name -- current name
+	"""
+	return '{}_{}'.format(name.rsplit('_S', 1)[0], sequence_hash(sequence))
+
+
 class SerialPool:
 	"""
 	An alternative to multiprocessing.Pool that runs things in serial for

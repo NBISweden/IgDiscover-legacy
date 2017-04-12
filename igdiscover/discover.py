@@ -20,7 +20,7 @@ from sqt.align import edit_distance
 from sqt.utils import available_cpu_count
 
 from .table import read_table
-from .utils import iterative_consensus, sequence_hash, downsampled, SerialPool, Merger, has_stop
+from .utils import iterative_consensus, unique_name, downsampled, SerialPool, Merger, has_stop
 from .cluster import cluster_sequences
 from .species import looks_like_V_gene
 
@@ -289,7 +289,7 @@ class Discoverer:
 			# Build the Candidate
 			# TODO use UniqueNamer here
 			if database_diff is not None and database_diff != 0:
-				sequence_id = '{}_{}'.format(gene.rsplit('_S', 1)[0], sequence_hash(sibling))
+				sequence_id = unique_name(gene, sibling)
 			else:
 				sequence_id = gene
 
