@@ -84,17 +84,18 @@ so! If one of the steps does not work, that is fine, just continue.
 
 1. Delete miniconda: Run the command ``which conda``. The output will be
    something like ``/home/myusername/miniconda3/bin/conda``. The part before
-   ``bin/conda`` is the miniconda installation directory. Delete that one. In
-   this case, you would need to delete ``/home/myusername/miniconda3``.
+   ``bin/conda`` is the miniconda installation directory. Delete that folder. In
+   this case, you would need to delete ``miniconda3`` in ``/home/myusername``.
 2. Run ``pip3 uninstall igdiscover``. If this runs successfully and prints some
    messages about removing files, then *repeat the same command*! Do this
    until you get a message telling you that the package cannot be uninstalled
    because it is not installed.
-3. Do the same as in the previous step, but with ``pip3 uninstall sqt``.
+3. Repeat the previous step, but with ``pip3 uninstall sqt``.
 4. If you have a directory named ``.local`` within your home directory, you may
    want to rename it: ``mv .local dot-local-backup`` You can also delete it, but
    there is a small risk that other software (not IgDiscover) uses that
-   directory.
+   directory. It is possible that this directory is hidden (check by running the 
+   command ``ll -l`` while in your home  directory.
 5. If you have ever used ``sudo`` to install IgDiscover, you may have an
    installation in ``/usr/local/``. You can try to remove it with
    ``sudo pip3 uninstall igdiscover``.
