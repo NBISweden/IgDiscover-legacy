@@ -63,7 +63,8 @@ def main(args):
 		logger.info('Read %d sequences from %r', len(database), args.database)
 	else:
 		database = None
-	table = read_table(args.table)
+	table = read_table(args.table,
+		usecols=['count', 'V_gene', 'J_gene', 'V_errors', 'J_nt', 'D_region', 'CDR3_nt', 'genomic_sequence'])
 	logger.info('Table with %s rows read', len(table))
 	table = table[table.V_errors == 0]
 	logger.info('Keeping %s rows that have zero V mismatches', len(table))

@@ -70,7 +70,7 @@ def _fix_columns(df):
 			df[col] = df[col].astype(int)
 
 
-def read_table(path, log=False):
+def read_table(path, usecols=None, log=False):
 	"""
 	Read in the table created by the parse subcommand (typically named *.tab)
 	"""
@@ -91,7 +91,7 @@ def read_table(path, log=False):
 				os.rename(temp_h5, h5path)
 		d = pd.read_hdf(h5path, 'table')
 	else:
-		d = pd.read_csv(path, sep='\t')
+		d = pd.read_csv(path, usecols=usecols, sep='\t')
 		_fix_columns(d)
 	if log:
 		logger.info('%s rows in input table', len(d))
