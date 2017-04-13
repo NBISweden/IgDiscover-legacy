@@ -1,6 +1,9 @@
 .. image:: https://img.shields.io/pypi/v/igdiscover.svg?branch=master
     :target: https://pypi.python.org/pypi/igdiscover
 
+.. image:: https://travis-ci.org/NBISweden/IgDiscover.svg?branch=master
+    :target: https://travis-ci.org/NBISweden/IgDiscover
+
 
 
 ==========
