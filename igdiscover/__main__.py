@@ -8,14 +8,16 @@ IgDiscover computes V/D/J gene usage profiles and discovers novel V genes
 - Plot V gene usage
 - Discover new V genes given more than one dataset
 """
-__author__ = "Marcel Martin"
-
+import sys
 import logging
 import importlib
 from sqt import HelpfulArgumentParser
 import matplotlib as mpl
 import warnings
+import resource
 from . import __version__
+
+__author__ = "Marcel Martin"
 
 mpl.use('Agg')
 warnings.filterwarnings('ignore', 'axes.color_cycle is deprecated and replaced with axes.prop_cycle')
@@ -50,6 +52,14 @@ COMMANDS = [
 logger = logging.getLogger(__name__)
 
 
+def format_duration(seconds):
+	h = int(seconds // 3600)
+	seconds -= h * 3600
+	m = int(seconds // 60)
+	seconds -= m * 60
+	return '{:02d}:{:02d}:{:04.1f}'.format(h, m, seconds)
+
+
 def main(arguments=None):
 	logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 	parser = HelpfulArgumentParser(description=__doc__, prog='igdiscover')
@@ -68,6 +78,12 @@ def main(arguments=None):
 		parser.error('Please provide the name of a subcommand to run')
 	else:
 		args.func(args)
+	if sys.platform == 'linux':
+		r = resource.getrusage(resource.RUSAGE_SELF)
+		memory_kb = r.ru_maxrss
+		cpu_time_s = format_duration(r.ru_utime + r.ru_stime)
+		logger.info('CPU time {}. Maximum memory usage {:.3f} GB'.format(
+			cpu_time_s, memory_kb / 1E6))
 
 
 if __name__ == '__main__':
