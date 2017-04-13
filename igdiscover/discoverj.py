@@ -1,8 +1,9 @@
 """
-Rudimentary discovery of J genes
+Discover D and J genes
 
-Print out the most frequent J sequences in FASTA format.
-If one sequence is suffix of another, the longer version is kept.
+The most frequent D/J sequences are considered candidates.
+
+For J genes, candidate sequences are merged if they overlap each other.
 """
 import logging
 import pandas as pd
@@ -15,12 +16,18 @@ logger = logging.getLogger(__name__)
 
 
 MIN_COUNT = 100
+MINIMUM_CANDIDATE_LENGTH = 5
 
 
 def add_arguments(parser):
 	arg = parser.add_argument
 	arg('--database', metavar='FASTA',
 		help='FASTA file with reference gene sequences')
+	arg('--merge', default=None, action='store_true', help='Merge overlapping genes. '
+		'Default: Enabled for J, disabled for D.')
+	arg('--no-merge', dest='merge', action='store_false', help='Do not merge overlapping genes')
+	arg('--gene', default='J', choices=('D', 'J'),
+		help='Which gene category to discover. Default: %(default)s')
 	arg('table', help='Table with parsed and filtered IgBLAST results')
 
 
@@ -70,16 +77,31 @@ def main(args):
 	table = table[table.V_errors == 0]
 	logger.info('Keeping %s rows that have zero V mismatches', len(table))
 
-	# Merge candidate sequences that overlap. If one candidate is longer than
-	# another, this is typically a sign that IgBLAST has not extended the
-	# alignment long enough.
-	merger = SequenceMerger()
-	for sequence, group in table.groupby('J_nt'):
-		merger.add(SequenceInfo(sequence, max_count=len(group)))
-	logger.info('After merging overlapping sequences, %s remain', len(merger))
+	if args.merge is None:
+		args.merge = args.gene == 'J'
+
+	column = 'J_nt' if args.gene == 'J' else 'D_region'
+	if args.merge:
+		# Merge candidate sequences that overlap. If one candidate is longer than
+		# another, this is typically a sign that IgBLAST has not extended the
+		# alignment long enough.
+		merger = SequenceMerger()
+		for sequence, group in table.groupby(column):
+			if len(sequence) < MINIMUM_CANDIDATE_LENGTH:
+				continue
+			merger.add(SequenceInfo(sequence, max_count=len(group)))
+		logger.info('After merging overlapping %s sequences, %s remain', args.gene, len(merger))
+		candidates = list(merger)
+	else:
+		candidates = []
+		for sequence, group in table.groupby(column):
+			if len(sequence) < MINIMUM_CANDIDATE_LENGTH:
+				continue
+			candidates.append(SequenceInfo(sequence, max_count=len(group)))
+		logger.info('Collected %s unique %s sequences', len(candidates), args.gene)
 
 	# Use only records that have a chance of reaching the required MIN_COUNT
-	records = {info.sequence: info for info in merger if info.max_count >= MIN_COUNT}
+	records = {info.sequence: info for info in candidates if info.max_count >= MIN_COUNT}
 
 	# Speed up search by looking for most common sequences first
 	search_order = sorted(records, key=lambda s: records[s].max_count, reverse=True)
@@ -98,17 +120,17 @@ def main(args):
 					record.count += 1
 					record.v_genes.add(row.V_gene)
 					record.cdr3s.add(row.CDR3_nt)
-					break
+					if args.merge:
+						break
 
 	# Print output table
 	print('name', 'count', 'V_genes', 'CDR3s', 'database', 'database_diff', 'sequence', sep='\t')
 	i = 0
 	for record in sorted(records.values(), key=lambda r: (r.count, r.sequence), reverse=True):
-		# TODO
-		# if record.count < MIN_COUNT:
-		# 	break
+		if record.count < 1:
+			break
 		if database:
-			distances = [(edit_distance(d.sequence, record.sequence), d) for d in database]
+			distances = [(edit_distance(db.sequence, record.sequence), db) for db in database]
 			distance, closest = min(distances, key=lambda x: x[0])
 			db_name = closest.name
 			if distance == 0:
@@ -118,7 +140,7 @@ def main(args):
 		else:
 			db_name = ''
 			distance = -1
-			name = unique_name('J', record.sequence)
+			name = unique_name(args.gene, record.sequence)
 		print(name,
 			record.count,
 			len(set(record.v_genes)),
