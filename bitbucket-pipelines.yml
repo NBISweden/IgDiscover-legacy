@@ -1,9 +1,0 @@
-image: python:3.5.2
-pipelines:
-  default:
-    - step:
-        script:
-          - pip3 install -q -U nose
-          - pip3 --version
-          - pip3 install -q .
-          - nosetests --with-doctest -P tests/ igdiscover/
