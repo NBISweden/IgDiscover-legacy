@@ -310,7 +310,7 @@ def main(args):
 		ax.set_ylabel('Read frequency')
 		ax.set_title('Histogram of group sizes (>1)')
 		ax.grid(axis='x')
-		ax.tick_params(direction="outward", top=False, right=False)
+		ax.tick_params(direction='out', top=False, right=False)
 		fig.set_tight_layout(True)
 		fig.savefig(args.plot_sizes)
 		logger.info('Plotted group sizes to %r', args.plot_sizes)
