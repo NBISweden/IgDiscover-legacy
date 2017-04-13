@@ -99,7 +99,7 @@ def main(args):
 	# Print output table
 	print('name', 'count', 'V_genes', 'CDR3s', 'database', 'database_diff', 'sequence', sep='\t')
 	i = 0
-	for record in sorted(records.values(), key=lambda r: r.count, reverse=True):
+	for record in sorted(records.values(), key=lambda r: (r.count, r.sequence), reverse=True):
 		# TODO
 		# if record.count < MIN_COUNT:
 		# 	break
