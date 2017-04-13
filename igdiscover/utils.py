@@ -272,8 +272,8 @@ def find_overlap(s, t, min_overlap=1):
 	2
 	>>> find_overlap('CDE', 'ABCDEFG')
 	-2
-	>>> find_overlap('ABC', 'X')
-	None
+	>>> find_overlap('ABC', 'X') is None
+	True
 	"""
 	aligner = Aligner(s, max_error_rate=0)
 	aligner.min_overlap = min_overlap
