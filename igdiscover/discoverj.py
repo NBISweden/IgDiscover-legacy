@@ -5,6 +5,7 @@ Print out the most frequent J sequences in FASTA format.
 If one sequence is suffix of another, the longer version is kept.
 """
 import logging
+import pandas as pd
 from .utils import Merger, merge_overlapping, unique_name
 from .table import read_table
 from sqt import FastaReader
@@ -64,7 +65,7 @@ def main(args):
 	else:
 		database = None
 	table = read_table(args.table,
-		usecols=['count', 'V_gene', 'J_gene', 'V_errors', 'J_nt', 'D_region', 'CDR3_nt', 'genomic_sequence'])
+		usecols=['count', 'V_gene', 'J_gene', 'V_errors', 'J_nt', 'D_region', 'CDR3_nt'])
 	logger.info('Table with %s rows read', len(table))
 	table = table[table.V_errors == 0]
 	logger.info('Keeping %s rows that have zero V mismatches', len(table))
@@ -85,16 +86,19 @@ def main(args):
 
 	# Count full-text occurrences in the genomic_sequence, circumventing
 	# inaccurate IgBLAST alignment boundaries
-	for row in table.itertuples():
-		# print('current row', row)
-		for needle in search_order:
-			# print('current needle', needle)
-			if needle in row.genomic_sequence:
-				record = records[needle]
-				record.count += 1
-				record.v_genes.add(row.V_gene)
-				record.cdr3s.add(row.CDR3_nt)
-				break
+	# TODO limit the search to the gene region (especially for D genes)
+	del table
+	cols = ['V_gene', 'V_errors', 'CDR3_nt', 'genomic_sequence']
+	for chunk in pd.read_csv(args.table, usecols=cols, chunksize=10000, sep='\t'):
+		chunk = chunk[chunk.V_errors == 0]
+		for row in chunk.itertuples():
+			for needle in search_order:
+				if needle in row.genomic_sequence:
+					record = records[needle]
+					record.count += 1
+					record.v_genes.add(row.V_gene)
+					record.cdr3s.add(row.CDR3_nt)
+					break
 
 	# Print output table
 	print('name', 'count', 'V_genes', 'CDR3s', 'database', 'database_diff', 'sequence', sep='\t')
