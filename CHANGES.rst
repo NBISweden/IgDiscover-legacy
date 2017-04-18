@@ -5,6 +5,13 @@ Changes
 development version
 -------------------
 
+* Ignore the CDR3-encoding bases whenever comparing two V gene sequences.
+* Avoid finding 5'-truncated V genes by extending found hits towards the
+  5' end.
+* By default, candidate sequences are no longer merged if they are nearly
+  identical. That is, the ``differences`` setting within the two germline
+  filter configuration sections is now set to zero by default.
+* Implemented an experimental ``discoverj`` script for J gene discovery.
 * Add a ``config`` subcommand, which can be used to change the
   configuration file from the command-line.
 * Add a ``V_CDR3_start`` column to the ``assigned.tab``/``filtered.tab``
@@ -13,8 +20,14 @@ development version
   file describing where the CDR3 starts within a discovered V sequence.
   It is computed by using the most common CDR3 start of the
   sequences within the cluster.
-* Ignore the CDR3-encoding bases whenever comparing two V gene sequences.
-* Rename ``compose`` subcommand to ``germlinefilter``.
+* Rename the ``compose`` subcommand to ``germlinefilter``.
+* The ``init`` subcommand automatically fixes certain problems in the
+  input database (duplicate sequences, empty records, duplicate sequence
+  names). Previously, it would complain, but the user would have to fix
+  the problems themselves.
+* Move source code to GitHub
+* Set up automatic code testing (continuous integration) via Travis
+* Lots of documentation improvements
 
 v0.6.0 (2016-12-07)
 -------------------
