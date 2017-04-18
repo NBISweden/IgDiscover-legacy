@@ -1,11 +1,14 @@
 """
 Some utility functions that work on sequences and lists of sequences.
 """
+import os
+import sys
+import re
 import random
 import hashlib
-import os
+import resource
 from collections import OrderedDict
-import re
+
 import numpy as np
 from sqt.align import edit_distance, multialign, consensus
 from sqt.dna import GENETIC_CODE, nt_to_aa as _nt_to_aa
@@ -299,3 +302,12 @@ def merge_overlapping(s, t):
 		# s is in t
 		return t
 	return t[:-i] + s
+
+
+def get_cpu_time():
+	"""Return CPU time used by process and children"""
+	if sys.platform != 'linux':
+		return None
+	rs = resource.getrusage(resource.RUSAGE_SELF)
+	rc = resource.getrusage(resource.RUSAGE_CHILDREN)
+	return rs.ru_utime + rs.ru_stime + rc.ru_utime + rc.ru_stime

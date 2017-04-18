@@ -16,6 +16,8 @@ import logging
 from sqt import SequenceReader
 from sqt.utils import available_cpu_count
 
+from .utils import get_cpu_time
+
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +46,7 @@ def run_igblast(fasta, database, species, penalty=None):
 
 	Return IgBLAST’s output as a string.
 	"""
+	n, fasta = fasta
 	if fasta.startswith('>'):
 		fasta_input = '-'
 	else:
@@ -71,7 +74,7 @@ def run_igblast(fasta, database, species, penalty=None):
 	]
 	result = subprocess.check_output(arguments,
 		input=fasta if fasta_input == '-' else None, universal_newlines=True)
-	return result
+	return n, result
 
 
 def chunked_fasta(path, chunksize=1000, limit=None):
@@ -87,10 +90,10 @@ def chunked_fasta(path, chunksize=1000, limit=None):
 		for record in islice(sr, 0, limit):
 			buf.append(record)
 			if len(buf) == chunksize:
-				yield buf_to_fasta(buf)
+				yield len(buf), buf_to_fasta(buf)
 				buf = []
 		if len(buf) > 0:
-			yield buf_to_fasta(buf)
+			yield len(buf), buf_to_fasta(buf)
 
 
 class Runner:
@@ -112,5 +115,11 @@ def main(args):
 	chunks = chunked_fasta(args.fasta, limit=args.limit)
 	runner = Runner(args.database, args.species, args.penalty)
 	with multiprocessing.Pool(args.threads) as pool:
-		for result in pool.imap(runner, chunks, chunksize=1):
+		total = 0
+		for n, result in pool.imap(runner, chunks, chunksize=1):
 			sys.stdout.write(result)
+			total += n
+
+	cpu_time = get_cpu_time()
+	if cpu_time is not None:
+		logger.info('Processed {} sequences at {:.1f} ms/sequence'.format(total, cpu_time / total * 1E3))
