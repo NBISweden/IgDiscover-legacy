@@ -79,9 +79,11 @@ def main(arguments=None):
 	else:
 		args.func(args)
 	if sys.platform == 'linux':
-		r = resource.getrusage(resource.RUSAGE_SELF)
-		memory_kb = r.ru_maxrss
-		cpu_time_s = format_duration(r.ru_utime + r.ru_stime)
+		rself = resource.getrusage(resource.RUSAGE_SELF)
+		rchildren = resource.getrusage(resource.RUSAGE_CHILDREN)
+		memory_kb = rself.ru_maxrss + rchildren.ru_maxrss
+		cpu_time = rself.ru_utime + rself.ru_stime + rchildren.ru_utime + rchildren.ru_stime
+		cpu_time_s = format_duration(cpu_time)
 		logger.info('CPU time {}. Maximum memory usage {:.3f} GB'.format(
 			cpu_time_s, memory_kb / 1E6))
 
