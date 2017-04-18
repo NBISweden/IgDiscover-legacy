@@ -450,6 +450,9 @@ class IgBlastParser:
 		"""
 		zipped = zip(self._sequence_reader, split_by_section(self._igblast_file, ['# IGBLASTN']))
 		for fasta_record, (record_header, record_lines) in zipped:
+			# 'IGBLASTN 2.2.29+': IgBLAST 1.4.0
+			# 'IGBLASTN 2.3.1+': IgBLAST 1.5.0
+			# 'IGBLASTN 2.5.1+': IgBLAST 1.6.1
 			assert record_header == '# IGBLASTN 2.2.29+' or record_header == '# IGBLASTN 2.3.1+'
 			yield self._parse_record(record_lines, fasta_record)
 
