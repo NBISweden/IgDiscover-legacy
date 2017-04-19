@@ -24,21 +24,21 @@ def add_arguments(parser):
 	arg('--database', metavar='FASTA',
 		help='FASTA file with reference gene sequences')
 	arg('--merge', default=None, action='store_true', help='Merge overlapping genes. '
-		'Default: Enabled for J, disabled for D.')
+		'Default: Enabled for J, disabled for D and V.')
 	arg('--no-merge', dest='merge', action='store_false', help='Do not merge overlapping genes')
-	arg('--gene', default='J', choices=('D', 'J'),
+	arg('--gene', default='J', choices=('V', 'D', 'J'),
 		help='Which gene category to discover. Default: %(default)s')
 	arg('table', help='Table with parsed and filtered IgBLAST results')
 
 
 class SequenceInfo:
-	def __init__(self, sequence, count=0, max_count=0, cdr3s=None, v_genes=None):
+	def __init__(self, sequence, count=0, max_count=0, cdr3s=None, other_genes=None):
 		self.name = 'name'
 		self.sequence = sequence
 		self.count = count
 		self.max_count = max_count  # an upper bound for the count
 		self.cdr3s = cdr3s if cdr3s is not None else set()
-		self.v_genes = v_genes if v_genes is not None else set()
+		self.other_genes = other_genes if other_genes is not None else set()
 
 	def __repr__(self):
 		return 'SequenceInfo({sequence!r}, count={count}, max_count={max_count}, ...)'.format(**vars(self))
@@ -71,16 +71,25 @@ def main(args):
 		logger.info('Read %d sequences from %r', len(database), args.database)
 	else:
 		database = None
+	if args.gene == 'V':
+		column = 'V_nt'
+	elif args.gene == 'J':
+		column = 'J_nt'
+	else:
+		assert args.gene == 'D'
+		column = 'D_region'
+	other = 'V' if args.gene in ('D', 'J') else 'J'
+	other_gene = other + '_gene'
+	other_errors = other + '_errors'
 	table = read_table(args.table,
-		usecols=['count', 'V_gene', 'J_gene', 'V_errors', 'J_nt', 'D_region', 'CDR3_nt'])
+		usecols=['count', 'V_gene', 'J_gene', 'V_errors', 'J_errors', column, 'CDR3_nt'])
 	logger.info('Table with %s rows read', len(table))
-	table = table[table.V_errors == 0]
-	logger.info('Keeping %s rows that have zero V mismatches', len(table))
+	table = table[table[other_errors] == 0]
+	logger.info('Keeping %s rows that have zero %s mismatches', len(table), other)
 
 	if args.merge is None:
 		args.merge = args.gene == 'J'
 
-	column = 'J_nt' if args.gene == 'J' else 'D_region'
 	if args.merge:
 		# Merge candidate sequences that overlap. If one candidate is longer than
 		# another, this is typically a sign that IgBLAST has not extended the
@@ -110,21 +119,21 @@ def main(args):
 	# inaccurate IgBLAST alignment boundaries
 	# TODO limit the search to the gene region (especially for D genes)
 	del table
-	cols = ['V_gene', 'V_errors', 'CDR3_nt', 'genomic_sequence']
+	cols = [other_gene, 'V_errors', 'J_errors', 'CDR3_nt', 'genomic_sequence']
 	for chunk in pd.read_csv(args.table, usecols=cols, chunksize=10000, sep='\t'):
-		chunk = chunk[chunk.V_errors == 0]
+		chunk = chunk[chunk[other_errors] == 0]
 		for row in chunk.itertuples():
 			for needle in search_order:
 				if needle in row.genomic_sequence:
 					record = records[needle]
 					record.count += 1
-					record.v_genes.add(row.V_gene)
+					record.other_genes.add(getattr(row, other_gene))
 					record.cdr3s.add(row.CDR3_nt)
 					if args.merge:
 						break
 
 	# Print output table
-	print('name', 'count', 'V_genes', 'CDR3s', 'database', 'database_diff', 'sequence', sep='\t')
+	print('name', 'count', other_gene + 's', 'CDR3s', 'database', 'database_diff', 'sequence', sep='\t')
 	i = 0
 	for record in sorted(records.values(), key=lambda r: (r.count, r.sequence), reverse=True):
 		if record.count < 1:
@@ -143,7 +152,7 @@ def main(args):
 			name = unique_name(args.gene, record.sequence)
 		print(name,
 			record.count,
-			len(set(record.v_genes)),
+			len(set(record.other_genes)),
 			len(set(record.cdr3s)),
 			db_name,
 			distance,
