@@ -220,7 +220,7 @@ file::
      check_motifs: false  # Check whether 5' end starts with known motif
      whitelist: true      # Add database sequences to the whitelist
      cluster_size: 0      # Minimum number of sequences assigned to cluster
-     differences: 1       # Merge sequences if they have at most this number of differences
+     differences: 0       # Merge sequences if they have at most this number of differences
      allow_stop: true     # Whether to allow non-productive sequences containing stop codons
      cross_mapping_ratio: 0.02  # Threshold for removal of cross-mapping artifacts (set to 0 to disable)
 
@@ -234,7 +234,7 @@ file::
      check_motifs: false  # Check whether 5' end starts with known motif
      whitelist: true      # Add database sequences to the whitelist
      cluster_size: 100    # Minimum number of sequences assigned to cluster
-     differences: 1       # Merge sequences if they have at most this number of differences
+     differences: 0       # Merge sequences if they have at most this number of differences
      allow_stop: false    # Whether to allow non-productive sequences containing stop codons
      cross_mapping_ratio: 0.02  # Threshold for removal of cross-mapping artifacts (set to 0 to disable)
 
@@ -248,14 +248,20 @@ of false positives in the output. Example::
    unique_cdr3s: 10      # Minimum number of unique CDR3s (within exact matches)
    unique_js: 4          # Minimum number of unique J genes (within exact matches)
 
-The germline filter also inspects clusters of sequences that are closely related and retains only
-the most common sequence of each cluster. This procedure removes false positives due to
-accumulated random sequence errors of highly expressed alleles that otherwise would pass the
-cutoff criteria.
+If the ``differences`` parameter is set to a value higher than 0, the germline filter inspects
+clusters of sequences that are closely related (when the edit distance between them is at
+most ``differences``) and retains only the most common sequence of each cluster. Previously, we
+believed this would removes some false positives due to accumulated random sequence errors of highly
+expressed alleles that otherwise would pass the cutoff criteria. However, we found out that we miss
+true positives, in particular if there are two alleles in the sample that differ in only a single
+nucleotide. We have now implemented other measures to avoid false positives and recommend against
+setting the ``differences`` to something other than ``0``.
 
 Read also about the :ref:`cross mapping <cross-mapping>`, for which germline filtering corrects, and
 about the :ref:`germline filters <germline-filters>`.
 
+.. versionchanged::
+   The default for the ``differences`` setting was changed from 1 to 0.
 
 .. _analysis-directory:
 

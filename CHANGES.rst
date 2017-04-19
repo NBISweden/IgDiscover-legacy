@@ -11,6 +11,10 @@ development version
 * By default, candidate sequences are no longer merged if they are nearly
   identical. That is, the ``differences`` setting within the two germline
   filter configuration sections is now set to zero by default.
+  Previously, we believed the merging would remove some false
+  positives, but it turns out we also miss true positives. It also seems
+  that with the other changes in this version we also no longer get the
+  particular false positives the setting was supposed to catch.
 * Implemented an experimental ``discoverj`` script for J gene discovery.
 * Add a ``config`` subcommand, which can be used to change the
   configuration file from the command-line.
