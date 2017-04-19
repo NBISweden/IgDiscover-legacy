@@ -228,12 +228,14 @@ class Discoverer:
 				cl += 1
 
 		if database_sequence:
-			# Are there any assignments with <= 1% V SHM?
-			group_in_window = group[group.V_SHM <= 1.0]
+			# If this is a database sequence and there are some exact occurrences of it,
+			# add it to the list of candidates even if it has not been found as a
+			# cluster.
+			group_in_window = group[group.V_errors == 0]
 			if len(group_in_window) >= MINGROUPSIZE:
 				if not database_sequence_found:
-					logger.info('Database sequence for %r is expressed, but missing from candidates. '
-						'Re-adding it.', gene)
+					logger.info('Database sequence seems to be %r expressed, but is missing from '
+						'candidates. Re-adding it.', gene)
 				yield SiblingInfo(database_sequence, False, 'db', group_in_window)
 
 	def set_random_seed(self, name):
