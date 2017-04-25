@@ -4,6 +4,8 @@
 .. image:: https://travis-ci.org/NBISweden/IgDiscover.svg?branch=master
     :target: https://travis-ci.org/NBISweden/IgDiscover
 
+.. image:: https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg
+    :target: http://bioconda.github.io/recipes/igdiscover/README.html
 
 
 ==========
