@@ -515,7 +515,7 @@ cluster
     From which type of cluster or clusters the consensus was computed.
     If there are multiple clusters that give rise to the same consensus sequence, they are all listed here, separated by semicolon.
     A cluster name such as ``2-4`` is for a percentage difference window:
-    Such a cluster consists of all sequnces assigned to the source gene that have a percentage difference to it between 2 and 4 percent.
+    Such a cluster consists of all sequences assigned to the source gene that have a percentage difference to it between 2 and 4 percent.
 
     A cluster name such as ``cl3`` describes a cluster generated through linkage cluster analysis.
     The clusters are simply named ``cl1``, ``cl2``, ``cl3`` etc.

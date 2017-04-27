@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 def add_arguments(parser):
 	arg = parser.add_argument
-	arg('table', help='Tables with parsed and filtered IgBLAST results')
+	arg('table', help='Table with parsed and filtered IgBLAST results')
 
 
 def main(args):
