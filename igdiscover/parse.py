@@ -174,6 +174,7 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		'V_SHM',
 		'J_SHM',
 		'V_errors',
+		'D_errors',
 		'J_errors',
 		'UTR',
 		'leader',
@@ -352,9 +353,11 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 			v_covered = None
 			v_evalue = None
 		if 'D' in self.hits:
+			d_errors = self.hits['D'].errors
 			d_covered = 100. * self.hits['D'].covered()
 			d_evalue = self.hits['D'].evalue
 		else:
+			d_errors = None
 			d_covered = None
 			d_evalue = None
 		if 'J' in self.hits:
@@ -395,6 +398,7 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 			V_SHM=v_shm,
 			J_SHM=j_shm,
 			V_errors=v_errors,
+			D_errors=d_errors,
 			J_errors=j_errors,
 			UTR=self.utr,
 			leader=self.leader,
