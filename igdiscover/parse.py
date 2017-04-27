@@ -434,8 +434,8 @@ class IgBlastParser:
 	Parser for IgBLAST results. Works only when IgBLAST was run with
 	the option -outfmt "7 sseqid qstart qseq sstart sseq pident slen".
 	"""
-	BOOL = { 'Yes': True, 'No': False, 'N/A': None }
-	FRAME = { 'In-frame': True, 'Out-of-frame': False, 'N/A': None }
+	BOOL = {'Yes': True, 'No': False, 'N/A': None}
+	FRAME = {'In-frame': True, 'Out-of-frame': False, 'N/A': None}
 	SECTIONS = frozenset([
 		'# Query:',
 		'# V-(D)-J rearrangement summary',
@@ -531,9 +531,7 @@ class IgBlastParser:
 				if gene not in hits:
 					continue
 				hit = hits[gene]
-
 				qsequence = hit.query_sequence
-				#print(gene, hit.query_start, '-', hit.query_start + len(qsequence), end=' ')
 
 				# IgBLAST removes the trailing semicolon (why, oh why??)
 				qname = query_name[:-1] if query_name.endswith(';') else query_name
@@ -574,7 +572,8 @@ class IgBlastParser:
 		Parse a line of the "Hit table" section and return a tuple (hit, gene)
 		where hit is a Hit object.
 		"""
-		gene, subject_id, query_start, query_sequence, subject_start, subject_sequence, percent_identity, subject_length, evalue = line.split('\t')
+		(gene, subject_id, query_start, query_sequence, subject_start, subject_sequence,
+			percent_identity, subject_length, evalue) = line.split('\t')
 		# subject_sequence and query_sequence describe the alignment:
 		# They contain '-' characters for insertions and deletions.
 		assert len(subject_sequence) == len(query_sequence)
@@ -585,7 +584,6 @@ class IgBlastParser:
 		query_start = int(query_start) - 1
 		subject_start = int(subject_start) - 1
 		subject_length = int(subject_length)  # Length of original subject sequence
-		#subject_end = subject_start + len(subject_sequence)
 		# Percent identity is calculated by IgBLAST as
 		# 100 - errors / alignment_length and then rounded to two decimal digits
 		percent_identity = float(percent_identity)
@@ -689,8 +687,8 @@ def main(args):
 			# ignores NaN values.
 			# Columns that have any NaN values in them cannot be converted to
 			# int due to a numpy limitation.
-			for col in INTEGER_COLUMNS:
-				if all(df[col].notnull()):
-					df[col] = df[col].astype(int)
+			for icol in INTEGER_COLUMNS:
+				if all(df[icol].notnull()):
+					df[icol] = df[icol].astype(int)
 		df.to_hdf(args.hdf5, 'table', mode='w', complevel=3, complib='zlib')
 		logger.info('HDF5 file written')
