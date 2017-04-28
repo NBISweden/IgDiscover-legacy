@@ -69,7 +69,7 @@ def main(args):
 
 	if args.vdatabase:
 		with SequenceReader(args.vdatabase) as f:
-			v_names = frozenset(record.name for record in f if record.name in matrix.index)
+			v_names = [record.name for record in f if record.name in matrix.index]
 		if not v_names:
 			logger.error('None of the sequence names in %r were found in the input table',
 				args.vdatabase)
