@@ -4,6 +4,7 @@ Plot allele usage
 import sys
 import logging
 import pandas as pd
+from sqt import SequenceReader
 from .table import read_table
 
 logger = logging.getLogger(__name__)
@@ -15,6 +16,9 @@ def add_arguments(parser):
 		help='Maximal allowed E-value for D gene match. Default: %(default)s')
 	arg('--d-coverage', '--D-coverage', type=float, default=65,
 		help='Minimum D coverage (in percent). Default: %(default)s%%)')
+	arg('--vdatabase', metavar='FASTA',
+		help='Restrict plotting to the V sequences named in the FASTA file. '
+		'Only the sequence names are used!')
 	arg('--gene', choices=('D', 'J'), help='Type of gene on y axis. Default: %(default)s', default='J')
 	arg('alleles', help='List of alleles to plot on y axis, separated by comma')
 	arg('table', help='Table with parsed and filtered IgBLAST results')
@@ -62,7 +66,17 @@ def main(args):
 		if allele not in matrix.columns:
 			logger.error('Allele %s not expressed in this dataset', allele)
 			sys.exit(1)
-	allele_expressions = matrix.loc[:, alleles]
+
+	if args.vdatabase:
+		with SequenceReader(args.vdatabase) as f:
+			v_names = frozenset(record.name for record in f if record.name in matrix.index)
+		if not v_names:
+			logger.error('None of the sequence names in %r were found in the input table',
+				args.vdatabase)
+			sys.exit(1)
+		allele_expressions = matrix.loc[v_names, alleles]
+	else:
+		allele_expressions = matrix.loc[:, alleles]
 	print('#\n# Allele-specific expression\n#')
 	print(allele_expressions)
 
