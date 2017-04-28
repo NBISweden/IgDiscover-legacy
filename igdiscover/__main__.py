@@ -47,6 +47,7 @@ COMMANDS = [
 	'rename',
 	'union',
 	'clonotypes',
+	'plotalleles',
 ]
 
 logger = logging.getLogger(__name__)

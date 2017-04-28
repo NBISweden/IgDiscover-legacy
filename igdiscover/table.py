@@ -45,7 +45,7 @@ _STRING_COLUMNS = [
 	'genomic_sequence',
 ]
 
-_INTEGER_COLUMNS = ('V_errors', 'J_errors', 'V_CDR3_start')
+_INTEGER_COLUMNS = ('V_errors', 'D_errors', 'J_errors', 'V_CDR3_start')
 
 
 def _fix_columns(df):
