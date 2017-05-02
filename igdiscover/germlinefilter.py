@@ -119,10 +119,11 @@ class SequenceMerger(Merger):
 		else:
 			dist = edit_distance(s_no_cdr3, t_no_cdr3, max(self._max_differences, 1))
 
-		# To check for cross-mapping, use the edit distance between the
-		# full sequences, not only the non-CDR3 parts.
-		full_dist = edit_distance(s.sequence, t.sequence, max(self._max_differences, 1))
-		if self._cross_mapping_ratio and full_dist == 1 and s.is_database and t.is_database:
+		# Check for cross-mapping
+		# We check for dist <= 1 (and not ==1) since there may be
+		# differences in the CDR3 parts of the sequences that we
+		# ignore when computing edit distance.
+		if self._cross_mapping_ratio and dist <= 1 and s.is_database and t.is_database:
 			total_count = (s.cluster_size + t.cluster_size)
 			for u, v in [(s, t), (t, s)]:
 				ratio = u.cluster_size / total_count
