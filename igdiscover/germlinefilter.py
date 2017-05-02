@@ -123,8 +123,11 @@ class SequenceMerger(Merger):
 		if self._cross_mapping_ratio and dist == 1 and s.is_database and t.is_database:
 			total_count = (s.cluster_size + t.cluster_size)
 			for u, v in [(s, t), (t, s)]:
-				if u.cluster_size_is_accurate and u.cluster_size / total_count < self._cross_mapping_ratio:
+				ratio = u.cluster_size / total_count
+				if u.cluster_size_is_accurate and ratio < self._cross_mapping_ratio:
 					# u is probably a cross-mapping artifact of the higher-expressed v
+					logger.info('%r is a cross-mapping artifact of %r (ratio %.4f)',
+						u.name, v.name, ratio)
 					return v
 
 		if dist > self._max_differences:
