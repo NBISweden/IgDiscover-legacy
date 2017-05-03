@@ -18,6 +18,16 @@ def test_has_stop():
 	assert not has_stop('TATTG')
 
 
+def assert_dicts_equal(expected, actual):
+	assert expected.keys() == actual.keys()
+	for k in expected:
+		if hasattr(expected[k], 'keys'):
+			assert hasattr(actual[k], 'keys')
+			assert_dicts_equal(expected[k], actual[k])
+		else:
+			assert expected[k] == actual[k], '{}: {} vs {}'.format(k, expected[k], actual[k])
+
+
 def test_config():
 	empty_config = Config(file=StringIO('{}'))
 	packaged_config = Config(file=pkg_resources.resource_stream('igdiscover', Config.DEFAULT_PATH))
@@ -25,9 +35,7 @@ def test_config():
 	empty_config.library_name = packaged_config.library_name = 'nolib'
 	e = empty_config.__dict__
 	p = packaged_config.__dict__
-	assert e.keys() == p.keys()
-	for k in e:
-		assert e[k] == p[k], '{}: {} vs {}'.format(k, e[k], p[k])
+	assert_dicts_equal(e, p)
 	# assert empty_config == packaged_config
 
 
