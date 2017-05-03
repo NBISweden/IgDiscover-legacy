@@ -70,6 +70,7 @@ a Git tag::
 
 The ``v`` prefix is mandatory.
 
+.. _removing-igdiscover:
 
 Removing IgDiscover from a Linux system
 ---------------------------------------

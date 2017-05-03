@@ -21,7 +21,7 @@ each line separately::
 
 Close the terminal window and open a new one. Then run::
 
-	conda install -c bioconda igdiscover
+	conda install -c bioconda igdiscover python=3.5
 	igdiscover --version
 
 If the last command outputs the current version of IgDiscover, it worked! Skip
@@ -34,7 +34,7 @@ OS X/macOS
 On macOS, `follow the miniconda <https://conda.io/docs/install/quick.html#os-x-miniconda-install>`_
 installation instructions. Then open a terminal window and run::
 
-	conda install -c bioconda igdiscover
+	conda install -c bioconda igdiscover python=3.5
 	igdiscover --version
 
 If the last command outputs the current version of IgDiscover, it worked!
@@ -85,7 +85,10 @@ a list of some packages andd IgDiscover can now be installed.
 Install IgDiscover from `the bioconda channel <https://bioconda.github.io/bioconda>`_
 with this command::
 
-	conda install -c bioconda igdiscover
+	conda install -c bioconda igdiscover python=3.5
+
+The ``python=3.5`` is needed because Conda comes with a default of Python 3.6,
+but bioconda offers only packages for Python 3.5.
 
 Then make sure that it works by running ::
 
@@ -109,6 +112,20 @@ If you get the error ::
 
 Then follow `these instructions <http://conda.pydata.org/docs/troubleshooting.html#unknown-locale>`_.
 
+
+Troubleshooting on Linux
+------------------------
+
+If you use conda and see an error that includes something like this::
+
+    ImportError: .../.local/lib/python3.5/site-packages/sqt/_helpers.cpython-35m-x86_64-linux-gnu.so: undefined symbol: PyFPE_jbuf
+
+Or you see any error that mentions a ``.local/`` directory, then a previous
+installation of IgDiscover is interfering with the conda installation.
+
+The easiest way to solve this problem is to delete the directory ``.local/`` in
+your home directory, see also :ref:`how to remove IgDiscover from a Linux
+system <removing-igdiscover>`.
 
 Development version
 -------------------
