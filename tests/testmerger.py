@@ -88,7 +88,7 @@ def SI(sequence, name, CDR3s_exact, whitelisted=False):
 
 
 def test_sequence_merger_withCDR3():
-	merger = SequenceMerger(max_differences=1, cross_mapping_ratio=0)
+	merger = SequenceMerger(max_differences=1, cross_mapping_ratio=0, allele_ratio=None)
 	infos = [
 		SI('ACGTTA', 'Name1', 15),
 		SI('ACGTTAT', 'Name2', 100),  # kept because it is longer
@@ -108,7 +108,7 @@ def test_sequence_merger_withCDR3():
 
 
 def test_sequence_merger_prefix():
-	merger = SequenceMerger(max_differences=1, cross_mapping_ratio=0)
+	merger = SequenceMerger(max_differences=1, cross_mapping_ratio=0, allele_ratio=None)
 	infos = [
 		SI('AAATAA', 'Name1', 117),
 		SI('AAACAAG', 'Name2', 10),
@@ -121,7 +121,7 @@ def test_sequence_merger_prefix():
 
 
 def test_merger_check_all_previous():
-	merger = SequenceMerger(max_differences=1, cross_mapping_ratio=0)
+	merger = SequenceMerger(max_differences=1, cross_mapping_ratio=0, allele_ratio=None)
 	infos = [
 		SI('ATAAAA', 's1', 11),
 		SI('AAGAAA', 's2', 12),

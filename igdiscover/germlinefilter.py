@@ -13,7 +13,8 @@ The following filtering and processing steps are performed:
 * Discard sequences identical to one of the database sequences (if DB given)
 * Discard sequences that do not match a set of known good motifs
 * Discard sequences that contain a stop codon (has_stop column)
-* Discard near-duplicate sequences
+* Discard sequences that are cross-mapping artifacts
+* Discard sequences that have a too low allele ratio
 
 If you provide a whitelist of sequences, then the candidates that appear on it
 * are not checked for the cluster size criterion,
@@ -44,6 +45,8 @@ def add_arguments(parser):
 		'The one with more CDR3s is kept. Default: %(default)s')
 	arg('--cross-mapping-ratio', type=float, metavar='RATIO', default=0.02,
 		help='Ratio for detection of cross-mapping artifacts. Default: %(default)s')
+	arg('--allele-ratio', type=float, metavar='RATIO', default=0.1,
+		help='Required allele ratio. Works only for genes named "NAME*ALLELE". Default: %(default)s')
 	arg('--minimum-db-diff', '-b', type=int, metavar='N', default=0,
 		help='Sequences must have at least N differences to the database '
 		'sequence. Default: %(default)s')
@@ -81,10 +84,19 @@ class SequenceMerger(Merger):
 	"""
 	Merge sequences that are sufficiently similar into single entries.
 	"""
-	def __init__(self, max_differences, cross_mapping_ratio):
+	def __init__(self, max_differences, cross_mapping_ratio, allele_ratio):
 		super().__init__()
 		self._max_differences = max_differences
 		self._cross_mapping_ratio = cross_mapping_ratio
+		self._allele_ratio = allele_ratio
+
+	@staticmethod
+	def is_same_gene(name1: str, name2: str):
+		"""
+		Compare gene names to find out whether they are alleles of each other.
+		Both names must have a '*' in them
+		"""
+		return '*' in name1 and '*' in name2 and name1.split('*')[0] == name2.split('*')[0]
 
 	def merged(self, s: SequenceInfo, t: SequenceInfo):
 		"""
@@ -133,6 +145,18 @@ class SequenceMerger(Merger):
 						u.name, v.name, ratio)
 					return v
 
+		# Check allele ratio. Somewhat similar to cross-mapping, but
+		# this uses sequence names to decide whether two genes can be
+		# alleles of each other and the ratio is between the CDR3s_exact
+		# values
+		if self._allele_ratio and self.is_same_gene(s.name, t.name):
+			for u, v in [(s, t), (t, s)]:
+				ratio = u.CDR3s_exact / v.CDR3s_exact
+				if ratio < self._allele_ratio:
+					logger.info('Allele ratio %.4f too low for %r compared to %r',
+						ratio, u.name, v.name)
+					return v
+
 		if dist > self._max_differences:
 			return None  # keep both
 
@@ -152,7 +176,7 @@ class SequenceMerger(Merger):
 
 
 def main(args):
-	merger = SequenceMerger(args.max_differences, args.cross_mapping_ratio)
+	merger = SequenceMerger(args.max_differences, args.cross_mapping_ratio, args.allele_ratio)
 
 	whitelist = dict()
 	for path in args.whitelist:

@@ -44,9 +44,11 @@ class Config:
 		self.exact_copies = None
 		self.preprocessing_filter = dict(v_coverage=90, j_coverage=60, v_evalue=1E-3)
 		self.pre_germline_filter = dict(unique_cdr3s=2, unique_js=2, check_motifs=False,
-			whitelist=True, cluster_size=0, differences=0, allow_stop=True, cross_mapping_ratio=0.02)
+			whitelist=True, cluster_size=0, differences=0, allow_stop=True, cross_mapping_ratio=0.02,
+			allele_ratio=0.1)
 		self.germline_filter = dict(unique_cdr3s=5, unique_js=3, check_motifs=False,
-			whitelist=True, cluster_size=100, differences=0, allow_stop=False, cross_mapping_ratio=0.02)
+			whitelist=True, cluster_size=100, differences=0, allow_stop=False, cross_mapping_ratio=0.02,
+			allele_ratio=0.1)
 		self.cdr3_location = [-80, -60]
 		self.library_name = os.path.basename(os.getcwd())
 

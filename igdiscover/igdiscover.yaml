@@ -186,7 +186,7 @@ pre_germline_filter:
   differences: 0       # Merge sequences if they have at most this number of differences
   allow_stop: true     # Whether to allow non-productive sequences containing stop codons
   cross_mapping_ratio: 0.02  # Threshold for removal of cross-mapping artifacts (set to 0 to disable)
-
+  allele_ratio: 0.1    # Required minimum ratio between alleles of a single gene
 
 # Filtering criteria applied to candidate sequences in the last iteration.
 # These should be more strict than the pre_germline_filter criteria.
@@ -200,3 +200,4 @@ germline_filter:
   differences: 0       # Merge sequences if they have at most this number of differences
   allow_stop: false    # Whether to allow non-productive sequences containing stop codons
   cross_mapping_ratio: 0.02  # Threshold for removal of cross-mapping artifacts (set to 0 to disable)
+  allele_ratio: 0.1    # Required minimum ratio between alleles of a single gene
