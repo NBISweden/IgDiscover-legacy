@@ -2,7 +2,7 @@
 Changes
 =======
 
-development version
+v0.7.0 (2017-05-04)
 -------------------
 
 * Add an “allele ratio” criterion to the germline filter to further reduce
@@ -19,7 +19,9 @@ development version
   positives, but it turns out we also miss true positives. It also seems
   that with the other changes in this version we also no longer get the
   particular false positives the setting was supposed to catch.
-* Implemented an experimental ``discoverj`` script for J gene discovery.
+* Implement an experimental ``discoverj`` script for J gene discovery.
+  It is curently not run automatically as part of ``igdiscover run``. See
+  ``igdiscover discoverj --help`` for how to run it manually.
 * Add a ``config`` subcommand, which can be used to change the
   configuration file from the command-line.
 * Add a ``V_CDR3_start`` column to the ``assigned.tab``/``filtered.tab``
@@ -35,7 +37,7 @@ development version
   the problems themselves.
 * Move source code to GitHub
 * Set up automatic code testing (continuous integration) via Travis
-* Lots of documentation improvements
+* Many documentation improvements
 
 v0.6.0 (2016-12-07)
 -------------------
