@@ -223,7 +223,7 @@ file::
      differences: 0       # Merge sequences if they have at most this number of differences
      allow_stop: true     # Whether to allow non-productive sequences containing stop codons
      cross_mapping_ratio: 0.02  # Threshold for removal of cross-mapping artifacts (set to 0 to disable)
-
+     allele_ratio: 0.1    # Required minimum ratio between alleles of a single gene
 
    # Filtering criteria applied to candidate sequences in the last iteration.
    # These should be more strict than the pre_germline_filter criteria.
@@ -237,6 +237,7 @@ file::
      differences: 0       # Merge sequences if they have at most this number of differences
      allow_stop: false    # Whether to allow non-productive sequences containing stop codons
      cross_mapping_ratio: 0.02  # Threshold for removal of cross-mapping artifacts (set to 0 to disable)
+     allele_ratio: 0.1    # Required minimum ratio between alleles of a single gene
 
 Factors that affect germline discovery include library source (IgM vs IgK, IgL or IgG)
 library size, sequence error rate and individual genomic factors (for example the
@@ -696,13 +697,15 @@ following filtering and processing steps:
 * Discard sequences that contain a stop codon (has_stop column)
 * Discard near-duplicate sequences
 * Discard cross-mapping artifacts
+* Discard sequences whose “allele ratio” is too low.
 
 If a whitelist of sequences is provided (by default, this is the input V gene database), then the
 candidates that appear on it
 
 * are not checked for the cluster size criterion,
 * do not need to match a set of known good motifs,
-* are never considered near-duplicates (but they are checked for cross-mapping),
+* are never considered near-duplicates (but they are checked for
+  cross-mapping and for the allele ratio),
 * are allowed to contain a stop codon.
 
 Whitelisting allows IgDiscover to identify known germline sequences that are expressed at low
@@ -737,6 +740,22 @@ cross-mapping artifacts by checking all pairs of sequences for the following:
 
 If all that is the case, then the sequence with the lower expression is
 discarded.
+
+
+.. _allele-ratio:
+
+Allele-ratio filtering
+----------------------
+
+When multiple alleles of the same gene appear in the list of V gene candidates,
+such as IGHV1-2*02 and IGHV1-2*04, the germline filter computes the ratio
+of ``CDR3s_exact`` between them. If the ratio is under a threshold, the
+lower-expressed candidate is discarded. The default threshold is 0.1 and can
+be modified in the configuration file by adjusting the ``allele_ratio``
+settings within the germline filter sections.
+
+
+.. versionadded:: 0.7.0
 
 
 Data from the Sequence Read Archive (SRA)
