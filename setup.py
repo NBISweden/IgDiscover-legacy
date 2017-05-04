@@ -16,7 +16,7 @@ setup(
 	cmdclass = versioneer.get_cmdclass(),
 	author = 'Marcel Martin',
 	author_email = 'marcel.martin@scilifelab.se',
-	url = 'https://igdiscover.readthedocs.io/',
+	url = 'https://igdiscover.se/',
 	description = 'Analyze antibody repertoires and discover new V genes',
 	long_description = long_description,
 	license = 'MIT',
