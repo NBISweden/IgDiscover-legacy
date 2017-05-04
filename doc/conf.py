@@ -33,7 +33,7 @@ master_doc = 'index'
 # General information about the project.
 authors = u'Marcel Martin'
 project = u'IgDiscover'
-copyright = u'2015-2016, ' + authors
+copyright = u'2015-2017, ' + authors
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
