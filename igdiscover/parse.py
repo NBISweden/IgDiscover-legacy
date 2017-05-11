@@ -33,8 +33,6 @@ def add_arguments(parser):
 	arg('--vdatabase', '--vdb', metavar='FASTA',
 		help="Path to FASTA file with V genes. Used to fix the 5' ends of V "
 		"gene alignments. If not given, 'N' bases will be inserted instead.")
-	arg('--hdf5', metavar='FILE',
-		help='Write table in HDF5 format to FILE')
 	arg('--stats', metavar='FILE',
 		help='Write statistics in JSON format to FILE')
 	arg('igblast', help='IgBLAST output')
@@ -636,9 +634,6 @@ def main(args):
 	Parse IgBLAST output
 	"""
 	n = 0
-	if args.hdf5:
-		rows = []
-
 	if args.vdatabase:
 		with SequenceReader(args.vdatabase) as fr:
 			v_database = { record.name: record.sequence.upper() for record in fr }
@@ -657,8 +652,6 @@ def main(args):
 				detected_cdr3s += 1
 			if args.rename is not None:
 				d['name'] = "{}seq{}".format(args.rename, n)
-			if args.hdf5:
-				rows.append(d)
 			try:
 				writer.write(d)
 			except IOError as e:
@@ -673,22 +666,3 @@ def main(args):
 		with open(args.stats, 'w') as f:
 			json.dump(stats, f)
 			print(file=f)
-
-	if args.hdf5:
-		from igdiscover.table import STRING_COLUMNS, INTEGER_COLUMNS
-		df = pd.DataFrame(rows, columns=ExtendedIgBlastRecord.columns)
-		# TODO code below is copied from igdiscover.table
-		# Convert all string columns to str to avoid a PerformanceWarning
-		for col in STRING_COLUMNS:
-			df[col].fillna('', inplace=True)
-			df[col] = df[col].astype('str')
-			# Empty strings have been set to NaN by read_csv. Replacing
-			# by the empty string avoids problems with groupby, which
-			# ignores NaN values.
-			# Columns that have any NaN values in them cannot be converted to
-			# int due to a numpy limitation.
-			for icol in INTEGER_COLUMNS:
-				if all(df[icol].notnull()):
-					df[icol] = df[icol].astype(int)
-		df.to_hdf(args.hdf5, 'table', mode='w', complevel=3, complib='zlib')
-		logger.info('HDF5 file written')
