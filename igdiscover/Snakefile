@@ -503,31 +503,11 @@ else:
 			shell("cp -p {input.fasta} {output.fasta}")
 
 
-rule makeblastdb:
-	output: "{dir}/{gene,[VDJ]}.nhr"  # and nin nog nsd nsi nsq
-	input: fasta="{dir}/{gene}.fasta"
-	params: dbname="{dir}/{gene}"
-	log: '{dir}/{gene}.log'
-	threads: 100  # force to run as single job
-	run:
-		with FastaReader(input.fasta) as fr:
-			sequences = list(fr)
-		if not sequences:
-			sys.exit("The FASTA file {} is empty, cannot continue!".format(input.fasta))
-		shell("makeblastdb -parse_seqids -dbtype nucl -in {input.fasta} -out {params.dbname} >& {log}")
-		with open(log[0]) as f:
-		    if 'Error: ' in f.read():
-		        sys.exit("makeblastdb failed when creating {}".format(params.dbname))
-
-
 rule igdiscover_igblast:
 	output:
 		txtgz="{dir}/igblast.txt.gz"
 	input:
 		fastagz=PREPROCESSED_READS,
-		db_v="{dir}/database/V.nhr",
-		db_d="{dir}/database/D.nhr",
-		db_j="{dir}/database/J.nhr"
 	params:
 		penalty=' --penalty {}'.format(config.mismatch_penalty) if config.mismatch_penalty is not None else '',
 		database='{dir}/database',

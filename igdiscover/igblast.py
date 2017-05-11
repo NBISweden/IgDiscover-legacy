@@ -12,6 +12,7 @@ import subprocess
 from itertools import islice
 import pkg_resources
 import logging
+import tempfile
 
 from sqt import SequenceReader
 from sqt.utils import available_cpu_count
@@ -32,8 +33,7 @@ def add_arguments(parser):
 		help='Which species (default: %(default)s)')
 	arg('--limit', type=int, metavar='N',
 		help='Limit processing to first N records')
-	arg('database', help='Database directory. Must contain BLAST databases for '
-		'V, D and J.')
+	arg('database', help='Database directory with V.fasta, D.fasta, J.fasta.')
 	arg('fasta', help='File with original reads')
 
 
@@ -111,14 +111,32 @@ class Runner:
 		return run_igblast(s, self.dbpath, self.species, self.penalty)
 
 
+def makeblastdb(fasta, database_name):
+	with SequenceReader(fasta) as fr:
+		sequences = list(fr)
+	if not sequences:
+		raise ValueError("FASTA file {} is empty".format(fasta))
+	process_output = subprocess.check_output(
+		['makeblastdb', '-parse_seqids', '-dbtype', 'nucl', '-in', fasta, '-out', database_name],
+		stderr=subprocess.STDOUT
+	)
+	if b'Error: ' in process_output:
+		raise subprocess.SubprocessError()
+
+
 def main(args):
-	chunks = chunked_fasta(args.fasta, limit=args.limit)
-	runner = Runner(args.database, args.species, args.penalty)
-	with multiprocessing.Pool(args.threads) as pool:
-		total = 0
-		for n, result in pool.imap(runner, chunks, chunksize=1):
-			sys.stdout.write(result)
-			total += n
+	with tempfile.TemporaryDirectory() as tmpdir:
+		# Create the three BLAST databases in a temporary directory
+		for gene in list('VDJ'):
+			makeblastdb(os.path.join(args.database, gene + '.fasta'), os.path.join(tmpdir, gene))
+
+		chunks = chunked_fasta(args.fasta, limit=args.limit)
+		runner = Runner(tmpdir, args.species, args.penalty)
+		with multiprocessing.Pool(args.threads) as pool:
+			total = 0
+			for n, result in pool.imap(runner, chunks, chunksize=1):
+				sys.stdout.write(result)
+				total += n
 
 	cpu_time = get_cpu_time()
 	if cpu_time is not None:
