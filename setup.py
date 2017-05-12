@@ -7,7 +7,7 @@ if sys.version_info < (3, 4):
 	sys.stdout.write("At least Python 3.4 is required.\n")
 	sys.exit(1)
 
-with open('README.rst') as f:
+with open('README.rst', encoding='utf-8') as f:
 	long_description = f.read()
 
 setup(
