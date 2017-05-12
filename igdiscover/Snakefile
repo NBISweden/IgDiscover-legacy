@@ -508,6 +508,9 @@ rule igdiscover_igblast:
 		txtgz="{dir}/igblast.txt.gz"
 	input:
 		fastagz=PREPROCESSED_READS,
+		db_v="{dir}/database/V.fasta",
+		db_d="{dir}/database/D.fasta",
+		db_j="{dir}/database/J.fasta"
 	params:
 		penalty=' --penalty {}'.format(config.mismatch_penalty) if config.mismatch_penalty is not None else '',
 		database='{dir}/database',
