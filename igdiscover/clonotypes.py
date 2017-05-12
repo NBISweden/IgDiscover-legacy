@@ -14,7 +14,9 @@ def add_arguments(parser):
 
 
 def main(args):
-	table = read_table(args.table)
+	columns = ['count', 'V_gene', 'D_gene', 'J_gene', 'CDR3_nt', 'CDR3_aa',
+		'V_errors', 'J_errors', 'VDJ_nt', 'barcode']  # 'D_errors',
+	table = read_table(args.table, usecols=columns)
 	table['CDR3_length'] = table['CDR3_nt'].apply(len)
 #	table.sort_values(['V_gene', 'J_gene', 'CDR3_nt'])
 
