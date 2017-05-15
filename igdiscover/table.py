@@ -43,7 +43,7 @@ _STRING_COLUMNS = [
 _INTEGER_COLUMNS = ('V_errors', 'D_errors', 'J_errors', 'V_CDR3_start')
 
 
-def _fix_columns(df):
+def fix_columns(df):
 	"""
 	Changes DataFrame in-place
 	"""
@@ -70,7 +70,7 @@ def read_table(path, usecols=None, log=False):
 	Read in the table created by the parse subcommand (typically named *.tab)
 	"""
 	d = pd.read_csv(path, usecols=usecols, sep='\t')
-	_fix_columns(d)
+	fix_columns(d)
 	if log:
 		logger.info('%s rows in input table', len(d))
 	return d

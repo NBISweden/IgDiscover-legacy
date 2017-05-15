@@ -2,6 +2,14 @@
 Changes
 =======
 
+development version
+-------------------
+
+* The pre-processing filtering step no longer reads in the full table of
+  IgBLAST assignments, but filters the table piece by piece. Memory usage
+  for this step therefore does not depend anymore on the dataset size and
+  should always be below 1 GB.
+
 v0.7.0 (2017-05-04)
 -------------------
 
