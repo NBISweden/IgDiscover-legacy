@@ -67,7 +67,9 @@ To run an analysis, proceed as follows.
 
        igdiscover run
 
-   Depending on the size of your library, your computer, and the number of iterations, this will now take from a few hours to a day.
+   Depending on the size of your library, your computer, and the number of iterations, this will
+   now take from a few hours to a day. See the :ref:`running IgDiscover <running>` section for
+   more fine-grained control over what to run and how to resume the process if something failed.
 
 
 .. _obtaining-database:
@@ -204,7 +206,7 @@ Doing this is not strictly necessary for IgDiscover. It is simplest
 if you do not specify any primer sequences.
 
 
-Pregermline and Germline filter criteria
+Pregermline and germline filter criteria
 ----------------------------------------
 
 This provides IgDiscover with stringency requirements for V gene discovery
@@ -263,6 +265,42 @@ about the :ref:`germline filters <germline-filters>`.
 
 .. versionchanged::
    The default for the ``differences`` setting was changed from 1 to 0.
+
+
+.. _running:
+
+Running IgDiscover
+==================
+
+Resuming failed runs
+--------------------
+
+The command ``igdiscover run``, which is used to start the pipeline, can also be used to resume
+execution if there was an interruption (a transient failure). Reasons for interruptions might be:
+
+* Ctrl+C was pressed on the keyboard
+* A full harddisk
+* If running on a cluster, the program may have been terminated because it exceeded its allocated
+  time
+* Too little RAM
+* Power loss
+
+To resume execution after you have fixed the problem, go to the analysis directory and run
+``igdiscover run`` again. It will skip the steps that have already finished successfully.
+This capability comes from the workflow management system
+`snakemake <https://snakemake.bitbucket.io/>`_, on which ``igdiscover run`` is based.
+Snakemake will determine automatically which steps need to be re-run in order to get to a full
+result and then run only those.
+
+We recommend that you do not change the configuration file ``igdiscover.yaml`` once you have
+started a run. However, with care, it is possible if you keep the following in mind:
+Any changes will not influence steps that have
+already finished. Assume, for example, that you interrupt a run with Ctrl+C after it is already past
+the step in which barcodes are removed. Then, even if you change the barcode length in the
+configuration, the barcode removal step will not be re-run when you resume the pipeline and the
+previous barcode length is in effect. As the results in this case would not match the configuration,
+it is best to avoid this.
+
 
 .. _analysis-directory:
 
