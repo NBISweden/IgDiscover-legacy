@@ -1,4 +1,4 @@
-from igdiscover.cluster import inner_nodes
+from igdiscover.cluster import inner_nodes, hamming_single_linkage
 
 
 def inner_nodes_recursive(root):
@@ -56,13 +56,26 @@ def test_inner_nodes():
 		Node(2,
 			leaf,
 			Node(3,
-	            Node(4,
-	                leaf,
-	                Node(5, leaf, leaf)
-	            ),
-	            Node(6, leaf, leaf)
+				Node(4,
+					leaf,
+					Node(5, leaf, leaf)
+				),
+				Node(6, leaf, leaf)
 			)
 		)
 	)
 	values = [ n.value for n in inner_nodes(tree) ]
 	assert values == [1, 2, 4, 5, 3, 6]
+
+
+def test_hamming_single_linkage():
+	strings = ['', 'AC', 'AG', 'GG', 'CT', 'GGG', 'GGA']
+	components = hamming_single_linkage(strings, 0)
+	assert all(len(component) == 1 for component in components)
+	assert set(strings) == set(component[0] for component in components)
+
+	components = hamming_single_linkage(strings, 1)
+	components = set(frozenset(component) for component in components)
+	expected = [[''], ['AC', 'AG', 'GG'], ['CT'], ['GGG', 'GGA']]
+	expected = set(frozenset(component) for component in expected)
+	assert components == expected

@@ -1,4 +1,4 @@
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 import pandas as pd
 from scipy.spatial import distance
 from scipy.cluster import hierarchy
@@ -116,12 +116,20 @@ def hamming_single_linkage(strings, mismatches):
 
 	Return a list of connected components (clusters).
 	"""
-	t = Trie()
+	components = []
+
+	# First pre-cluster strings by length
+	string_lists = defaultdict(list)
 	for s in strings:
-		t.add(s)
-	graph = Graph(strings)
-	for s in strings:
-		for neighbor in t.find_all_similar(s, mismatches):
-			if neighbor != s:
-				graph.add_edge(s, neighbor)
-	return graph.connected_components()
+		string_lists[len(s)].append(s)
+	for strings in string_lists.values():
+		trie = Trie()
+		for s in strings:
+			trie.add(s)
+		graph = Graph(strings)
+		for s in strings:
+			for neighbor in trie.find_all_similar(s, mismatches):
+				if neighbor != s:
+					graph.add_edge(s, neighbor)
+		components.extend(graph.connected_components())
+	return components
