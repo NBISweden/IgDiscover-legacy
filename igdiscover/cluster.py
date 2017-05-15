@@ -1,3 +1,4 @@
+from collections import OrderedDict
 import pandas as pd
 from scipy.spatial import distance
 from scipy.cluster import hierarchy
@@ -71,3 +72,37 @@ def cluster_sequences(sequences, minsize=5):
 	# so we omit it.
 
 	return pd.DataFrame(matrix), linkage, clusters
+
+
+class Graph:
+	"""Graph that can find connected components"""
+	def __init__(self, nodes):
+		self._nodes = OrderedDict()
+		for node in nodes:
+			self._nodes[node] = []
+
+	def add_edge(self, node1, node2):
+		self._nodes[node1].append(node2)
+		self._nodes[node2].append(node1)
+
+	def connected_components(self):
+		"""Return a list of connected components."""
+		visited = set()
+		components = []
+		for node, neighbors in self._nodes.items():
+			if node in visited:
+				continue
+			# Start a new component
+			to_visit = [node]
+			component = []
+			while to_visit:
+				n = to_visit.pop()
+				if n in visited:
+					continue
+				visited.add(n)
+				component.append(n)
+				for neighbor in self._nodes[n]:
+					if neighbor not in visited:
+						to_visit.append(neighbor)
+			components.append(component)
+		return components

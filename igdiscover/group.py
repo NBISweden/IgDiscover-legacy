@@ -48,10 +48,9 @@ format). Which sequence that is depends on the group size:
 import csv
 import sys
 import logging
-from collections import Counter, defaultdict, OrderedDict
+from collections import Counter, defaultdict
 from contextlib import ExitStack
 from itertools import islice
-import random
 
 import matplotlib
 matplotlib.use('pdf')
@@ -60,7 +59,7 @@ from sqt.align import consensus
 from sqt import SequenceReader
 from xopen import xopen
 from .species import find_cdr3
-
+from .cluster import Graph
 
 # minimum number of sequences needed for attempting to compute a consensus
 MIN_CONSENSUS_SEQUENCES = 3
@@ -99,40 +98,6 @@ def add_arguments(parser):
 		help='FASTA or FASTQ file (can be gzip-compressed) with sequences')
 
 
-class Graph:
-	"""Graph that can find connected components"""
-	def __init__(self, nodes):
-		self._nodes = OrderedDict()
-		for node in nodes:
-			self._nodes[node] = []
-
-	def add_edge(self, node1, node2):
-		self._nodes[node1].append(node2)
-		self._nodes[node2].append(node1)
-
-	def connected_components(self):
-		"""Return a list of connected components."""
-		visited = set()
-		components = []
-		for node, neighbors in self._nodes.items():
-			if node in visited:
-				continue
-			# Start a new component
-			to_visit = [node]
-			component = []
-			while to_visit:
-				n = to_visit.pop()
-				if n in visited:
-					continue
-				visited.add(n)
-				component.append(n)
-				for neighbor in self._nodes[n]:
-					if neighbor not in visited:
-						to_visit.append(neighbor)
-			components.append(component)
-		return components
-
-
 def hamming_neighbors(s):
 	"""Return sequences that are at hamming distance 1 and return also s itself"""
 	for i in range(len(s)):
@@ -149,7 +114,7 @@ def cluster_sequences(sequences):
 	- and their lengths differs by at most 2.
 	"""
 	graph = Graph(sequences)
-	cdr3_seqs = defaultdict(list)
+	cdr3_seqs = defaultdict(list)  # maps CDR3 sequence to list of full sequence with that CDR3
 	for s in sequences:
 		cdr3_seqs[s.cdr3].append(s)
 	for sequence in sequences:
