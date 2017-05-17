@@ -37,20 +37,15 @@ def add_arguments(parser):
 	arg('fasta', help='File with original reads')
 
 
-def run_igblast(fasta, database, species, penalty=None):
+def run_igblast(sequences, database, species, penalty=None):
 	"""
-	fasta -- path to a FASTA file or data in FASTA format as a string
+	sequences -- list of Sequence objects
 	database -- directory that contains IgBLAST databases. Files in that
 	directory must be databases created by the makeblastdb program and have
-	names organism_gene, such as "rhesus_monkey_V".
+	names V, D, and J.
 
-	Return IgBLAST’s output as a string.
+	Return IgBLAST’s raw output as a string.
 	"""
-	n, fasta = fasta
-	if fasta.startswith('>'):
-		fasta_input = '-'
-	else:
-		fasta_input = fasta
 	arguments = ['igblastn']
 	for gene in 'V', 'D', 'J':
 		arguments += ['-germline_db_{gene}'.format(gene=gene),
@@ -68,32 +63,28 @@ def run_igblast(fasta, database, species, penalty=None):
 		'-num_alignments_V', '1',
 		'-num_alignments_D', '1',
 		'-num_alignments_J', '1',
-		'-outfmt', "7 sseqid qstart qseq sstart sseq pident slen evalue",
-		'-query', fasta_input,
+		'-outfmt', '7 sseqid qstart qseq sstart sseq pident slen evalue',
+		'-query', '-',
 		'-out', '-',  # write to stdout
 	]
-	result = subprocess.check_output(arguments,
-		input=fasta if fasta_input == '-' else None, universal_newlines=True)
-	return n, result
+	fasta_str = ''.join(">{}\n{}\n".format(r.name, r.sequence) for r in sequences)
+	return subprocess.check_output(arguments, input=fasta_str, universal_newlines=True)
 
 
-def chunked_fasta(path, chunksize=1000, limit=None):
+def chunked(iterable, chunksize):
 	"""
-	Split a FASTA file into chunks that contain at most chunksize records.
-	Take only the first 'limit' records, or all if limit is None.
+	Group the iterable into lists of length chunksize
+	>>> list(chunked('ABCDEFG', 3))
+	[['A', 'B', 'C'], ['D', 'E', 'F'], ['G']]
 	"""
-	def buf_to_fasta(b):
-		return ''.join(">{}\n{}\n".format(r.name, r.sequence) for r in b)
-
-	with SequenceReader(path) as sr:
-		buf = []
-		for record in islice(sr, 0, limit):
-			buf.append(record)
-			if len(buf) == chunksize:
-				yield len(buf), buf_to_fasta(buf)
-				buf = []
-		if len(buf) > 0:
-			yield len(buf), buf_to_fasta(buf)
+	chunk = []
+	for it in iterable:
+		if len(chunk) == chunksize:
+			yield chunk
+			chunk = []
+		chunk.append(it)
+	if chunk:
+		yield chunk
 
 
 class Runner:
@@ -107,8 +98,8 @@ class Runner:
 		self.species = species
 		self.penalty = penalty
 
-	def __call__(self, s):
-		return run_igblast(s, self.dbpath, self.species, self.penalty)
+	def __call__(self, chunk):
+		return len(chunk), run_igblast(chunk, self.dbpath, self.species, self.penalty)
 
 
 def makeblastdb(fasta, database_name):
@@ -130,13 +121,14 @@ def main(args):
 		for gene in list('VDJ'):
 			makeblastdb(os.path.join(args.database, gene + '.fasta'), os.path.join(tmpdir, gene))
 
-		chunks = chunked_fasta(args.fasta, limit=args.limit)
-		runner = Runner(tmpdir, args.species, args.penalty)
-		with multiprocessing.Pool(args.threads) as pool:
-			total = 0
-			for n, result in pool.imap(runner, chunks, chunksize=1):
-				sys.stdout.write(result)
-				total += n
+		with SequenceReader(args.fasta) as fasta:
+			chunks = chunked(islice(fasta, 0, args.limit), chunksize=1000)
+			runner = Runner(tmpdir, args.species, args.penalty)
+			with multiprocessing.Pool(args.threads) as pool:
+				total = 0
+				for n, igblast_output in pool.imap(runner, chunks, chunksize=1):
+					sys.stdout.write(igblast_output)
+					total += n
 
 	cpu_time = get_cpu_time()
 	if cpu_time is not None:
