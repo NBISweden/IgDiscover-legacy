@@ -44,7 +44,7 @@ def none_if_na(s):
 	return None if s == 'N/A' else s
 
 
-def split_by_section(it, section_starts):
+def split_by_section(iterable, section_starts):
 	"""
 	Parse a stream of lines into chunks of sections. When one of the lines
 	starts with a string given in section_starts, a new section is started, and
@@ -56,7 +56,7 @@ def split_by_section(it, section_starts):
 	"""
 	lines = None
 	header = None
-	for line in it:
+	for line in iterable:
 		line = line.strip()
 		for start in section_starts:
 			if line.startswith(start):
@@ -89,6 +89,8 @@ _Hit = namedtuple('_Hit', [
 	'percent_identity',
 	'evalue',
 ])
+
+
 class Hit(_Hit):
 	# This avoids having a __dict__ attribute, which is necessary for namedtuple
 	# subclasses that need _asdict() to work (http://bugs.python.org/issue24931)
@@ -130,10 +132,35 @@ def parse_header(header):
 	return query_name, size, barcode
 
 
-IgBlastRecord = namedtuple('IgBlastRecord',
-	'full_sequence query_name alignments '
-	'hits v_gene d_gene j_gene chain has_stop in_frame is_productive '
-	'strand junction')
+class IgBlastRecord:
+	def __init__(self,
+		full_sequence,
+		query_name,
+		alignments,
+		hits,
+		v_gene,
+		d_gene,
+		j_gene,
+		chain,
+		has_stop,
+		in_frame,
+		is_productive,
+		strand,
+		junction
+	):
+		self.full_sequence = full_sequence
+		self.query_name = query_name
+		self.alignments = alignments
+		self.hits = hits
+		self.v_gene = v_gene
+		self.d_gene = d_gene
+		self.j_gene = j_gene
+		self.chain = chain
+		self.has_stop = has_stop
+		self.in_frame = in_frame
+		self.is_productive = is_productive
+		self.strand = strand
+		self.junction = junction
 
 
 class ExtendedIgBlastRecord(IgBlastRecord):
@@ -198,16 +225,9 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		'genomic_sequence',
 	]
 
-	def __new__(cls, record, v_database):
-		d = record._asdict()
-		query_name, size, barcode = parse_header(record.query_name)
-		d['query_name'] = query_name
-		obj = super().__new__(cls, **d)
-		obj.size = size
-		obj.barcode = barcode
-		return obj
-
-	def __init__(self, record, v_database):
+	def __init__(self, v_database, **kwargs):
+		super().__init__(**kwargs)
+		self.query_name, self.size, self.barcode = parse_header(self.query_name)
 		self.genomic_sequence = self.full_sequence
 		self.race_g = None  # TODO since the parse script does not extract the race_G anymore, we don’t have this info available
 		if 'V' in self.hits:
@@ -442,15 +462,15 @@ class IgBlastParser:
 		'# Hit table',
 	])
 
-	def __init__(self, sequence_file, igblast_file):
-		self._sequence_reader = SequenceReader(sequence_file)
-		self._igblast_file = igblast_file
+	def __init__(self, sequences, igblast_lines):
+		self._sequences = sequences
+		self._igblast_lines = igblast_lines
 
 	def __iter__(self):
 		"""
 		Yield IgBlastRecord objects
 		"""
-		zipped = zip(self._sequence_reader, split_by_section(self._igblast_file, ['# IGBLASTN']))
+		zipped = zip(self._sequences, split_by_section(self._igblast_lines, ['# IGBLASTN']))
 		for fasta_record, (record_header, record_lines) in zipped:
 			# 'IGBLASTN 2.2.29+': IgBLAST 1.4.0
 			# 'IGBLASTN 2.3.1+': IgBLAST 1.5.0
@@ -591,12 +611,18 @@ class IgBlastParser:
 		return hit, gene
 
 
+class ExtendedIgBlastParser:
+	def __init__(self, sequences, igblast_lines, v_database):
+		self._parser = IgBlastParser(sequences, igblast_lines)
+		self._v_database = v_database
+
+	def __iter__(self):
+		for record in self._parser:
+			yield ExtendedIgBlastRecord(self._v_database, **record.__dict__)
+
+
 class TableWriter:
 	def __init__(self, file):
-		"""
-		If rename is not None, rename reads to {rename}seq{number}, where
-		{number} is a sequential number starting from 1.
-		"""
 		self._file = file
 		self._writer = csv.DictWriter(file, fieldnames=ExtendedIgBlastRecord.columns, delimiter='\t')
 		self._writer.writeheader()
@@ -636,18 +662,17 @@ def main(args):
 	n = 0
 	if args.vdatabase:
 		with SequenceReader(args.vdatabase) as fr:
-			v_database = { record.name: record.sequence.upper() for record in fr }
+			v_database = {record.name: record.sequence.upper() for record in fr}
 	else:
 		v_database = None
 
 	detected_cdr3s = 0
 	writer = TableWriter(sys.stdout)
-	with xopen(args.fasta) as fasta, xopen(args.igblast) as igblast:
-		parser = IgBlastParser(fasta, igblast)
+	with SequenceReader(args.fasta) as sequences, xopen(args.igblast) as igblast:
+		parser = ExtendedIgBlastParser(sequences, igblast, v_database)
 		for record in parser:
 			n += 1
-			extended_record = ExtendedIgBlastRecord(record, v_database=v_database)
-			d = extended_record.asdict()
+			d = record.asdict()
 			if d['CDR3_aa']:
 				detected_cdr3s += 1
 			if args.rename is not None:

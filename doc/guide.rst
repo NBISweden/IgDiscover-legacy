@@ -143,9 +143,8 @@ to follow this structure (from 5' to 3'):
   this barcode. You can currently not have both a 5' and a 3' barcode.
 * The reverse primer. This is optional.
 
-We use IgBLAST to detect the location of the V, D, J genes (run as
-part of the ``igdiscover igblast`` subcommand), and the remaining parts
-are detected subsequently with ``igdiscover parse``. The G nucleotides
+We use IgBLAST to detect the location of the V, D, J genes through the
+``igdiscover igblast`` subcommand. The G nucleotides
 after the barcode are split off if the configuration specifies
 ``race_g: true``. The leader sequence is detected by looking for a start
 codon near 60 bp upstream of the start of the V gene match.
@@ -438,8 +437,8 @@ Format of output files
 assigned.tab.gz
 ---------------
 
-This file is a gzip-compressed table with tab-separated values.
-It is created by ``igdiscover parse`` and is the result of parsing IgBLAST output.
+This file is a gzip-compressed table with tab-separated values. It is created by
+the ``igdiscover igblast`` subcommand and is the result of parsing raw output from IgBLAST.
 It contains a few additional columns that do not come directly from IgBLAST.
 In particular, the CDR3 sequence is detected, the sequence before the V gene match is split into *UTR* and *leader*, and
 the RACE-specific run of G nucleotides is also detected.
@@ -685,11 +684,8 @@ union
 
 The following subcommands are used internally, and listed here for completeness.
 
-parse
-    Parse IgBLAST output and write out a tab-separated table
-
 filter
-    Filter table with parsed IgBLAST results
+    Filter a table with IgBLAST results
 
 count
     Count and plot V, D, J gene usage

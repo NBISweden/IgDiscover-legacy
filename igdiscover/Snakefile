@@ -505,7 +505,9 @@ else:
 
 rule igdiscover_igblast:
 	output:
-		txtgz="{dir}/igblast.txt.gz"
+		txtgz="{dir}/igblast.txt.gz",
+		tabgz="{dir}/assigned.tab.gz",
+		json="{dir}/stats/assigned.json"
 	input:
 		fastagz=PREPROCESSED_READS,
 		db_v="{dir}/database/V.fasta",
@@ -514,26 +516,14 @@ rule igdiscover_igblast:
 	params:
 		penalty=' --penalty {}'.format(config.mismatch_penalty) if config.mismatch_penalty is not None else '',
 		database='{dir}/database',
-		species=' --species={}'.format(config.species) if config.species else ''
+		species=' --species={}'.format(config.species) if config.species else '',
+		rename=' --rename {config.library_name!r}_'.format(config=config) if config.rename else ''
 	log: '{dir}/igblast.log'
 	threads: 16
 	shell:
-		"time igdiscover igblast{params.penalty} --threads={threads}"
-		"{params.species} {params.database} {input.fastagz} | "
-		"{GZIP} 2>&1 > {output.txtgz} | tee {log} >&2"
-
-
-rule igdiscover_parse:
-	output:
-		tabgz="{dir}/assigned.tab.gz",
-		json="{dir}/stats/assigned.json"
-	input:
-		txt="{dir}/igblast.txt.gz",
-		fasta=PREPROCESSED_READS
-	params:
-		extra=" --rename {config.library_name!r}_".format(config=config) if config.rename else ""
-	shell:
-		"igdiscover parse{params.extra} --stats={output.json} {input.txt} {input.fasta} | {GZIP} > {output.tabgz}"
+		"time igdiscover igblast{params.penalty}{params.rename} --threads={threads}"
+		"{params.species} --stats={output.json} --raw={output.txtgz} {params.database} {input.fastagz} | "
+		"{GZIP} 2>&1 > {output.tabgz} | tee {log} >&2"
 
 
 rule check_parsing:

@@ -413,8 +413,8 @@ def main(args):
 		seed = random.randrange(10**6)
 		logger.info('Use --seed=%d to reproduce this run', seed)
 
-	table = read_table(args.table, usecols=('name', 'chain', 'V_gene', 'J_gene', 'V_nt', 'CDR3_nt', 'V_CDR3_start',
-		'V_SHM', 'J_SHM', 'V_errors', 'J_errors'))
+	table = read_table(args.table, usecols=('name', 'chain', 'V_gene', 'J_gene', 'V_nt', 'CDR3_nt',
+		'V_CDR3_start', 'V_SHM', 'J_SHM', 'V_errors', 'J_errors'))
 	table['V_no_CDR3'] = [s[:start] if start != 0 else s for s, start in
 		zip(table.V_nt, table.V_CDR3_start)]
 
