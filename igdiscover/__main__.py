@@ -48,6 +48,7 @@ COMMANDS = [
 	'rename',
 	'union',
 	'clonotypes',
+	'clonoquery',
 	'plotalleles',
 ]
 

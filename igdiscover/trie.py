@@ -18,6 +18,11 @@ class Trie:
 	# node - but only for leaf nodes.
 	name = None
 
+	def __init__(self, iterable=None):
+		if iterable is not None:
+			for it in iterable:
+				self.add(it)
+
 	def add(self, s: str):
 		"""Add a string to this trie. If it already exists, the trie remains unchanged."""
 		self._insert(s, leaf_name=s)
