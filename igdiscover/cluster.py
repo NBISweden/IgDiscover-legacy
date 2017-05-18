@@ -3,6 +3,7 @@ import pandas as pd
 from scipy.spatial import distance
 from scipy.cluster import hierarchy
 from .utils import distances
+from .trie import Trie
 
 
 def all_nodes(root):
@@ -106,3 +107,21 @@ class Graph:
 						to_visit.append(neighbor)
 			components.append(component)
 		return components
+
+
+def hamming_single_linkage(strings, mismatches):
+	"""
+	Cluster a set of strings by their hamming distance: Strings with
+	a distance of at most 'mismatches' will be put into the same cluster.
+
+	Return a list of connected components (clusters).
+	"""
+	t = Trie()
+	for s in strings:
+		t.add(s)
+	graph = Graph(strings)
+	for s in strings:
+		for neighbor in t.find_all_similar(s, mismatches):
+			if neighbor != s:
+				graph.add_edge(s, neighbor)
+	return graph.connected_components()
