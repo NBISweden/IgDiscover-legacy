@@ -16,10 +16,13 @@ def add_arguments(parser):
 		help='Maximal allowed E-value for D gene match. Default: %(default)s')
 	arg('--d-coverage', '--D-coverage', type=float, default=65,
 		help='Minimum D coverage (in percent). Default: %(default)s%%)')
-	arg('--vdatabase', metavar='FASTA',
-		help='Restrict plotting to the V sequences named in the FASTA file. '
+	arg('--database', metavar='FASTA',
+		help='Restrict plotting to the sequences named in the FASTA file. '
 		'Only the sequence names are used!')
-	arg('--gene', choices=('D', 'J'), help='Type of gene on y axis. Default: %(default)s', default='J')
+	arg('--x', choices=('V', 'D'), default='V',
+		help='Type of gene on x axis. Default: %(default)s')
+	arg('--gene', choices=('D', 'J'), default='J',
+		help='Type of gene on y axis. Default: %(default)s')
 	arg('alleles', help='List of alleles to plot on y axis, separated by comma')
 	arg('table', help='Table with parsed and filtered IgBLAST results')
 	arg('plot', help='Path to output PDF or PNG')
@@ -35,12 +38,13 @@ def main(args):
 		usecols = [col for col in usecols if col != 'D_errors']
 		table = read_table(args.table, usecols=usecols)
 	logger.info('Table with %s rows read', len(table))
-	table = table[table.V_errors == 0]
-	logger.info('%s rows remain after requiring V errors = 0', len(table))
+	if args.x == 'V':
+		table = table[table.V_errors == 0]
+		logger.info('%s rows remain after requiring V errors = 0', len(table))
 	if args.gene == 'J':
 		table = table[table.J_errors == 0]
 		logger.info('%s rows remain after requiring J errors = 0', len(table))
-	elif args.gene == 'D':
+	elif args.gene == 'D' or args.x == 'D':
 		table = table[table.D_evalue <= args.d_evalue]
 		logger.info('%s rows remain after requiring D E-value <= %s', len(table), args.d_evalue)
 		table = table[table.D_covered >= args.d_coverage]
@@ -49,7 +53,7 @@ def main(args):
 			table = table[table.D_errors == 0]
 			logger.info('%s rows remain after requiring D errors = 0', len(table))
 
-	gene1 = 'V_gene'
+	gene1 = args.x + '_gene'
 	gene2 = args.gene + '_gene'
 	expression_counts = table.groupby((gene1, gene2)).size().to_frame().reset_index()
 	matrix = pd.DataFrame(
@@ -67,14 +71,14 @@ def main(args):
 			logger.error('Allele %s not expressed in this dataset', allele)
 			sys.exit(1)
 
-	if args.vdatabase:
-		with SequenceReader(args.vdatabase) as f:
-			v_names = [record.name for record in f if record.name in matrix.index]
-		if not v_names:
+	if args.database:
+		with SequenceReader(args.database) as f:
+			x_names = [record.name for record in f if record.name in matrix.index]
+		if not x_names:
 			logger.error('None of the sequence names in %r were found in the input table',
-				args.vdatabase)
+				args.database)
 			sys.exit(1)
-		allele_expressions = matrix.loc[v_names, alleles]
+		allele_expressions = matrix.loc[x_names, alleles]
 	else:
 		allele_expressions = matrix.loc[:, alleles]
 	print('#\n# Allele-specific expression\n#')
