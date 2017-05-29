@@ -281,19 +281,19 @@ class Discoverer:
 			for key, g in groups:
 				unique_J = len(set(s for s in g.J_gene if s))
 				unique_CDR3 = len(set(s for s in g.CDR3_nt if s))
+				unique_D = self.count_unique_D(g)
 				count = len(g.index)
-				info[key] = Groupinfo(count=count, unique_J=unique_J, unique_CDR3=unique_CDR3)
+				info[key] = Groupinfo(count=count, unique_D=unique_D, unique_J=unique_J, unique_CDR3=unique_CDR3)
 			if gene in self.database:
 				database_diff = edit_distance(sibling, self.database[gene])
 			else:
 				database_diff = None
 
 			# Build the Candidate
-			# TODO use UniqueNamer here
-			if database_diff is not None and database_diff != 0:
-				sequence_id = unique_name(gene, sibling)
-			else:
+			if database_diff == 0:
 				sequence_id = gene
+			else:
+				sequence_id = unique_name(gene, sibling)
 
 			if self.approx_columns:
 				assert info['exact'].count <= info['approx'].count
