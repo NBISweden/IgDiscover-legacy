@@ -592,6 +592,12 @@ exact
     A consensus is then computed from each cluster.
     Then we look back at *all* sequences assigned to the source gene and find exact occurrences of that consensus sequence.
 
+Ds_exact
+    How many unique D genes were used by the sequences in the set of exact sequences (described above).
+    Only those D gene assignments are included in this count for which the number of errors
+    is zero, the E-value is at most a given threshold, and for which the number of covered bases
+    is at least a given percentage.
+
 Js_exact
     How many unique J genes were used by the sequences in the set of exact sequences (described above).
 

@@ -74,10 +74,16 @@ def add_arguments(parser):
 	arg('--exact-copies', metavar='N', type=int, default=1,
 		help='When subsampling, first pick rows whose V gene sequences'
 			'have at least N exact copies in the input. Default: %(default)s')
+	arg('--d-evalue', metavar='EVALUE', type=float, default=1E-4,
+		help='For Ds_exact, require D matches with an E-value of '
+			'at most EVALUE. Default: %(default)s')
+	arg('--d-coverage', '--D-coverage', metavar='COVERAGE', type=float, default=70,
+		help='For Ds_exact, require D matches with a minimum D '
+			'coverage of COVERAGE (in percent). Default: %(default)s)')
 	arg('table', help='Table with parsed IgBLAST results')
 
 
-Groupinfo = namedtuple('Groupinfo', 'count unique_J unique_CDR3')
+Groupinfo = namedtuple('Groupinfo', 'count unique_D unique_J unique_CDR3')
 
 SiblingInfo = namedtuple('SiblingInfo', 'sequence requested name group')
 
@@ -121,7 +127,7 @@ class Discoverer:
 	def __init__(self, database, windows, left, right, cluster, table_output,
 			consensus_threshold, v_error_rate, downsample,
 			cluster_subsample_size, approx_columns, max_n_bases, exact_copies,
-			seed):
+			d_coverage, d_evalue, seed):
 		self.database = database
 		self.windows = windows
 		self.left = left
@@ -135,6 +141,8 @@ class Discoverer:
 		self.approx_columns = approx_columns
 		self.max_n_bases = max_n_bases
 		self.exact_copies = exact_copies
+		self.d_coverage = d_coverage
+		self.d_evalue = d_evalue
 		self.seed = seed
 
 	def _sibling_sequence(self, gene, group):
@@ -168,10 +176,18 @@ class Discoverer:
 		"""
 		return Counter(group.V_CDR3_start).most_common()[0][0]
 
+	def count_unique_D(self, group):
+		g = group[(group.D_errors == 0) &
+				(group.D_covered >= self.d_coverage) &
+		        (group.D_evalue <= self.d_evalue)]
+		return len(set(s for s in g.D_gene if s))
+
 	def _collect_siblings(self, gene, group):
 		"""
 		gene -- gene name
 		group -- pandas.DataFrame of sequences assigned to that gene
+
+		Yield SiblingInfo objects
 		"""
 		group = group.copy()
 		# the original reference sequence for all the IgBLAST assignments in this group
@@ -234,7 +250,7 @@ class Discoverer:
 			group_in_window = group[group.V_errors == 0]
 			if len(group_in_window) >= MINGROUPSIZE:
 				if not database_sequence_found:
-					logger.info('Database sequence seems to be %r expressed, but is missing from '
+					logger.info('Database sequence %r seems to be expressed, but is missing from '
 						'candidates. Re-adding it.', gene)
 				yield SiblingInfo(database_sequence, False, 'db', group_in_window)
 
@@ -320,6 +336,7 @@ class Discoverer:
 				Js=info['window'].unique_J,
 				CDR3s=info['window'].unique_CDR3,
 				exact=info['exact'].count,
+				Ds_exact=info['exact'].unique_D,
 				Js_exact=info['exact'].unique_J,
 				CDR3s_exact=info['exact'].unique_CDR3,
 				CDR3_exact_ratio='{:.2f}'.format(ratio),
@@ -355,6 +372,7 @@ Candidate = namedtuple('Candidate', [
 	'Js',
 	'CDR3s',
 	'exact',
+	'Ds_exact',
 	'Js_exact',
 	'CDR3s_exact',
 	'CDR3_exact_ratio',
@@ -413,8 +431,8 @@ def main(args):
 		seed = random.randrange(10**6)
 		logger.info('Use --seed=%d to reproduce this run', seed)
 
-	table = read_table(args.table, usecols=('name', 'chain', 'V_gene', 'J_gene', 'V_nt', 'CDR3_nt',
-		'V_CDR3_start', 'V_SHM', 'J_SHM', 'V_errors', 'J_errors'))
+	table = read_table(args.table, usecols=('name', 'chain', 'V_gene', 'D_gene', 'J_gene', 'V_nt', 'CDR3_nt',
+		'V_CDR3_start', 'V_SHM', 'J_SHM', 'D_covered', 'D_evalue', 'V_errors', 'D_errors', 'J_errors'))
 	table['V_no_CDR3'] = [s[:start] if start != 0 else s for s, start in
 		zip(table.V_nt, table.V_CDR3_start)]
 
@@ -463,6 +481,7 @@ def main(args):
 		args.table_output, args.consensus_threshold, v_error_rate,
 		MAXIMUM_SUBSAMPLE_SIZE, cluster_subsample_size=args.subsample,
 		approx_columns=args.approx, max_n_bases=args.max_n_bases, exact_copies=args.exact_copies,
+		d_coverage=args.d_coverage, d_evalue=args.d_evalue,
 		seed=seed)
 	n_consensus = 0
 
