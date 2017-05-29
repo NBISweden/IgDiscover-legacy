@@ -60,17 +60,13 @@ from sqt import SequenceReader
 from xopen import xopen
 from .species import find_cdr3
 from .cluster import Graph
+from .utils import slice_arg
 
 # minimum number of sequences needed for attempting to compute a consensus
 MIN_CONSENSUS_SEQUENCES = 3
 
 
 logger = logging.getLogger(__name__)
-
-
-def slice_arg(s):
-	start, end = s.split(':')
-	return slice(int(start), int(end))
 
 
 def add_arguments(parser):

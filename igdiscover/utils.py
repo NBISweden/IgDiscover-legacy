@@ -311,3 +311,15 @@ def get_cpu_time():
 	rs = resource.getrusage(resource.RUSAGE_SELF)
 	rc = resource.getrusage(resource.RUSAGE_CHILDREN)
 	return rs.ru_utime + rs.ru_stime + rc.ru_utime + rc.ru_stime
+
+
+def slice_arg(s):
+	"""
+	Parse a string that describes a slice with start and end.
+
+	>>> slice_arg('2:-3')
+	slice(2, -3, None)
+	"""
+
+	start, end = s.split(':')
+	return slice(int(start), int(end))
