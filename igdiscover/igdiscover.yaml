@@ -33,7 +33,8 @@ barcode_length_3prime: 0
 # base has index 0.)
 #
 # Set this to 'detect' (with quotation marks) in order to use CDR3s
-# detected by regular expression.
+# detected by regular expression. This assumes that the input contains
+# VH sequences!
 #
 # Set this to false (no quotation marks) in order to *only* group by barcode, not by CDR3.
 cdr3_location: [-80, -60]
