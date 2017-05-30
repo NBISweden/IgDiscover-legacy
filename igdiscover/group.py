@@ -134,11 +134,13 @@ def write_group(csvfile, barcode, sequences):
 	csvfile.writerow([])
 
 
-def main(args):
-	if args.barcode_length == 0:
-		sys.exit("Barcode length must be non-zero")
+def collect_barcode_groups(
+		fastx, barcode_length, trim_g, limit, minimum_length, pseudo_cdr3, real_cdr3):
+	"""
+	fastx -- path to FASTA or FASTQ input
 
-	group_by_cdr3 = args.pseudo_cdr3 or args.real_cdr3
+	"""
+	group_by_cdr3 = pseudo_cdr3 or real_cdr3
 	if group_by_cdr3:
 		cdr3s = set()
 	# Map barcodes to lists of sequences
@@ -146,35 +148,34 @@ def main(args):
 	n = 0
 	too_short = 0
 	regex_fail = 0
-	with SequenceReader(args.fastx) as f:
-		for record in islice(f, 0, args.limit):
-			if len(record) < args.minimum_length:
+	with SequenceReader(fastx) as f:
+		for record in islice(f, 0, limit):
+			if len(record) < minimum_length:
 				too_short += 1
 				continue
-			if args.barcode_length > 0:
-				barcode = record.sequence[:args.barcode_length]
-				unbarcoded = record[args.barcode_length:]
+			if barcode_length > 0:
+				barcode = record.sequence[:barcode_length]
+				unbarcoded = record[barcode_length:]
 			else:
-				barcode = record.sequence[args.barcode_length:]
-				unbarcoded = record[:args.barcode_length]
+				barcode = record.sequence[barcode_length:]
+				unbarcoded = record[:barcode_length]
 
-			if args.trim_g:
+			if trim_g:
 				# The RACE protocol leads to a run of non-template Gs in the beginning
 				# of the sequence, after the barcode.
 				unbarcoded.sequence = unbarcoded.sequence.lstrip('G')
 				if unbarcoded.qualities:
 					unbarcoded.qualities = unbarcoded.qualities[-len(unbarcoded.sequence):]
 
-			if args.real_cdr3:
+			if real_cdr3:
 				match = find_cdr3(unbarcoded.sequence, chain='VH')
 				if match:
 					cdr3 = unbarcoded.sequence[match[0]:match[1]]
 				else:
 					regex_fail += 1
 					continue
-			elif args.pseudo_cdr3:
-
-				cdr3 = unbarcoded.sequence[args.pseudo_cdr3]
+			elif pseudo_cdr3:
+				cdr3 = unbarcoded.sequence[pseudo_cdr3]
 			if group_by_cdr3:
 				unbarcoded.cdr3 = cdr3  # TODO slight abuse of Sequence objects
 				cdr3s.add(cdr3)
@@ -183,13 +184,25 @@ def main(args):
 
 	logger.info('%s sequences in input', n + too_short + regex_fail)
 	logger.info('%s sequences long enough', n + regex_fail)
-	if args.real_cdr3:
+	if real_cdr3:
 		logger.info('Using the real CDR3')
 		logger.info('%s times (%.2f%%), the CDR3 regex matched', n, n / (n + regex_fail) * 100)
-	elif args.pseudo_cdr3:
+	elif pseudo_cdr3:
 		logger.info('Using the pseudo CDR3')
 	if group_by_cdr3:
 		logger.info('%s unique CDR3s', len(cdr3s))
+
+	return barcodes
+
+
+def main(args):
+	if args.barcode_length == 0:
+		sys.exit("Barcode length must be non-zero")
+
+	group_by_cdr3 = args.pseudo_cdr3 or args.real_cdr3
+	barcodes = collect_barcode_groups(args.fastx, args.barcode_length, args.trim_g,
+		args.limit, args.minimum_length, args.pseudo_cdr3, args.real_cdr3)
+
 	logger.info('%s unique barcodes', len(barcodes))
 	barcode_singletons = sum(1 for seqs in barcodes.values() if len(seqs) == 1)
 	logger.info('%s barcodes used by only a single sequence (singletons)', barcode_singletons)
