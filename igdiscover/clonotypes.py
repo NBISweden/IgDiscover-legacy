@@ -14,6 +14,7 @@ that have the same clonotype.
 The table is written to standard output.
 """
 import logging
+from itertools import islice
 
 from .table import read_table
 from .cluster import hamming_single_linkage
@@ -23,6 +24,10 @@ logger = logging.getLogger(__name__)
 
 def add_arguments(parser):
 	arg = parser.add_argument
+	arg('--sort', action='store_true', default=False,
+		help='Sort by group size (largest first). Default: Sort by V/D/J gene names')
+	arg('--limit', metavar='N', type=int, default=None,
+		help='Print out only the first N groups')
 	arg('--mismatches', default=1, type=int,
 		help='No. of allowed mismatches between CDR3 sequences. Default: %(default)s')
 	arg('table', help='Table with parsed and filtered IgBLAST results')
@@ -56,17 +61,25 @@ def main(args):
 	table = read_table(args.table, usecols=columns)
 	logger.info('Read table with %s rows', len(table))
 	table.insert(6, 'CDR3_length', table['CDR3_nt'].apply(len))
-	print_header = True
 	prev_v = None
-	n = 0
+
+	logger.info('Grouping by clonotype ...')
+	groups = []
 	for (v_gene, j_gene, cdr3_length), vj_group in table.groupby(('V_gene', 'J_gene', 'CDR3_length')):
 		if prev_v != v_gene:
-			logger.info('%d clonotypes seen. Processing %s', n, v_gene)
+			logger.info('%d clonotypes seen. Processing %s', len(groups), v_gene)
 		prev_v = v_gene
-		for group in group_by_cdr3(vj_group.copy(), mismatches=args.mismatches):
-			# We get an intentional empty line between groups since
-			# to_csv() already includes a line break
-			print(group.to_csv(sep='\t', header=print_header, index=False))
-			print_header = False
-			n += 1
-	logger.info('A total of %d clonotypes was seen', n)
+		groups.extend(group_by_cdr3(vj_group.copy(), mismatches=args.mismatches))
+	logger.info('A total of %d clonotypes was seen', len(groups))
+	logger.info('Writing output table ...')
+
+	if args.sort:
+		logger.info('Sorting by group size ...')
+		groups.sort(key=len, reverse=True)
+
+	print_header = True
+	for group in islice(groups, 0, args.limit):
+		# We get an intentional empty line between groups since
+		# to_csv() already includes a line break
+		print(group.to_csv(sep='\t', header=print_header, index=False))
+		print_header = False
