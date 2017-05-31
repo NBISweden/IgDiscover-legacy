@@ -98,7 +98,7 @@ A phylogenetic tree of the V sequences can be found in ``final/V_dendrogram.pdf`
 
 For more details of how that database was created, you need to inspect the files created in the last
 iteration of the discovery process, located in ``iteration-xx``, where ``xx`` is the number of
-iterations configured in the ``igdiscover.yaml``configuration file. For example, if three
+iterations configured in the ``igdiscover.yaml`` configuration file. For example, if three
 iterations were used, look into ``iteration-03/``.
 
 Most interesting in that folder are likely
