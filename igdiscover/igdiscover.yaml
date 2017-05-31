@@ -120,12 +120,6 @@ flash_maximum_overlap: 300
 subsample: 1000
 
 
-# Which program to use for clustering. Use vsearch or usearch (can also be an
-# absolute path).
-#
-#cluster_program: vsearch
-
-
 # Filter out reads that have more than this number of expected errors.
 # Set to null to disable.
 #

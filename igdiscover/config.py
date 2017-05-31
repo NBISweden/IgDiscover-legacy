@@ -26,7 +26,6 @@ class Config:
 		self.merge_program = 'pear'
 		self.flash_maximum_overlap = 300
 		self.limit = None  # or an integer
-		self.cluster_program = 'vsearch'
 		self.multialign_program = 'muscle-fast'
 		self.maximum_expected_errors = None  # or an integer
 		self.minimum_merged_read_length = 300
