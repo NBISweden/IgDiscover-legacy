@@ -23,8 +23,14 @@ barcode_length_5prime: 0
 barcode_length_3prime: 0
 
 
-# When barcoding is enabled, sequences are automatically grouped by barcode
-# and by their CDR3 sequence. The CDR3 location is either detected with a
+# When barcoding is enabled, sequences that have identical barcode and CDR3 are
+# collapsed into a single consensus sequence.
+# If you set this to false, no collapsing and consensus taking is done and
+# only the barcode is removed from each sequence.
+barcode_consensus: true
+
+
+# When grouping by barcode and CDR3, the CDR3 location is either detected with a
 # regular expressions or a 'pseudo' CDR3 sequence is used, which is at a
 # pre-defined position within the sequence. Seting this configuration option to
 # [-80, -60] (which is the default) means that a pseudo CDR3 is to be used,
