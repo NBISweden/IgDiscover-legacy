@@ -36,6 +36,7 @@ COMMANDS = [
 	'filter',
 	'count',
 	'group',
+	'dereplicate',
 	#'multidiscover',
 	'germlinefilter',
 	'discover',
