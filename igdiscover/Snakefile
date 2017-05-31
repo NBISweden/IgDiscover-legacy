@@ -428,11 +428,14 @@ if config.barcode_length != 0:
 
 else:
 	rule dereplicate:
-		"""Collapse identical sequences with VSEARCH"""
+		"""Collapse identical sequences, remove barcodes"""
 		output: fastagz=PREPROCESSED_READS
 		input: fasta="reads/5-filtered.fasta"
+		params:
+			barcode_length=' --barcode-length={}'.format(config.barcode_length) if config.barcode_length else '',
+			race_arg = ' --trim-g' if config.race_g else ''
 		shell:
-			'time vsearch --derep_fulllength {input.fasta} --strand both --sizeout --output >({GZIP} > {output.fastagz})'
+			'igdiscover dereplicate{params.barcode_length}{params.race_arg} {input.fasta} | {GZIP} > {output.fastagz}'
 
 
 rule copy_dj_database:
