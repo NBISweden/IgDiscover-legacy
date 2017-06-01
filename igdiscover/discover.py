@@ -9,7 +9,7 @@ import hashlib
 import logging
 import sys
 import os.path
-from collections import OrderedDict, namedtuple, Counter
+from collections import namedtuple, Counter
 import multiprocessing
 import random
 from itertools import zip_longest
@@ -83,7 +83,7 @@ def add_arguments(parser):
 	arg('table', help='Table with parsed IgBLAST results')
 
 
-Groupinfo = namedtuple('Groupinfo', 'count unique_D unique_J unique_CDR3')
+Groupinfo = namedtuple('Groupinfo', 'count unique_D unique_J unique_CDR3 unique_barcodes')
 
 SiblingInfo = namedtuple('SiblingInfo', 'sequence requested name group')
 
@@ -181,6 +181,10 @@ class Discoverer:
 				(group.D_covered >= self.d_coverage) &
 		        (group.D_evalue <= self.d_evalue)]
 		return len(set(s for s in g.D_gene if s))
+
+	@staticmethod
+	def count_unique_barcodes(group):
+		return len(set(s for s in group.barcode if s))
 
 	def _collect_siblings(self, gene, group):
 		"""
@@ -298,8 +302,10 @@ class Discoverer:
 				unique_J = len(set(s for s in g.J_gene if s))
 				unique_CDR3 = len(set(s for s in g.CDR3_nt if s))
 				unique_D = self.count_unique_D(g)
+				unique_barcodes = self.count_unique_barcodes(g)
 				count = len(g.index)
-				info[key] = Groupinfo(count=count, unique_D=unique_D, unique_J=unique_J, unique_CDR3=unique_CDR3)
+				info[key] = Groupinfo(count=count, unique_D=unique_D, unique_J=unique_J,
+					unique_CDR3=unique_CDR3, unique_barcodes=unique_barcodes)
 			if gene in self.database:
 				database_diff = edit_distance(sibling, self.database[gene])
 			else:
@@ -336,6 +342,7 @@ class Discoverer:
 				Js=info['window'].unique_J,
 				CDR3s=info['window'].unique_CDR3,
 				exact=info['exact'].count,
+				barcodes_exact=info['exact'].unique_barcodes,
 				Ds_exact=info['exact'].unique_D,
 				Js_exact=info['exact'].unique_J,
 				CDR3s_exact=info['exact'].unique_CDR3,
@@ -372,6 +379,7 @@ Candidate = namedtuple('Candidate', [
 	'Js',
 	'CDR3s',
 	'exact',
+	'barcodes_exact',
 	'Ds_exact',
 	'Js_exact',
 	'CDR3s_exact',
@@ -431,8 +439,9 @@ def main(args):
 		seed = random.randrange(10**6)
 		logger.info('Use --seed=%d to reproduce this run', seed)
 
-	table = read_table(args.table, usecols=('name', 'chain', 'V_gene', 'D_gene', 'J_gene', 'V_nt', 'CDR3_nt',
-		'V_CDR3_start', 'V_SHM', 'J_SHM', 'D_covered', 'D_evalue', 'V_errors', 'D_errors', 'J_errors'))
+	table = read_table(args.table, usecols=('name', 'chain', 'V_gene', 'D_gene', 'J_gene', 'V_nt',
+		'CDR3_nt', 'barcode', 'V_CDR3_start', 'V_SHM', 'J_SHM', 'D_covered', 'D_evalue', 'V_errors',
+		'D_errors', 'J_errors'))
 	table['V_no_CDR3'] = [s[:start] if start != 0 else s for s, start in
 		zip(table.V_nt, table.V_CDR3_start)]
 
