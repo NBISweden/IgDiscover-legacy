@@ -57,7 +57,7 @@ def group_by_cdr3(table, mismatches):
 
 def main(args):
 	columns = ['count', 'V_gene', 'D_gene', 'J_gene', 'CDR3_nt', 'CDR3_aa',
-		'V_errors', 'J_errors', 'barcode', 'VDJ_nt']  # TODO D_errors
+		'V_errors', 'J_errors', 'V_SHM', 'J_SHM', 'barcode', 'VDJ_nt']
 	table = read_table(args.table, usecols=columns)
 	logger.info('Read table with %s rows', len(table))
 	table.insert(6, 'CDR3_length', table['CDR3_nt'].apply(len))
