@@ -27,7 +27,7 @@ def add_arguments(parser):
 	arg('--mismatches', default=1, type=int,
 		help='No. of allowed mismatches between CDR3 sequences. Default: %(default)s')
 	arg('reftable', help='Reference table with parsed and filtered '
-		'IgBLAST results (filtered.tab or filtered.tab)')
+		'IgBLAST results (filtered.tab)')
 	arg('querytable', help='Query table with IgBLAST results (assigned.tab)')
 
 
