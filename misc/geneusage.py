@@ -10,7 +10,7 @@ import pandas as pd
 
 def add_arguments(parser):
 	arg = parser.add_argument
-	arg('--mincount', metavar='N', default=1,
+	arg('--mincount', metavar='N', default=1, type=int,
 		help='Filter out clonotypes with less than N members. Default: %(default)s')
 	arg('--gene', default='V', choices=('V', 'J'),
 		help='Which gene to plot. Choose V or J. Default: %(default)s')
