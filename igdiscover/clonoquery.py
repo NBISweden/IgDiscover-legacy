@@ -55,7 +55,7 @@ def group_by_cdr3(table, mismatches):
 
 def main(args):
 	columns = ['count', 'V_gene', 'D_gene', 'J_gene', 'CDR3_nt', 'CDR3_aa',
-		'V_errors', 'J_errors', 'barcode', 'VDJ_nt']  # TODO D_errors
+		'V_errors', 'J_errors', 'V_SHM', 'J_SHM', 'barcode', 'VDJ_nt']  # TODO D_errors
 	reftable = read_table(args.reftable, usecols=columns)
 	reftable = reftable[columns]  # reorder columns
 	logger.info('Read reference table with %s rows', len(reftable))
