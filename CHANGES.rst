@@ -2,9 +2,15 @@
 Changes
 =======
 
-development version
+v0.8.0 (2017-06-19)
 -------------------
 
+* Add a ``barcodes_exact`` column to the candidates table. It gives the number
+  of unique barcode sequences that were used by the sequences in the set of
+  exact sequences. Also, add a configuration setting ``barcode_consensus``
+  that can turn off consensus taking of barcode groups, which needs to be
+  set to ``false`` for ``barcodes_exact`` to work.
+* Add a ``Ds_exact`` column to candidates table.
 * The pre-processing filtering step no longer reads in the full table of
   IgBLAST assignments, but filters the table piece by piece. Memory usage
   for this step therefore does not depend anymore on the dataset size and
@@ -13,6 +19,9 @@ development version
   the ``igblast`` subcommand. This means that ``igdiscover igblast`` now
   directly outputs a result table (``assigned.tab``). This makes it easier
   to use that subcommand directly instead of only via the workflow.
+* The ``igblast`` subcommand now always runs ``makeblastdb`` by itself
+  and deletes the BLAST database afterwards. This reduces clutter and
+  ensures the database is always up to date.
 
 v0.7.0 (2017-05-04)
 -------------------
