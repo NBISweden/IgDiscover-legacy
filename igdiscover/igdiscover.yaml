@@ -92,14 +92,6 @@ reverse_primers:
 minimum_merged_read_length: 300
 
 
-# When discovering new V genes, ignore whether a J gene has been assigned
-# and also ignore its %SHM.
-#  true: yes, ignore the J
-#  false: do not ignore J assignment, do not ignore its %SHM
-#
-ignore_j: false
-
-
 # Read merging program. Choose either 'pear' or 'flash'.
 # pear merges more reads, but is slower.
 #
@@ -118,12 +110,6 @@ ignore_j: false
 # If you use pear, this is ignored.
 #
 flash_maximum_overlap: 300
-
-
-# When clustering sequences to discover new genes, subsample to this number of
-# sequences. Higher is slower.
-#
-subsample: 1000
 
 
 # Filter out reads that have more than this number of expected errors.
@@ -174,6 +160,26 @@ preprocessing_filter:
   v_coverage: 90   # Match must cover V gene by at least this percentage
   j_coverage: 60   # Match must cover J gene by at least this percentage
   v_evalue: 0.001  # Highest allowed V gene match E-value
+
+
+## Candidate discovery settings
+
+
+# When discovering new V genes, ignore whether a J gene has been assigned
+# and also ignore its %SHM.
+#  true: yes, ignore the J
+#  false: do not ignore J assignment, do not ignore its %SHM
+#
+ignore_j: false
+
+
+# When clustering sequences to discover new genes, subsample to this number of
+# sequences. Higher is slower.
+#
+subsample: 1000
+
+
+## Candidate filtering (germline filtering) settings
 
 
 # Filtering criteria applied to candidate sequences in all iterations except the last.
