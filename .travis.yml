@@ -7,7 +7,7 @@ cache:
 python:
   - "3.4"
   - "3.5"
-  # packages for 3.6 are not yet available on bioconda
+  - "3.6"
 
 before_install:
   - wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
