@@ -508,7 +508,7 @@ else:
 
 rule igdiscover_igblast:
 	output:
-		txtgz="{dir}/igblast.txt.gz",
+		txtgz="{dir}/igblast.txt.gz" if config.debug else [],
 		tabgz="{dir}/assigned.tab.gz",
 		json="{dir}/stats/assigned.json"
 	input:
@@ -520,12 +520,13 @@ rule igdiscover_igblast:
 		penalty=' --penalty {}'.format(config.mismatch_penalty) if config.mismatch_penalty is not None else '',
 		database='{dir}/database',
 		species=' --species={}'.format(config.species) if config.species else '',
-		rename=' --rename {path!r}_'.format(path=os.path.basename(os.getcwd())) if config.rename else ''
+		rename=' --rename {path!r}_'.format(path=os.path.basename(os.getcwd())) if config.rename else '',
+		raw=' --raw={dir}/igblast.txt.gz' if config.debug else ''
 	log: '{dir}/igblast.log'
 	threads: 16
 	shell:
 		"time igdiscover igblast{params.penalty}{params.rename} --threads={threads}"
-		"{params.species} --stats={output.json} --raw={output.txtgz} {params.database} {input.fastagz} | "
+		"{params.species} --stats={output.json}{params.raw} {params.database} {input.fastagz} | "
 		"{GZIP} 2>&1 > {output.tabgz} | tee {log} >&2"
 
 

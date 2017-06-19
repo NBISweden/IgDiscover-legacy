@@ -8,6 +8,7 @@ rm -rf testrun
 mkdir testrun
 igdiscover init --db=testdata/db --reads=testdata/reads.1.fastq.gz testrun/paired
 cp -p testdata/igdiscover.yaml testrun/paired/
+igdiscover config --file=testrun/paired/igdiscover.yaml --set debug true
 cd testrun/paired
 time igdiscover run -p
 cd ../..
