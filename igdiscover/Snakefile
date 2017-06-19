@@ -611,6 +611,7 @@ rule igdiscover_discover:
 	threads: 6
 	shell:
 		"time igdiscover discover -j {threads}{params.seed}{params.ignore_j}{params.exact_copies} "
+		"--d-coverage={config.d_coverage} "
 		"--subsample={config.subsample} --database={input.v_reference} "
 		"{input.tab} > {output.tab}"
 

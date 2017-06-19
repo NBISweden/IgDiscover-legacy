@@ -34,6 +34,7 @@ class Config:
 		self.barcode_consensus = True
 		self.iterations = 3
 		self.ignore_j = False
+		self.d_coverage = 70
 		self.subsample = 1000
 		self.stranded = False
 		self.forward_primers = None
@@ -63,9 +64,11 @@ class Config:
 				del new_config[key]
 		self.__dict__.update(new_config)
 
-	def make_compatible(self, config):
+	@staticmethod
+	def make_compatible(config):
 		"""
-		Convert old-style configuration to new style. Raise ConfigurationError if configuration is invalid.
+		Convert old-style configuration to new style.
+		Raise ConfigurationError if configuration is invalid.
 		Return updated config dict.
 		"""
 		if 'barcode_length' in config:

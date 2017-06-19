@@ -164,7 +164,6 @@ preprocessing_filter:
 
 ## Candidate discovery settings
 
-
 # When discovering new V genes, ignore whether a J gene has been assigned
 # and also ignore its %SHM.
 #  true: yes, ignore the J
@@ -172,11 +171,15 @@ preprocessing_filter:
 #
 ignore_j: false
 
-
 # When clustering sequences to discover new genes, subsample to this number of
 # sequences. Higher is slower.
 #
 subsample: 1000
+
+# When computing the Ds_exact column, consider only D hits that
+# cover the reference D gene sequence by at least this percentage.
+#
+d_coverage: 70
 
 
 ## Candidate filtering (germline filtering) settings

@@ -11,6 +11,7 @@ v0.8.0 (2017-06-19)
   that can turn off consensus taking of barcode groups, which needs to be
   set to ``false`` for ``barcodes_exact`` to work.
 * Add a ``Ds_exact`` column to candidates table.
+* Add a ``D_coverage`` configuration option.
 * The pre-processing filtering step no longer reads in the full table of
   IgBLAST assignments, but filters the table piece by piece. Memory usage
   for this step therefore does not depend anymore on the dataset size and
