@@ -20,7 +20,7 @@ v0.7.0 (2017-05-04)
 * Add an “allele ratio” criterion to the germline filter to further reduce
   the number of false positives. The filter is activated by default and can
   be configured through the ``allele_ratio`` setting in the configuration
-  file. :ref:`See the documentation for how it works <allele-ratio>.`
+  file. :ref:`See the documentation for how it works <allele-ratio>`.
 * Ignore the CDR3-encoding bases whenever comparing two V gene sequences.
 * Avoid finding 5'-truncated V genes by extending found hits towards the
   5' end.
