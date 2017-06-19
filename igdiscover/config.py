@@ -32,7 +32,7 @@ class Config:
 		self.mismatch_penalty = None
 		self.barcode_length = 0
 		self.barcode_consensus = True
-		self.iterations = 3
+		self.iterations = 1
 		self.ignore_j = False
 		self.d_coverage = 70
 		self.subsample = 1000

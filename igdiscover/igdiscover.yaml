@@ -6,7 +6,10 @@ library_name:
 # How many discovery iterations to run.
 # If 0, no updated database is created, but expression
 # profiles are still computed.
-iterations: 3
+# Unless working with a highly incomplete starting database,
+# a single iteration is usually sufficient.
+#
+iterations: 1
 
 
 ## Barcoding settings
