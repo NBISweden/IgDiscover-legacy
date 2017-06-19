@@ -6,11 +6,9 @@ import logging
 import os
 import os.path
 import sys
-import shutil
 import subprocess
 import pkg_resources
 from sqt import SequenceReader
-from .utils import FastaValidationError
 from .config import Config
 
 try:
@@ -34,8 +32,6 @@ def add_arguments(parser):
 	group.add_argument('--reads1', default=None,
 		help='First paired-end read file. The second is found automatically. '
 			'Must be a .fastq.gz file. If not given, a dialog is shown.')
-	parser.add_argument('--library-name', metavar='NAME', default=None,
-		help='Name of the library. Sets library_name in the configuration file.')
 	parser.add_argument('directory', help='New analysis directory to create')
 
 
@@ -316,18 +312,10 @@ def main(args):
 			sys.exit(1)
 		create_symlink(reads1, args.directory, target)
 
-	if args.library_name:
-		library_name = args.library_name
-	else:
-		library_name = os.path.basename(os.path.normpath(args.directory))
-
 	# Write the configuration file
 	configuration = pkg_resources.resource_string('igdiscover', Config.DEFAULT_PATH).decode()
 	with open(os.path.join(args.directory, Config.DEFAULT_PATH), 'w') as f:
-		for line in configuration.splitlines(keepends=True):
-			if line.startswith('library_name:'):
-				line = 'library_name: ' + library_name + '\n'
-			f.write(line)
+		f.write(configuration)
 
 	# Create database files
 	database_dir = os.path.join(args.directory, 'database')

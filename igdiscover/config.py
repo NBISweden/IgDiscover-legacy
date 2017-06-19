@@ -51,7 +51,6 @@ class Config:
 			whitelist=True, cluster_size=100, differences=0, allow_stop=False, cross_mapping_ratio=0.02,
 			allele_ratio=0.1)
 		self.cdr3_location = [-80, -60]
-		self.library_name = os.path.basename(os.getcwd())
 
 		self.read_from(file)
 

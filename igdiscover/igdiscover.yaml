@@ -1,7 +1,5 @@
 ## IgDiscover configuration
 
-library_name:
-
 
 # How many discovery iterations to run.
 # If 0, no updated database is created, but expression

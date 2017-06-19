@@ -23,6 +23,9 @@ v0.8.0 (2017-06-19)
 * The ``igblast`` subcommand now always runs ``makeblastdb`` by itself
   and deletes the BLAST database afterwards. This reduces clutter and
   ensures the database is always up to date.
+* Remove the ``library_name`` configuration setting. Instead, the
+  ``library_name`` is now always the same as the name of analysis
+  directory.
 
 v0.7.0 (2017-05-04)
 -------------------

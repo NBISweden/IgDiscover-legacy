@@ -520,7 +520,7 @@ rule igdiscover_igblast:
 		penalty=' --penalty {}'.format(config.mismatch_penalty) if config.mismatch_penalty is not None else '',
 		database='{dir}/database',
 		species=' --species={}'.format(config.species) if config.species else '',
-		rename=' --rename {config.library_name!r}_'.format(config=config) if config.rename else ''
+		rename=' --rename {path!r}_'.format(path=os.path.basename(os.getcwd())) if config.rename else ''
 	log: '{dir}/igblast.log'
 	threads: 16
 	shell:
