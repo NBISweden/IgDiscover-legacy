@@ -37,3 +37,36 @@ that the V_errors column has. In newer pipeline versions, the index is
 
 If the column wasn’t 21, then replace the ``$21`` appropriately. The part
 where it says ``NR == 1`` ensures that the column headings are also printed.
+
+
+Extra configuration settings
+----------------------------
+
+Some configuration settings are not documented in the default ``igdiscover.yaml`` file
+since they rarely need to be changed.
+
+::
+
+    # Leave empty or choose a species name supported by IgBLAST:
+    # human, mouse, rabbit, rat, rhesus_monkey
+    # This setting is not used anywhere except that it is passed
+    # to IgBLAST. Since we provide IgBLAST with our own gene
+    # databases, it seems this has no effect.
+    species:
+
+::
+
+    # Filter out reads that have more than this number of expected errors.
+    # Set to null to disable.
+    #
+    #maximum_expected_errors: null
+    #maximum_expected_errors: 5
+
+::
+
+    # Which program to use for computing multiple alignments. This is used for
+    # computing consens sequences.
+    # Choose 'mafft', 'clustalo', 'muscle' or 'muscle-fast'.
+    # 'muscle-fast' runs muscle with parameters "-maxiters 1 -diags".
+    #
+    #multialign_program: muscle-fast
