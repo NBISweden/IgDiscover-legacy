@@ -2,7 +2,7 @@
 Changes
 =======
 
-v0.8.0 (2017-06-19)
+v0.8.0 (2017-06-20)
 -------------------
 
 * Add a ``barcodes_exact`` column to the candidates table. It gives the number
