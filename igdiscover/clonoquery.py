@@ -17,7 +17,6 @@ from collections import defaultdict
 from sqt.align import hamming_distance
 
 from .table import read_table
-from .cluster import hamming_single_linkage
 
 logger = logging.getLogger(__name__)
 
@@ -29,28 +28,6 @@ def add_arguments(parser):
 	arg('reftable', help='Reference table with parsed and filtered '
 		'IgBLAST results (filtered.tab)')
 	arg('querytable', help='Query table with IgBLAST results (assigned.tab)')
-
-
-def group_by_cdr3(table, mismatches):
-	"""
-	Cluster the rows of the table by Hamming distance between
-	their CDR3 sequences. Yield (index, group) tuples similar 
-	to .groupby().
-	"""
-	# Cluster all unique CDR3s by Hamming distance
-	sequences = list(set(table.CDR3_nt))
-	clusters = hamming_single_linkage(sequences, mismatches)
-
-	# Create dict that maps CDR3 sequences to a numeric cluster id
-	cluster_ids = dict()
-	for cluster_id, cdr3s in enumerate(clusters):
-		for cdr3 in cdr3s:
-			cluster_ids[cdr3] = cluster_id
-
-	# Assign cluster id to each row
-	table['cluster_id'] = table['CDR3_nt'].apply(lambda cdr3: cluster_ids[cdr3])
-	for index, group in table.groupby('cluster_id'):
-		yield group.drop('cluster_id', axis=1)
 
 
 def main(args):
