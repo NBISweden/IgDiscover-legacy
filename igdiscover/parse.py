@@ -460,6 +460,7 @@ class IgBlastParser:
 		'# V-(D)-J junction details',
 		'# Alignment summary',
 		'# Hit table',
+		'Total queries = ',
 	])
 
 	def __init__(self, sequences, igblast_lines):
@@ -475,7 +476,8 @@ class IgBlastParser:
 			# 'IGBLASTN 2.2.29+': IgBLAST 1.4.0
 			# 'IGBLASTN 2.3.1+': IgBLAST 1.5.0
 			# 'IGBLASTN 2.5.1+': IgBLAST 1.6.1
-			assert record_header == '# IGBLASTN 2.2.29+' or record_header == '# IGBLASTN 2.3.1+'
+			# 'IGBLASTN 2.6.1+': IgBLAST 1.7.0
+			assert record_header in {'# IGBLASTN 2.2.29+', '# IGBLASTN 2.3.1+', '# IGBLASTN 2.6.1+'}
 			yield self._parse_record(record_lines, fasta_record)
 
 	def _parse_record(self, record_lines, fasta_record):
@@ -538,6 +540,8 @@ class IgBlastParser:
 					assert gene in ('V', 'D', 'J')
 					assert gene not in hits, "Two hits for same gene found"
 					hits[gene] = hit
+			elif section.startswith('Total queries = '):
+				continue
 
 		assert fasta_record.name == query_name
 		full_sequence = fasta_record.sequence.upper()
