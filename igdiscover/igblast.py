@@ -174,7 +174,7 @@ def main(args):
 		fasta = stack.enter_context(SequenceReader(args.fasta))
 		chunks = chunked(islice(fasta, 0, args.limit), chunksize=1000)
 		runner = Runner(tmpdir, args.species, args.penalty, v_database)
-		pool = stack.enter_context(multiprocessing.Pool(args.threads))
+		pool = stack.enter_context(multiprocessing.Pool(args.threads) if args.threads > 1 else SerialPool())
 		n = 0  # number of records processed so far
 		for igblast_output, igblast_records in pool.imap(runner, chunks, chunksize=1):
 			if raw_output:
