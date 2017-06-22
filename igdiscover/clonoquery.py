@@ -17,17 +17,35 @@ from collections import defaultdict
 from sqt.align import hamming_distance
 
 from .table import read_table
+from .utils import slice_arg
 
 logger = logging.getLogger(__name__)
 
 
 def add_arguments(parser):
 	arg = parser.add_argument
+	arg('--cdr3-core', default=None,
+		type=slice_arg, metavar='START:END',
+		help='START:END defines the non-junction region of CDR3 '
+			'sequences. Use negative numbers for END to count '
+			'from the end. Regions before and after are considered to '
+			'be junction sequence, and for two CDR3s to be considered '
+			'similar, at least one of the junctions must be identical. '
+			'Default: no junction region.')
 	arg('--mismatches', default=1, type=int,
 		help='No. of allowed mismatches between CDR3 sequences. Default: %(default)s')
 	arg('reftable', help='Reference table with parsed and filtered '
 		'IgBLAST results (filtered.tab)')
-	arg('querytable', help='Query table with IgBLAST results (assigned.tab)')
+	arg('querytable', help='Query table with IgBLAST results (assigned.tab or filtered.tab)')
+
+
+def is_similar_with_junction(s, t, mismatches, cdr3_core):
+	distance_ok = hamming_distance(s, t) <= mismatches
+	if cdr3_core is None:
+		return distance_ok
+	return distance_ok and (
+			(s[:cdr3_core.start] == t[:cdr3_core.start]) or
+			(s[cdr3_core.stop:] == t[cdr3_core.stop:]))
 
 
 def main(args):
@@ -62,6 +80,6 @@ def main(args):
 			print('# query: {}'.format(query_row.name))
 			cdr3 = query_row.CDR3_nt
 			is_similar = [
-				hamming_distance(cdr3, r.CDR3_nt) <= args.mismatches for r in vjlen_group.itertuples()]
+				is_similar_with_junction(cdr3, r.CDR3_nt, args.mismatches, args.cdr3_core) for r in vjlen_group.itertuples()]
 			similar_group = vjlen_group.loc[is_similar, :]
 			print(similar_group.to_csv(sep='\t', header=False, index=False))
