@@ -74,12 +74,20 @@ def main(args):
 		if clonotype not in query_clonotypes:
 			continue
 		if print_header:
-			print(vjlen_group.head(0).to_csv(sep='\t', header=True, index=False))
+			print('keep?', vjlen_group.head(0).to_csv(sep='\t', header=True, index=False), sep='\t')
 			print_header = False
 		for query_row in query_clonotypes[clonotype]:
 			print('# query: {}'.format(query_row.name))
 			cdr3 = query_row.CDR3_nt
 			is_similar = [
-				is_similar_with_junction(cdr3, r.CDR3_nt, args.mismatches, args.cdr3_core) for r in vjlen_group.itertuples()]
+				hamming_distance(cdr3, r.CDR3_nt) <= args.mismatches for r in vjlen_group.itertuples()]
 			similar_group = vjlen_group.loc[is_similar, :]
+			if args.cdr3_core is not None:
+				cdr3_core = args.cdr3_core
+				cdr3_head = cdr3[:cdr3_core.start]
+				cdr3_tail = cdr3[cdr3_core.stop:]
+				similar_group = similar_group.copy()
+				similar_group.insert(0, 'junction_ident', [
+					int((cdr3_head == r.CDR3_nt[:cdr3_core.start]) or
+					(cdr3_tail == r.CDR3_nt[cdr3_core.stop:])) for r in similar_group.itertuples()])
 			print(similar_group.to_csv(sep='\t', header=False, index=False))
