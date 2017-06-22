@@ -125,9 +125,37 @@ class Trie:
 			if self.name is not None:
 				yield self.name
 			return
-		for c in list('ACGT'):
-			if c != s[0] and mismatches == 0:
-				continue
-			subtrie = getattr(self, c)
+
+		# The code below is an optimized version of the following:
+		#
+		# for c in list('ACGT'):
+		#   if c != s[0] and mismatches == 0:
+		#     continue
+		#   subtrie = getattr(self, c)
+		#   if subtrie is not None:
+		#     yield from subtrie.find_all_similar(s[1:], mismatches - int(c != s[0]))
+
+		if mismatches > 0:
+			s0 = s[0]
+			s1 = s[1:]
+			subtrie = self.A
 			if subtrie is not None:
-				yield from subtrie.find_all_similar(s[1:], mismatches - int(c != s[0]))
+				yield from subtrie.find_all_similar(s1, mismatches - (int(s0 != 'A')))
+			subtrie = self.C
+			if subtrie is not None:
+				yield from subtrie.find_all_similar(s1, mismatches - (int(s0 != 'C')))
+			subtrie = self.G
+			if subtrie is not None:
+				yield from subtrie.find_all_similar(s1, mismatches - (int(s0 != 'G')))
+			subtrie = self.T
+			if subtrie is not None:
+				yield from subtrie.find_all_similar(s1, mismatches - (int(s0 != 'T')))
+		else:
+			subtrie = self
+			for c in s:
+				subtrie = getattr(subtrie, c)
+				if subtrie is None:
+					break
+			else:
+				if subtrie.name is not None:
+					yield subtrie.name
