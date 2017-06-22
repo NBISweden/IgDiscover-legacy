@@ -2,6 +2,7 @@ from collections import OrderedDict, defaultdict
 import pandas as pd
 from scipy.spatial import distance
 from scipy.cluster import hierarchy
+from sqt.align import hamming_distance
 from .utils import distances
 from .trie import Trie
 
@@ -109,7 +110,7 @@ class Graph:
 		return components
 
 
-def hamming_single_linkage(strings, mismatches):
+def hamming_single_linkage(strings, mismatches, use_trie=False):
 	"""
 	Cluster a set of strings by their hamming distance: Strings with
 	a distance of at most 'mismatches' will be put into the same cluster.
@@ -123,13 +124,20 @@ def hamming_single_linkage(strings, mismatches):
 	for s in strings:
 		string_lists[len(s)].append(s)
 	for strings in string_lists.values():
-		trie = Trie()
-		for s in strings:
-			trie.add(s)
 		graph = Graph(strings)
-		for s in strings:
-			for neighbor in trie.find_all_similar(s, mismatches):
-				if neighbor != s:
-					graph.add_edge(s, neighbor)
+		if use_trie:
+			trie = Trie()
+			for s in strings:
+				trie.add(s)
+			for s in strings:
+				for neighbor in trie.find_all_similar(s, mismatches):
+					if neighbor != s:
+						graph.add_edge(s, neighbor)
+		else:
+			for i, s in enumerate(strings):
+				for j, t in enumerate(strings[i + 1:]):
+					if hamming_distance(s, t) <= mismatches:
+						graph.add_edge(s, t)
+
 		components.extend(graph.connected_components())
 	return components
