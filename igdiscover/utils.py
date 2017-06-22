@@ -319,7 +319,15 @@ def slice_arg(s):
 
 	>>> slice_arg('2:-3')
 	slice(2, -3, None)
+
+	>> slice_arg(':-3')
+	slice(None, -3, None)
+
+	>> slice_arg('2:')
+	slice(2, None, None)
 	"""
 
 	start, end = s.split(':')
-	return slice(int(start), int(end))
+	start = None if start == '' else int(start)
+	end = None if end == '' else int(end)
+	return slice(start, end)
