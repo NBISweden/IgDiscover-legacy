@@ -166,6 +166,10 @@ class Merger:
 		items.append(item)
 		self._items = items
 
+	def extend(self, iterable):
+		for i in iterable:
+			self.add(i)
+
 	def __iter__(self):
 		if self._items and hasattr(self._items, 'name'):
 			yield from sorted(self._items, key=lambda x: x.name)
@@ -331,3 +335,11 @@ def slice_arg(s):
 	start = None if start == '' else int(start)
 	end = None if end == '' else int(end)
 	return slice(start, end)
+
+
+def is_same_gene(name1: str, name2: str):
+	"""
+	Compare gene names to find out whether they are alleles of each other.
+	Both names must have a '*' in them
+	"""
+	return '*' in name1 and '*' in name2 and name1.split('*')[0] == name2.split('*')[0]

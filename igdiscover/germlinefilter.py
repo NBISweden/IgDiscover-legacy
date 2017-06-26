@@ -30,7 +30,7 @@ import pandas as pd
 from sqt import FastaReader
 from sqt.align import edit_distance
 
-from .utils import UniqueNamer, Merger
+from .utils import UniqueNamer, Merger, is_same_gene
 
 logger = logging.getLogger(__name__)
 
@@ -90,14 +90,6 @@ class SequenceMerger(Merger):
 		self._cross_mapping_ratio = cross_mapping_ratio
 		self._allele_ratio = allele_ratio
 
-	@staticmethod
-	def is_same_gene(name1: str, name2: str):
-		"""
-		Compare gene names to find out whether they are alleles of each other.
-		Both names must have a '*' in them
-		"""
-		return '*' in name1 and '*' in name2 and name1.split('*')[0] == name2.split('*')[0]
-
 	def merged(self, s: SequenceInfo, t: SequenceInfo):
 		"""
 		Given two SequenceInfo objects, decide whether to discard one of them and which one.
@@ -149,7 +141,7 @@ class SequenceMerger(Merger):
 		# this uses sequence names to decide whether two genes can be
 		# alleles of each other and the ratio is between the CDR3s_exact
 		# values
-		if self._allele_ratio and self.is_same_gene(s.name, t.name):
+		if self._allele_ratio and is_same_gene(s.name, t.name):
 			for u, v in [(s, t), (t, s)]:
 				ratio = u.CDR3s_exact / v.CDR3s_exact
 				if ratio < self._allele_ratio:
