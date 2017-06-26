@@ -39,6 +39,7 @@ DISCOVERY_TARGETS = [
 	'candidates.tab',
 	'new_V_germline.fasta',
 	'new_V_pregermline.fasta',
+	'new_J.fasta',
 ]
 TARGETS = expand('iteration-{nr:02d}/{path}', nr=range(1, config.iterations+1), path=ITERATION_TARGETS + DISCOVERY_TARGETS)
 TARGETS += [
@@ -649,6 +650,24 @@ rule igdiscover_germlinefilter:
 		criteria += ['--cross-mapping-ratio={}'.format(conf['cross_mapping_ratio'])]
 		criteria = ' '.join(criteria)
 		shell("igdiscover germlinefilter {criteria} --fasta={output.fasta} {input.tab} > {output.tab}")
+
+
+rule igdiscover_discover_j:
+	"""Discover potential new J gene sequences"""
+	output:
+		tab="{dir}/new_J.tab",
+		fasta="{dir}/new_J.fasta",
+	input:
+		j_reference="{dir}/database/J.fasta",
+		tab="{dir}/filtered.tab.gz",
+	params:
+		allele_ratio='--allele-ratio={}'.format(config.j_discovery['allele_ratio']),
+		extra=' --cross-mapping-ratio={}'.format(config.j_discovery['cross_mapping_ratio']) if config.j_discovery['cross_mapping_ratio'] else ''
+	shell:
+		"time igdiscover discoverj {params.allele_ratio}{params.extra} "
+		"--database={input.j_reference} "
+		"--fasta={output.fasta} "
+		"{input.tab} > {output.tab}"
 
 
 rule stats_correlation_V_J:

@@ -164,7 +164,7 @@ subsample: 1000
 d_coverage: 70
 
 
-## Candidate filtering (germline filtering) settings
+## V candidate filtering (germline filtering) settings
 
 
 # Filtering criteria applied to candidate sequences in all iterations except the last.
@@ -194,3 +194,10 @@ germline_filter:
   allow_stop: false    # Whether to allow non-productive sequences containing stop codons
   cross_mapping_ratio: 0.02  # Threshold for removal of cross-mapping artifacts (set to 0 to disable)
   allele_ratio: 0.1    # Required minimum ratio between alleles of a single gene
+
+
+## J discovery settings
+
+j_discovery:
+  allele_ratio: 0.1     # Required minimum ratio between alleles of a single gene
+  cross_mapping_ratio:  # Threshold for removal of cross-mapping artifacts.
