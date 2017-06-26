@@ -16,9 +16,6 @@ try:
 except FileNotFoundError as e:
 	sys.exit("Pipeline configuration file {!r} not found. Please create it!".format(e.filename))
 
-# This command is run before every shell command and helps to catch errors early
-shell.prefix("set -euo pipefail;")
-
 # Use pigz (parallel gzip) if available
 GZIP = 'pigz' if shutil.which('pigz') is not None else 'gzip'
 
