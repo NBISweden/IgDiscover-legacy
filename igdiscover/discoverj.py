@@ -4,6 +4,9 @@ Discover D and J genes
 The most frequent D/J sequences are considered candidates.
 
 For J genes, candidate sequences are merged if they overlap each other.
+
+The result table is written to standard output. Use --fasta to also
+generate FASTA output.
 """
 import logging
 import pandas as pd
@@ -13,7 +16,6 @@ from .utils import Merger, merge_overlapping, unique_name, is_same_gene
 from .table import read_table
 
 logger = logging.getLogger(__name__)
-
 
 MIN_COUNT = 100
 MINIMUM_CANDIDATE_LENGTH = 5
@@ -30,6 +32,7 @@ def add_arguments(parser):
 		help='Which gene category to discover. Default: %(default)s')
 	arg('--allele-ratio', type=float, metavar='RATIO', default=0.1,
 		help='Required allele ratio. Works only for genes named "NAME*ALLELE". Default: %(default)s')
+	arg('--fasta', help='Write discovered sequences to FASTA file')
 	arg('table', help='Table with parsed and filtered IgBLAST results')
 
 
@@ -200,10 +203,11 @@ def main(args):
 			else:
 				record.name = unique_name(closest.name, record.sequence)
 		# Merge by allele ratio
-		arm = AlleleRatioMerger(args.allele_ratio)
-		arm.extend(records)
-		records = list(arm)
-		logger.info('After filtering by allele ratio, %d candidates remain', len(records))
+		if args.allele_ratio:
+			arm = AlleleRatioMerger(args.allele_ratio)
+			arm.extend(records)
+			records = list(arm)
+			logger.info('After filtering by allele ratio, %d candidates remain', len(records))
 	else:
 		for record in records:
 			record.name = unique_name(args.gene, record.sequence)
@@ -212,4 +216,9 @@ def main(args):
 	records = [r for r in records if r.count > 1]
 
 	print_table(records, other_gene)
+	if args.fasta:
+		with open(args.fasta, 'w') as f:
+			for record in sorted(records, key=lambda r: r.name):
+				print('>{}\n{}'.format(record.name, record.sequence), file=f)
+
 	logger.info('Wrote %d genes', len(records))
