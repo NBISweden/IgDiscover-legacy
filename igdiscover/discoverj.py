@@ -32,6 +32,8 @@ def add_arguments(parser):
 		help='Which gene category to discover. Default: %(default)s')
 	arg('--allele-ratio', type=float, metavar='RATIO', default=0.1,
 		help='Required allele ratio. Works only for genes named "NAME*ALLELE". Default: %(default)s')
+	arg('--cross-mapping-ratio', type=float, metavar='RATIO', default=None,
+		help='Ratio for detection of cross-mapping artifacts. Default: %(default)s')
 	arg('--fasta', help='Write discovered sequences to FASTA file')
 	arg('table', help='Table with parsed and filtered IgBLAST results')
 
@@ -60,8 +62,9 @@ class OverlappingSequenceMerger(Merger):
 	"""
 	Merge sequences that overlap
 	"""
-	def __init__(self):
+	def __init__(self, cross_mapping_ratio=None):
 		super().__init__()
+		self._cross_mapping_ratio = cross_mapping_ratio
 
 	def merged(self, s, t):
 		"""
@@ -71,6 +74,7 @@ class OverlappingSequenceMerger(Merger):
 		m = merge_overlapping(s.sequence, t.sequence)
 		if m is not None:
 			return SequenceInfo(s.name, m, max_count=t.max_count + s.max_count)
+
 		return None
 
 
@@ -78,9 +82,10 @@ class AlleleRatioMerger(Merger):
 	"""
 	Discard sequences with too low allele ratio
 	"""
-	def __init__(self, allele_ratio):
+	def __init__(self, allele_ratio, cross_mapping_ratio):
 		super().__init__()
 		self._allele_ratio = allele_ratio
+		self._cross_mapping_ratio = cross_mapping_ratio
 
 	def merged(self, s, t):
 		"""
@@ -93,12 +98,36 @@ class AlleleRatioMerger(Merger):
 		# this uses sequence names to decide whether two genes can be
 		# alleles of each other and the ratio is between the CDR3s_exact
 		# values
-		if is_same_gene(s.name, t.name):
+		if self._allele_ratio and is_same_gene(s.name, t.name):
 			for u, v in [(s, t), (t, s)]:
 				ratio = len(set(u.cdr3s)) / len(set(v.cdr3s))
 				if ratio < self._allele_ratio:
 					# logger.info('Allele ratio %.4f too low for %r compared to %r',
 					# 	ratio, u.name, v.name)
+					return v
+
+		if self._cross_mapping_ratio:
+			# When checking for cross mapping, ignore overhanging bases in the 5' end.
+			# Example:
+			# ---ACTACGACTA...
+			# XXX|||||X||||
+			# ATTACTACTACTA...
+			if len(t.sequence) < len(s.sequence):
+				t, s = s, t  # s is now the shorter sequence
+			t_seq = t.sequence[len(t.sequence) - len(s.sequence):]
+			s_seq = s.sequence
+			dist = edit_distance(s_seq, t_seq, 1)
+			if dist > 1:
+				return None
+			total_count = (s.count + t.count)
+			if total_count == 0:
+				return None
+			for u, v in [(s, t), (t, s)]:
+				ratio = u.count / total_count
+				if ratio < self._cross_mapping_ratio:
+					# u is probably a cross-mapping artifact of the higher-expressed v
+					logger.info('%r is a cross-mapping artifact of %r (ratio %.4f)',
+						u.name, v.name, ratio)
 					return v
 
 		return None
@@ -203,14 +232,15 @@ def main(args):
 			else:
 				record.name = unique_name(closest.name, record.sequence)
 		# Merge by allele ratio
-		if args.allele_ratio:
-			arm = AlleleRatioMerger(args.allele_ratio)
-			arm.extend(records)
-			records = list(arm)
-			logger.info('After filtering by allele ratio, %d candidates remain', len(records))
 	else:
 		for record in records:
 			record.name = unique_name(args.gene, record.sequence)
+
+	if args.allele_ratio or args.cross_mapping_ratio:
+		arm = AlleleRatioMerger(args.allele_ratio, args.cross_mapping_ratio)
+		arm.extend(records)
+		records = list(arm)
+		logger.info('After filtering by allele ratio and/or cross-mapping ratio, %d candidates remain', len(records))
 
 	records = sorted(records, key=lambda r: (r.count, r.sequence), reverse=True)
 	records = [r for r in records if r.count > 1]
