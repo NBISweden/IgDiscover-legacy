@@ -436,27 +436,27 @@ else:
 			'igdiscover dereplicate{params.barcode_length}{params.race_arg} {input.fasta} | {GZIP} > {output.fastagz}'
 
 
-rule copy_dj_database:
-	"""Copy D and J gene database into the iteration folder"""
+rule copy_d_database:
+	"""Copy D gene database into the iteration folder"""
 	output:
-		fasta="{base}/database/{gene,[DJ]}.fasta"
+		fasta="{base}/database/D.fasta"
+	input:
+		fasta="database/D.fasta"
+	shell:
+		"cp -p {input} {output}"
+
+
+rule vj_database_iteration_1:
+	"""Copy original V or J gene database into the iteration 1 folder"""
+	output:
+		fasta="iteration-01/database/{gene,[VJ]}.fasta"
 	input:
 		fasta="database/{gene}.fasta"
 	shell:
 		"cp -p {input} {output}"
 
 
-rule v_database_iteration_1:
-	"""Copy original V gene database into the iteration 1 folder"""
-	output:
-		fasta="iteration-01/database/V.fasta"
-	input:
-		fasta="database/V.fasta"
-	shell:
-		"cp -p {input} {output}"
-
-
-def ensure_fasta_not_empty(path):
+def ensure_fasta_not_empty(path, gene):
 	with FastaReader(path) as fr:
 		for record in fr:
 			has_records = True
@@ -465,11 +465,11 @@ def ensure_fasta_not_empty(path):
 			has_records = False
 	if not has_records:
 		print(
-			'ERROR: No V genes were discovered in this iteration (file '
-			'{!r} is empty)! Cannot continue.\n'
+			'ERROR: No {gene} genes were discovered in this iteration (file '
+			'{path!r} is empty)! Cannot continue.\n'
 			'Check whether the starting database is of the correct chain type '
 			'(heavy, light lambda, light kappa). It needs to match the type '
-			'of sequences you analyze.'.format(path), file=sys.stderr)
+			'of sequences you analyze.'.format(gene=gene, path=path), file=sys.stderr)
 		sys.exit(1)
 
 
@@ -480,17 +480,28 @@ for i in range(2, config.iterations + 1):
 		input:
 			fasta='iteration-{nr:02d}/new_V_pregermline.fasta'.format(nr=i-1)
 		run:
-			ensure_fasta_not_empty(input.fasta)
+			ensure_fasta_not_empty(input.fasta, 'V')
 			shell("cp -p {input.fasta} {output.fasta}")
 
+	rule:
+		output:
+			fasta='iteration-{nr:02d}/database/J.fasta'.format(nr=i)
+		input:
+			fasta='iteration-{nr:02d}/new_J.fasta'.format(nr=i-1)
+		run:
+			ensure_fasta_not_empty(input.fasta, 'J')
+			shell("cp -p {input.fasta} {output.fasta}")
+
+
+# Rules for last iteration
 
 if config.iterations == 0:
 	# Copy over the input database (would be nice to avoid this)
 	rule copy_database:
 		output:
-			fasta='final/database/V.fasta'
+			fasta='final/database/{gene,[VJ]}.fasta'
 		input:
-			fasta='database/V.fasta'
+			fasta='database/{gene}.fasta'
 		shell:
 			"cp -p {input.fasta} {output.fasta}"
 else:
@@ -500,7 +511,16 @@ else:
 		input:
 			fasta='iteration-{nr:02d}/new_V_germline.fasta'.format(nr=config.iterations)
 		run:
-			ensure_fasta_not_empty(input.fasta)
+			ensure_fasta_not_empty(input.fasta, 'V')
+			shell("cp -p {input.fasta} {output.fasta}")
+
+	rule copy_final_j_database:
+		output:
+			fasta='final/database/J.fasta'
+		input:
+			fasta='iteration-{nr:02d}/new_J.fasta'.format(nr=config.iterations)
+		run:
+			ensure_fasta_not_empty(input.fasta, 'J')
 			shell("cp -p {input.fasta} {output.fasta}")
 
 
