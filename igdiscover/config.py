@@ -101,7 +101,7 @@ class Config:
 def add_arguments(parser):
 	arg = parser.add_argument
 	arg('--set', nargs=2, default=[], metavar=('KEY', 'VALUE'), action='append',
-		help='Set KEY to VALUE.')
+		help='Set KEY to VALUE. Use KEY.SUBKEY[.SUBSUBKEY...] for nested keys.')
 	arg('--file', default=Config.DEFAULT_PATH,
 		help='Configuration file to modify. Default: igdiscover.yaml in current directory.')
 
@@ -112,11 +112,17 @@ def main(args):
 			config = ruamel.yaml.load(f, ruamel.yaml.RoundTripLoader)
 		for k, v in args.set:
 			v = ruamel.yaml.safe_load(v)
-			config[k] = v
+			# config[k] = v
+			item = config
+			# allow nested keys
+			keys = k.split('.')
+			for i in keys[:-1]:
+				item = item[i]
+			item[keys[-1]] = v
 		tmpfile = args.file + '.tmp'
 		with open(tmpfile, 'w') as f:
 			print(ruamel.yaml.dump(config, Dumper=ruamel.yaml.RoundTripDumper), end='', file=f)
-		os.rename(args.file + '.tmp', args.file)
+		os.rename(tmpfile, args.file)
 	else:
 		with open(args.file) as f:
 			config = ruamel.yaml.safe_load(f)
