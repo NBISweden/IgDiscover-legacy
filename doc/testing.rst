@@ -8,13 +8,13 @@ After installing IgDiscover, you should run it once on a small test data that we
 provide, both to test your installation and to familiarize yourself with
 running the program.
 
-1. Download und unpack `the test data set (version 0.3)`_. To do this
+1. Download und unpack `the test data set (version 0.4)`_. To do this
    from the command-line, use these commands::
 
-	wget https://bitbucket.org/igdiscover/testdata/get/0.3.tar.gz
-	tar xvf 0.3.tar.gz
+	wget https://bitbucket.org/igdiscover/testdata/get/v0.4.tar.gz
+	tar xvf v0.4.tar.gz
 
-.. _the test data set (version 0.3): https://bitbucket.org/igdiscover/testdata/get/0.3.tar.gz
+.. _the test data set (version 0.4): https://bitbucket.org/igdiscover/testdata/get/v0.4.tar.gz
 
    The test data set contains some paired-end reads from a rhesus monkey and a
    simplified version of the publicly available VH, DH, and JH gene lists

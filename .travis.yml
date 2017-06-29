@@ -17,8 +17,8 @@ before_install:
   - conda update -q conda
   - conda config --add channels defaults --add channels conda-forge --add channels bioconda
   - conda info -a
-  - wget https://bitbucket.org/igdiscover/testdata/get/0.3.tar.gz
-  - tar xvf 0.3.tar.gz
+  - wget https://bitbucket.org/igdiscover/testdata/get/v0.4.tar.gz
+  - tar xvf v0.4.tar.gz
 
 install:
   - conda create -q -n testenv python=$TRAVIS_PYTHON_VERSION pip nose 'sqt>=0.8.0' seaborn 'snakemake!=3.13.2' cutadapt muscle pear flash 'igblast=1.7' 'vsearch=1.9.7' fastqc
