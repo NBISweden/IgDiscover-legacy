@@ -21,7 +21,7 @@ before_install:
   - tar xvf 0.3.tar.gz
 
 install:
-  - conda create -q -n testenv python=$TRAVIS_PYTHON_VERSION pip nose 'sqt>=0.8.0' seaborn 'snakemake!=3.13.2' cutadapt muscle pear flash 'igblast=1.5' 'vsearch=1.9.7' fastqc
+  - conda create -q -n testenv python=$TRAVIS_PYTHON_VERSION pip nose 'sqt>=0.8.0' seaborn 'snakemake!=3.13.2' cutadapt muscle pear flash 'igblast=1.7' 'vsearch=1.9.7' fastqc
   - source activate testenv
   - pip install .
 
