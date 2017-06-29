@@ -15,7 +15,7 @@ before_install:
   - export PATH="$HOME/miniconda/bin:$PATH"
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
-  - conda config --add channels conda-forge --add channels defaults --add channels r --add channels bioconda
+  - conda config --add channels defaults --add channels conda-forge --add channels bioconda
   - conda info -a
   - wget https://bitbucket.org/igdiscover/testdata/get/0.3.tar.gz
   - tar xvf 0.3.tar.gz
