@@ -21,7 +21,7 @@ each line separately::
 
 Close the terminal window and open a new one. Then run::
 
-	conda install -c bioconda igdiscover python=3.5
+	conda install -c bioconda igdiscover
 	igdiscover --version
 
 If the last command outputs the current version of IgDiscover, it worked! Skip
@@ -34,7 +34,7 @@ OS X/macOS
 On macOS, `follow the miniconda <https://conda.io/docs/install/quick.html#os-x-miniconda-install>`_
 installation instructions. Then open a terminal window and run::
 
-	conda install -c bioconda igdiscover python=3.5
+	conda install -c bioconda igdiscover
 	igdiscover --version
 
 If the last command outputs the current version of IgDiscover, it worked!
