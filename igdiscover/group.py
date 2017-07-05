@@ -103,24 +103,52 @@ def hamming_neighbors(s):
 	yield s
 
 
-def cluster_sequences(sequences):
+def cluster_sequences(records):
 	"""
 	Single-linkage clustering. Two sequences are linked if
 	- their (pseudo-) CDR3 sequences have a hamming distance of at most 1
 	- and their lengths differs by at most 2.
 	"""
-	graph = Graph(sequences)
-	cdr3_seqs = defaultdict(list)  # maps CDR3 sequence to list of full sequence with that CDR3
-	for s in sequences:
-		cdr3_seqs[s.cdr3].append(s)
-	for sequence in sequences:
-		for neighbor in hamming_neighbors(sequence.cdr3):
-			neighbor_seqs = cdr3_seqs.get(neighbor, [])
-			for neighbor_seq in neighbor_seqs:
-				if abs(len(sequence) - len(neighbor_seq)) <= 2:
-					graph.add_edge(sequence, neighbor_seq)
-	components = graph.connected_components()
-	assert sum(len(component) for component in components) == len(sequences)
+	if len(records) == 1:  # TODO check if this helps
+		return [records]
+
+	# Cluster unique CDR3s first
+	cdr3s = set(r.cdr3 for r in records)
+	sorted_cdr3s = sorted(cdr3s)  # For reproducibility
+	graph = Graph(sorted_cdr3s)
+	for cdr3 in sorted_cdr3s:
+		for neighbor in hamming_neighbors(cdr3):
+			if neighbor in cdr3s:
+				graph.add_edge(cdr3, neighbor)
+	cdr3_components = graph.connected_components()
+
+	# Maps CDR3 sequence to list of records of sequence that have that CDR3
+	cdr3_records = defaultdict(list)
+	for r in records:
+		cdr3_records[r.cdr3].append(r)
+
+	components = []
+	for cdr3_component in cdr3_components:
+		component_records = []
+		for cdr3 in cdr3_component:
+			component_records.extend(cdr3_records[cdr3])
+
+		component_records.sort(key=lambda r: len(r.sequence))
+		component = []
+		prev_length = None
+		for r in component_records:
+			l = len(r.sequence)
+			if prev_length is not None and l > prev_length + 2:
+				# Start a new component
+				components.append(component)
+				component = []
+			component.append(r)
+			prev_length = l
+		if component:
+			components.append(component)
+
+	assert sum(len(component) for component in components) == len(records)
+	assert all(components)  # Components must be non-empty
 	return components
 
 
@@ -273,6 +301,8 @@ def main(args):
 	logger.info('%d consensus sequences computed (from groups that had at least %d sequences)',
 		n_consensus + n_ambiguous, MIN_CONSENSUS_SEQUENCES)
 	logger.info('%d of those had no ambiguous bases', n_consensus)
+	if args.groups_output:
+		logger.info('Groups written to %r', args.groups_output)
 
 	if args.plot_sizes:
 		matplotlib.rcParams.update({'font.size': 14})
@@ -289,5 +319,3 @@ def main(args):
 		fig.savefig(args.plot_sizes)
 		logger.info('Plotted group sizes to %r', args.plot_sizes)
 
-	if args.groups_output:
-		logger.info('Groups written to %r', args.groups_output)
