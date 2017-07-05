@@ -65,6 +65,8 @@ def format_duration(seconds):
 def main(arguments=None):
 	logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 	parser = HelpfulArgumentParser(description=__doc__, prog='igdiscover')
+	parser.add_argument('--profile', default=False, action='store_true',
+		help='Save profiling information to igdiscover.prof')
 	parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
 
 	subparsers = parser.add_subparsers()
@@ -78,6 +80,10 @@ def main(arguments=None):
 	args = parser.parse_args(arguments)
 	if not hasattr(args, 'func'):
 		parser.error('Please provide the name of a subcommand to run')
+	elif args.profile:
+		import cProfile as profile
+		profile.runctx('args.func(args)', globals(), locals(), filename='igdiscover.prof')
+		logger.info('Wrote profiling data to igdiscover.prof')
 	else:
 		args.func(args)
 	if sys.platform == 'linux':
