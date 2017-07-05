@@ -22,7 +22,7 @@ _CDR3_REGEX = {
 	'VH': re.compile("""
 		[FY] [FHVWY] C
 		(?P<cdr3>
-			[ADEGIKMNRSTV] .{5,31}
+			[ADEGIKMNRSTV] .{3,31}
 		)
 		W[GAV]
 		""", re.VERBOSE),
@@ -31,7 +31,7 @@ _CDR3_REGEX = {
 	'VK': re.compile("""
 		[FSVY] [CFHNVY] [CDFGLSW]
 		(?P<cdr3>
-			.{5,15}
+			.{4,15}
 		)
 		[FLV][GRV]
 		""", re.VERBOSE),
@@ -41,7 +41,7 @@ _CDR3_REGEX = {
 		# the negative lookahead assertion ensures that the rightmost start is found
 		[CDY](?![CDY][CFHSY][CFGW])[CFHSY][CFGW]
 		(?P<cdr3>
-			.{5,15}
+			.{4,15}
 		)
 		[FS]G
 		""", re.VERBOSE)
