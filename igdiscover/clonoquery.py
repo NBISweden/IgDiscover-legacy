@@ -40,6 +40,10 @@ def add_arguments(parser):
 
 
 def is_similar_with_junction(s, t, mismatches, cdr3_core):
+	"""
+	Return whether strings s and t have at most the given number of mismatches
+	*and* have at least one identical junction.
+	"""
 	distance_ok = hamming_distance(s, t) <= mismatches
 	if cdr3_core is None:
 		return distance_ok
@@ -79,6 +83,7 @@ def main(args):
 		for query_row in query_clonotypes[clonotype]:
 			print('# query: {}'.format(query_row.name))
 			cdr3 = query_row.CDR3_nt
+			# TODO use is_similar_with_junction
 			is_similar = [
 				hamming_distance(cdr3, r.CDR3_nt) <= args.mismatches for r in vjlen_group.itertuples()]
 			similar_group = vjlen_group.loc[is_similar, :]

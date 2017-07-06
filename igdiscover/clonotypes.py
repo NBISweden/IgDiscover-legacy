@@ -26,6 +26,8 @@ from xopen import xopen
 
 from .table import read_table
 from .cluster import hamming_single_linkage
+from .utils import slice_arg
+from .clonoquery import is_similar_with_junction
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +38,14 @@ def add_arguments(parser):
 		help='Sort by group size (largest first). Default: Sort by V/D/J gene names')
 	arg('--limit', metavar='N', type=int, default=None,
 		help='Print out only the first N groups')
+	arg('--cdr3-core', default=None,
+		type=slice_arg, metavar='START:END',
+		help='START:END defines the non-junction region of CDR3 '
+			'sequences. Use negative numbers for END to count '
+			'from the end. Regions before and after are considered to '
+			'be junction sequence, and for two CDR3s to be considered '
+			'similar, at least one of the junctions must be identical. '
+			'Default: no junction region.')
 	arg('--mismatches', default=1, type=int,
 		help='No. of allowed mismatches between CDR3 sequences. Default: %(default)s')
 	arg('--members', metavar='FILE',
@@ -43,7 +53,7 @@ def add_arguments(parser):
 	arg('table', help='Table with parsed and filtered IgBLAST results')
 
 
-def group_by_cdr3(table, mismatches):
+def group_by_cdr3(table, mismatches, cdr3_core):
 	"""
 	Cluster the rows of the table by Hamming distance between
 	their CDR3 sequences. Yield (index, group) tuples similar 
@@ -51,7 +61,12 @@ def group_by_cdr3(table, mismatches):
 	"""
 	# Cluster all unique CDR3s by Hamming distance
 	sequences = list(set(table.CDR3_nt))
-	clusters = hamming_single_linkage(sequences, mismatches)
+	if cdr3_core:
+		def linked(s, t):
+			return is_similar_with_junction(s, t, mismatches, cdr3_core)
+	else:
+		linked = None
+	clusters = hamming_single_linkage(sequences, mismatches, linked=linked)
 
 	# Create dict that maps CDR3 sequences to a numeric cluster id
 	cluster_ids = dict()
@@ -79,7 +94,7 @@ def representative(table):
 	return (count, V_gene, J_gene, CDR3_length, CDR3_nt)
 
 
-def group_by_clonotype(table, mismatches, sort):
+def group_by_clonotype(table, mismatches, sort, cdr3_core):
 	"""
 	Yield clonotype groups. Each item is a DataFrame with all the members of the
 	clonotype.
@@ -92,7 +107,7 @@ def group_by_clonotype(table, mismatches, sort):
 		if prev_v != v_gene:
 			logger.info('Processing %s', v_gene)
 		prev_v = v_gene
-		cdr3_groups = group_by_cdr3(vj_group.copy(), mismatches=mismatches)
+		cdr3_groups = group_by_cdr3(vj_group.copy(), mismatches=mismatches, cdr3_core=cdr3_core)
 		if sort:
 			# When sorting by group size is requested, we need to buffer
 			# results
@@ -123,7 +138,7 @@ def main(args):
 		print('count', 'V_gene', 'J_gene', 'CDR3_length', 'CDR3_nt', sep='\t')
 		print_header = True
 		n = 0
-		grouped = group_by_clonotype(table, args.mismatches, args.sort)
+		grouped = group_by_clonotype(table, args.mismatches, args.sort, args.cdr3_core)
 		for group in islice(grouped, 0, args.limit):
 			if members_file:
 				# We get an intentional empty line between groups since

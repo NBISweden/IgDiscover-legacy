@@ -110,34 +110,68 @@ class Graph:
 		return components
 
 
-def hamming_single_linkage(strings, mismatches, use_trie=False):
+def cluster_by_length(strings):
 	"""
-	Cluster a set of strings by their hamming distance: Strings with
-	a distance of at most 'mismatches' will be put into the same cluster.
-
-	Return a list of connected components (clusters).
+	Cluster a set of strings by length
 	"""
-	components = []
-
-	# First pre-cluster strings by length
 	string_lists = defaultdict(list)
 	for s in strings:
 		string_lists[len(s)].append(s)
-	for strings in string_lists.values():
-		graph = Graph(strings)
-		if use_trie:
-			trie = Trie()
-			for s in strings:
-				trie.add(s)
-			for s in strings:
-				for neighbor in trie.find_all_similar(s, mismatches):
-					if neighbor != s:
-						graph.add_edge(s, neighbor)
-		else:
-			for i, s in enumerate(strings):
-				for j, t in enumerate(strings[i + 1:]):
-					if hamming_distance(s, t) <= mismatches:
-						graph.add_edge(s, t)
+	return list(string_lists.values())
 
+
+def single_linkage(strings, linked):
+	"""
+	Cluster a set of strings. *linked* is a function with two parameters s and t that returns
+	whether *s* and *t* are in the same cluster.
+
+	>>> single_linkage(['ABC', 'ABD', 'DEFG', 'DEFH'], lambda s, t: hamming_distance(s, t) <= 1)
+	[['ABC', 'ABD'], ['DEFG', 'DEFH']]
+	"""
+	graph = Graph(strings)
+	for i, s in enumerate(strings):
+		for j, t in enumerate(strings[i + 1:]):
+			if linked(s, t):
+				graph.add_edge(s, t)
+	return graph.connected_components()
+
+
+def hamming_single_linkage(strings, mismatches, linked=None):
+	"""
+	Cluster a set of strings by hamming distance. Strings with
+	a distance of at most 'mismatches' will be put into the same cluster.
+
+	Uses the optimization that strings of different lengths can be
+	clustered separately.
+
+	Use *linked* to override the function passed to single_linkage. It will
+	only be called for strings of the same length.
+
+	Return a list of connected components (clusters).
+	"""
+	if linked is None:
+		def linked(s, t):
+			return hamming_distance(s, t,) <= mismatches
+
+	components = []
+	for strings in cluster_by_length(strings):
+		components.extend(single_linkage(strings, linked))
+	return components
+
+
+def hamming_single_linkage_trie(strings, mismatches):
+	"""
+	Cluster by hamming distance using a trie
+	"""
+	components = []
+	for strings in cluster_by_length(strings):
+		graph = Graph(strings)
+		trie = Trie()
+		for s in strings:
+			trie.add(s)
+		for s in strings:
+			for neighbor in trie.find_all_similar(s, mismatches):
+				if neighbor != s:
+					graph.add_edge(s, neighbor)
 		components.extend(graph.connected_components())
 	return components
