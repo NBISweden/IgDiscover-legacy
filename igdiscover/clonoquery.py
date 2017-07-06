@@ -54,7 +54,7 @@ def is_similar_with_junction(s, t, mismatches, cdr3_core):
 
 def main(args):
 	columns = ['count', 'V_gene', 'D_gene', 'J_gene', 'CDR3_nt', 'CDR3_aa',
-		'V_errors', 'J_errors', 'V_SHM', 'J_SHM', 'barcode', 'VDJ_nt']  # TODO D_errors
+		'V_errors', 'J_errors', 'V_SHM', 'J_SHM', 'barcode', 'name', 'VDJ_nt', 'VDJ_aa']  # TODO D_errors
 	reftable = read_table(args.reftable, usecols=columns)
 	reftable = reftable[columns]  # reorder columns
 	logger.info('Read reference table with %s rows', len(reftable))
@@ -78,7 +78,9 @@ def main(args):
 		if clonotype not in query_clonotypes:
 			continue
 		if print_header:
-			print('keep?', vjlen_group.head(0).to_csv(sep='\t', header=True, index=False), sep='\t')
+			if args.cdr3_core:
+				print('keep?', end='\t')
+			print(vjlen_group.head(0).to_csv(sep='\t', header=True, index=False), sep='\t')
 			print_header = False
 		for query_row in query_clonotypes[clonotype]:
 			print('# query: {}'.format(query_row.name))
