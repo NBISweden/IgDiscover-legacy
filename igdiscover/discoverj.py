@@ -99,8 +99,12 @@ class AlleleRatioMerger(Merger):
 		# alleles of each other and the ratio is between the CDR3s_exact
 		# values
 		if self._allele_ratio and is_same_gene(s.name, t.name):
-			for u, v in [(s, t), (t, s)]:
-				ratio = len(set(u.cdr3s)) / len(set(v.cdr3s))
+			s_cdr3s = len(set(s.cdr3s))
+			t_cdr3s = len(set(t.cdr3s))
+			for u, v, u_cdr3s, t_cdr3s in [(s, t, s_cdr3s, t_cdr3s), (t, s, t_cdr3s, s_cdr3s)]:
+				if t_cdr3s == 0:
+					continue
+				ratio = u_cdr3s / t_cdr3s
 				if ratio < self._allele_ratio:
 					# logger.info('Allele ratio %.4f too low for %r compared to %r',
 					# 	ratio, u.name, v.name)
