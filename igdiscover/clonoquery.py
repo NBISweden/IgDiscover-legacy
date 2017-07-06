@@ -55,12 +55,12 @@ def is_similar_with_junction(s, t, mismatches, cdr3_core):
 def main(args):
 	columns = ['count', 'V_gene', 'D_gene', 'J_gene', 'CDR3_nt', 'CDR3_aa',
 		'V_errors', 'J_errors', 'V_SHM', 'J_SHM', 'barcode', 'name', 'VDJ_nt', 'VDJ_aa']  # TODO D_errors
+	querytable = read_table(args.querytable, usecols=columns)
+	logger.info('Read query table with %s rows', len(querytable))
 	reftable = read_table(args.reftable, usecols=columns)
 	reftable = reftable[columns]  # reorder columns
 	logger.info('Read reference table with %s rows', len(reftable))
 	reftable.insert(6, 'CDR3_length', reftable['CDR3_nt'].apply(len))
-	querytable = read_table(args.querytable, usecols=columns + ['name'])
-	logger.info('Read query table with %s rows', len(querytable))
 	if len(querytable) > len(reftable):
 		logger.warning('The reference table is smaller than the '
 			'query table! Did you swap query and reference?')
@@ -82,7 +82,7 @@ def main(args):
 				print('keep?', end='\t')
 			print(vjlen_group.head(0).to_csv(sep='\t', header=True, index=False), sep='\t')
 			print_header = False
-		for query_row in query_clonotypes[clonotype]:
+		for query_row in query_clonotypes.pop(clonotype):
 			print('# query: {}'.format(query_row.name))
 			cdr3 = query_row.CDR3_nt
 			# TODO use is_similar_with_junction
@@ -98,3 +98,6 @@ def main(args):
 					int((cdr3_head == r.CDR3_nt[:cdr3_core.start]) or
 					(cdr3_tail == r.CDR3_nt[cdr3_core.stop:])) for r in similar_group.itertuples()])
 			print(similar_group.to_csv(sep='\t', header=False, index=False))
+	for queries in query_clonotypes.values():
+		for query_row in queries:
+			print('# query: {}\n'.format(query_row.name))
