@@ -62,7 +62,7 @@ def main(args):
 	reftable = reftable[columns]
 	logger.info('Read reference table with %s rows', len(reftable))
 	for tab in querytable, reftable:
-		tab.insert(6, 'CDR3_length', reftable['CDR3_nt'].apply(len))
+		tab.insert(6, 'CDR3_length', tab['CDR3_nt'].apply(len))
 
 	if len(querytable) > len(reftable):
 		logger.warning('The reference table is smaller than the '
