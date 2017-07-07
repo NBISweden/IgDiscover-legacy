@@ -24,6 +24,8 @@ logger = logging.getLogger(__name__)
 
 def add_arguments(parser):
 	arg = parser.add_argument
+	arg('--minimum-count', '-c', metavar='N', default=1, type=int,
+		help='Discard all rows with count less than N. Default: %(default)s')
 	arg('--cdr3-core', default=None,
 		type=slice_arg, metavar='START:END',
 		help='START:END defines the non-junction region of CDR3 '
@@ -61,6 +63,10 @@ def main(args):
 	reftable = read_table(args.reftable, usecols=columns)
 	reftable = reftable[columns]
 	logger.info('Read reference table with %s rows', len(reftable))
+	if args.minimum_count > 1:
+		reftable = reftable[reftable['count'] >= args.minimum_count]
+		logger.info('After filtering out rows with count < %s, %s rows remain', args.minimum_count,
+			len(reftable))
 	for tab in querytable, reftable:
 		tab.insert(6, 'CDR3_length', tab['CDR3_nt'].apply(len))
 
