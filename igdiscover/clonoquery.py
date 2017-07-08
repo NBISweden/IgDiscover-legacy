@@ -74,33 +74,45 @@ def main(args):
 		logger.warning('The reference table is smaller than the '
 			'query table! Did you swap query and reference?')
 
-	# Determine set of clonotypes (ignoring CDR3 sequence) to query
+	# The vjlentype is a "clonotype without CDR3 sequence" (only V, J, CDR3 length)
+	# Determine set of vjlentypes to query
 	groupby = ('V_gene', 'J_gene', 'CDR3_length')
-	query_clonotypes = defaultdict(list)
+	query_vjlentypes = defaultdict(list)
 	for row in querytable.itertuples():
-		clonotype = (row.V_gene, row.J_gene, len(row.CDR3_nt))
-		query_clonotypes[clonotype].append(row)
+		vjlentype = (row.V_gene, row.J_gene, len(row.CDR3_nt))
+		query_vjlentypes[vjlentype].append(row)
 
 	print_header = True
-	for clonotype, vjlen_group in reftable.groupby(groupby):
-		# (v_gene, j_gene, cdr3_length) = clonotype
-		if clonotype not in query_clonotypes:
+	for vjlentype, vjlen_group in reftable.groupby(groupby):
+		# (v_gene, j_gene, cdr3_length) = vjlentype
+		if vjlentype not in query_vjlentypes:
 			continue
 		if print_header:
 			if args.cdr3_core:
 				print('keep?', end='\t')
 			print(vjlen_group.head(0).to_csv(sep='\t', header=True, index=False), sep='\t')
 			print_header = False
-		for query_row in query_clonotypes.pop(clonotype):
-			if args.cdr3_core:
-				print('', end='\t')
-			print('# Query: {}'.format(query_row.name), '', *(query_row[3:]), sep='\t')
 
+		# Collect results for this vjlentype
+		results = defaultdict(list)
+		for query_row in query_vjlentypes.pop(vjlentype):
 			cdr3 = query_row.CDR3_nt
 			# TODO use is_similar_with_junction
-			is_similar = [
-				hamming_distance(cdr3, r.CDR3_nt) <= args.mismatches for r in vjlen_group.itertuples()]
-			similar_group = vjlen_group.loc[is_similar, :]
+			# Save indices of the rows that are similar to this query
+			indices = tuple(index for index, r in enumerate(vjlen_group.itertuples())
+				if hamming_distance(cdr3, r.CDR3_nt) <= args.mismatches)
+			results[indices].append(query_row)
+
+		# Print results, grouping queries that lead to the same result
+		for indices, query_rows in results.items():
+			for query_row in query_rows:
+				if args.cdr3_core:
+					print('', end='\t')
+				print('# Query: {}'.format(query_row.name), '', *(query_row[3:]), sep='\t')
+				if not indices:
+					print()
+
+			similar_group = vjlen_group.iloc[indices, :]
 			if args.cdr3_core is not None:
 				cdr3_core = args.cdr3_core
 				cdr3_head = cdr3[:cdr3_core.start]
@@ -109,10 +121,11 @@ def main(args):
 				similar_group.insert(0, 'junction_ident', [
 					int((cdr3_head == r.CDR3_nt[:cdr3_core.start]) or
 					(cdr3_tail == r.CDR3_nt[cdr3_core.stop:])) for r in similar_group.itertuples()])
-			print(similar_group.to_csv(sep='\t', header=False, index=False))
+			if indices:
+				print(similar_group.to_csv(sep='\t', header=False, index=False))
 
 	# Output all the queries that have not been found
-	for queries in query_clonotypes.values():
+	for queries in query_vjlentypes.values():
 		for query_row in queries:
 			if args.cdr3_core:
 				print('', end='\t')
