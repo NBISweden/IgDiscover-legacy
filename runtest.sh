@@ -9,14 +9,15 @@ mkdir testrun
 igdiscover init --db=testdata/db --reads=testdata/reads.1.fastq.gz testrun/paired
 
 cd testrun/paired
-igdiscover config --set iterations 1 \
+igdiscover config --set iterations 2 \
    --set race_g true \
    --set stranded true \
    --set barcode_length_5prime 12 \
    --set cdr3_location '[-80, -60]' \
    --set reverse_primers '["GCAGGCCTTTTTGGCCNNNNNGGGGCATTCTCACAGGAGACGAGGGGGAAAAG"]' \
    --set forward_primers '["CGTGAGCTGAGTACGACTCACTATAGCTTCAC"]' \
-   --set germline_filter.unique_js 1
+   --set germline_filter.unique_js 1 \
+   --set j_discovery.propagate false
 time -p igdiscover run -p
 cd ../..
 
