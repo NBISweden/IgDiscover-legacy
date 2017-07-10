@@ -27,7 +27,6 @@ class Config:
 		self.flash_maximum_overlap = 300
 		self.limit = None  # or an integer
 		self.multialign_program = 'muscle-fast'
-		self.maximum_expected_errors = None  # or an integer
 		self.minimum_merged_read_length = 300
 		self.mismatch_penalty = None
 		self.barcode_length = 0

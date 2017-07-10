@@ -56,14 +56,6 @@ since they rarely need to be changed.
 
 ::
 
-    # Filter out reads that have more than this number of expected errors.
-    # Set to null to disable.
-    #
-    #maximum_expected_errors: null
-    #maximum_expected_errors: 5
-
-::
-
     # Which program to use for computing multiple alignments. This is used for
     # computing consens sequences.
     # Choose 'mafft', 'clustalo', 'muscle' or 'muscle-fast'.

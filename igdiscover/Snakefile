@@ -389,9 +389,8 @@ for ext in ('fasta', 'fastq'):
 		"""
 		output: fasta=temp("reads/5-filtered.fasta")
 		input: fastaq="reads/4-trimmed.{ext}.gz".format(ext=ext), success='stats/trimming-successful'
-		params: max_errors=" --max-errors {config.maximum_expected_errors}" if config.maximum_expected_errors is not None else ""
 		shell:
-			"sqt fastxmod{params.max_errors} --minimum-length {config.minimum_merged_read_length} --fasta {input.fastaq} > {output.fasta}"
+			"sqt fastxmod --minimum-length {config.minimum_merged_read_length} --fasta {input.fastaq} > {output.fasta}"
 
 
 if config.barcode_length and config.barcode_consensus:
