@@ -34,9 +34,10 @@ barcode_consensus: true
 
 # When grouping by barcode and CDR3, the CDR3 location is either detected with a
 # regular expressions or a 'pseudo' CDR3 sequence is used, which is at a
-# pre-defined position within the sequence. Seting this configuration option to
-# [-80, -60] (which is the default) means that a pseudo CDR3 is to be used,
-# located at bases 80 to 60 counted from the 3' end. (Use negative numbers to
+# pre-defined position within the sequence.
+#
+# Set this configuration option to a region like [-80, -60] to use a pseudo
+# CDR3 located at bases 80 to 60 counted from the 3' end. (Use negative numbers to
 # count from the 3' end, positive ones to count from the 5' end. The most 5'
 # base has index 0.)
 #
@@ -46,7 +47,7 @@ barcode_consensus: true
 #
 # Set this to false (no quotation marks) in order to *only* group by barcode, not by CDR3.
 #
-cdr3_location: [-80, -60]
+cdr3_location: 'detect'  # Works only with VH sequences!
 
 
 # When you use a RACE protocol, then the sequences have a run of G nucleotides in the beginning
