@@ -381,27 +381,17 @@ rule fastqc:
 		"""
 
 
-rule filter_fasta:
-	"""
-	* Remove low-quality sequences
-	* Discard too short sequences
-	"""
-	output: fasta=temp("reads/5-filtered.fasta")
-	input: fasta="reads/4-trimmed.fasta.gz", success='stats/trimming-successful'
-	params: max_errors=" --max-errors {config.maximum_expected_errors}" if config.maximum_expected_errors is not None else ""
-	shell:
-		"sqt fastxmod{params.max_errors} --minimum-length {config.minimum_merged_read_length} {input.fasta} > {output.fasta}"
-
-
-rule fastq_to_fasta:
-	"""
-	Same as filter_fasta, but also convert from FASTQ to FASTA
-	"""
-	output: fasta=temp("reads/5-filtered.fasta")
-	input: fastq="reads/4-trimmed.fastq.gz", success='stats/trimming-successful'
-	params: max_errors=" --max-errors {config.maximum_expected_errors}" if config.maximum_expected_errors is not None else ""
-	shell:
-		"sqt fastxmod{params.max_errors} --minimum-length {config.minimum_merged_read_length} --fasta {input.fastq} > {output.fasta}"
+for ext in ('fasta', 'fastq'):
+	rule:
+		"""
+		* Remove low-quality sequences
+		* Discard too short sequences
+		"""
+		output: fasta=temp("reads/5-filtered.fasta")
+		input: fastaq="reads/4-trimmed.{ext}.gz".format(ext=ext), success='stats/trimming-successful'
+		params: max_errors=" --max-errors {config.maximum_expected_errors}" if config.maximum_expected_errors is not None else ""
+		shell:
+			"sqt fastxmod{params.max_errors} --minimum-length {config.minimum_merged_read_length} --fasta {input.fastaq} > {output.fasta}"
 
 
 if config.barcode_length and config.barcode_consensus:
