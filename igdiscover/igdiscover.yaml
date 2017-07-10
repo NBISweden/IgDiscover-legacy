@@ -200,5 +200,6 @@ germline_filter:
 ## J discovery settings
 
 j_discovery:
-  allele_ratio: 0.1     # Required minimum ratio between alleles of a single gene
-  cross_mapping_ratio:  # Threshold for removal of cross-mapping artifacts.
+  allele_ratio: 0.1         # Required minimum ratio between alleles of a single gene
+  cross_mapping_ratio: null # Threshold for removal of cross-mapping artifacts.
+  propagate: true           # Use discovered J genes as input for next V/J discovery iteration
