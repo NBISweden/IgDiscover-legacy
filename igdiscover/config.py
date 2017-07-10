@@ -27,7 +27,6 @@ class Config:
 		self.flash_maximum_overlap = 300
 		self.limit = None  # or an integer
 		self.multialign_program = 'muscle-fast'
-		self.maximum_expected_errors = None  # or an integer
 		self.minimum_merged_read_length = 300
 		self.mismatch_penalty = None
 		self.barcode_length = 0
@@ -51,14 +50,14 @@ class Config:
 			whitelist=True, cluster_size=100, differences=0, allow_stop=False, cross_mapping_ratio=0.02,
 			allele_ratio=0.1)
 		self.j_discovery = dict(allele_ratio=0.1, cross_mapping_ratio=None, propagate=True)
-		self.cdr3_location = [-80, -60]
+		self.cdr3_location = 'detect'
 
 		self.read_from(file)
 
 	def read_from(self, file):
 		content = file.read()
 		new_config = self.make_compatible(ruamel.yaml.safe_load(content))
-		for key in ('preprocessing_filter', 'pre_germline_filter', 'germline_filter'):
+		for key in ('preprocessing_filter', 'pre_germline_filter', 'germline_filter', 'j_discovery'):
 			if key in new_config:
 				self.__dict__[key].update(new_config[key])
 				del new_config[key]

@@ -381,59 +381,42 @@ rule fastqc:
 		"""
 
 
-rule filter_fasta:
-	"""
-	* Remove low-quality sequences
-	* Discard too short sequences
-	"""
-	output: fasta=temp("reads/5-filtered.fasta")
-	input: fasta="reads/4-trimmed.fasta.gz", success='stats/trimming-successful'
-	params: max_errors=" --max-errors {config.maximum_expected_errors}" if config.maximum_expected_errors is not None else ""
-	shell:
-		"sqt fastxmod{params.max_errors} --minimum-length {config.minimum_merged_read_length} {input.fasta} > {output.fasta}"
+for ext in ('fasta', 'fastq'):
+	if config.barcode_length and config.barcode_consensus:
+		rule:
+			"""Group by barcode and CDR3 (also implicitly removes duplicates)"""
+			output:
+				fastagz=PREPROCESSED_READS,
+				pdf="stats/groupsizes.pdf",
+				groups="reads/groups.tab.gz"
+			input:
+				fastaq='reads/4-trimmed.{ext}.gz'.format(ext=ext), success='stats/trimming-successful'
+			log: PREPROCESSED_READS + ".log"
+			run:
+				if not config.cdr3_location:
+					cdr3_arg = ''
+				elif config.cdr3_location == 'detect':
+					cdr3_arg = ' --real-cdr3'
+				else:
+					cdr3_arg = ' --pseudo-cdr3={}:{}'.format(*config.cdr3_location)
+				race_arg = ' --trim-g' if config.race_g else ''
+				shell("igdiscover group{cdr3_arg} --minimum-length={config.minimum_merged_read_length} "
+				      "--groups-output={output.groups} --barcode-length={config.barcode_length}{race_arg} "
+				      "--plot-sizes={output.pdf} {input.fastaq} 2> {log} | {GZIP} > {output.fastagz}")
 
-
-rule fastq_to_fasta:
-	"""
-	Same as filter_fasta, but also convert from FASTQ to FASTA
-	"""
-	output: fasta=temp("reads/5-filtered.fasta")
-	input: fastq="reads/4-trimmed.fastq.gz", success='stats/trimming-successful'
-	params: max_errors=" --max-errors {config.maximum_expected_errors}" if config.maximum_expected_errors is not None else ""
-	shell:
-		"sqt fastxmod{params.max_errors} --minimum-length {config.minimum_merged_read_length} --fasta {input.fastq} > {output.fasta}"
-
-
-if config.barcode_length and config.barcode_consensus:
-	rule igdiscover_group:
-		"""Group by barcode and CDR3 (also implicitly removes duplicates)"""
-		output:
-			fastagz=PREPROCESSED_READS,
-			pdf="stats/groupsizes.pdf",
-			groups="reads/groups.tab.gz"
-		input:
-			fasta="reads/5-filtered.fasta"
-		log: PREPROCESSED_READS + ".log"
-		run:
-			if not config.cdr3_location:
-				cdr3_arg = ''
-			elif config.cdr3_location == 'detect':
-				cdr3_arg = ' --real-cdr3'
-			else:
-				cdr3_arg = ' --pseudo-cdr3={}:{}'.format(*config.cdr3_location)
-			race_arg = ' --trim-g' if config.race_g else ''
-			shell("igdiscover group{cdr3_arg} --groups-output={output.groups} --barcode-length={config.barcode_length}{race_arg} --plot-sizes={output.pdf} {input.fasta} 2> {log} | {GZIP} > {output.fastagz}")
-
-else:
-	rule dereplicate:
-		"""Collapse identical sequences, remove barcodes"""
-		output: fastagz=PREPROCESSED_READS
-		input: fasta="reads/5-filtered.fasta"
-		params:
-			barcode_length=' --barcode-length={}'.format(config.barcode_length) if config.barcode_length else '',
-			race_arg = ' --trim-g' if config.race_g else ''
-		shell:
-			'igdiscover dereplicate{params.barcode_length}{params.race_arg} {input.fasta} | {GZIP} > {output.fastagz}'
+	else:
+		rule:
+			"""Collapse identical sequences, remove barcodes"""
+			output: fastagz=PREPROCESSED_READS
+			input: fastaq='reads/4-trimmed.{ext}.gz'.format(ext=ext), success='stats/trimming-successful'
+			params:
+				barcode_length=' --barcode-length={}'.format(config.barcode_length) if config.barcode_length else '',
+				race_arg = ' --trim-g' if config.race_g else ''
+			shell:
+				'igdiscover dereplicate{params.barcode_length}{params.race_arg} ' \
+				'--minimum-length={config.minimum_merged_read_length} ' \
+				'{input.fastaq} | {GZIP} ' \
+				'> {output.fastagz}'
 
 
 rule copy_d_database:
