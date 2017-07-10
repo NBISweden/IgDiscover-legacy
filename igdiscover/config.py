@@ -57,7 +57,7 @@ class Config:
 	def read_from(self, file):
 		content = file.read()
 		new_config = self.make_compatible(ruamel.yaml.safe_load(content))
-		for key in ('preprocessing_filter', 'pre_germline_filter', 'germline_filter'):
+		for key in ('preprocessing_filter', 'pre_germline_filter', 'germline_filter', 'j_discovery'):
 			if key in new_config:
 				self.__dict__[key].update(new_config[key])
 				del new_config[key]
