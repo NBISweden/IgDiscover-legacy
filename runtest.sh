@@ -13,6 +13,7 @@ igdiscover config --set iterations 1 \
    --set race_g true \
    --set stranded true \
    --set barcode_length_5prime 12 \
+   --set cdr3_location '[-80, -60]' \
    --set reverse_primers '["GCAGGCCTTTTTGGCCNNNNNGGGGCATTCTCACAGGAGACGAGGGGGAAAAG"]' \
    --set forward_primers '["CGTGAGCTGAGTACGACTCACTATAGCTTCAC"]' \
    --set germline_filter.unique_js 1
