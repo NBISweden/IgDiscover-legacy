@@ -50,7 +50,7 @@ class Config:
 			whitelist=True, cluster_size=100, differences=0, allow_stop=False, cross_mapping_ratio=0.02,
 			allele_ratio=0.1)
 		self.j_discovery = dict(allele_ratio=0.1, cross_mapping_ratio=None, propagate=True)
-		self.cdr3_location = [-80, -60]
+		self.cdr3_location = 'detect'
 
 		self.read_from(file)
 
