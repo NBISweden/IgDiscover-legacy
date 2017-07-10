@@ -458,7 +458,7 @@ rule vj_database_iteration_1:
 
 def ensure_fasta_not_empty(path, gene):
 	with FastaReader(path) as fr:
-		for record in fr:
+		for _ in fr:
 			has_records = True
 			break
 		else:
@@ -487,7 +487,7 @@ for i in range(2, config.iterations + 1):
 		output:
 			fasta='iteration-{nr:02d}/database/J.fasta'.format(nr=i)
 		input:
-			fasta='iteration-{nr:02d}/new_J.fasta'.format(nr=i-1)
+			fasta='iteration-{nr:02d}/new_J.fasta'.format(nr=i-1) if config.j_discovery['propagate'] else 'database/J.fasta'
 		run:
 			ensure_fasta_not_empty(input.fasta, 'J')
 			shell("cp -p {input.fasta} {output.fasta}")
@@ -518,7 +518,8 @@ else:
 		output:
 			fasta='final/database/J.fasta'
 		input:
-			fasta='iteration-{nr:02d}/new_J.fasta'.format(nr=config.iterations)
+			fasta=('iteration-{nr:02d}/new_J.fasta'.format(nr=config.iterations)
+					if config.j_discovery['propagate'] else 'database/J.fasta')
 		run:
 			ensure_fasta_not_empty(input.fasta, 'J')
 			shell("cp -p {input.fasta} {output.fasta}")
