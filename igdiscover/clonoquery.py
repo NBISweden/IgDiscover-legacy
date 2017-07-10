@@ -113,6 +113,8 @@ def main(args):
 		'V_errors', 'J_errors', 'V_SHM', 'J_SHM', 'barcode', 'VDJ_nt', 'VDJ_aa']  # TODO D_errors
 	querytable = read_table(args.querytable, usecols=columns)
 	querytable = querytable[columns]  # reorder columns
+	# Filter empty rows (happens sometimes)
+	querytable = querytable[querytable.V_gene != '']
 	logger.info('Read query table with %s rows', len(querytable))
 	reftable = read_table(args.reftable, usecols=columns)
 	reftable = reftable[columns]
