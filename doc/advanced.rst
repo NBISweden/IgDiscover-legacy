@@ -50,8 +50,8 @@ since they rarely need to be changed.
     # Leave empty or choose a species name supported by IgBLAST:
     # human, mouse, rabbit, rat, rhesus_monkey
     # This setting is not used anywhere except that it is passed
-    # to IgBLAST. Since we provide IgBLAST with our own gene
-    # databases, it seems this has no effect.
+    # to IgBLAST using the -organism option. Since we provide IgBLAST
+    # with our own gene databases, it seems this has no effect.
     species:
 
 ::
