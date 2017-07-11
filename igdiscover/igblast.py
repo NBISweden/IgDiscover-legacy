@@ -47,10 +47,10 @@ def add_arguments(parser):
 		help='Number of threads. Default: no. of available CPUs (%(default)s)')
 	arg('--penalty', type=int, choices=(-1, -2, -3, -4), default=None,
 		help='BLAST mismatch penalty (default: -1)')
-	arg('--species', default='mouse',
-		help='Which species. Note that this setting does not seem to have '
-			'any effect since we provide our own database to IgBLAST. '
-			'Default: %(default)s')
+	arg('--species', default=None,
+		help='Tell IgBLAST which species to use. Note that this setting does '
+			'not seem to have any effect since we provide our own database to '
+			'IgBLAST. Default: Use IgBLAST’s default')
 	arg('--raw', metavar='FILE', help='Write raw IgBLAST output to FILE '
 			'(add .gz to compress)')
 	arg('--limit', type=int, metavar='N',
@@ -81,9 +81,10 @@ def run_igblast(sequences, database, species, penalty=None):
 		arguments += ['-penalty', str(penalty)]
 	# An empty .aux suppresses a warning from IgBLAST. /dev/null does not work.
 	empty_aux_path = pkg_resources.resource_filename('igdiscover', 'empty.aux')
+	if species is not None:
+		arguments += ['-species', species]
 	arguments += [
 		'-auxiliary_data', empty_aux_path,
-		'-organism', species,
 		'-ig_seqtype', 'Ig',
 		'-num_threads', '1',
 		'-domain_system', 'imgt',
