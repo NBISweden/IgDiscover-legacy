@@ -77,6 +77,60 @@ def find_cdr3(sequence, chain):
 	return min(matches, default=None)
 
 
+# Matches the start of the CDR3 within the end of a VH sequence
+_CDR3START_VH_REGEX = re.compile("""
+	[FY] [FHVWY] C
+	(?P<cdr3_start>
+		[ADEGIKMNRSTV*] | $
+	)
+	""", re.VERBOSE)
+
+
+_CDR3START_VH_ALTERNATIVE_REGEX = re.compile("""
+	C
+	(?P<cdr3_start> . [RK])
+	""", re.VERBOSE)
+
+
+# Matches after the end of the CDR3 within a J sequence
+_CDR3END_JH_REGEX = re.compile('W[GAV]')
+
+
+def v_cdr3_start(sequence, chain):
+	"""
+	Find the position of the CDR3 start within the end of a
+	V sequence.
+	"""
+	assert chain == 'VH'
+	if 'N' in sequence:
+		return None
+	aa = nt_to_aa(sequence)
+	head, tail = aa[:-12], aa[-12:]
+	match = _CDR3START_VH_REGEX.search(tail)
+	if not match:
+		match = _CDR3START_VH_ALTERNATIVE_REGEX.search(tail)
+	if not match:
+		return None
+	return 3 * (len(head) + match.start('cdr3_start'))
+
+
+def j_cdr3_end(sequence, chain):
+	"""
+	Find the position of the CDR3 end within a J sequence
+
+	Return a tuple (frame, cdr3_end) where frame is the frameshift
+	(0, 1 or 2).
+	"""
+	assert chain == 'VH'
+	if 'N' in sequence:
+		return None
+	for frame in 0, 1, 2:
+		aa = nt_to_aa(sequence[frame:])
+		match = _CDR3END_JH_REGEX.search(aa)
+		return frame, match.start()
+	return None
+
+
 # When searching for the CDR3, start this many bases to the left of the end of
 # the V match.
 CDR3_SEARCH_START = 30
