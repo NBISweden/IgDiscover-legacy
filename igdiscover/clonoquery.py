@@ -90,7 +90,7 @@ def collect(querytable, reftable, mismatches, cdr3_core_slice):
 					yield ([query_row], [])
 				continue
 
-			similar_group = vjlen_group.iloc[indices, :]
+			similar_group = vjlen_group.iloc[list(indices), :]
 			if cdr3_core_slice is not None:
 				cdr3_core = cdr3_core_slice
 				cdr3_head = cdr3[:cdr3_core.start]
