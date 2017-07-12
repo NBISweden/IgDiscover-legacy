@@ -62,10 +62,6 @@ class OverlappingSequenceMerger(Merger):
 	"""
 	Merge sequences that overlap
 	"""
-	def __init__(self, cross_mapping_ratio=None):
-		super().__init__()
-		self._cross_mapping_ratio = cross_mapping_ratio
-
 	def merged(self, s, t):
 		"""
 		Merge two sequences if they overlap. If they should not be merged,
