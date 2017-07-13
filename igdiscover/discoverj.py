@@ -39,8 +39,8 @@ def add_arguments(parser):
 
 
 class SequenceInfo:
-	__slots__ = ('name', 'sequence', 'count', 'max_count', 'cdr3s', 'other_genes', 'db_name',
-		'db_distance')
+	__slots__ = ('name', 'sequence', 'count', 'max_count', 'other_genes', 'db_name',
+		'db_distance', 'cdr3s')
 
 	def __init__(self, name, sequence, count=0, max_count=0, cdr3s=None, other_genes=None,
 			db_name=None, db_distance=None):
@@ -53,9 +53,12 @@ class SequenceInfo:
 		self.db_name = db_name
 		self.db_distance = db_distance
 
+	@property
+	def unique_CDR3(self):
+		return len(self.cdr3s)
+
 	def __repr__(self):
 		return 'SequenceInfo({sequence!r}, count={count}, max_count={max_count}, ...)'.format(**vars(self))
-	# def __lt__(self, other): ...
 
 
 class OverlappingSequenceMerger(Merger):
@@ -95,12 +98,10 @@ class AlleleRatioMerger(Merger):
 		# alleles of each other and the ratio is between the CDR3s_exact
 		# values
 		if self._allele_ratio and is_same_gene(s.name, t.name):
-			s_cdr3s = len(set(s.cdr3s))
-			t_cdr3s = len(set(t.cdr3s))
-			for u, v, u_cdr3s, t_cdr3s in [(s, t, s_cdr3s, t_cdr3s), (t, s, t_cdr3s, s_cdr3s)]:
-				if t_cdr3s == 0:
+			for u, v in [(s, t), (t, s)]:
+				if v.unique_CDR3 == 0:
 					continue
-				ratio = u_cdr3s / t_cdr3s
+				ratio = u.unique_CDR3 / v.unique_CDR3
 				if ratio < self._allele_ratio:
 					# logger.info('Allele ratio %.4f too low for %r compared to %r',
 					# 	ratio, u.name, v.name)
@@ -164,7 +165,7 @@ def print_table(records, other_gene):
 		print(record.name,
 			record.count,
 			len(set(record.other_genes)),
-			len(set(record.cdr3s)),
+			record.unique_CDR3,
 			record.db_name if record.db_name is not None else '',
 			record.db_distance if record.db_distance is not None else -1,
 			record.sequence,
@@ -240,7 +241,8 @@ def main(args):
 		arm = AlleleRatioMerger(args.allele_ratio, args.cross_mapping_ratio)
 		arm.extend(records)
 		records = list(arm)
-		logger.info('After filtering by allele ratio and/or cross-mapping ratio, %d candidates remain', len(records))
+		logger.info('After filtering by allele ratio and/or cross-mapping ratio, %d candidates remain',
+			len(records))
 
 	records = sorted(records, key=lambda r: (r.count, r.sequence), reverse=True)
 	records = [r for r in records if r.count > 1]
