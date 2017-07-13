@@ -14,6 +14,7 @@ import pandas as pd
 from sqt import SequenceReader
 from .table import read_table
 from .utils import natural_sort_key
+from .discoverj import AlleleRatioMerger
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +30,7 @@ def add_arguments(parser):
 	arg('--plot', metavar='FILE',
 		help='Plot expressions to FILE (PDF or PNG)')
 
-	group = parser.add_argument_group('Filtering')
+	group = parser.add_argument_group('Input table filtering')
 	group.add_argument('--d-evalue', type=float, default=None,
 		help='Maximal allowed E-value for D gene match. Default: 1E-4 '
 		'if --gene=D, no restriction otherwise.')
@@ -38,6 +39,11 @@ def add_arguments(parser):
 		'if --gene=D, no restriction otherwise.')
 	group.add_argument('--d-errors', type=int, default=None,
 		help='Maximum allowed D errors. Default: No limit.')
+
+	group = parser.add_argument_group('Expression counts table filtering')
+	group.add_argument('--allele-ratio', type=float, metavar='RATIO', default=None,
+		help='Required allele ratio. Works only for genes named "NAME*ALLELE". '
+		'Default: Do not check allele ratio.')
 
 	arg('table', help='Table with parsed and filtered IgBLAST results')
 
@@ -55,7 +61,6 @@ def compute_expressions(table, gene_type):
 	for gt in 'V', 'D', 'J':
 		if gene_type != gt:
 			columns += ('unique_' + gt,)
-
 	gene_column = gene_type + '_gene'
 	unassigned = 0
 	rows = []
@@ -138,8 +143,19 @@ def main(args):
 	# Make sure that always all gene names are listed even if no sequences
 	# were assigned.
 	if gene_names:
-		# TODO
 		counts = counts.reindex(gene_names, fill_value=0)
+
+	if args.database and args.allele_ratio:
+		logger.error('--database and --allele-ratio cannot be used at the same time.')
+		sys.exit(1)
+
+	if args.allele_ratio is not None:
+		arm = AlleleRatioMerger(args.allele_ratio, cross_mapping_ratio=None)
+		arm.extend(counts.reset_index().rename(columns={'gene': 'name'}).itertuples(index=False))
+		counts = pd.DataFrame(list(arm)).rename(columns={'name': 'gene'}).set_index('gene')
+		logger.info(
+			'After filtering by allele ratio and/or cross-mapping ratio, %d candidates remain',
+			len(counts))
 
 	# logger.info('%d sequences were not assigned a %s gene', unassigned, args.gene)
 	counts.to_csv(sys.stdout, sep='\t')
