@@ -292,6 +292,10 @@ def find_overlap(s, t, min_overlap=1):
 
 
 def merge_overlapping(s, t):
+	"""
+	Return merged sequences or None if they do not overlap
+	The minimum overlap is 50% of the length of the shorter sequence.
+	"""
 	i = find_overlap(s, t, min_overlap=max(1, min(len(s), len(t)) // 2))
 	if i is None:
 		return None
