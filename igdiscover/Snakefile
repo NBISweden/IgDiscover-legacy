@@ -583,8 +583,8 @@ rule igdiscover_count:
 		reference="{dir}/database/{gene}.fasta",
 		tab="{dir}/filtered.tab.gz"
 	shell:
-		"igdiscover count --database {input.reference} --gene {wildcards.gene} "
-		"{input.tab} {output.plot} > {output.counts}"
+		"igdiscover count --database={input.reference} --gene={wildcards.gene} "
+		"--plot={output.plot} {input.tab} > {output.counts}"
 
 
 rule igdiscover_clusterplot:
