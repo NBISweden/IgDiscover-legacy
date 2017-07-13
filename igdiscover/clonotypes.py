@@ -23,11 +23,17 @@ from itertools import islice
 from contextlib import ExitStack
 from collections import Counter
 from xopen import xopen
+from sqt.dna import nt_to_aa
+from sqt.align import hamming_distance
 
 from .table import read_table
 from .cluster import hamming_single_linkage
 from .utils import slice_arg
-from .clonoquery import is_similar_with_junction
+
+
+CLONOTYPE_COLUMNS = ['name', 'count', 'V_gene', 'D_gene', 'J_gene', 'CDR3_nt', 'CDR3_aa',
+	'V_errors', 'J_errors', 'V_SHM', 'J_SHM', 'barcode', 'VDJ_nt', 'VDJ_aa']
+
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +57,19 @@ def add_arguments(parser):
 	arg('--members', metavar='FILE',
 		help='Write member table to FILE')
 	arg('table', help='Table with parsed and filtered IgBLAST results')
+
+
+def is_similar_with_junction(s, t, mismatches, cdr3_core):
+	"""
+	Return whether strings s and t have at most the given number of mismatches
+	*and* have at least one identical junction.
+	"""
+	distance_ok = hamming_distance(s, t) <= mismatches
+	if cdr3_core is None:
+		return distance_ok
+	return distance_ok and (
+			(s[:cdr3_core.start] == t[:cdr3_core.start]) or
+			(s[cdr3_core.stop:] == t[cdr3_core.stop:]))
 
 
 def group_by_cdr3(table, mismatches, cdr3_core):
@@ -91,7 +110,7 @@ def representative(table):
 	CDR3_length = table['CDR3_length'].iloc[0]
 	CDR3_nt = Counter(table['CDR3_nt']).most_common(1)[0][0]
 
-	return (count, V_gene, J_gene, CDR3_length, CDR3_nt)
+	return (count, V_gene, J_gene, CDR3_length, CDR3_nt, nt_to_aa(CDR3_nt))
 
 
 def group_by_clonotype(table, mismatches, sort, cdr3_core):
@@ -122,12 +141,11 @@ def group_by_clonotype(table, mismatches, sort, cdr3_core):
 
 
 def main(args):
-	columns = ['count', 'V_gene', 'D_gene', 'J_gene', 'CDR3_nt', 'CDR3_aa',
-		'V_errors', 'J_errors', 'V_SHM', 'J_SHM', 'barcode', 'VDJ_nt']
 	logger.info('Reading input table ...')
-	table = read_table(args.table, usecols=columns)
+	table = read_table(args.table, usecols=CLONOTYPE_COLUMNS)
+	table = table[CLONOTYPE_COLUMNS]
 	logger.info('Read table with %s rows', len(table))
-	table.insert(6, 'CDR3_length', table['CDR3_nt'].apply(len))
+	table.insert(5, 'CDR3_length', table['CDR3_nt'].apply(len))
 
 	with ExitStack() as stack:
 		if args.members:
@@ -135,7 +153,7 @@ def main(args):
 		else:
 			members_file = None
 
-		print('count', 'V_gene', 'J_gene', 'CDR3_length', 'CDR3_nt', sep='\t')
+		print('count', 'V_gene', 'J_gene', 'CDR3_length', 'CDR3_nt', 'CDR3_aa', sep='\t')
 		print_header = True
 		n = 0
 		grouped = group_by_clonotype(table, args.mismatches, args.sort, args.cdr3_core)

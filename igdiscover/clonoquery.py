@@ -15,12 +15,12 @@ The table is written to standard output.
 import logging
 from collections import defaultdict
 from contextlib import ExitStack
-
-from xopen import xopen
 from sqt.align import hamming_distance
+from xopen import xopen
 
 from .table import read_table
 from .utils import slice_arg
+from .clonotypes import is_similar_with_junction, CLONOTYPE_COLUMNS
 
 logger = logging.getLogger(__name__)
 
@@ -44,19 +44,6 @@ def add_arguments(parser):
 	arg('reftable', help='Reference table with parsed and filtered '
 		'IgBLAST results (filtered.tab)')
 	arg('querytable', help='Query table with IgBLAST results (assigned.tab or filtered.tab)')
-
-
-def is_similar_with_junction(s, t, mismatches, cdr3_core):
-	"""
-	Return whether strings s and t have at most the given number of mismatches
-	*and* have at least one identical junction.
-	"""
-	distance_ok = hamming_distance(s, t) <= mismatches
-	if cdr3_core is None:
-		return distance_ok
-	return distance_ok and (
-			(s[:cdr3_core.start] == t[:cdr3_core.start]) or
-			(s[cdr3_core.stop:] == t[cdr3_core.stop:]))
 
 
 def collect(querytable, reftable, mismatches, cdr3_core_slice):
@@ -109,22 +96,20 @@ def collect(querytable, reftable, mismatches, cdr3_core_slice):
 
 
 def main(args):
-	columns = ['name', 'count', 'V_gene', 'D_gene', 'J_gene', 'CDR3_nt', 'CDR3_aa',
-		'V_errors', 'J_errors', 'V_SHM', 'J_SHM', 'barcode', 'VDJ_nt', 'VDJ_aa']  # TODO D_errors
-	querytable = read_table(args.querytable, usecols=columns)
-	querytable = querytable[columns]  # reorder columns
+	querytable = read_table(args.querytable, usecols=CLONOTYPE_COLUMNS)
+	querytable = querytable[CLONOTYPE_COLUMNS]  # reorder columns
 	# Filter empty rows (happens sometimes)
 	querytable = querytable[querytable.V_gene != '']
 	logger.info('Read query table with %s rows', len(querytable))
-	reftable = read_table(args.reftable, usecols=columns)
-	reftable = reftable[columns]
+	reftable = read_table(args.reftable, usecols=CLONOTYPE_COLUMNS)
+	reftable = reftable[CLONOTYPE_COLUMNS]
 	logger.info('Read reference table with %s rows', len(reftable))
 	if args.minimum_count > 1:
 		reftable = reftable[reftable['count'] >= args.minimum_count]
 		logger.info('After filtering out rows with count < %s, %s rows remain', args.minimum_count,
 			len(reftable))
 	for tab in querytable, reftable:
-		tab.insert(6, 'CDR3_length', tab['CDR3_nt'].apply(len))
+		tab.insert(5, 'CDR3_length', tab['CDR3_nt'].apply(len))
 
 	if len(querytable) > len(reftable):
 		logger.warning('The reference table is smaller than the '
