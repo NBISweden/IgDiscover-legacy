@@ -17,3 +17,4 @@ bin/
 testrun
 dist/
 igblast/
+*.pyc
