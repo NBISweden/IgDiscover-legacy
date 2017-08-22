@@ -4,7 +4,7 @@ Plot a clustermap of all sequences assigned to a gene
 import os.path
 import logging
 import matplotlib
-matplotlib.use('pdf')
+matplotlib.use('agg')
 import seaborn as sns
 from .table import read_table
 from .utils import downsampled, plural_s
