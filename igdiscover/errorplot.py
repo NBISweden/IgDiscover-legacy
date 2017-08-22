@@ -6,7 +6,7 @@ assigned to that gene at a certain percentage difference.
 """
 import logging
 import matplotlib
-matplotlib.use('pdf')
+matplotlib.use('agg')
 from matplotlib.backends.backend_pdf import FigureCanvasPdf, PdfPages
 from matplotlib.figure import Figure
 import numpy as np

@@ -86,7 +86,7 @@ def compute_expressions(table, gene_type):
 def plot_counts(counts, gene_type):
 	"""Plot expression counts. Return a Figure object"""
 	import matplotlib
-	matplotlib.use('pdf')
+	matplotlib.use('agg')
 	import matplotlib.pyplot as plt
 	import seaborn as sns
 	import numpy as np

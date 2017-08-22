@@ -53,7 +53,7 @@ from contextlib import ExitStack
 from itertools import islice
 
 import matplotlib
-matplotlib.use('pdf')
+matplotlib.use('agg')
 import matplotlib.pyplot as plt
 from sqt.align import consensus
 from sqt import SequenceReader
