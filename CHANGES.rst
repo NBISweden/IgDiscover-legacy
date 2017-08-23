@@ -8,6 +8,19 @@ development version
 * Implemented allele ratio filtering for J gene discovery
 * J genes are discovered as part of the pipeline (previously, one needed
   to run the ``discoverj`` script manually)
+* In each iteration, dendrograms are now created not only for V genes, but
+  also for D and J genes. The file names are ``dendrogram_D.pdf``,
+  ``dendrogram_J.pdf``
+* The V dendrograms are now in  in ``dendrogram_V.pdf`` (no longer
+  ``dendrogram_V.pdf``). This puts all the dendrograms together when looking
+  at the files in the iteration directory.
+* The ``V_usage.tab`` and ``V_usage.pdf`` files are no longer created.
+  Instead, ``expressed_V.tab`` and ``expressed_V.pdf`` are created. These
+  contain similar information, but an allele-ratio filter is used to
+  filter out artifacts.
+* Similarly, ``expressed_D.tab`` and ``expressed_J.tab`` and their
+  ``.pdf`` counterparts are created in each iteration.
+
 
 v0.8.0 (2017-06-20)
 -------------------

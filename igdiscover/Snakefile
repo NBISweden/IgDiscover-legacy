@@ -29,11 +29,9 @@ if config.debug:
 # Targets for each iteration
 ITERATION_TARGETS = [
 	'clusterplots/done',
-	'errorhistograms.pdf',
-	'V_usage.tab',
-	'V_usage.pdf',
-	'V_dendrogram.pdf',
-]
+	'errorhistograms.pdf'
+] + expand(['expressed_{gene}.tab', 'expressed_{gene}.pdf', 'dendrogram_{gene}.pdf'], gene=['V', 'D', 'J'])
+
 # Targets for non-final iterations
 DISCOVERY_TARGETS = [
 	'candidates.tab',
@@ -577,13 +575,13 @@ rule igdiscover_filter:
 
 rule igdiscover_count:
 	output:
-		plot="{dir}/{gene,[VDJ]}_usage.pdf",
-		counts="{dir}/{gene}_usage.tab"
+		plot="{dir}/expressed_{gene,[VDJ]}.pdf",
+		counts="{dir}/expressed_{gene}.tab"
 	input:
-		reference="{dir}/database/{gene}.fasta",
 		tab="{dir}/filtered.tab.gz"
 	shell:
-		"igdiscover count --database={input.reference} --gene={wildcards.gene} "
+		"igdiscover count --gene={wildcards.gene} "
+		"--allele-ratio=0.1 "
 		"--plot={output.plot} {input.tab} > {output.counts}"
 
 
@@ -718,7 +716,7 @@ rule plot_errorhistograms:
 
 rule dendrogram:
 	output:
-		pdf='{dir}/{gene}_dendrogram.pdf'
+		pdf='{dir}/dendrogram_{gene}.pdf'
 	input:
 		fasta='{dir}/database/{gene}.fasta'
 	shell:
