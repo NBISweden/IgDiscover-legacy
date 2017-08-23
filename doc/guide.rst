@@ -385,13 +385,14 @@ Final results
 
 Final results are found in the ``final/`` subdirectory of the analysis directory.
 
-final/database/species_(V,D,J).fasta
+final/database/(V,D,J).fasta
     These three files represent the final, individualized V/D/J database found by IgDiscover.
     The D and J files are copies of the original starting database;
     they are not updated by IgDiscover.
 
-final/V_dendrogram.pdf
-    A dendrogram of all V sequences in the individualized database.
+final/dendrogram_(V,D,J).pdf
+    These three PDF files contain dendrograms of the V, D and J sequences in the individualized
+    database.
 
 final/igblast.txt.gz
     IgBLAST result (compressed) of running IgBLAST with the discovered database.
@@ -406,9 +407,19 @@ final/filtered.tab.gz
     Filtered V/D/J gene assignments. This is the same as the assigned.tab file mentioned above, but with low-quality assignments filtered out.
     Run ``igdiscover filter --help`` to see the filtering criteria.
 
-final/V_usage.tab, final/V_usage.pdf
-    The V gene expression counts, derived from the IgBLAST results.
-    The .tab file contains the counts as a table, while the pdf file contains a plot of the same values.
+final/expressed_(V,D,J).tab, final/expressed_(V,D,J).pdf
+    The V, D and J gene expression counts. Some assignments are filtered out to reduce artifacts. In particular,
+    an allele-ratio filter of 10% is applied. For D genes, only those with an E-value of at most
+    1E-4 and a coverage of at least 70% are counted. See also the help for the ``igdiscover count``
+    subcommand, which is used to create these files.
+
+    The ``.tab`` file contains the counts as a table, while the PDF file contains a plot of the same values.
+
+    These tables also exist in the iteration-specific directories (``iteration-xx``). For those,
+    note that the numbers do not include the genes that were discovered in that iteration. For
+    example, ``iteration-01/expressed_V.tab`` shows only expression counts of the V genes in the
+    starting database.
+
 
 final/errorhistograms.pdf
     A PDF with one page per V gene/allele.
@@ -684,10 +695,10 @@ CDR3s_approx
 
 .. _gene-names:
 
-Novel V gene names
--------------------
+Names for discovered genes
+--------------------------
 
-Each V gene discovered by IgDiscover gets a unique name such as “VH4.11_S1234”.
+Each gene discovered by IgDiscover gets a unique name such as “VH4.11_S1234”.
 The “VH4.11” is the name of the database gene to which the novel
 V gene was initially assigned. The number *1234* is derived from the nucleotide
 sequence of the novel gene. That is, if you discover the same sequence in two

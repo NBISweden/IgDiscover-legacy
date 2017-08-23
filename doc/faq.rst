@@ -94,7 +94,7 @@ directory <analysis-directory>` in the subdirectory ``final/database/``. The ``V
 contains the new list of V genes. The ``D.fasta`` and ``J.fasta`` files are unchanged from the
 starting database.
 
-A phylogenetic tree of the V sequences can be found in ``final/V_dendrogram.pdf``.
+A phylogenetic tree of the V sequences can be found in ``final/dendrogram_V.pdf``.
 
 For more details of how that database was created, you need to inspect the files created in the last
 iteration of the discovery process, located in ``iteration-xx``, where ``xx`` is the number of
@@ -109,3 +109,9 @@ Most interesting in that folder are likely
 - Details about the individualized database in ``new_V_germline.tab`` in tab-separated-value format
 
 The ``new_V_germline.fasta`` file is identical to the one in ``final/database/V.fasta``
+
+
+What does the _S1234 at the end of same gene names mean?
+--------------------------------------------------------
+
+Please see the :ref:`Section on gene names <gene-names>`.

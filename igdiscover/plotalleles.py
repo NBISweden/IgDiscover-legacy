@@ -35,7 +35,7 @@ def main(args):
 	try:
 		table = read_table(args.table, usecols=usecols)
 	except ValueError:
-		usecols = [col for col in usecols if col != 'D_errors']
+		usecols.remove('D_errors')
 		table = read_table(args.table, usecols=usecols)
 	logger.info('Table with %s rows read', len(table))
 	if args.x == 'V':
