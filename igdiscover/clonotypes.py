@@ -54,6 +54,8 @@ def add_arguments(parser):
 			'Default: no junction region.')
 	arg('--mismatches', default=1, type=int,
 		help='No. of allowed mismatches between CDR3 sequences. Default: %(default)s')
+	arg('--aa', default=False, action='store_true',
+		help='Count CDR3 mismatches on amino-acid level. Default: Compare nucleotides.')
 	arg('--members', metavar='FILE',
 		help='Write member table to FILE')
 	arg('table', help='Table with parsed and filtered IgBLAST results')
@@ -72,14 +74,14 @@ def is_similar_with_junction(s, t, mismatches, cdr3_core):
 			(s[cdr3_core.stop:] == t[cdr3_core.stop:]))
 
 
-def group_by_cdr3(table, mismatches, cdr3_core):
+def group_by_cdr3(table, mismatches, cdr3_core, cdr3_column):
 	"""
 	Cluster the rows of the table by Hamming distance between
 	their CDR3 sequences. Yield (index, group) tuples similar 
 	to .groupby().
 	"""
 	# Cluster all unique CDR3s by Hamming distance
-	sequences = list(set(table.CDR3_nt))
+	sequences = list(set(table[cdr3_column]))
 	if cdr3_core:
 		def linked(s, t):
 			return is_similar_with_junction(s, t, mismatches, cdr3_core)
@@ -94,7 +96,7 @@ def group_by_cdr3(table, mismatches, cdr3_core):
 			cluster_ids[cdr3] = cluster_id
 
 	# Assign cluster id to each row
-	table['cluster_id'] = table['CDR3_nt'].apply(lambda cdr3: cluster_ids[cdr3])
+	table['cluster_id'] = table[cdr3_column].apply(lambda cdr3: cluster_ids[cdr3])
 	for index, group in table.groupby('cluster_id'):
 		yield group.drop('cluster_id', axis=1)
 
@@ -108,12 +110,14 @@ def representative(table):
 	V_gene = table['V_gene'].iloc[0]
 	J_gene = table['J_gene'].iloc[0]
 	CDR3_length = table['CDR3_length'].iloc[0]
+
+	# TODO should this use CDR3_aa if --aa is given?
 	CDR3_nt = Counter(table['CDR3_nt']).most_common(1)[0][0]
 
 	return (count, V_gene, J_gene, CDR3_length, CDR3_nt, nt_to_aa(CDR3_nt))
 
 
-def group_by_clonotype(table, mismatches, sort, cdr3_core):
+def group_by_clonotype(table, mismatches, sort, cdr3_core, cdr3_column):
 	"""
 	Yield clonotype groups. Each item is a DataFrame with all the members of the
 	clonotype.
@@ -126,7 +130,8 @@ def group_by_clonotype(table, mismatches, sort, cdr3_core):
 		if prev_v != v_gene:
 			logger.info('Processing %s', v_gene)
 		prev_v = v_gene
-		cdr3_groups = group_by_cdr3(vj_group.copy(), mismatches=mismatches, cdr3_core=cdr3_core)
+		cdr3_groups = group_by_cdr3(vj_group.copy(), mismatches=mismatches, cdr3_core=cdr3_core,
+			cdr3_column=cdr3_column)
 		if sort:
 			# When sorting by group size is requested, we need to buffer
 			# results
@@ -156,7 +161,8 @@ def main(args):
 		print('count', 'V_gene', 'J_gene', 'CDR3_length', 'CDR3_nt', 'CDR3_aa', sep='\t')
 		print_header = True
 		n = 0
-		grouped = group_by_clonotype(table, args.mismatches, args.sort, args.cdr3_core)
+		cdr3_column = 'CDR3_aa' if args.aa else 'CDR3_nt'
+		grouped = group_by_clonotype(table, args.mismatches, args.sort, args.cdr3_core, cdr3_column)
 		for group in islice(grouped, 0, args.limit):
 			if members_file:
 				# We get an intentional empty line between groups since

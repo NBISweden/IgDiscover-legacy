@@ -39,6 +39,8 @@ def add_arguments(parser):
 			'Default: no junction region.')
 	arg('--mismatches', default=1, type=int,
 		help='No. of allowed mismatches between CDR3 sequences. Default: %(default)s')
+	arg('--aa', default=False, action='store_true',
+		help='Count CDR3 mismatches on amino-acid level. Default: Compare nucleotides.')
 	arg('--summary', metavar='FILE',
 		help='Write summary table to FILE')
 	arg('reftable', help='Reference table with parsed and filtered '
@@ -46,7 +48,7 @@ def add_arguments(parser):
 	arg('querytable', help='Query table with IgBLAST results (assigned.tab or filtered.tab)')
 
 
-def collect(querytable, reftable, mismatches, cdr3_core_slice):
+def collect(querytable, reftable, mismatches, cdr3_core_slice, cdr3_column):
 	# The vjlentype is a "clonotype without CDR3 sequence" (only V, J, CDR3 length)
 	# Determine set of vjlentypes to query
 	groupby = ('V_gene', 'J_gene', 'CDR3_length')
@@ -63,11 +65,11 @@ def collect(querytable, reftable, mismatches, cdr3_core_slice):
 		# Collect results for this vjlentype
 		results = defaultdict(list)
 		for query_row in query_vjlentypes.pop(vjlentype):
-			cdr3 = query_row.CDR3_nt
+			cdr3 = getattr(query_row, cdr3_column)
 			# TODO use is_similar_with_junction
 			# Save indices of the rows that are similar to this query
 			indices = tuple(index for index, r in enumerate(vjlen_group.itertuples())
-				if hamming_distance(cdr3, r.CDR3_nt) <= mismatches)
+				if hamming_distance(cdr3, getattr(r, cdr3_column)) <= mismatches)
 			results[indices].append(query_row)
 
 		# Yield results, grouping queries that lead to the same result
@@ -84,8 +86,8 @@ def collect(querytable, reftable, mismatches, cdr3_core_slice):
 				cdr3_tail = cdr3[cdr3_core.stop:]
 				similar_group = similar_group.copy()
 				similar_group.insert(0, 'junction_ident', [
-					int((cdr3_head == r.CDR3_nt[:cdr3_core.start]) or
-						(cdr3_tail == r.CDR3_nt[cdr3_core.stop:])) for r in
+					int((cdr3_head == getattr(r, cdr3_column)[:cdr3_core.start]) or
+						(cdr3_tail == getattr(r, cdr3_column)[cdr3_core.stop:])) for r in
 					similar_group.itertuples()])
 			yield (query_rows, similar_group)
 
@@ -115,6 +117,7 @@ def main(args):
 		logger.warning('The reference table is smaller than the '
 			'query table! Did you swap query and reference?')
 
+	cdr3_column = 'CDR3_aa' if args.aa else 'CDR3_nt'
 	with ExitStack() as stack:
 		if args.summary:
 			summary_file = stack.enter_context(xopen(args.summary, 'w'))
@@ -125,7 +128,8 @@ def main(args):
 		if args.cdr3_core:
 			print('keep?', end='\t')
 		print(*reftable.columns, sep='\t')
-		for query_rows, result_table in collect(querytable, reftable, args.mismatches, args.cdr3_core):
+		for query_rows, result_table in collect(querytable, reftable, args.mismatches,
+				args.cdr3_core, cdr3_column):
 			assert len(query_rows) >= 1
 			if summary_file:
 				for query_row in query_rows:
