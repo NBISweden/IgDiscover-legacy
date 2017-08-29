@@ -51,7 +51,7 @@ def add_arguments(parser):
 
 class Candidate:
 	__slots__ = ('name', 'sequence', 'count', 'max_count', 'other_genes', 'db_name',
-		'db_distance', 'cdr3s')
+		'db_distance', 'cdr3s', 'missing')
 
 	def __init__(self, name, sequence, count=0, max_count=0, cdr3s=None, other_genes=None,
 			db_name=None, db_distance=None):
@@ -63,6 +63,7 @@ class Candidate:
 		self.other_genes = other_genes if other_genes is not None else set()
 		self.db_name = db_name
 		self.db_distance = db_distance
+		self.missing = ''
 
 	@property
 	def unique_CDR3(self):
@@ -202,17 +203,24 @@ def discard_substring_occurrences(seq_count_pairs):
 # 	return result
 
 
-def print_table(records, other_gene):
-	print('name', 'count', other_gene + 's', 'CDR3s', 'database', 'database_diff', 'sequence', sep='\t')
+def print_table(records, other_gene, missing):
+	columns = ['name', 'count', other_gene + 's', 'CDR3s', 'database', 'database_diff', 'sequence']
+	if missing:
+		columns.append('missing')
+	print(*columns, sep='\t')
 	for record in records:
-		print(record.name,
+		columns = [
+			record.name,
 			record.count,
 			len(set(record.other_genes)),
 			record.unique_CDR3,
 			record.db_name if record.db_name is not None else '',
 			record.db_distance if record.db_distance is not None else -1,
-			record.sequence,
-			sep='\t')
+			record.sequence
+		]
+		if missing:
+			columns.append(record.missing)
+		print(*columns, sep='\t')
 
 
 def main(args):
@@ -285,10 +293,23 @@ def main(args):
 			distances = [(edit_distance(db.sequence, record.sequence), db) for db in database]
 			record.db_distance, closest = min(distances, key=lambda x: x[0])
 			record.db_name = closest.name
+
 			if record.db_distance == 0:
 				record.name = closest.name
 			else:
-				record.name = unique_name(closest.name, record.sequence)
+				# Exact db sequence not found, is there one that contains
+				# this candidate as a substring?
+				is_substring = [db for db in database
+					if db.sequence.find(record.sequence) != -1]
+				if is_substring:
+					db = is_substring[-1]
+					start = db.sequence.find(record.sequence)
+					prefix = db.sequence[:start]
+					suffix = db.sequence[start + len(record.sequence):]
+					record.name = db.name
+					record.missing = '{}...{}'.format(prefix, suffix)
+				else:
+					record.name = unique_name(closest.name, record.sequence)
 		# Merge by allele ratio
 	else:
 		for record in records:
@@ -302,9 +323,9 @@ def main(args):
 			len(records))
 
 	records = sorted(records, key=lambda r: (r.count, r.sequence), reverse=True)
-	records = [r for r in records if r.count >= args.min_count]
+	records = [r for r in records if r.count >= 1]
 
-	print_table(records, other_gene)
+	print_table(records, other_gene, missing=args.gene == 'D')
 	if args.fasta:
 		with open(args.fasta, 'w') as f:
 			for record in sorted(records, key=lambda r: r.name):

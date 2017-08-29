@@ -1,8 +1,9 @@
 #!/bin/bash
 # Run this within an activated igdiscover environment
-
-set -eo pipefail
+set -euo pipefail
 unset DISPLAY
+
+nosetests --with-doctest -P tests/ igdiscover/
 
 rm -rf testrun
 mkdir testrun
