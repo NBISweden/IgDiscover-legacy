@@ -9,15 +9,15 @@ The result table is written to standard output. Use --fasta to also
 generate FASTA output.
 """
 import logging
+from collections import Counter
 import pandas as pd
 from sqt import FastaReader
 from sqt.align import edit_distance
-from .utils import Merger, merge_overlapping, unique_name, is_same_gene
+from .utils import Merger, merge_overlapping, unique_name, is_same_gene, slice_arg
 from .table import read_table
 
 logger = logging.getLogger(__name__)
 
-MIN_COUNT = 100
 MINIMUM_CANDIDATE_LENGTH = 5
 
 
@@ -26,7 +26,7 @@ def add_arguments(parser):
 	arg('--database', metavar='FASTA',
 		help='FASTA file with reference gene sequences')
 	arg('--merge', default=None, action='store_true', help='Merge overlapping genes. '
-		'Default: Enabled for J, disabled for D and V.')
+		'Default: Enabled for J and D, disabled for V.')
 	arg('--no-merge', dest='merge', action='store_false', help='Do not merge overlapping genes')
 	arg('--gene', default='J', choices=('V', 'D', 'J'),
 		help='Which gene category to discover. Default: %(default)s')
@@ -34,11 +34,22 @@ def add_arguments(parser):
 		help='Required allele ratio. Works only for genes named "NAME*ALLELE". Default: %(default)s')
 	arg('--cross-mapping-ratio', type=float, metavar='RATIO', default=None,
 		help='Ratio for detection of cross-mapping artifacts. Default: %(default)s')
+	arg('--min-count', type=int, default=None,
+		help='Minimum count. Default: 1 for D, 100 for V and J')
+
+	# --gene=D options
+	arg('--d-core-length', metavar='L', type=int, default=6,
+		help='Use only D core regions that have at least length L (only '
+			'applies when --gene=D). Default: %(default)s')
+	arg('--d-core', type=slice_arg, default=slice(2, -2),
+		help='D core region location (only applies when --gene=D). '
+			'Default: %(default)s')
+
 	arg('--fasta', help='Write discovered sequences to FASTA file')
 	arg('table', help='Table with parsed and filtered IgBLAST results')
 
 
-class SequenceInfo:
+class Candidate:
 	__slots__ = ('name', 'sequence', 'count', 'max_count', 'other_genes', 'db_name',
 		'db_distance', 'cdr3s')
 
@@ -58,7 +69,7 @@ class SequenceInfo:
 		return len(self.cdr3s)
 
 	def __repr__(self):
-		return 'SequenceInfo({sequence!r}, count={count}, max_count={max_count}, ...)'.format(**vars(self))
+		return 'Candidate({sequence!r}, count={count}, max_count={max_count}, ...)'.format(**vars(self))
 
 
 class OverlappingSequenceMerger(Merger):
@@ -72,7 +83,7 @@ class OverlappingSequenceMerger(Merger):
 		"""
 		m = merge_overlapping(s.sequence, t.sequence)
 		if m is not None:
-			return SequenceInfo(s.name, m, max_count=t.max_count + s.max_count)
+			return Candidate(s.name, m, max_count=t.max_count + s.max_count)
 
 		return None
 
@@ -134,9 +145,9 @@ class AlleleRatioMerger(Merger):
 		return None
 
 
-def count_full_text_occurrences(candidates, table_path, other_gene, other_errors, merge):
-	# Use only records that have a chance of reaching the required MIN_COUNT
-	records = {info.sequence: info for info in candidates if info.max_count >= MIN_COUNT}
+def count_full_text_occurrences(candidates, table_path, other_gene, other_errors, merge, min_count):
+	# Use only records that have a chance of reaching the required min_count
+	records = {info.sequence: info for info in candidates if info.max_count >= min_count}
 
 	# Count full-text occurrences in the genomic_sequence, circumventing
 	# inaccurate IgBLAST alignment boundaries
@@ -158,8 +169,40 @@ def count_full_text_occurrences(candidates, table_path, other_gene, other_errors
 	return records.values()
 
 
+def discard_substring_occurrences(seq_count_pairs):
+	# Sort by sequence length
+	seq_count_pairs = sorted(seq_count_pairs, key=lambda r: len(r[0]))
+	result = []
+	while seq_count_pairs:
+		seq, count = seq_count_pairs.pop()
+		# Keep only those candidates that are not substrings of seq
+		tmp = []
+		for s, n in seq_count_pairs:
+			if seq.find(s) != -1:
+				count += n
+			else:
+				tmp.append((s, n))
+		seq_count_pairs = tmp
+		result.append((seq, count))
+	return result
+
+
+# TODO Remove this version of the above that works on strings only
+#
+# def discard_substring_occurrences(sequences):
+# 	"""
+# 	Discard sequences that appear as substrings in others
+# 	"""
+# 	sequences = sorted(sequences, key=len)
+# 	result = []
+# 	while sequences:
+# 		long = sequences.pop()
+# 		sequences = [s for s in sequences if long.find(s) == -1]
+# 		result.append(long)
+# 	return result
+
+
 def print_table(records, other_gene):
-	# Print output table
 	print('name', 'count', other_gene + 's', 'CDR3s', 'database', 'database_diff', 'sequence', sep='\t')
 	for record in records:
 		print(record.name,
@@ -179,13 +222,7 @@ def main(args):
 		logger.info('Read %d sequences from %r', len(database), args.database)
 	else:
 		database = None
-	if args.gene == 'V':
-		column = 'V_nt'
-	elif args.gene == 'J':
-		column = 'J_nt'
-	else:
-		assert args.gene == 'D'
-		column = 'D_region'
+	column = {'V': 'V_nt', 'J': 'J_nt', 'D': 'D_region'}[args.gene]
 	other = 'V' if args.gene in ('D', 'J') else 'J'
 	other_gene = other + '_gene'
 	other_errors = other + '_errors'
@@ -196,7 +233,29 @@ def main(args):
 	logger.info('Keeping %s rows that have no %s mismatches', len(table), other)
 
 	if args.merge is None:
-		args.merge = args.gene == 'J'
+		args.merge = args.gene != 'V'
+	if args.min_count is None:
+		args.min_count = 1 if args.gene == 'D' else 100
+
+	def initial_vj_candidates(table, column):
+		for sequence, group in table.groupby(column):
+			if len(sequence) < MINIMUM_CANDIDATE_LENGTH:
+				continue
+			yield sequence, len(group)
+
+	def initial_d_candidates(table, column):
+		d_sequences = Counter(s[args.d_core] for s in table[column])
+		# Require more than one occurrence and a minimum length
+		d_sequences = [(s, n) for s, n in d_sequences.most_common()
+			if n > 1 and len(s) >= args.d_core_length]
+
+		# TODO
+		# - do not use a D core region?
+		# if database is not None:
+		# 	candidates = discard_known(candidates, database)
+		return discard_substring_occurrences(d_sequences)
+
+	candidates_func = initial_d_candidates if args.gene == 'D' else initial_vj_candidates
 
 	if args.merge:
 		logger.info('Merging overlapping sequences ...')
@@ -204,24 +263,22 @@ def main(args):
 		# another, this is typically a sign that IgBLAST has not extended the
 		# alignment long enough.
 		merger = OverlappingSequenceMerger()
-		for sequence, group in table.groupby(column):
-			if len(sequence) < MINIMUM_CANDIDATE_LENGTH:
-				continue
-			merger.add(SequenceInfo(None, sequence, max_count=len(group)))
+		for sequence, count in candidates_func(table, column):
+			merger.add(Candidate(None, sequence, max_count=count))
 		logger.info('After merging overlapping %s sequences, %s remain', args.gene, len(merger))
 		candidates = list(merger)
 	else:
 		candidates = []
-		for sequence, group in table.groupby(column):
-			if len(sequence) < MINIMUM_CANDIDATE_LENGTH:
-				continue
-			candidates.append(SequenceInfo(None, sequence, max_count=len(group)))
+		for sequence, count in candidates_func(table, column):
+			candidates.append(Candidate(None, sequence, max_count=count))
 		logger.info('Collected %s unique %s sequences', len(candidates), args.gene)
 	del table
 
 	logger.info('Counting occurrences ...')
-	records = count_full_text_occurrences(candidates, args.table, other_gene, other_errors, args.merge)
+	records = count_full_text_occurrences(candidates, args.table, other_gene, other_errors,
+		args.merge, args.min_count)
 
+	logger.info('%d records', len(records))
 	# Assign names etc.
 	if database:
 		for record in records:
@@ -245,7 +302,7 @@ def main(args):
 			len(records))
 
 	records = sorted(records, key=lambda r: (r.count, r.sequence), reverse=True)
-	records = [r for r in records if r.count > 1]
+	records = [r for r in records if r.count >= args.min_count]
 
 	print_table(records, other_gene)
 	if args.fasta:
