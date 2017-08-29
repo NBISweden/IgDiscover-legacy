@@ -7,6 +7,8 @@ nosetests --with-doctest -P tests/ igdiscover/
 
 rm -rf testrun
 mkdir testrun
+ln -s igdiscover-testdata-* testdata
+
 igdiscover init --db=testdata/db --reads=testdata/reads.1.fastq.gz testrun/paired
 
 cd testrun/paired
@@ -19,16 +21,16 @@ igdiscover config --set iterations 2 \
    --set forward_primers '["CGTGAGCTGAGTACGACTCACTATAGCTTCAC"]' \
    --set germline_filter.unique_js 1 \
    --set j_discovery.propagate false
-time -p igdiscover run -p
+igdiscover run -p
 cd ../..
 
 # Use the merged file from above as input again
 igdiscover init --db=testdata/db --single-reads=testrun/paired/reads/2-merged.fastq.gz testrun/singlefastq
 cp -p testrun/paired/igdiscover.yaml testrun/singlefastq/
-( cd testrun/singlefastq && exec time -p igdiscover run -p stats/reads.json )
+( cd testrun/singlefastq && igdiscover run -p stats/reads.json )
 
 # Test FASTA input
 sqt fastxmod -w 0 --fasta testrun/paired/reads/2-merged.fastq.gz > testrun/reads.fasta
 igdiscover init --db=testdata/db --single-reads=testrun/reads.fasta testrun/singlefasta
 cp -p testrun/paired/igdiscover.yaml testrun/singlefastq/
-( cd testrun/singlefasta && exec time -p igdiscover run -p stats/reads.json )
+( cd testrun/singlefasta && igdiscover run -p stats/reads.json )
