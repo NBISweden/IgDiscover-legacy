@@ -302,7 +302,7 @@ def main(args):
 			len(records))
 
 	records = sorted(records, key=lambda r: (r.count, r.sequence), reverse=True)
-	records = [r for r in records if r.count >= args.min_count]
+	records = [r for r in records if r.count >= 1]
 
 	print_table(records, other_gene)
 	if args.fasta:
