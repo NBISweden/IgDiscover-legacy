@@ -25,8 +25,4 @@ install:
   - source activate testenv
   - pip install .
 
-script:
-  - nosetests --with-doctest -P tests/ igdiscover/
-  - igdiscover init --db igdiscover-testdata-*/db/ --reads igdiscover-testdata-*/reads.1.fastq.gz discovertest
-  - cp igdiscover-testdata-*/igdiscover.yaml discovertest/
-  - cd discovertest && igdiscover run
+script: tests/run.sh
