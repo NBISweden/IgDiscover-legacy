@@ -146,7 +146,6 @@ def main(args):
 		arm = AlleleRatioMerger(args.allele_ratio, cross_mapping_ratio=None)
 		renamed_counts = counts.reset_index().rename(columns={'gene': 'name'})
 		arm.extend(renamed_counts.itertuples(index=False))
-		import ipdb; ipdb.set_trace()
 		counts = pd.DataFrame(list(arm), columns=renamed_counts.columns) \
 			.rename(columns={'name': 'gene'}) \
 			.set_index('gene')
