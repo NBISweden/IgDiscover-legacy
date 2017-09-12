@@ -144,8 +144,12 @@ def main(args):
 
 	if args.allele_ratio is not None:
 		arm = AlleleRatioMerger(args.allele_ratio, cross_mapping_ratio=None)
-		arm.extend(counts.reset_index().rename(columns={'gene': 'name'}).itertuples(index=False))
-		counts = pd.DataFrame(list(arm)).rename(columns={'name': 'gene'}).set_index('gene')
+		renamed_counts = counts.reset_index().rename(columns={'gene': 'name'})
+		arm.extend(renamed_counts.itertuples(index=False))
+		import ipdb; ipdb.set_trace()
+		counts = pd.DataFrame(list(arm), columns=renamed_counts.columns) \
+			.rename(columns={'name': 'gene'}) \
+			.set_index('gene')
 		logger.info(
 			'After filtering by allele ratio and/or cross-mapping ratio, %d candidates remain',
 			len(counts))
