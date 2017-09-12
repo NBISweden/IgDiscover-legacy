@@ -62,11 +62,9 @@ def compute_expressions(table, gene_type):
 		if gene_type != gt:
 			columns += ('unique_' + gt,)
 	gene_column = gene_type + '_gene'
-	unassigned = 0
 	rows = []
 	for gene, group in table.groupby(gene_column):
 		if gene == '':
-			unassigned = len(group)
 			continue
 		unique_cdr3 = count_unique_cdr3(group)
 		row = dict(gene=gene, count=len(group), unique_CDR3=unique_cdr3)
@@ -74,12 +72,7 @@ def compute_expressions(table, gene_type):
 			if gene_type != gt:
 				row['unique_' + gt] = count_unique_gene(group, gene_type=gt)
 		rows.append(row)
-	if rows:
-		counts = pd.DataFrame(rows, columns=columns).set_index('gene')
-	else:
-		# Work around a pandas bug in reindex when the table is empty
-		# TODO is this still needed?
-		counts = pd.DataFrame(columns=columns, dtype=int).set_index('gene')
+	counts = pd.DataFrame(rows, columns=columns).set_index('gene')
 	return counts
 
 
@@ -151,8 +144,12 @@ def main(args):
 
 	if args.allele_ratio is not None:
 		arm = AlleleRatioMerger(args.allele_ratio, cross_mapping_ratio=None)
-		arm.extend(counts.reset_index().rename(columns={'gene': 'name'}).itertuples(index=False))
-		counts = pd.DataFrame(list(arm)).rename(columns={'name': 'gene'}).set_index('gene')
+		renamed_counts = counts.reset_index().rename(columns={'gene': 'name'})
+		arm.extend(renamed_counts.itertuples(index=False))
+		import ipdb; ipdb.set_trace()
+		counts = pd.DataFrame(list(arm), columns=renamed_counts.columns) \
+			.rename(columns={'name': 'gene'}) \
+			.set_index('gene')
 		logger.info(
 			'After filtering by allele ratio and/or cross-mapping ratio, %d candidates remain',
 			len(counts))
