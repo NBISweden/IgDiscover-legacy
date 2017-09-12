@@ -62,11 +62,9 @@ def compute_expressions(table, gene_type):
 		if gene_type != gt:
 			columns += ('unique_' + gt,)
 	gene_column = gene_type + '_gene'
-	unassigned = 0
 	rows = []
 	for gene, group in table.groupby(gene_column):
 		if gene == '':
-			unassigned = len(group)
 			continue
 		unique_cdr3 = count_unique_cdr3(group)
 		row = dict(gene=gene, count=len(group), unique_CDR3=unique_cdr3)
