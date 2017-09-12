@@ -72,12 +72,7 @@ def compute_expressions(table, gene_type):
 			if gene_type != gt:
 				row['unique_' + gt] = count_unique_gene(group, gene_type=gt)
 		rows.append(row)
-	if rows:
-		counts = pd.DataFrame(rows, columns=columns).set_index('gene')
-	else:
-		# Work around a pandas bug in reindex when the table is empty
-		# TODO is this still needed?
-		counts = pd.DataFrame(columns=columns, dtype=int).set_index('gene')
+	counts = pd.DataFrame(rows, columns=columns).set_index('gene')
 	return counts
 
 
