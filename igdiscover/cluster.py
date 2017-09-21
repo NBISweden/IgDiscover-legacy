@@ -151,7 +151,7 @@ def hamming_single_linkage(strings, mismatches, linked=None):
 	"""
 	if linked is None:
 		def linked(s, t):
-			return hamming_distance(s, t,) <= mismatches
+			return hamming_distance(s, t) <= mismatches
 
 	components = []
 	for strings in cluster_by_length(strings):

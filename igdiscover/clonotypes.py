@@ -52,8 +52,11 @@ def add_arguments(parser):
 			'be junction sequence, and for two CDR3s to be considered '
 			'similar, at least one of the junctions must be identical. '
 			'Default: no junction region.')
-	arg('--mismatches', default=1, type=int,
-		help='No. of allowed mismatches between CDR3 sequences. Default: %(default)s')
+	arg('--mismatches', default=1, type=float,
+		help='No. of allowed mismatches between CDR3 sequences. '
+			'Can also be a fraction between 0 and 1 (such as 0.15), '
+			'interpreted relative to the length of the CDR3 (minus the front non-core). '
+			'Default: %(default)s')
 	arg('--aa', default=False, action='store_true',
 		help='Count CDR3 mismatches on amino-acid level. Default: Compare nucleotides.')
 	arg('--members', metavar='FILE',
@@ -66,7 +69,11 @@ def is_similar_with_junction(s, t, mismatches, cdr3_core):
 	Return whether strings s and t have at most the given number of mismatches
 	*and* have at least one identical junction.
 	"""
-	distance_ok = hamming_distance(s, t) <= mismatches
+	if 0 < mismatches < 1:
+		delta = cdr3_core.start if cdr3_core is not None else 0
+		distance_ok = hamming_distance(s, t) <= (len(s) - delta) * mismatches
+	else:
+		distance_ok = hamming_distance(s, t) <= mismatches
 	if cdr3_core is None:
 		return distance_ok
 	return distance_ok and (
@@ -82,11 +89,10 @@ def group_by_cdr3(table, mismatches, cdr3_core, cdr3_column):
 	"""
 	# Cluster all unique CDR3s by Hamming distance
 	sequences = list(set(table[cdr3_column]))
-	if cdr3_core:
-		def linked(s, t):
-			return is_similar_with_junction(s, t, mismatches, cdr3_core)
-	else:
-		linked = None
+
+	def linked(s, t):
+		return is_similar_with_junction(s, t, mismatches, cdr3_core)
+
 	clusters = hamming_single_linkage(sequences, mismatches, linked=linked)
 
 	# Create dict that maps CDR3 sequences to a numeric cluster id

@@ -37,8 +37,11 @@ def add_arguments(parser):
 			'be junction sequence, and for two CDR3s to be considered '
 			'similar, at least one of the junctions must be identical. '
 			'Default: no junction region.')
-	arg('--mismatches', default=1, type=int,
-		help='No. of allowed mismatches between CDR3 sequences. Default: %(default)s')
+	arg('--mismatches', default=1, type=float,
+		help='No. of allowed mismatches between CDR3 sequences. '
+			'Can also be a fraction between 0 and 1 (such as 0.15), '
+			'interpreted relative to the length of the CDR3 (minus the front non-core). '
+			'Default: %(default)s')
 	arg('--aa', default=False, action='store_true',
 		help='Count CDR3 mismatches on amino-acid level. Default: Compare nucleotides.')
 	arg('--summary', metavar='FILE',
@@ -62,14 +65,15 @@ def collect(querytable, reftable, mismatches, cdr3_core_slice, cdr3_column):
 		if vjlentype not in query_vjlentypes:
 			continue
 
-		# Collect results for this vjlentype
+		# Collect results for this vjlentype. The result dict
+		# maps row indices (into the vjlen_group) to each query_row,
+		# allowing us to group identical results together.
 		results = defaultdict(list)
 		for query_row in query_vjlentypes.pop(vjlentype):
 			cdr3 = getattr(query_row, cdr3_column)
-			# TODO use is_similar_with_junction
 			# Save indices of the rows that are similar to this query
 			indices = tuple(index for index, r in enumerate(vjlen_group.itertuples())
-				if hamming_distance(cdr3, getattr(r, cdr3_column)) <= mismatches)
+				if is_similar_with_junction(cdr3, getattr(r, cdr3_column), mismatches, cdr3_core_slice))
 			results[indices].append(query_row)
 
 		# Yield results, grouping queries that lead to the same result
@@ -80,15 +84,6 @@ def collect(querytable, reftable, mismatches, cdr3_core_slice, cdr3_column):
 				continue
 
 			similar_group = vjlen_group.iloc[list(indices), :]
-			if cdr3_core_slice is not None:
-				cdr3_core = cdr3_core_slice
-				cdr3_head = cdr3[:cdr3_core.start]
-				cdr3_tail = cdr3[cdr3_core.stop:]
-				similar_group = similar_group.copy()
-				similar_group.insert(0, 'junction_ident', [
-					int((cdr3_head == getattr(r, cdr3_column)[:cdr3_core.start]) or
-						(cdr3_tail == getattr(r, cdr3_column)[cdr3_core.stop:])) for r in
-					similar_group.itertuples()])
 			yield (query_rows, similar_group)
 
 	# Yield result tuples for all the queries that have not been found
