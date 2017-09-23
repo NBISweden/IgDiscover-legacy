@@ -120,8 +120,6 @@ def main(args):
 		else:
 			summary_file = None
 
-		if args.cdr3_core:
-			print('keep?', end='\t')
 		print(*reftable.columns, sep='\t')
 		for query_rows, result_table in collect(querytable, reftable, args.mismatches,
 				args.cdr3_core, cdr3_column):
@@ -130,8 +128,6 @@ def main(args):
 				for query_row in query_rows:
 					print(query_row.name, len(result_table), sep='\t', file=summary_file)
 			for query_row in query_rows:
-				if args.cdr3_core:
-					print('', end='\t')
 				print('# Query: {}'.format(query_row.name), '', *(query_row[3:]), sep='\t')
 			if len(result_table) > 0:
 				print(result_table.to_csv(sep='\t', header=False, index=False))
