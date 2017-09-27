@@ -19,9 +19,9 @@ def add_arguments(parser):
 	arg('--database', metavar='FASTA',
 		help='Restrict plotting to the sequences named in the FASTA file. '
 		'Only the sequence names are used!')
-	arg('--x', choices=('V', 'D'), default='V',
+	arg('--x', choices=('V', 'D', 'J'), default='V',
 		help='Type of gene on x axis. Default: %(default)s')
-	arg('--gene', choices=('D', 'J'), default='J',
+	arg('--gene', choices=('V', 'D', 'J'), default='J',
 		help='Type of gene on y axis. Default: %(default)s')
 	arg('alleles', help='List of alleles to plot on y axis, separated by comma')
 	arg('table', help='Table with parsed and filtered IgBLAST results')
@@ -38,10 +38,10 @@ def main(args):
 		usecols.remove('D_errors')
 		table = read_table(args.table, usecols=usecols)
 	logger.info('Table with %s rows read', len(table))
-	if args.x == 'V':
+	if args.x == 'V' or args.gene == 'V':
 		table = table[table.V_errors == 0]
 		logger.info('%s rows remain after requiring V errors = 0', len(table))
-	if args.gene == 'J':
+	if args.gene == 'J' or args.x == 'J':
 		table = table[table.J_errors == 0]
 		logger.info('%s rows remain after requiring J errors = 0', len(table))
 	elif args.gene == 'D' or args.x == 'D':
