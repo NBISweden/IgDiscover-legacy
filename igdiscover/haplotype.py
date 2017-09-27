@@ -85,7 +85,9 @@ def main(args):
 		for _, group in expressions[gene_type].groupby(level='gene'):
 			group = filter_alleles(group)
 			if len(group) >= 2:
-				print(group.index[0][0], 'with alleles', ', '.join(group['name']))
+				print(group.index[0][0], 'with alleles', ', '.join(group['name']), '-- Counts:',
+					', '.join(str(x) for x in group['count'])
+				)
 		print()
 
 	return
