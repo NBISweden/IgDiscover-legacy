@@ -92,7 +92,7 @@ def main(args):
 	ax = allele_expressions.plot(kind='bar', stacked=True, figsize=(12, 6))
 	ax.legend(title=None)
 	ax.set_title('Allele-specific expression counts')
-	ax.set_xlabel('V gene')
+	ax.set_xlabel(args.x + ' gene')
 	ax.set_ylabel('Count')
 	ax.figure.set_tight_layout(True)
 	# ax.legend(bbox_to_anchor=(1.15, 0.5))
