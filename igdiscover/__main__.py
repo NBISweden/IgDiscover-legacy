@@ -50,6 +50,7 @@ COMMANDS = [
 	'clonotypes',
 	'clonoquery',
 	'plotalleles',
+	'haplotype',
 ]
 
 logger = logging.getLogger(__name__)
