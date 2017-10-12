@@ -3,6 +3,7 @@ Haplotype
 """
 import sys
 import logging
+from collections import defaultdict
 import pandas as pd
 from sqt import SequenceReader
 from .table import read_table
@@ -54,6 +55,62 @@ def filter_alleles(table):
 	return table[table['count'] >= HETEROZYGOUS_THRESHOLD * max_expression]
 
 
+def cooccurrences(table, gene_type1, gene_type2, groups1, groups2):
+	logger.info('Analyzing heterozygous %s genes and comparing to %s genes', gene_type1, gene_type2)
+	coexpressions = table.groupby(
+		(gene_type1 + '_gene', gene_type2 + '_gene')).size().to_frame()
+	coexpressions.columns = ['count']
+	hom = []
+	for alleles1 in groups1:
+		if len(alleles1) == 1:
+			hom.append(alleles1.iloc[0]['name'])
+			continue
+		assert len(alleles1) == 2  # TODO
+		print('# Haplotypes from {}:'.format('/'.join(alleles1['name'])))
+		print('haplotype1', 'haplotype2', 'type', sep='\t')
+		haplotypes = []
+		for alleles2 in groups2:
+			is_expressed_list = []
+			names = []
+			for name2, _ in alleles2.itertuples(index=False):
+				ex = []
+				for name1, _ in alleles1.itertuples(index=False):
+					try:
+						e = coexpressions.loc[(name1, name2), 'count']
+					except KeyError:
+						e = 0
+					ex.append(e)
+				ex_total = sum(ex) + 1  # +1 avoids division by zero
+				ratios = [x / ex_total for x in ex]
+				is_expressed = [ratio >= 0.1 for ratio in ratios]
+				is_expressed_list.append(is_expressed)
+				names.append(name2)
+			if len(is_expressed_list) == 1:
+				is_expressed = is_expressed_list[0]
+				if is_expressed == [True, False]:
+					haplotypes.append((names[0], '', 'deletion'))
+				elif is_expressed == [False, True]:
+					haplotypes.append(('', names[0], 'deletion'))
+				elif is_expressed == [True, True]:
+					haplotypes.append((names[0], names[0], 'homozygous'))
+				else:
+					assert is_expressed == [False, False]
+			elif is_expressed_list == [[True, False], [False, True]]:
+				haplotypes.append((names[0], names[1], 'heterozygous'))
+			elif is_expressed_list == [[False, True], [True, False]]:
+				haplotypes.append((names[1], names[0], 'heterozygous'))
+			else:
+				for is_expressed, name in zip(is_expressed_list, names):
+					if is_expressed == [False, False]:
+						continue
+					haplotypes.append((
+						name if is_expressed[0] else '',
+						name if is_expressed[1] else '', ''))
+		for h1, h2, typ in haplotypes:
+			print(h1, h2, typ, sep='\t')
+	logger.info('homozygous: %s', ', '.join(hom))
+
+
 def main(args):
 	usecols = ['V_gene', 'D_gene', 'J_gene', 'V_errors', 'D_errors', 'J_errors', 'D_covered',
 		'D_evalue']
@@ -80,77 +137,32 @@ def main(args):
 	# Pre-compute expression levels
 	expressions = {gt: expression_counts(table, gt) for gt in ('V', 'D', 'J')}
 
+	heterozygous = defaultdict(list)
 	for gene_type in ('V', 'D', 'J'):
-		print('Heterozygous', gene_type, 'genes:')
+		logger.info('Heterozygous %s genes:', gene_type)
 		for _, group in expressions[gene_type].groupby(level='gene'):
 			group = filter_alleles(group)
 			if len(group) >= 2:
-				print(group.index[0][0], 'with alleles', ', '.join(group['name']), '-- Counts:',
+				logger.info('%s with alleles %s -- Counts: %s',
+					group.index[0][0],
+					', '.join(group['name']),
 					', '.join(str(x) for x in group['count'])
 				)
-		print()
-
-	return
 
 	def count_heterozygous(groups):
 		return sum(1 for g in groups if len(g) > 1)
 
-	def filtered_group(expressions):
+	def filtered_group(gene_type):
+		"""Group on gene level, filter out low-expressed genes in each group"""
 		result = []
-		for _, group in expressions.groupby(level='gene'):
+		for _, group in expressions[gene_type].groupby(level='gene'):
 			result.append(filter_alleles(group))
 		return result
 
-	for gene_type1, gene_type2 in [('V', 'D'), ('D', 'J'), ('V', 'J')]:
-		groups1 = filtered_group(expressions[gene_type1])
-		groups2 = filtered_group(expressions[gene_type2])
-		n_het1 = count_heterozygous(groups1)
-		n_het2 = count_heterozygous(groups2)
+	for gene_type1, gene_type2 in [('J', 'V')]:  # TODO [('V', 'D'), ('D', 'J'), ('V', 'J')]:
+		# groups1 and groups2 are expressions grouped by gene (one row is an allele)
+		groups1 = filtered_group(gene_type1)
+		groups2 = filtered_group(gene_type2)
 
-		# Swap if necessary to make the first group the smaller one
-		if n_het1 > n_het2:
-			groups1, groups2 = groups2, groups1
-			n_het1, n_het2 = n_het2, n_het1
-			gene_type1, gene_type2 = gene_type2, gene_type1
-
-		expressions1 = expressions[gene_type1]
-		expressions2 = expressions[gene_type2]
-		print('=== Inspecting', n_het1, 'heterozygous', gene_type1, 'genes and', n_het2,
-			'heterozygous', gene_type2, 'genes')
-		print()
-		coexpressions = table.groupby(
-			(gene_type1 + '_gene', gene_type2 + '_gene')).size().to_frame()
-		coexpressions.columns = ['count']
-		hom = []
-		for alleles1 in groups1:
-			# print('a1', alleles1)
-			if len(alleles1) == 1:
-				hom.append(alleles1.iloc[0]['name'])  # , alleles1.iloc[0]['count'])
-				continue
-			print(alleles1.index[0][0], 'is heterozygous')
-			# heterozygous gene, look at its alleles
-			for name1, _ in alleles1.itertuples(index=False):
-				print('Allele', name1, 'occurs with:')
-				# iterate over the genes of other type
-				for alleles2 in groups2:
-					if len(alleles2) < 2:
-						continue
-					ex = []
-					for name2, _ in alleles2.itertuples(index=False):
-						try:
-							e = coexpressions.loc[(name1, name2), 'count']
-						except KeyError:
-							e = 0
-						ex.append(e + 1)  # +1 for pseudo-count
-					# print('co-expression with', name2, e)
-					ex_total = sum(ex)
-					ratios = [x / ex_total for x in ex]
-					# print(ex)
-					# print(ratios)
-					for (name, _), ratio, e in zip(alleles2.itertuples(index=False), ratios, ex):
-						if ratio > 0.25:
-							print(name, e)
-						else:
-							print('NOT', name, e)
-					print()
-		print('homozygous:', ', '.join(hom))
+		cooccurrences(table, gene_type1, gene_type2, groups1, groups2)
+		# TODO cooccurrences(table, gene_type2, gene_type1, groups2, groups1)
