@@ -1,9 +1,8 @@
 """
-Haplotype
+Determine haplotypes based on co-occurrences of alleles
 """
 import sys
 import logging
-from collections import defaultdict
 import pandas as pd
 from sqt import SequenceReader
 from .table import read_table
@@ -23,13 +22,11 @@ def add_arguments(parser):
 		help='Maximal allowed E-value for D gene match. Default: %(default)s')
 	arg('--d-coverage', '--D-coverage', type=float, default=65,
 		help='Minimum D coverage (in percent). Default: %(default)s%%)')
-	arg('--database', metavar='FASTA',
-		help='Restrict plotting to the sequences named in the FASTA file. '
-		'Only the sequence names are used!')
-	arg('--x', choices=('V', 'D', 'J'), default='V',
-		help='Type of gene on x axis. Default: %(default)s')
-	arg('--gene', choices=('V', 'D', 'J'), default='J',
-		help='Type of gene on y axis. Default: %(default)s')
+	arg('--het', metavar='GENETYPE', choices=('V', 'D', 'J'), default='J',
+		help='Use heterozygous GENETYPE genes as starting point for haplotyping. '
+			'Default: %(default)s')
+	arg('--gene', metavar='GENETYPE', choices=('V', 'D', 'J'), default='V',
+		help='Haplotype genes of this GENETYPE. Default: %(default)s')
 	arg('table', help='Table with parsed and filtered IgBLAST results')
 
 
@@ -121,6 +118,9 @@ def cooccurrences(table, gene_type1, gene_type2, groups1, groups2):
 
 
 def main(args):
+	if args.het == args.gene:
+		logger.error('Gene types given for --het and --gene must not be the same')
+		sys.exit(1)
 	usecols = ['V_gene', 'D_gene', 'J_gene', 'V_errors', 'D_errors', 'J_errors', 'D_covered',
 		'D_evalue']
 	# Support reading a table without D_errors
@@ -167,11 +167,11 @@ def main(args):
 			result.append(filter_alleles(group))
 		return result
 
-	for gene_type1, gene_type2 in [('J', 'V')]:
-		#[('V', 'D'), ('D', 'J'), ('V', 'J')]:
-		# groups1 and groups2 are expressions grouped by gene (one row is an allele)
-		groups1 = filtered_group(gene_type1)
-		groups2 = filtered_group(gene_type2)
+	gene_type1 = args.het
+	gene_type2 = args.gene
 
-		cooccurrences(table, gene_type1, gene_type2, groups1, groups2)
-		#cooccurrences(table, gene_type2, gene_type1, groups2, groups1)
+	# groups1 and groups2 are expressions grouped by gene (one row is an allele)
+	groups1 = filtered_group(gene_type1)
+	groups2 = filtered_group(gene_type2)
+
+	cooccurrences(table, gene_type1, gene_type2, groups1, groups2)
