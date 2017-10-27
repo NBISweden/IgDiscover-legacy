@@ -32,7 +32,8 @@ from .utils import slice_arg
 
 
 CLONOTYPE_COLUMNS = ['name', 'count', 'V_gene', 'D_gene', 'J_gene', 'CDR3_nt', 'CDR3_aa',
-	'V_errors', 'J_errors', 'V_SHM', 'J_SHM', 'barcode', 'VDJ_nt', 'VDJ_aa']
+	'FR1_SHM', 'CDR1_SHM', 'FR2_SHM', 'CDR2_SHM', 'FR3_SHM', 'V_errors', 'J_errors',
+	'V_SHM', 'J_SHM', 'barcode', 'VDJ_nt', 'VDJ_aa']
 
 
 logger = logging.getLogger(__name__)
