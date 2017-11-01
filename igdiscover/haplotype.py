@@ -27,6 +27,9 @@ def add_arguments(parser):
 			'Default: %(default)s')
 	arg('--gene', metavar='GENETYPE', choices=('V', 'D', 'J'), default='V',
 		help='Haplotype genes of this GENETYPE. Default: %(default)s')
+	arg('--order', metavar='FASTA', default=None,
+		help='Sort the output according to the order of the records in '
+			'this FASTA file.')
 	arg('table', help='Table with parsed and filtered IgBLAST results')
 
 
@@ -52,7 +55,26 @@ def filter_alleles(table):
 	return table[table['count'] >= HETEROZYGOUS_THRESHOLD * max_expression]
 
 
-def cooccurrences(table, gene_type1, gene_type2, groups1, groups2):
+class GeneMissing(Exception):
+	pass
+
+
+def sorted_haplotypes(haplotypes, gene_order):
+	# import ipdb; ipdb.set_trace()
+	d = {name: i for i, name in enumerate(gene_order)}
+
+	def keyfunc(hap):
+		name = hap[0] if hap[0] else hap[1]
+		gene = name.partition('*')[0]
+		try:
+			return d[gene]
+		except KeyError:
+			raise GeneMissing(gene)
+
+	return sorted(haplotypes, key=keyfunc)
+
+
+def cooccurrences(table, gene_type1, gene_type2, groups1, groups2, gene_order):
 	logger.info('Analyzing heterozygous %s genes and comparing to %s genes', gene_type1, gene_type2)
 	coexpressions = table.groupby(
 		(gene_type1 + '_gene', gene_type2 + '_gene')).size().to_frame()
@@ -111,6 +133,8 @@ def cooccurrences(table, gene_type1, gene_type2, groups1, groups2):
 						'',
 						count,
 					))
+		if gene_order is not None:
+			haplotypes = sorted_haplotypes(haplotypes, gene_order)
 		for h1, h2, typ, count in haplotypes:
 			print(h1, h2, typ, count[0], count[1], sep='\t')
 		print()
@@ -121,6 +145,11 @@ def main(args):
 	if args.het == args.gene:
 		logger.error('Gene types given for --het and --gene must not be the same')
 		sys.exit(1)
+	if args.order is not None:
+		with SequenceReader(args.order) as sr:
+			gene_order = [r.name for r in sr]
+	else:
+		gene_order = None
 	usecols = ['V_gene', 'D_gene', 'J_gene', 'V_errors', 'D_errors', 'J_errors', 'D_covered',
 		'D_evalue']
 	# Support reading a table without D_errors
@@ -173,5 +202,9 @@ def main(args):
 	# groups1 and groups2 are expressions grouped by gene (one row is an allele)
 	groups1 = filtered_group(gene_type1)
 	groups2 = filtered_group(gene_type2)
-
-	cooccurrences(table, gene_type1, gene_type2, groups1, groups2)
+	try:
+		cooccurrences(table, gene_type1, gene_type2, groups1, groups2, gene_order)
+	except GeneMissing as e:
+		logger.error('Could not sort genes: gene %r not found in %r',
+			str(e), args.order)
+		sys.exit(1)
