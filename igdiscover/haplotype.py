@@ -26,10 +26,11 @@ def add_arguments(parser):
 	arg('--d-coverage', '--D-coverage', type=float, default=65,
 		help='Minimum D coverage (in percent). Default: %(default)s%%)')
 	arg('--het', metavar='GENETYPE', choices=('V', 'D', 'J'), default='J',
-		help='Use heterozygous GENETYPE genes as starting point for haplotyping. '
+		help='Use heterozygous GENETYPE genes as anchoring point for haplotyping. '
 			'Default: %(default)s')
-	arg('--gene', metavar='GENETYPE', choices=('V', 'D', 'J'), default='V',
-		help='Haplotype genes of this GENETYPE. Default: %(default)s')
+	arg('--gene', metavar='GENETYPE', choices=('V', 'D', 'J'),
+		help='Haplotype genes of this GENETYPE. Default is to haplotype all except '
+			'the --het gene')
 	arg('--order', metavar='FASTA', default=None,
 		help='Sort the output according to the order of the records in '
 			'this FASTA file.')
@@ -62,7 +63,7 @@ class GeneMissing(Exception):
 	pass
 
 
-def sorted_haplotypes(haplotypes, gene_order):
+def sorted_haplotype(haplotypes, gene_order):
 	# import ipdb; ipdb.set_trace()
 	d = {name: i for i, name in enumerate(gene_order)}
 
@@ -94,23 +95,23 @@ def compute_coexpressions(table, gene_type1, gene_type2):
 	return coexpressions
 
 
-def cooccurrences(coexpressions, het_alleles, groups2):
+def cooccurrences(coexpressions, het_alleles, target_groups):
 	"""
 	het_alleles -- a two-element list of alleles of a heterozygous gene,
 	such as ['IGHJ6*02', 'IGHJ6*03'].
 	"""
 	assert len(het_alleles) == 2
 
-	haplotypes = []
-	for alleles2 in groups2:
+	haplotype = []
+	for target_alleles in target_groups:
 		is_expressed_list = []
 		names = []
 		counts = []
-		for name2, _ in alleles2.itertuples(index=False):
+		for target_allele, _ in target_alleles.itertuples(index=False):
 			ex = []
-			for name1 in het_alleles:
+			for het_allele in het_alleles:
 				try:
-					e = coexpressions.loc[(name1, name2), 'count']
+					e = coexpressions.loc[(het_allele, target_allele), 'count']
 				except KeyError:
 					e = 0
 				ex.append(e)
@@ -119,31 +120,31 @@ def cooccurrences(coexpressions, het_alleles, groups2):
 			is_expressed = [ratio >= EXPRESSED_RATIO for ratio in ratios]
 			if is_expressed != [False, False]:
 				is_expressed_list.append(is_expressed)
-				names.append(name2)
+				names.append(target_allele)
 				counts.append(ex)
 		if len(is_expressed_list) == 1:
 			is_expressed = is_expressed_list[0]
 			if is_expressed == [True, False]:
-				haplotypes.append((names[0], '', 'deletion', counts[0]))
+				haplotype.append((names[0], '', 'deletion', counts[0]))
 			elif is_expressed == [False, True]:
-				haplotypes.append(('', names[0], 'deletion', counts[0]))
+				haplotype.append(('', names[0], 'deletion', counts[0]))
 			elif is_expressed == [True, True]:
-				haplotypes.append((names[0], names[0], 'homozygous', counts[0]))
+				haplotype.append((names[0], names[0], 'homozygous', counts[0]))
 			else:
 				assert False
 		elif is_expressed_list == [[True, False], [False, True]]:
-			haplotypes.append((names[0], names[1], 'heterozygous', (counts[0][0], counts[1][1])))
+			haplotype.append((names[0], names[1], 'heterozygous', (counts[0][0], counts[1][1])))
 		elif is_expressed_list == [[False, True], [True, False]]:
-			haplotypes.append((names[1], names[0], 'heterozygous', (counts[0][1], counts[1][0])))
+			haplotype.append((names[1], names[0], 'heterozygous', (counts[0][1], counts[1][0])))
 		else:
 			for is_expressed, name, count in zip(is_expressed_list, names, counts):
-				haplotypes.append((
+				haplotype.append((
 					name if is_expressed[0] else '',
 					name if is_expressed[1] else '',
 					'',
 					count,
 				))
-	return haplotypes
+	return haplotype
 
 
 def main(args):
@@ -201,38 +202,47 @@ def main(args):
 			result.append(filter_alleles(group))
 		return result
 
-	gene_type1 = args.het
-	gene_type2 = args.gene
+	het_gene_type = args.het
 
-	# groups1 and groups2 are expressions grouped by gene (one row is an allele)
-	groups1 = filtered_group(gene_type1)
-	groups2 = filtered_group(gene_type2)
+	if args.gene:
+		target_gene_types = [args.gene]
+	else:
+		target_gene_types = {'V': ['D', 'J'], 'D': ['V', 'J'], 'J': ['V', 'D']}[het_gene_type]
+	filtered_groups = {gene_type: filtered_group(gene_type) for gene_type in ['V', 'D', 'J']}
+	# het_groups and target_groups are expressions grouped by gene (one row is an allele)
+	het_groups = filtered_groups[het_gene_type]
 
-	coexpressions = compute_coexpressions(table, gene_type1, gene_type2)
+	coexpressions_dict = {
+		gene_type: compute_coexpressions(table, het_gene_type, gene_type)
+		for gene_type in ['V', 'D', 'J']}
 
-	for alleles1 in groups1:
-		if len(alleles1) == 1:
+	for het_alleles in het_groups:
+		het_alleles = list(het_alleles['name'])
+		if len(het_alleles) == 1:
 			continue
-		if len(alleles1) != 2:
-			logger.warning('More than two alleles found for %s (%s). Skipping!',
-				alleles1.iloc[0]['name'], ', '.join(alleles1['name']))
+		if len(het_alleles) != 2:
+			logger.warning('More than two alleles found: %s. Skipping!',
+				', '.join(het_alleles))
 			continue
-		het_alleles = list(alleles1['name'])
-		logger.info('Analyzing heterozygous %s genes with alleles '
-            '%s and comparing to %s genes', gene_type1, ', '.join(het_alleles),	gene_type2)
 
-		haplotypes = cooccurrences(coexpressions, het_alleles, groups2)
+		logger.info('Using heterozygous %s gene alleles %s and %s to haplotype genes',
+			het_gene_type, het_alleles[0], het_alleles[1])
+		haplotype = []
+		for target_gene_type in target_gene_types:
+			coexpressions = coexpressions_dict[target_gene_type]
+			target_groups = filtered_groups[target_gene_type]
+			haplotype.extend(cooccurrences(coexpressions, het_alleles, target_groups))
 
 		if gene_order is not None:
 			try:
-				haplotypes = sorted_haplotypes(haplotypes, gene_order)
+				haplotype = sorted_haplotype(haplotype, gene_order)
 			except GeneMissing as e:
 				logger.error('Could not sort genes: gene %r not found in %r',
 					str(e), args.order)
 				sys.exit(1)
 
-		print('# {}:'.format(' vs '.join(alleles1['name'])))
+		print('# {}:'.format(' vs '.join(het_alleles)))
 		print('haplotype1', 'haplotype2', 'type', 'count1', 'count2', sep='\t')
-		for h1, h2, typ, count in haplotypes:
+		for h1, h2, typ, count in haplotype:
 			print(h1, h2, typ, count[0], count[1], sep='\t')
 		print()
