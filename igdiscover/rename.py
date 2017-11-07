@@ -5,7 +5,14 @@ Sequences can be renamed according to the sequences in a template file.
 The sequences in the target file will get the name that they have in the
 template file. Sequences are considered to be equivalent if one is a prefix of
 the other.
+
+Sequences can also be ordered by name, either alphabetically or by
+the order given in a template file. For comparison, only the 'gene part'
+of the name is used (before the '*'). For example, for 'VH4-4*01', the name 'VH4-4'
+is looked up in the template. Alphabetic order is the default. Use --no-sort
+to disable sorting entirely.
 """
+import sys
 import logging
 from sqt import FastaReader
 from .utils import natural_sort_key
@@ -24,6 +31,10 @@ def add_arguments(parser):
 		help='FASTA template file with correctly named sequences. If a sequence in '
 			'the target file is identical to one in the template, it is assigned the '
 			'name of the sequence in the template.')
+	arg('--order-by', metavar='TEMPLATE',
+		help='FASTA template that contains genes in the desired order. '
+			'If a name contains a "*" (asterisk), only the preceding part '
+			'is used. Thus, VH4-4*01 and VH4-4*02 are equivalent.')
 	arg('target', help='FASTA file with to-be renamed sequences')
 
 
@@ -68,6 +79,28 @@ class PrefixDict:
 		return len(self._items)
 
 
+class GeneMissing(Exception):
+	pass
+
+
+def gene_name(record):
+	record_name, _, record_comment = record.name.partition(' ')
+	return record_name.partition('*')[0]
+
+
+def sorted_by_gene(records, gene_order):
+	d = {name: i for i, name in enumerate(gene_order)}
+
+	def keyfunc(record):
+		gene = gene_name(record)
+		try:
+			return d[gene]
+		except KeyError:
+			raise GeneMissing(gene)
+
+	return sorted(records, key=keyfunc)
+
+
 def main(args):
 	if args.rename_from:
 		with FastaReader(args.rename_from) as fr:
@@ -81,6 +114,12 @@ def main(args):
 		logger.info('Read %d entries from template', len(template))
 	else:
 		template = None
+
+	if args.order_by:
+		with FastaReader(args.order_by) as fr:
+			gene_order = [gene_name(r) for r in fr]
+	else:
+		gene_order = None
 
 	with FastaReader(args.target) as fr:
 		sequences = list(fr)
@@ -101,7 +140,14 @@ def main(args):
 			else:
 				record.name = name
 
-	if args.sort:
+	# Reorder
+	if gene_order:
+		try:
+			sequences = sorted_by_gene(sequences, gene_order)
+		except GeneMissing as e:
+			logger.error('Gene "%s" not found in the --order-by template file', e)
+			sys.exit(1)
+	elif args.sort:
 		sequences = sorted(sequences, key=lambda s: natural_sort_key(s.name))
 	for record in sequences:
 		print('>{}\n{}'.format(record.name, record.sequence))
