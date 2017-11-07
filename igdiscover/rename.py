@@ -1,6 +1,7 @@
 """
-Rename sequences in a target FASTA file using a template FASTA file
+Rename and reorder records in a FASTA file
 
+Sequences can be renamed according to the sequences in a template file.
 The sequences in the target file will get the name that they have in the
 template file. Sequences are considered to be equivalent if one is a prefix of
 the other.
@@ -19,7 +20,10 @@ def add_arguments(parser):
 	arg('--not-found', metavar='TEXT', default=' (not found)',
 		help='Append this text to the record name when the sequence was not found '
 		'in the template. Default: %(default)r')
-	arg('template', help='FASTA file with correctly named sequences')
+	arg('--rename-from', metavar='TEMPLATE',
+		help='FASTA template file with correctly named sequences. If a sequence in '
+			'the target file is identical to one in the template, it is assigned the '
+			'name of the sequence in the template.')
 	arg('target', help='FASTA file with to-be renamed sequences')
 
 
@@ -65,30 +69,34 @@ class PrefixDict:
 
 
 def main(args):
-	with FastaReader(args.template) as fr:
-		template = PrefixDict([])
-		for record in fr:
-			try:
-				template.add(record.sequence.upper(), record.name)
-			except ValueError:
-				logger.error('Sequences in entry %r and %r are duplicate',
-					record.name, template[record.sequence.upper()])
-	logger.info('Read %d entries from template', len(template))
+	if args.rename_from:
+		with FastaReader(args.rename_from) as fr:
+			template = PrefixDict([])
+			for record in fr:
+				try:
+					template.add(record.sequence.upper(), record.name)
+				except ValueError:
+					logger.error('Sequences in entry %r and %r are duplicate',
+						record.name, template[record.sequence.upper()])
+		logger.info('Read %d entries from template', len(template))
+	else:
+		template = None
 
 	with FastaReader(args.target) as fr:
 		sequences = list(fr)
 
 	# Rename
 	renamed = 0
-	for record in sequences:
-		name = template.get(record.sequence.upper())
-		if name is None:
-			name = record.name + args.not_found
-		else:
-			renamed += 1
-		# Replace record’s name, leaving comment intact
-		record_name, _, record_comment = record.name.partition(' ')
-		record.name = name + ' ' + record_comment
+	if template is not None:
+		for record in sequences:
+			name = template.get(record.sequence.upper())
+			if name is None:
+				name = record.name + args.not_found
+			else:
+				renamed += 1
+			# Replace record’s name, leaving comment intact
+			record_name, _, record_comment = record.name.partition(' ')
+			record.name = name + ' ' + record_comment
 
 	if args.sort:
 		sequences = sorted(sequences, key=lambda s: natural_sort_key(s.name))
