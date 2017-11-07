@@ -96,7 +96,10 @@ def main(args):
 				renamed += 1
 			# Replace record’s name, leaving comment intact
 			record_name, _, record_comment = record.name.partition(' ')
-			record.name = name + ' ' + record_comment
+			if record_comment:
+				record.name = name + ' ' + record_comment
+			else:
+				record.name = name
 
 	if args.sort:
 		sequences = sorted(sequences, key=lambda s: natural_sort_key(s.name))
