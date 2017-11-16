@@ -133,9 +133,9 @@ def main(args):
 			if summary_file:
 				for query_row in query_rows:
 					print(query_row.name, len(result_table), sep='\t', end='', file=summary_file)
-					if len(result_table) > 0:
-						for col in summary_columns:
-							print('\t{:.2f}'.format(result_table[col].mean()), end='', file=summary_file)
+					for col in summary_columns:
+						mean = result_table[col].mean() if len(result_table) > 0 else 0
+						print('\t{:.2f}'.format(mean), end='', file=summary_file)
 					print(file=summary_file)
 
 			for query_row in query_rows:
