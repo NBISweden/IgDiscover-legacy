@@ -52,6 +52,11 @@ def add_arguments(parser):
 
 
 def collect(querytable, reftable, mismatches, cdr3_core_slice, cdr3_column):
+	"""
+	Yield tuples (query_rows, similar_rows) where the query_rows are all the
+	rows that have the same result. The similar_rows is a DataFrame with all
+	the rows matching the query.
+	"""
 	# The vjlentype is a "clonotype without CDR3 sequence" (only V, J, CDR3 length)
 	# Determine set of vjlentypes to query
 	groupby = ('V_gene', 'J_gene', 'CDR3_length')
@@ -113,10 +118,11 @@ def main(args):
 			'query table! Did you swap query and reference?')
 
 	cdr3_column = 'CDR3_aa' if args.aa else 'CDR3_nt'
+	summary_columns = ['FR1_SHM', 'CDR1_SHM', 'FR2_SHM', 'CDR2_SHM', 'FR3_SHM', 'V_SHM', 'J_SHM']
 	with ExitStack() as stack:
 		if args.summary:
 			summary_file = stack.enter_context(xopen(args.summary, 'w'))
-			print('name', 'size', sep='\t', file=summary_file)
+			print('name', 'size', *('avg_' + s for s in summary_columns), sep='\t', file=summary_file)
 		else:
 			summary_file = None
 
@@ -126,7 +132,12 @@ def main(args):
 			assert len(query_rows) >= 1
 			if summary_file:
 				for query_row in query_rows:
-					print(query_row.name, len(result_table), sep='\t', file=summary_file)
+					print(query_row.name, len(result_table), sep='\t', end='', file=summary_file)
+					if len(result_table) > 0:
+						for col in summary_columns:
+							print('\t{:.2f}'.format(result_table[col].mean()), end='', file=summary_file)
+					print(file=summary_file)
+
 			for query_row in query_rows:
 				print('# Query: {}'.format(query_row.name), '', *(query_row[3:]), sep='\t')
 			if len(result_table) > 0:
