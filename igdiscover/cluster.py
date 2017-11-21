@@ -125,7 +125,8 @@ def single_linkage(strings, linked):
 	Cluster a set of strings. *linked* is a function with two parameters s and t that returns
 	whether *s* and *t* are in the same cluster.
 
-	>>> single_linkage(['ABC', 'ABD', 'DEFG', 'DEFH'], lambda s, t: hamming_distance(s, t) <= 1)
+	>>> single_linkage(['ABC', 'ABD', 'DEFG', 'DEFH'], lambda s, t: len(s) == len(t) and
+	...		hamming_distance(s, t) <= 1)
 	[['ABC', 'ABD'], ['DEFG', 'DEFH']]
 	"""
 	graph = Graph(strings)
