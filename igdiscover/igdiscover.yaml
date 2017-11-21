@@ -180,6 +180,8 @@ pre_germline_filter:
   allow_stop: true     # Whether to allow non-productive sequences containing stop codons
   cross_mapping_ratio: 0.02  # Threshold for removal of cross-mapping artifacts (set to 0 to disable)
   allele_ratio: 0.1    # Required minimum ratio between alleles of a single gene
+  unique_d_ratio: 0.3  # Minimum Ds_exact ratio between alleles
+  unique_d_threshold: 10  # Check Ds_exact ratio only if highest-expressed allele has at least this Ds_exact count
 
 
 # Filtering criteria applied to candidate sequences in the last iteration.
@@ -195,6 +197,8 @@ germline_filter:
   allow_stop: false    # Whether to allow non-productive sequences containing stop codons
   cross_mapping_ratio: 0.02  # Threshold for removal of cross-mapping artifacts (set to 0 to disable)
   allele_ratio: 0.1    # Required minimum ratio between alleles of a single gene
+  unique_d_ratio: 0.3  # Minimum Ds_exact ratio between alleles
+  unique_d_threshold: 10  # Check Ds_exact ratio only if highest-expressed allele has at least this Ds_exact count
 
 
 ## J discovery settings

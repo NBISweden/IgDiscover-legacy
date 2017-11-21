@@ -4,17 +4,23 @@ Filter V gene candidates (germline and pre-germline filter)
 After candidates for novel V genes have been found with the 'discover'
 subcommand, this script is used to filter the candidates and make sure that
 only true germline genes remain ("germline filter" and "pre-germline filter").
-The following filtering and processing steps are performed:
+The following filtering and processing steps are performed on each candidate
+separately:
 
 * Discard sequences with N bases
-* Discard sequences that come from a consensus over too few source sequences 
+* Discard sequences that come from a consensus over too few source sequences (unless whitelisted)
 * Discard sequences with too few unique CDR3s (CDR3s_exact column)
 * Discard sequences with too few unique Js (Js_exact column)
 * Discard sequences identical to one of the database sequences (if DB given)
-* Discard sequences that do not match a set of known good motifs
-* Discard sequences that contain a stop codon (has_stop column)
+* Discard sequences that do not match a set of known good motifs (unless whitelisted)
+* Discard sequences that contain a stop codon (has_stop column) (unless whitelisted)
+
+The following criteria involve comparison of candidates against each other:
+
+* Discard sequences that are too similar to another (unless whitelisted)
 * Discard sequences that are cross-mapping artifacts
 * Discard sequences that have a too low allele ratio
+* Discard sequences with too few unique Ds relative to other alleles (Ds_exact column)
 
 If you provide a whitelist of sequences, then the candidates that appear on it
 * are not checked for the cluster size criterion,
@@ -24,6 +30,7 @@ If you provide a whitelist of sequences, then the candidates that appear on it
 
 The filtered table is written to standard output.
 """
+import sys
 import logging
 from collections import namedtuple
 import pandas as pd
@@ -60,6 +67,12 @@ def add_arguments(parser):
 	arg('--unique-J', type=int, metavar='N', default=0,
 		help='Sequences must have at least N unique Js within exact sequence matches. '
 		'Default: %(default)s')
+	arg('--unique-D-ratio', type=float, metavar='RATIO', default=None,
+		help='Discard a sequence if another allele of this gene exists '
+		'such that the ratio between their Ds_exact is less than RATIO')
+	arg('--unique-D-threshold', type=int, metavar='THRESHOLD', default=10,
+		help='Apply the --unique-D-ratio filter only if the Ds_exact of the other '
+		'allele is at least THRESHOLD')
 	arg('--looks-like-V', action='store_true', default=False,
 		help='Sequences must look like V genes (uses the looks_like_V column). '
 		'Default: Column is ignored')
@@ -76,31 +89,39 @@ def add_arguments(parser):
 		nargs='+')
 
 
-SequenceInfo = namedtuple('_SequenceInfo', ['sequence', 'name', 'CDR3s_exact', 'cluster_size',
-	'whitelisted', 'is_database', 'cluster_size_is_accurate', 'CDR3_start', 'row'])
+SequenceInfo = namedtuple('_SequenceInfo', ['sequence', 'name', 'CDR3s_exact', 'Ds_exact',
+	'cluster_size', 'whitelisted', 'is_database', 'cluster_size_is_accurate', 'CDR3_start', 'row'])
 
 
 class SequenceMerger(Merger):
 	"""
 	Merge sequences that are sufficiently similar into single entries.
 	"""
-	def __init__(self, max_differences, cross_mapping_ratio, allele_ratio):
+	def __init__(self, max_differences, cross_mapping_ratio, allele_ratio, unique_d_ratio,
+			unique_d_threshold):
 		super().__init__()
 		self._max_differences = max_differences
 		self._cross_mapping_ratio = cross_mapping_ratio
 		self._allele_ratio = allele_ratio
+		self._unique_d_ratio = unique_d_ratio
+		self._unique_d_threshold = unique_d_threshold
 
 	def merged(self, s: SequenceInfo, t: SequenceInfo):
 		"""
 		Given two SequenceInfo objects, decide whether to discard one of them and which one.
 		This is used for merging similar candidate sequences.
 
+		Two sequences are Sequences can also be discarded if llele ratio, cross-mapping ratio or unique_d ratio criteria
+
 		Two sequences are considered to be similar if their edit distance is at most
 		max_differences (see constructor). If one of the sequences is longer, the 'overhanging'
 		bases are ignored at either the 5' end or the 3' end, whichever gives the lower
 		edit distance.
 
-		Sequences that are whitelisted are never discarded.
+
+		If two sequences are similar and
+		Sequences that are whitelisted are not discarded if the only reason for discarding
+		them is their similarity
 		If two sequences are similar and none of them is whitelisted, then the one with the
 		higher number of unique CDR3s is kept.
 
@@ -137,21 +158,34 @@ class SequenceMerger(Merger):
 						u.name, v.name, ratio)
 					return v
 
-		# Check allele ratio. Somewhat similar to cross-mapping, but
-		# this uses sequence names to decide whether two genes can be
-		# alleles of each other and the ratio is between the CDR3s_exact
-		# values
-		if self._allele_ratio and is_same_gene(s.name, t.name):
-			for u, v in [(s, t), (t, s)]:
-				ratio = u.CDR3s_exact / v.CDR3s_exact
-				if ratio < self._allele_ratio:
-					logger.info('Allele ratio %.4f too low for %r compared to %r',
-						ratio, u.name, v.name)
-					return v
+		# Check criteria based on whether the two sequences are alleles of the same gene
+		if is_same_gene(s.name, t.name):
+			# Check allele ratio. Somewhat similar to cross-mapping, but
+			# this uses sequence names to decide whether two genes can be
+			# alleles of each other and the ratio is between the CDR3s_exact
+			# values
+			if self._allele_ratio:
+				for u, v in [(s, t), (t, s)]:
+					ratio = u.CDR3s_exact / v.CDR3s_exact
+					if ratio < self._allele_ratio:
+						logger.info('Allele ratio %.4f too low for %r compared to %r',
+							ratio, u.name, v.name)
+						return v
+
+			if self._unique_d_ratio:
+				for u, v in [(s, t), (t, s)]:
+					if u.cluster_size >= v.cluster_size and u.Ds_exact >= self._unique_d_threshold:
+						ratio = v.Ds_exact / u.Ds_exact
+						if ratio < self._unique_d_ratio:
+							logger.info('Ds_exact ratio %.4f too low for %r compared to %r',
+								ratio, v.name, u.name)
+							return u
 
 		if dist > self._max_differences:
 			return None  # keep both
 
+		# If we get here, then the two candidates are too similar. Unless they are
+		# whitelisted, one needs to be discarded.
 		if s.whitelisted and t.whitelisted:
 			return None  # keep both
 		if s.whitelisted:
@@ -168,7 +202,10 @@ class SequenceMerger(Merger):
 
 
 def main(args):
-	merger = SequenceMerger(args.max_differences, args.cross_mapping_ratio, args.allele_ratio)
+	if args.unique_D_threshold <= 1:
+		sys.exit('--unique-D-threshold must be at least 1')
+	merger = SequenceMerger(args.max_differences, args.cross_mapping_ratio, args.allele_ratio,
+		unique_d_ratio=args.unique_D_ratio, unique_d_threshold=args.unique_D_threshold)
 
 	whitelist = dict()
 	for path in args.whitelist:
@@ -207,7 +244,7 @@ def main(args):
 		i = list(table.columns).index('consensus')
 		# whitelist_diff distinguishes between 0 and !=0 only
 		# at this point. Accurate edit distances are computed later.
-		whitelist_diff = [ (0 if s in whitelist else -1) for s in table['consensus'] ]
+		whitelist_diff = [(0 if s in whitelist else -1) for s in table['consensus']]
 		table.insert(i, 'whitelist_diff', pd.Series(whitelist_diff, index=table.index, dtype=int))
 		table.insert(i+1, 'closest_whitelist', pd.Series('', index=table.index))
 
@@ -244,10 +281,18 @@ def main(args):
 		return bool(set(row.cluster.split(';')) & {'all', 'db'})
 
 	for _, row in overall_table.iterrows():
-		merger.add(SequenceInfo(row['consensus'], row['name'], row['CDR3s_exact'],
-			row['cluster_size'], row['whitelist_diff'] == 0, row['database_diff'] == 0,
-			cluster_size_is_accurate(row), row.get('CDR3_start', 10000),  # TODO backwards compatibility
-			row.name))  # row.name is the index of the row. It is not row['name'].
+		merger.add(SequenceInfo(
+			sequence=row['consensus'],
+			name=row['name'],
+			CDR3s_exact=row['CDR3s_exact'],
+			Ds_exact=row['Ds_exact'],
+			cluster_size=row['cluster_size'],
+			whitelisted=row['whitelist_diff'] == 0,
+			is_database=row['database_diff'] == 0,
+			cluster_size_is_accurate=cluster_size_is_accurate(row),
+			CDR3_start=row.get('CDR3_start', 10000),  # TODO backwards compatibility
+			row=row.name,  # row.name is the index of the row. It is not row['name'].
+		))
 
 	# Discard near-duplicates
 	overall_table['is_duplicate'] = pd.Series(True, index=overall_table.index, dtype=bool)

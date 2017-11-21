@@ -650,6 +650,8 @@ rule igdiscover_germlinefilter:
 		criteria += ['--cluster-size={}'.format(conf['cluster_size'])]
 		criteria += ['--unique-J={}'.format(conf['unique_js'])]
 		criteria += ['--cross-mapping-ratio={}'.format(conf['cross_mapping_ratio'])]
+		criteria += ['--unique-D-ratio={}'.format(conf['unique_d_ratio'])]
+		criteria += ['--unique-D-threshold={}'.format(conf['unique_d_threshold'])]
 		criteria = ' '.join(criteria)
 		shell("igdiscover germlinefilter {criteria} --fasta={output.fasta} {input.tab} > {output.tab}")
 

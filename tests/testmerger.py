@@ -83,12 +83,14 @@ def test_unique_namer():
 
 
 def SI(sequence, name, CDR3s_exact, whitelisted=False):
-	return SequenceInfo(sequence, name, CDR3s_exact, cluster_size=100, whitelisted=whitelisted,
-		is_database=False, cluster_size_is_accurate=True, CDR3_start=len(sequence), row=None)
+	return SequenceInfo(sequence, name, CDR3s_exact, Ds_exact=10, cluster_size=100,
+		whitelisted=whitelisted, is_database=False, cluster_size_is_accurate=True,
+		CDR3_start=len(sequence), row=None)
 
 
 def test_sequence_merger_withCDR3():
-	merger = SequenceMerger(max_differences=1, cross_mapping_ratio=0, allele_ratio=None)
+	merger = SequenceMerger(max_differences=1, cross_mapping_ratio=0, allele_ratio=None,
+		unique_d_ratio=None, unique_d_threshold=10)
 	infos = [
 		SI('ACGTTA', 'Name1', 15),
 		SI('ACGTTAT', 'Name2', 100),  # kept because it is longer
@@ -108,7 +110,8 @@ def test_sequence_merger_withCDR3():
 
 
 def test_sequence_merger_prefix():
-	merger = SequenceMerger(max_differences=1, cross_mapping_ratio=0, allele_ratio=None)
+	merger = SequenceMerger(max_differences=1, cross_mapping_ratio=0, allele_ratio=None,
+		unique_d_ratio=None, unique_d_threshold=10)
 	infos = [
 		SI('AAATAA', 'Name1', 117),
 		SI('AAACAAG', 'Name2', 10),
@@ -121,7 +124,8 @@ def test_sequence_merger_prefix():
 
 
 def test_merger_check_all_previous():
-	merger = SequenceMerger(max_differences=1, cross_mapping_ratio=0, allele_ratio=None)
+	merger = SequenceMerger(max_differences=1, cross_mapping_ratio=0, allele_ratio=None,
+		unique_d_ratio = None, unique_d_threshold = 10)
 	infos = [
 		SI('ATAAAA', 's1', 11),
 		SI('AAGAAA', 's2', 12),
