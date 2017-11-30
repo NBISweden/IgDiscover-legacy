@@ -111,17 +111,23 @@ def group_by_cdr3(table, mismatches, cdr3_core, cdr3_column):
 def representative(table):
 	"""
 	Given a table with members of the same clonotype, return a representative
-	as tuple (count, V_gene, J_gene, CDR3_length, CDR3_nt)
+	as a dict.
 	"""
-	count = table['count'].sum()
-	V_gene = table['V_gene'].iloc[0]
-	J_gene = table['J_gene'].iloc[0]
-	CDR3_length = table['CDR3_length'].iloc[0]
+	result = {
+		'count': table['count'].sum(),
+		'V_gene': table['V_gene'].iloc[0],
+		'J_gene': table['J_gene'].iloc[0],
+		'CDR3_length': table['CDR3_length'].iloc[0],
+	}
 
-	# TODO should this use CDR3_aa if --aa is given?
-	CDR3_nt = Counter(table['CDR3_nt']).most_common(1)[0][0]
+	for column in CLONOTYPE_COLUMNS:
+		# Do not write name and barcode; do not overwrite already set values
+		if column not in ('name', 'barcode') and column not in result:
+			result[column] = Counter(table[column]).most_common(1)[0][0]
+	result['CDR3_aa'] = nt_to_aa(result['CDR3_nt'])
+	result['VDJ_aa'] = nt_to_aa(result['VDJ_nt'])
 
-	return (count, V_gene, J_gene, CDR3_length, CDR3_nt, nt_to_aa(CDR3_nt))
+	return result
 
 
 def group_by_clonotype(table, mismatches, sort, cdr3_core, cdr3_column):
@@ -165,7 +171,13 @@ def main(args):
 		else:
 			members_file = None
 
-		print('count', 'V_gene', 'J_gene', 'CDR3_length', 'CDR3_nt', 'CDR3_aa', sep='\t')
+		columns = CLONOTYPE_COLUMNS[:]
+		columns.remove('name')
+		columns.remove('barcode')
+		columns.remove('count')
+		columns.insert(0, 'count')
+		columns.insert(columns.index('CDR3_nt'), 'CDR3_length')
+		print(*columns, sep='\t')
 		print_header = True
 		n = 0
 		cdr3_column = 'CDR3_aa' if args.aa else 'CDR3_nt'
@@ -176,6 +188,7 @@ def main(args):
 				# to_csv() already includes a line break
 				print(group.to_csv(sep='\t', header=print_header, index=False), file=members_file)
 				print_header = False
-			print(*representative(group), sep='\t')
+			rep = representative(group)
+			print(*[rep[col] for col in columns], sep='\t')
 			n += 1
 	logger.info('%d clonotypes written', n)
