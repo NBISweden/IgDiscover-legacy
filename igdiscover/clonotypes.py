@@ -113,19 +113,12 @@ def representative(table):
 	Given a table with members of the same clonotype, return a representative
 	as a dict.
 	"""
-	result = {
-		'count': table['count'].sum(),
-		'V_gene': table['V_gene'].iloc[0],
-		'J_gene': table['J_gene'].iloc[0],
-		'CDR3_length': table['CDR3_length'].iloc[0],
-	}
-
-	for column in CLONOTYPE_COLUMNS:
-		# Do not write name and barcode; do not overwrite already set values
-		if column not in ('name', 'barcode') and column not in result:
-			result[column] = Counter(table[column]).most_common(1)[0][0]
-	result['CDR3_aa'] = nt_to_aa(result['CDR3_nt'])
-	result['VDJ_aa'] = nt_to_aa(result['VDJ_nt'])
+	c = Counter()
+	for row in table.itertuples():
+		c[row.VDJ_nt] += row.count
+	most_common_vdj_nt = c.most_common(1)[0][0]
+	result = table[table['VDJ_nt'] == most_common_vdj_nt].iloc[0]
+	result['count'] = table['count'].sum()
 
 	return result
 
