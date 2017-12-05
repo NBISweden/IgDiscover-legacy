@@ -118,8 +118,7 @@ def representative(table):
 		c[row.VDJ_nt] += row.count
 	most_common_vdj_nt = c.most_common(1)[0][0]
 	result = table[table['VDJ_nt'] == most_common_vdj_nt].iloc[0]
-	result['count'] = table['count'].sum()
-
+	result.at['count'] = table['count'].sum()
 	return result
 
 
