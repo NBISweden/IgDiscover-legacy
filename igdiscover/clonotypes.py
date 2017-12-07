@@ -166,7 +166,6 @@ def main(args):
 			members_file = None
 
 		columns = CLONOTYPE_COLUMNS[:]
-		columns.remove('name')
 		columns.remove('barcode')
 		columns.remove('count')
 		columns.insert(0, 'count')
