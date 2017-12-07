@@ -70,7 +70,11 @@ class Candidate:
 		return len(self.cdr3s)
 
 	def __repr__(self):
-		return 'Candidate({sequence!r}, count={count}, max_count={max_count}, ...)'.format(**vars(self))
+		return 'Candidate({sequence!r}, count={count}, max_count={max_count}, ...)'.format(
+			sequence=self.sequence,
+			count=self.count,
+			max_count=self.max_count,
+		)
 
 
 class OverlappingSequenceMerger(Merger):
@@ -146,12 +150,25 @@ class AlleleRatioMerger(Merger):
 		return None
 
 
-def count_full_text_occurrences(candidates, table_path, other_gene, other_errors, merge, min_count):
-	# Use only records that have a chance of reaching the required min_count
-	records = {info.sequence: info for info in candidates if info.max_count >= min_count}
+def count_full_text_occurrences(candidates, table_path, other_gene, other_errors, merge):
+	"""
+	Count how often each candidate sequence occurs in the genomic_sequence column of
+	an input table. This circumvents inaccurate IgBLAST alignment boundaries.
+	Rows where the column named by other_errors is not zero are ignored.
 
-	# Count full-text occurrences in the genomic_sequence, circumventing
-	# inaccurate IgBLAST alignment boundaries
+	The following attributes of the candidates are updated:
+
+	- count
+	- other_genes
+	- cdr3s
+
+	merge -- If True, stop searching for other candidates in a single row
+	    after one candidate has been found.
+
+	Return the updated list of candidates.
+	"""
+	records = {info.sequence: info for info in candidates}
+
 	# TODO limit the search to the gene region (especially for D genes)
 	# Speed up search by looking for most common sequences first
 	search_order = sorted(records, key=lambda s: records[s].max_count, reverse=True)
@@ -284,7 +301,7 @@ def main(args):
 
 	logger.info('Counting occurrences ...')
 	records = count_full_text_occurrences(candidates, args.table, other_gene, other_errors,
-		args.merge, args.min_count)
+		args.merge)
 
 	logger.info('%d records', len(records))
 	# Assign names etc.
@@ -323,7 +340,7 @@ def main(args):
 			len(records))
 
 	records = sorted(records, key=lambda r: (r.count, r.sequence), reverse=True)
-	records = [r for r in records if r.count >= 1]
+	records = [r for r in records if r.count >= args.min_count]
 
 	print_table(records, other_gene, missing=args.gene == 'D')
 	if args.fasta:
