@@ -156,7 +156,9 @@ def main(args):
 	table = table[CLONOTYPE_COLUMNS]
 	logger.info('Read table with %s rows', len(table))
 	table.insert(5, 'CDR3_length', table['CDR3_nt'].apply(len))
-
+	table = table[table['CDR3_length'] > 0]
+	table = table[table['CDR3_aa'].map(lambda s: '*' not in s)]
+	logger.info('After discarding rows with unusable CDR3, %s remain', len(table))
 	with ExitStack() as stack:
 		if args.members:
 			members_file = stack.enter_context(xopen(args.members, 'w'))
