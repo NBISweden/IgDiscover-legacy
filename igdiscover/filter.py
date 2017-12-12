@@ -97,7 +97,7 @@ def main(args):
 	first = True
 	written = 0
 	stats = FilteringStatistics()
-	for chunk in pd.read_csv(args.table, chunksize=10000, sep='\t'):
+	for chunk in pd.read_csv(args.table, chunksize=10000, float_precision='high', sep='\t'):
 		fix_columns(chunk)
 		n += len(chunk)
 		filtered, chunk_stats = filtered_table(chunk, v_gene_coverage=args.v_coverage,
