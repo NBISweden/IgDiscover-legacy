@@ -20,7 +20,7 @@ development version
   filter out artifacts.
 * Similarly, ``expressed_D.tab`` and ``expressed_J.tab`` and their
   ``.pdf`` counterparts are created in each iteration.
-
+* Removed ``parse`` subcommand (functionality is in the ``igblast`` subcommand)
 
 v0.8.0 (2017-06-20)
 -------------------

@@ -32,7 +32,6 @@ COMMANDS = [
 	'config',
 	'commonv',
 	'igblast',
-	'parse',
 	'filter',
 	'count',
 	'group',
