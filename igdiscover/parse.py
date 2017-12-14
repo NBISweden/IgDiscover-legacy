@@ -10,15 +10,11 @@ A few extra things are done in addition to parsing:
 - If the V sequence hit starts at base 2 in the reference, it is extended
   one to the left.
 """
-import sys
 import csv
-import errno
-import json
 import logging
 from collections import namedtuple
+from itertools import groupby
 
-import pandas as pd
-from sqt import SequenceReader, xopen
 from sqt.dna import reverse_complement
 from .utils import nt_to_aa
 from .species import find_cdr3, CDR3_SEARCH_START
