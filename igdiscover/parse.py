@@ -77,11 +77,10 @@ JunctionVJ = namedtuple('JunctionVJ', 'v_end vj_junction j_start')
 _Hit = namedtuple('_Hit', [
 	'subject_id',  # name of database record, such as "VH4.11"
 	'query_start',
-	'query_sequence',  # aligned part of the query
+	'query_alignment',  # aligned part of the query, with '-' for deletions
 	'subject_start',
-	'subject_sequence',  # aligned part of the reference
+	'subject_alignment',  # aligned reference, with '-' for insertions
 	'subject_length',  # total length of reference, depends only on subject_id
-	'errors',
 	'percent_identity',
 	'evalue',
 ])
@@ -102,6 +101,18 @@ class Hit(_Hit):
 	@property
 	def query_end(self):
 		return self.query_start + len(self.query_sequence)
+
+	@property
+	def query_sequence(self):
+		return self.query_alignment.replace('-', '')
+
+	@property
+	def subject_sequence(self):
+		return self.subject_alignment.replace('-', '')
+
+	@property
+	def errors(self):
+		return sum(a != b for a, b in zip(self.subject_alignment, self.query_alignment))
 
 
 def parse_header(header):
@@ -205,6 +216,7 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		'CDR2_aa',
 		'CDR3_nt',
 		'CDR3_aa',
+		'CDR3_oldaa',
 		'V_nt',
 		'V_aa',
 		'V_end',
@@ -221,15 +233,23 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		'genomic_sequence',
 	]
 
-	def __init__(self, v_database, **kwargs):
+	def __init__(self, database, **kwargs):
 		super().__init__(**kwargs)
 		self.query_name, self.size, self.barcode = parse_header(self.query_name)
 		self.genomic_sequence = self.full_sequence
 		self.race_g = None  # TODO since the parse script does not extract the race_G anymore, we don’t have this info available
 		if 'V' in self.hits:
-			self.hits['V'] = self._fixed_v_hit(v_database)
+			self.hits['V'] = self._fixed_v_hit(database)
 		self.utr, self.leader = self._utr_leader()
-		self.alignments['CDR3'] = self._fixed_cdr3_alignment()
+		regex_cdr3_alignment = self._fixed_cdr3_alignment_by_regex()
+		# TODO make this work with VK, VL
+		if self.chain == 'VH':
+			self.alignments['CDR3'] = self._find_cdr3(database)
+		else:
+			self.alignments['CDR3'] = regex_cdr3_alignment
+
+		# TODO temporarily leaving in the old CDR3 alignment
+		self.alignments['CDR3_old'] = regex_cdr3_alignment
 
 	@property
 	def vdj_sequence(self):
@@ -266,7 +286,7 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 					return before_v[:-i + offset], before_v[-i + offset:]
 		return None, None
 
-	def _fixed_cdr3_alignment(self):
+	def _fixed_cdr3_alignment_by_regex(self):
 		"""
 		Return a repaired AlignmentSummary object for the CDR3 region which
 		does not use IgBLAST’s coordinates. IgBLAST does not determine the end
@@ -293,9 +313,60 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		return AlignmentSummary(start=start, stop=end, length=None, matches=None,
 			mismatches=None, gaps=None, percent_identity=None)
 
-	def _fixed_v_hit(self, v_database):
+	@staticmethod
+	def _find_query_position(hit, reference_position):
 		"""
-		Extend the V hit to the left if it does not starts at the first of the V gene.
+		Given a hit and a position on the reference,
+		return the same position but relative to query.
+		"""
+		# Iterate over alignment columns
+		ref_pos = hit.subject_start
+		query_pos = hit.query_start
+		if ref_pos == reference_position:
+			return query_pos
+		for ref_c, query_c in zip(hit.subject_alignment, hit.query_alignment):
+			if ref_c != '-':
+				ref_pos += 1
+			if query_c != '-':
+				query_pos += 1
+			if ref_pos == reference_position:
+				return query_pos
+		return None
+
+	def _find_cdr3(self, database):
+		"""
+		Return a repaired AlignmentSummary object that describes the CDR3 region.
+		Return None if no CDR3 detected.
+		"""
+		if self.chain != 'VH':
+			return None
+		if 'V' not in self.hits or 'J' not in self.hits:
+			return None
+
+		# CDR3 start
+		cdr3_ref_start = database.v_cdr3_start(self.hits['V'].subject_id, self.chain)
+		if cdr3_ref_start is None:
+			return None
+		cdr3_query_start = self._find_query_position(hit=self.hits['V'], reference_position=cdr3_ref_start)
+		if cdr3_query_start is None:
+			return None
+
+		# CDR3 end
+		cdr3_ref_end = database.j_cdr3_end(self.hits['J'].subject_id, self.chain)
+		if cdr3_ref_end is None:
+			return None
+		cdr3_ref_end = cdr3_ref_end[1]  # cdr3_ref_end[0] is the frame (0, 1 or 2)
+
+		cdr3_query_end = self._find_query_position(hit=self.hits['J'], reference_position=cdr3_ref_end)
+		if cdr3_query_end is None:
+			return None
+
+		return AlignmentSummary(start=cdr3_query_start, stop=cdr3_query_end, length=None, matches=None,
+			mismatches=None, gaps=None, percent_identity=None)
+
+	def _fixed_v_hit(self, database):
+		"""
+		Extend the V hit to the left if it does not start at the first nucleotide of the V gene.
 		"""
 		hit = self.hits['V']
 		d = hit._asdict()
@@ -303,15 +374,13 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 			d['query_start'] -= 1
 			d['subject_start'] -= 1
 			preceding_query_base = self.full_sequence[d['query_start']]
-			d['query_sequence'] = preceding_query_base + d['query_sequence']
-			if v_database:
-				reference = v_database[hit.subject_id]
+			d['query_alignment'] = preceding_query_base + d['query_alignment']
+			if database.v:
+				reference = database.v[hit.subject_id]
 				preceding_base = reference[d['subject_start']]
 			else:
 				preceding_base = 'N'
-			d['subject_sequence'] = preceding_base + d['subject_sequence']
-			if preceding_base != preceding_query_base:
-				d['errors'] += 1
+			d['subject_alignment'] = preceding_base + d['subject_alignment']
 		return Hit(**d)
 
 	def region_sequence(self, region):
@@ -340,6 +409,8 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		cdr2aa = nt_to_aa(cdr2nt) if cdr2nt else None
 		cdr3nt = self.region_sequence('CDR3')
 		cdr3aa = nt_to_aa(cdr3nt) if cdr3nt else None
+		cdr3old = self.region_sequence('CDR3_old')  # TODO remove
+		cdr3old = nt_to_aa(cdr3old) if cdr3old else None  # TODO remove
 		vdj_nt = self.vdj_sequence
 		vdj_aa = nt_to_aa(vdj_nt) if vdj_nt else None
 
@@ -422,6 +493,7 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 			CDR2_aa=cdr2aa,
 			CDR3_nt=cdr3nt,
 			CDR3_aa=cdr3aa,
+			CDR3_oldaa=cdr3old,
 			V_nt=v_nt,
 			V_aa=v_aa,
 			V_end=v_end,
@@ -584,21 +656,13 @@ class IgBlastParser:
 			percent_identity=percent_identity
 		)
 
-
 	def _parse_hit(self, line):
 		"""
 		Parse a line of the "Hit table" section and return a tuple (hit, gene)
 		where hit is a Hit object.
 		"""
-		(gene, subject_id, query_start, query_sequence, subject_start, subject_sequence,
+		(gene, subject_id, query_start, query_alignment, subject_start, subject_alignment,
 			percent_identity, subject_length, evalue) = line.split('\t')
-		# subject_sequence and query_sequence describe the alignment:
-		# They contain '-' characters for insertions and deletions.
-		assert len(subject_sequence) == len(query_sequence)
-		alignment_length = len(subject_sequence)
-		errors = sum(a != b for a,b in zip(subject_sequence, query_sequence))
-		query_sequence = query_sequence.replace('-', '')
-		subject_sequence = subject_sequence.replace('-', '')
 		query_start = int(query_start) - 1
 		subject_start = int(subject_start) - 1
 		subject_length = int(subject_length)  # Length of original subject sequence
@@ -606,19 +670,19 @@ class IgBlastParser:
 		# 100 - errors / alignment_length and then rounded to two decimal digits
 		percent_identity = float(percent_identity)
 		evalue = float(evalue)
-		hit = Hit(subject_id, query_start, query_sequence, subject_start,
-			subject_sequence, subject_length, errors, percent_identity, evalue)
+		hit = Hit(subject_id, query_start, query_alignment, subject_start,
+			subject_alignment, subject_length, percent_identity, evalue)
 		return hit, gene
 
 
 class ExtendedIgBlastParser:
-	def __init__(self, sequences, igblast_lines, v_database):
+	def __init__(self, sequences, igblast_lines, database):
 		self._parser = IgBlastParser(sequences, igblast_lines)
-		self._v_database = v_database
+		self._database = database
 
 	def __iter__(self):
 		for record in self._parser:
-			yield ExtendedIgBlastRecord(self._v_database, **record.__dict__)
+			yield ExtendedIgBlastRecord(self._database, **record.__dict__)
 
 
 class TableWriter:

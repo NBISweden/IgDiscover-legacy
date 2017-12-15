@@ -127,7 +127,8 @@ def j_cdr3_end(sequence, chain):
 	for frame in 0, 1, 2:
 		aa = nt_to_aa(sequence[frame:])
 		match = _CDR3END_JH_REGEX.search(aa)
-		return frame, match.start()
+		if match:
+			return frame, match.start() * 3 + frame
 	return None
 
 

@@ -36,6 +36,7 @@ from sqt.utils import available_cpu_count
 
 from .utils import get_cpu_time, SerialPool
 from .parse import TableWriter, ExtendedIgBlastParser
+from .species import v_cdr3_start, j_cdr3_end
 
 
 logger = logging.getLogger(__name__)
@@ -123,11 +124,11 @@ class Runner:
 
 	It runs IgBLAST and parses the output for a list of sequences.
 	"""
-	def __init__(self, dbpath, species, penalty, v_database):
+	def __init__(self, dbpath, species, penalty, database):
 		self.dbpath = dbpath
 		self.species = species
 		self.penalty = penalty
-		self.v_database = v_database
+		self.database = database
 
 	def __call__(self, sequences):
 		"""
@@ -136,7 +137,7 @@ class Runner:
 		"""
 		igblast_result = run_igblast(sequences, self.dbpath, self.species, self.penalty)
 		parser = ExtendedIgBlastParser(sequences,
-			StringIO(igblast_result), self.v_database)
+			StringIO(igblast_result), self.database)
 		records = list(parser)
 		assert len(records) == len(sequences)
 		return igblast_result, records
@@ -155,11 +156,30 @@ def makeblastdb(fasta, database_name):
 		raise subprocess.SubprocessError()
 
 
-def main(args):
-	with SequenceReader(os.path.join(args.database, 'V.fasta')) as sr:
-		v_database = {record.name: record.sequence.upper() for record in sr}
+class Database:
+	def __init__(self, path):
+		"""path -- path to database directory with V.fasta, D.fasta, J.fasta"""
+		with SequenceReader(os.path.join(path, 'V.fasta')) as sr:
+			self.v = {record.name: record.sequence.upper() for record in sr}
+		with SequenceReader(os.path.join(path, 'J.fasta')) as sr:
+			self.j = {record.name: record.sequence.upper() for record in sr}
+		self._v_cdr3_starts = dict()
+		self._j_cdr3_ends = dict()
+		for chain in ('VH', ):
+			self._v_cdr3_starts[chain] = {name: v_cdr3_start(s, chain) for name, s in self.v.items()}
+			self._j_cdr3_ends[chain] = {name: j_cdr3_end(s, chain) for name, s in self.j.items()}
 
+	def v_cdr3_start(self, gene, chain):
+		return self._v_cdr3_starts[chain][gene]
+
+	def j_cdr3_end(self, gene, chain):
+		return self._j_cdr3_ends[chain][gene]
+
+
+def main(args):
+	database = Database(args.database)
 	detected_cdr3s = 0
+	old_detected_cdr3s = 0
 	writer = TableWriter(sys.stdout)
 	with ExitStack() as stack:
 		if args.raw:
@@ -174,7 +194,7 @@ def main(args):
 
 		fasta = stack.enter_context(SequenceReader(args.fasta))
 		chunks = chunked(islice(fasta, 0, args.limit), chunksize=1000)
-		runner = Runner(tmpdir, args.species, args.penalty, v_database)
+		runner = Runner(tmpdir, args.species, args.penalty, database)
 		pool = stack.enter_context(multiprocessing.Pool(args.threads) if args.threads > 1 else SerialPool())
 		n = 0  # number of records processed so far
 		for igblast_output, igblast_records in pool.imap(runner, chunks, chunksize=1):
@@ -187,6 +207,8 @@ def main(args):
 				d = record.asdict()
 				if d['CDR3_aa']:
 					detected_cdr3s += 1
+				if d['CDR3_oldaa']:
+					old_detected_cdr3s += 1
 				try:
 					writer.write(d)
 				except IOError as e:
@@ -200,6 +222,7 @@ def main(args):
 
 	logger.info('%d IgBLAST assignments parsed and written', n)
 	logger.info('CDR3s detected in %.1f%% of all sequences', detected_cdr3s / n * 100)
+	logger.info('CDR3s detected in %.1f%% of all sequences using old method', old_detected_cdr3s / n * 100)
 	if args.stats:
 		stats = {'total': n, 'detected_cdr3s': detected_cdr3s}
 		with open(args.stats, 'w') as f:
