@@ -327,11 +327,11 @@ def main(args):
 					record.missing = '{}...{}'.format(prefix, suffix)
 				else:
 					record.name = unique_name(closest.name, record.sequence)
-		# Merge by allele ratio
 	else:
 		for record in records:
 			record.name = unique_name(args.gene, record.sequence)
 
+	# Merge by allele ratio
 	if args.allele_ratio or args.cross_mapping_ratio:
 		arm = AlleleRatioMerger(args.allele_ratio, args.cross_mapping_ratio)
 		arm.extend(records)
