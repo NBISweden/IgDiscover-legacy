@@ -103,6 +103,10 @@ class Hit(_Hit):
 		return self.query_start + len(self.query_sequence)
 
 	@property
+	def subject_end(self):
+		return self.subject_start + len(self.subject_sequence)
+
+	@property
 	def query_sequence(self):
 		return self.query_alignment.replace('-', '')
 
@@ -349,7 +353,10 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 			return None
 		cdr3_query_start = self._find_query_position(hit=self.hits['V'], reference_position=cdr3_ref_start)
 		if cdr3_query_start is None:
-			return None
+			# Alignment is not long enough to cover CDR3 start position; try to rescue it
+			# by assuming that the alignment would continue without indels.
+			hit = self.hits['V']
+			cdr3_query_start = hit.query_end + (cdr3_ref_start - hit.subject_end)
 
 		# CDR3 end
 		cdr3_ref_end = database.j_cdr3_end(self.hits['J'].subject_id, self.chain)
