@@ -7,7 +7,7 @@ nosetests --with-doctest -P tests/ igdiscover/
 
 rm -rf testrun
 mkdir testrun
-ln -s igdiscover-testdata-* testdata
+[[ -L testdata ]] || ln -s igdiscover-testdata-* testdata
 
 igdiscover init --db=testdata/db --reads=testdata/reads.1.fastq.gz testrun/paired
 
