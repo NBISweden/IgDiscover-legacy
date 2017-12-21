@@ -193,10 +193,10 @@ def read_and_repair_fasta(path):
 			i += 1
 			name = r.name + '_{}'.format(i)
 		if name != r.name:
-			logger.info("Record name %r occurs more than once, replaced with %r", r.name, name)
+			logger.info('Record name %r replaced with %r because it occurs more than once', r.name, name)
 		if r.sequence in sequences:
-			logger.info('Records %r and %r contain the same sequence, skipping %r',
-				sequences[r.sequence], r.name, r.name)
+			logger.info('Skipping %r because it contains the same sequence as %r',
+				r.name, sequences[r.sequence])
 			continue
 		sequences[r.sequence] = name
 		names.add(name)
