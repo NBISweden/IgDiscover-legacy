@@ -237,6 +237,11 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		'genomic_sequence',
 	]
 
+	CHAINS = {
+		'VH': 'heavy', 'VK': 'kappa', 'VL': 'lambda', 'VA': 'alpha', 'VB': 'beta',
+		'VG': 'gamma', 'VD': 'delta'
+	}
+
 	def __init__(self, database, **kwargs):
 		super().__init__(**kwargs)
 		self.query_name, self.size, self.barcode = parse_header(self.query_name)
@@ -246,11 +251,7 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 			self.hits['V'] = self._fixed_v_hit(database)
 		self.utr, self.leader = self._utr_leader()
 		regex_cdr3_alignment = self._fixed_cdr3_alignment_by_regex()
-		# TODO make this work with VK, VL
-		if self.chain == 'VH':
-			self.alignments['CDR3'] = self._find_cdr3(database)
-		else:
-			self.alignments['CDR3'] = regex_cdr3_alignment
+		self.alignments['CDR3'] = self._find_cdr3(database)
 
 		# TODO temporarily leaving in the old CDR3 alignment
 		self.alignments['CDR3_old'] = regex_cdr3_alignment
@@ -342,13 +343,11 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		Return a repaired AlignmentSummary object that describes the CDR3 region.
 		Return None if no CDR3 detected.
 		"""
-		if self.chain != 'VH':
-			return None
 		if 'V' not in self.hits or 'J' not in self.hits:
 			return None
 
 		# CDR3 start
-		cdr3_ref_start = database.v_cdr3_start(self.hits['V'].subject_id, self.chain)
+		cdr3_ref_start = database.v_cdr3_start(self.hits['V'].subject_id, self.CHAINS[self.chain])
 		if cdr3_ref_start is None:
 			return None
 		cdr3_query_start = self._find_query_position(hit=self.hits['V'], reference_position=cdr3_ref_start)
@@ -359,10 +358,10 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 			cdr3_query_start = hit.query_end + (cdr3_ref_start - hit.subject_end)
 
 		# CDR3 end
-		cdr3_ref_end = database.j_cdr3_end(self.hits['J'].subject_id, self.chain)
+		cdr3_ref_end = database.j_cdr3_end(self.hits['J'].subject_id, self.CHAINS[self.chain])
 		if cdr3_ref_end is None:
 			return None
-		cdr3_ref_end = cdr3_ref_end[1]  # cdr3_ref_end[0] is the frame (0, 1 or 2)
+		cdr3_ref_end = cdr3_ref_end  #[1]  # cdr3_ref_end[0] is the frame (0, 1 or 2)
 
 		cdr3_query_end = self._find_query_position(hit=self.hits['J'], reference_position=cdr3_ref_end)
 		if cdr3_query_end is None:

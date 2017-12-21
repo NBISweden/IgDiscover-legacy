@@ -36,7 +36,7 @@ from sqt.utils import available_cpu_count
 
 from .utils import get_cpu_time, SerialPool
 from .parse import TableWriter, ExtendedIgBlastParser
-from .species import v_cdr3_start, j_cdr3_end
+from .species import cdr3_start, cdr3_end
 
 
 logger = logging.getLogger(__name__)
@@ -163,23 +163,24 @@ def makeblastdb(fasta, database_name):
 
 
 class Database:
+
 	def __init__(self, path):
 		"""path -- path to database directory with V.fasta, D.fasta, J.fasta"""
 		with SequenceReader(os.path.join(path, 'V.fasta')) as sr:
 			self.v = {record.name: record.sequence.upper() for record in sr}
 		with SequenceReader(os.path.join(path, 'J.fasta')) as sr:
 			self.j = {record.name: record.sequence.upper() for record in sr}
-		self._v_cdr3_starts = dict()
-		self._j_cdr3_ends = dict()
-		for chain in ('VH', ):
-			self._v_cdr3_starts[chain] = {name: v_cdr3_start(s, chain) for name, s in self.v.items()}
-			self._j_cdr3_ends[chain] = {name: j_cdr3_end(s, chain) for name, s in self.j.items()}
+		self._cdr3_starts = dict()
+		self._cdr3_ends = dict()
+		for chain in ('heavy', 'kappa', 'lambda', 'alpha', 'beta', 'gamma', 'delta'):
+			self._cdr3_starts[chain] = {name: cdr3_start(s, chain) for name, s in self.v.items()}
+			self._cdr3_ends[chain] = {name: cdr3_end(s, chain) for name, s in self.j.items()}
 
 	def v_cdr3_start(self, gene, chain):
-		return self._v_cdr3_starts[chain][gene]
+		return self._cdr3_starts[chain][gene]
 
 	def j_cdr3_end(self, gene, chain):
-		return self._j_cdr3_ends[chain][gene]
+		return self._cdr3_ends[chain][gene]
 
 
 def main(args):

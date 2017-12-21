@@ -77,8 +77,12 @@ def find_cdr3(sequence, chain):
 	return min(matches, default=None)
 
 
+# The following code is used for detecting CDR3 start sites within V
+# reference sequences and CDR3 end sites within J reference sequences.
+
+
 # Matches the start of the CDR3 within the end of a VH sequence
-_CDR3START_VH_REGEX = re.compile("""
+_CDR3_START_VH_REGEX = re.compile("""
 	[FY] [FHVWY] C
 	(?P<cdr3_start>
 		[ADEGIKMNRSTV*] | $
@@ -86,49 +90,88 @@ _CDR3START_VH_REGEX = re.compile("""
 	""", re.VERBOSE)
 
 
-_CDR3START_VH_ALTERNATIVE_REGEX = re.compile("""
+_CDR3_START_VH_ALTERNATIVE_REGEX = re.compile("""
 	C
 	(?P<cdr3_start> . [RK])
 	""", re.VERBOSE)
 
 
+_CDR3_START_REGEXES = {
+	'kappa': re.compile('[FSVY][CFHNVY][CDFGLSW]'),
+	'lambda': re.compile('[CDY](?![CDY][CFHSY][CFGW])[CFHSY][CFGW]'),
+	'gamma': re.compile('[YFH]C'),  # TODO test whether this also works for alpha and beta
+	'delta': re.compile('[YFH]C'),
+}
+
+
+def _cdr3_start_heavy(aa):
+	head, tail = aa[:-15], aa[-15:]
+	match = _CDR3_START_VH_REGEX.search(tail)
+	if not match:
+		match = _CDR3_START_VH_ALTERNATIVE_REGEX.search(tail)
+	if not match:
+		return None
+	return len(head) + match.start('cdr3_start')
+
+
+def cdr3_start(nt, chain):
+	"""
+	Find CDR3 start location within a V gene (Ig or TCR)
+
+	nt -- nucleotide sequence of the gene
+	chain -- one of the following strings:
+	  - 'heavy', 'lambda', 'kappa' for Ig genes
+	  - 'alpha', 'beta', 'gamma', 'delta' for TCR genes
+	"""
+	aa = nt_to_aa(nt)
+	if chain == 'heavy':
+		start = _cdr3_start_heavy(aa)
+		if start is None:
+			return None
+		return 3 * start
+	if chain in ('kappa', 'lambda', 'gamma', 'delta'):
+		head, tail = aa[:-15], aa[-15:]
+		match = _CDR3_START_REGEXES[chain].search(tail)
+		if match:
+			return 3 * (len(head) + match.end())
+		else:
+			return None
+	elif chain in ('alpha', 'beta'):
+		head, tail = aa[:-8], aa[-8:]
+		pos = tail.find('C')
+		if pos == -1:
+			return None
+		else:
+			return 3 * (len(head) + pos + 1)
+
+
 # Matches after the end of the CDR3 within a J sequence
-_CDR3END_JH_REGEX = re.compile('W[GAV]')
+_CDR3_END_REGEXES = {
+	'heavy': re.compile('W[GAV]'),
+	'kappa': re.compile('FG'),
+	'lambda': re.compile('FG'),
+	'alpha': re.compile('FG'),
+	'beta': re.compile('FG'),
+	'gamma': re.compile('FG'),
+	'delta': re.compile('FG'),
+}
 
 
-def v_cdr3_start(sequence, chain):
-	"""
-	Find the position of the CDR3 start within the end of a
-	V sequence.
-	"""
-	assert chain == 'VH'
-	if 'N' in sequence:
-		return None
-	aa = nt_to_aa(sequence)
-	head, tail = aa[:-12], aa[-12:]
-	match = _CDR3START_VH_REGEX.search(tail)
-	if not match:
-		match = _CDR3START_VH_ALTERNATIVE_REGEX.search(tail)
-	if not match:
-		return None
-	return 3 * (len(head) + match.start('cdr3_start'))
-
-
-def j_cdr3_end(sequence, chain):
+def cdr3_end(nt, chain):
 	"""
 	Find the position of the CDR3 end within a J sequence
 
-	Return a tuple (frame, cdr3_end) where frame is the frameshift
-	(0, 1 or 2).
+	nt -- nucleotide sequence of the J gene
+	chain -- one of the following strings:
+	  - 'heavy', 'lambda', 'kappa' for Ig genes
+	  - 'alpha', 'beta', 'gamma', 'delta' for TCR genes
 	"""
-	assert chain == 'VH'
-	if 'N' in sequence:
-		return None
+	regex = _CDR3_END_REGEXES[chain]
 	for frame in 0, 1, 2:
-		aa = nt_to_aa(sequence[frame:])
-		match = _CDR3END_JH_REGEX.search(aa)
+		aa = nt_to_aa(nt[frame:])
+		match = regex.search(aa)
 		if match:
-			return frame, match.start() * 3 + frame
+			return match.start() * 3 + frame
 	return None
 
 
