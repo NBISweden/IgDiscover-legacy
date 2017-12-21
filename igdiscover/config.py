@@ -23,6 +23,7 @@ class Config:
 		# Set some defaults.
 		self.debug = False
 		self.species = None
+		self.sequence_type = 'Ig'
 		self.merge_program = 'pear'
 		self.flash_maximum_overlap = 300
 		self.limit = None  # or an integer

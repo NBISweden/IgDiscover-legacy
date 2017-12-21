@@ -632,7 +632,7 @@ class IgBlastParser:
 
 				# IgBLAST removes the trailing semicolon (why, oh why??)
 				qname = query_name[:-1] if query_name.endswith(';') else query_name
-				assert chain in (None, 'VL', 'VH', 'VK', 'NON'), chain
+				assert chain in (None, 'VL', 'VH', 'VK', 'NON', 'VA', 'VB'), chain
 				assert qsequence == full_sequence[hit.query_start:hit.query_start+len(qsequence)]
 
 		return IgBlastRecord(

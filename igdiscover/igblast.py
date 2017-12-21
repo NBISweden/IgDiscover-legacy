@@ -52,6 +52,8 @@ def add_arguments(parser):
 		help='Tell IgBLAST which species to use. Note that this setting does '
 			'not seem to have any effect since we provide our own database to '
 			'IgBLAST. Default: Use IgBLAST’s default')
+	arg('--sequence-type', default='Ig', choices=('Ig', 'TCR'),
+		help='Sequence type. Default: %(default)s')
 	arg('--raw', metavar='FILE', help='Write raw IgBLAST output to FILE '
 			'(add .gz to compress)')
 	arg('--limit', type=int, metavar='N',
@@ -65,7 +67,7 @@ def add_arguments(parser):
 	arg('fasta', help='File with original reads')
 
 
-def run_igblast(sequences, database, species, penalty=None):
+def run_igblast(sequences, database, species, sequence_type, penalty=None):
 	"""
 	sequences -- list of Sequence objects
 	database -- directory that contains IgBLAST databases. Files in that
@@ -74,6 +76,8 @@ def run_igblast(sequences, database, species, penalty=None):
 
 	Return IgBLAST’s raw output as a string.
 	"""
+	if sequence_type not in ('Ig', 'TCR'):
+		raise ValueError('sequence_type must be "Ig" or "TCR"')
 	arguments = ['igblastn']
 	for gene in 'V', 'D', 'J':
 		arguments += ['-germline_db_{gene}'.format(gene=gene),
@@ -86,7 +90,7 @@ def run_igblast(sequences, database, species, penalty=None):
 		arguments += ['-species', species]
 	arguments += [
 		'-auxiliary_data', empty_aux_path,
-		'-ig_seqtype', 'Ig',
+		'-ig_seqtype', sequence_type,
 		'-num_threads', '1',
 		'-domain_system', 'imgt',
 		'-num_alignments_V', '1',
@@ -124,9 +128,10 @@ class Runner:
 
 	It runs IgBLAST and parses the output for a list of sequences.
 	"""
-	def __init__(self, dbpath, species, penalty, database):
+	def __init__(self, dbpath, species, sequence_type, penalty, database):
 		self.dbpath = dbpath
 		self.species = species
+		self.sequence_type = sequence_type
 		self.penalty = penalty
 		self.database = database
 
@@ -135,7 +140,8 @@ class Runner:
 		Return tuples (igblast_result, records) where igblast_result is the raw IgBLAST output
 		and records is a list of ExtendedIgBlastRecord objects (the parsed output).
 		"""
-		igblast_result = run_igblast(sequences, self.dbpath, self.species, self.penalty)
+		igblast_result = run_igblast(sequences, self.dbpath, self.species, self.sequence_type,
+			self.penalty)
 		parser = ExtendedIgBlastParser(sequences,
 			StringIO(igblast_result), self.database)
 		records = list(parser)
@@ -194,7 +200,7 @@ def main(args):
 
 		fasta = stack.enter_context(SequenceReader(args.fasta))
 		chunks = chunked(islice(fasta, 0, args.limit), chunksize=1000)
-		runner = Runner(tmpdir, args.species, args.penalty, database)
+		runner = Runner(tmpdir, args.species, args.sequence_type, args.penalty, database)
 		pool = stack.enter_context(multiprocessing.Pool(args.threads) if args.threads > 1 else SerialPool())
 		n = 0  # number of records processed so far
 		for igblast_output, igblast_records in pool.imap(runner, chunks, chunksize=1):

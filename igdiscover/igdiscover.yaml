@@ -8,6 +8,11 @@
 iterations: 1
 
 
+# Type of sequences: Choose 'Ig' or 'TCR'.
+#
+sequence_type: Ig
+
+
 ## Barcoding settings
 
 
