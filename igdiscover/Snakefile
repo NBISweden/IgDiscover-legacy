@@ -641,8 +641,6 @@ rule igdiscover_germlinefilter:
 		for path in [input.db_whitelist, input.whitelist]:
 			if path:
 				criteria += ['--whitelist=' + path]
-		if conf['check_motifs']:
-			criteria += ['--looks-like-V']
 		if conf['allow_stop']:
 			criteria += ['--allow-stop']
 		criteria += ['--max-differences={}'.format(conf['differences'])]

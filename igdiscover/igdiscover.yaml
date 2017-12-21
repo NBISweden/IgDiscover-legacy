@@ -173,7 +173,6 @@ d_coverage: 70
 pre_germline_filter:
   unique_cdr3s: 2      # Minimum number of unique CDR3s (within exact matches)
   unique_js: 2         # Minimum number of unique J genes (within exact matches)
-  check_motifs: false  # Check whether 5' end starts with known motif
   whitelist: true      # Add database sequences to the whitelist
   cluster_size: 0      # Minimum number of sequences assigned to cluster
   differences: 0       # Merge sequences if they have at most this number of differences
@@ -190,7 +189,6 @@ pre_germline_filter:
 germline_filter:
   unique_cdr3s: 5      # Minimum number of unique CDR3s (within exact matches)
   unique_js: 3         # Minimum number of unique J genes (within exact matches)
-  check_motifs: false  # Check whether 5' end starts with known motif
   whitelist: true      # Add database sequences to the whitelist
   cluster_size: 100    # Minimum number of sequences assigned to cluster
   differences: 0       # Merge sequences if they have at most this number of differences

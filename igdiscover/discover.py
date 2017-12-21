@@ -22,7 +22,6 @@ from sqt.utils import available_cpu_count
 from .table import read_table
 from .utils import iterative_consensus, unique_name, downsampled, SerialPool, Merger, has_stop
 from .cluster import cluster_sequences
-from .species import looks_like_V_gene
 
 logger = logging.getLogger(__name__)
 
@@ -353,7 +352,6 @@ class Discoverer:
 				N_bases=n_bases,
 				database_diff=database_diff,
 				has_stop=int(has_stop(sibling)),
-				looks_like_V=int(looks_like_V_gene(sibling, chain)),
 				CDR3_start=cdr3_start,
 				consensus=sibling,
 			)
@@ -390,7 +388,6 @@ Candidate = namedtuple('Candidate', [
 	'N_bases',
 	'database_diff',
 	'has_stop',
-	'looks_like_V',
 	'CDR3_start',
 	'consensus',
 ])

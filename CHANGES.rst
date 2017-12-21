@@ -24,6 +24,8 @@ development version
 * New CDR3 detection method (only heavy chain sequences): CDR3 start/end coordinates
   are pre-computed using the database V and J sequences. Increases detection rate
   to 99% (previously less than 90%).
+* Remove the ability to check discovered genes for required motifs. This has never
+  worked well.
 
 v0.8.0 (2017-06-20)
 -------------------

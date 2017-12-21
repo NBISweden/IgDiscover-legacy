@@ -73,9 +73,6 @@ def add_arguments(parser):
 	arg('--unique-D-threshold', type=int, metavar='THRESHOLD', default=10,
 		help='Apply the --unique-D-ratio filter only if the Ds_exact of the other '
 		'allele is at least THRESHOLD')
-	arg('--looks-like-V', action='store_true', default=False,
-		help='Sequences must look like V genes (uses the looks_like_V column). '
-		'Default: Column is ignored')
 	arg('--allow-stop', action='store_true', default=False,
 		help='Allow stop codons in sequences (uses the has_stop column).'
 			'Default: Do not allow stop codons.')
@@ -254,8 +251,6 @@ def main(args):
 			table = table[table.N_bases <= args.maximum_N]
 		table = table[table.CDR3s_exact >= args.unique_CDR3]
 		table = table[table.Js_exact >= args.unique_J]
-		if args.looks_like_V:
-			table = table[(table.looks_like_V == 1) | (table.whitelist_diff == 0)]
 		if not args.allow_stop:
 			table = table[(table.has_stop == 0) | (table.whitelist_diff == 0)]
 		table = table[(table.cluster_size >= args.cluster_size) | (table.whitelist_diff == 0)]
