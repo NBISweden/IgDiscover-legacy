@@ -345,6 +345,8 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		"""
 		if 'V' not in self.hits or 'J' not in self.hits:
 			return None
+		if self.chain not in self.CHAINS:
+			return None
 
 		# CDR3 start
 		cdr3_ref_start = database.v_cdr3_start(self.hits['V'].subject_id, self.CHAINS[self.chain])
