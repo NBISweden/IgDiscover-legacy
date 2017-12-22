@@ -5,7 +5,6 @@ Some refactoring is needed to make this module actually usable for many
 species. Right now, it works for - at least - human, rhesus monkey and mouse.
 """
 import re
-from sqt.dna import amino_acid_regex
 from .utils import nt_to_aa
 
 
