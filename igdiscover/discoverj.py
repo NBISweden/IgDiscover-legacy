@@ -14,7 +14,7 @@ import pandas as pd
 from sqt import FastaReader
 from sqt.align import edit_distance
 from .utils import Merger, merge_overlapping, unique_name, is_same_gene, slice_arg
-from .table import read_table
+from .table import read_table, fix_columns
 
 logger = logging.getLogger(__name__)
 
@@ -150,11 +150,18 @@ class AlleleRatioMerger(Merger):
 		return None
 
 
-def count_full_text_occurrences(candidates, table_path, other_gene, other_errors, merge):
+def count_occurrences(candidates, table_path, search_columns, other_gene, other_errors, merge):
 	"""
 	Count how often each candidate sequence occurs in the genomic_sequence column of
 	an input table. This circumvents inaccurate IgBLAST alignment boundaries.
 	Rows where the column named by other_errors is not zero are ignored.
+
+	candidates -- list of candidates
+	table_path -- path to input table
+	search_columns -- which columns to search. The contained strings are
+	    concatenated and then searched.
+	merge -- If True, stop searching for other candidates in a single row
+	    after one candidate has been found.
 
 	The following attributes of the candidates are updated:
 
@@ -162,27 +169,31 @@ def count_full_text_occurrences(candidates, table_path, other_gene, other_errors
 	- other_genes
 	- cdr3s
 
-	merge -- If True, stop searching for other candidates in a single row
-	    after one candidate has been found.
-
 	Return the updated list of candidates.
 	"""
 	records = {info.sequence: info for info in candidates}
 
-	# TODO limit the search to the gene region (especially for D genes)
-	# Speed up search by looking for most common sequences first
+	# Speed up search by looking for the most common sequences first
 	search_order = sorted(records, key=lambda s: records[s].max_count, reverse=True)
-	cols = [other_gene, 'V_errors', 'J_errors', 'CDR3_nt', 'genomic_sequence']
+	cols = [other_gene, 'V_errors', 'J_errors', 'CDR3_nt'] + search_columns
 	for chunk in pd.read_csv(table_path, usecols=cols, chunksize=10000, sep='\t'):
+		fix_columns(chunk)
 		chunk = chunk[chunk[other_errors] == 0]
+		# concatenate search columns
+		chunk['haystack'] = chunk.loc[:, search_columns].astype(str).sum(axis=1)
+		chunk['haystack'] = chunk['haystack'].str.replace('(', '').replace(')', '')
+
 		for row in chunk.itertuples():
 			for needle in search_order:
-				if needle in row.genomic_sequence:
+				if needle in row.haystack:
 					record = records[needle]
 					record.count += 1
 					record.other_genes.add(getattr(row, other_gene))
 					record.cdr3s.add(row.CDR3_nt)
 					if merge:
+						# When overlapping candidates have been merged,
+						# there will be no other pattern that is a
+						# substrings of the current search pattern.
 						break
 	return records.values()
 
@@ -300,7 +311,12 @@ def main(args):
 	del table
 
 	logger.info('Counting occurrences ...')
-	records = count_full_text_occurrences(candidates, args.table, other_gene, other_errors,
+
+	if args.gene == 'D':
+		search_columns = ['VD_junction', 'D_region', 'DJ_junction']
+	else:
+		search_columns = ['genomic_sequence']
+	records = count_occurrences(candidates, args.table, search_columns, other_gene, other_errors,
 		args.merge)
 
 	logger.info('%d records', len(records))
