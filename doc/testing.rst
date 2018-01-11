@@ -53,3 +53,15 @@ running the program.
    For example, the final list of discovered V genes is in ``discovertest/final/database/V.fasta``.
 
    See the :ref:`explanation of final result files <final-results>`.
+
+
+Other test data sets
+--------------------
+
+ENA project `PRJEB15295 <https://www.ebi.ac.uk/ena/data/view/PRJEB15295>`_ contains the data for
+our Nature Communications paper from 2016, in particular
+`ERR1760498 <https://www.ebi.ac.uk/ena/data/view/ERR1760498>`_, which is the data for the human “H1”
+sample (multiplex PCR, IgM heavy chain).
+
+Data used for testing TCR detection (human, RACE): `SRR2905677 <https://www.ncbi.nlm.nih.gov/sra/SRR2905677/`_ and
+`SRR2905710 <https://www.ncbi.nlm.nih.gov/sra/SRR2905710/>`_.
