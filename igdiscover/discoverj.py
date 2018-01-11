@@ -35,7 +35,7 @@ def add_arguments(parser):
 	arg('--cross-mapping-ratio', type=float, metavar='RATIO', default=None,
 		help='Ratio for detection of cross-mapping artifacts. Default: %(default)s')
 	arg('--min-count', type=int, default=None,
-		help='Minimum count. Default: 1 for D, 100 for V and J')
+		help='Minimum count. Default: 10 for D, 100 for V and J')
 
 	# --gene=D options
 	arg('--d-core-length', metavar='L', type=int, default=6,
@@ -271,7 +271,7 @@ def main(args):
 	if args.merge is None:
 		args.merge = args.gene != 'V'
 	if args.min_count is None:
-		args.min_count = 1 if args.gene == 'D' else 100
+		args.min_count = 10 if args.gene == 'D' else 100
 
 	def initial_vj_candidates(table, column):
 		for sequence, group in table.groupby(column):
