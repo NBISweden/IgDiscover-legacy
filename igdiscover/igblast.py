@@ -67,10 +67,10 @@ def add_arguments(parser):
 	arg('fasta', help='File with original reads')
 
 
-def run_igblast(sequences, database, species, sequence_type, penalty=None):
+def run_igblast(sequences, blastdb_dir, species, sequence_type, penalty=None):
 	"""
 	sequences -- list of Sequence objects
-	database -- directory that contains IgBLAST databases. Files in that
+	blastdb_dir -- directory that contains BLAST databases. Files in that
 	directory must be databases created by the makeblastdb program and have
 	names V, D, and J.
 
@@ -81,7 +81,7 @@ def run_igblast(sequences, database, species, sequence_type, penalty=None):
 	arguments = ['igblastn']
 	for gene in 'V', 'D', 'J':
 		arguments += ['-germline_db_{gene}'.format(gene=gene),
-			os.path.join(database, '{gene}'.format(gene=gene))]
+			os.path.join(blastdb_dir, '{gene}'.format(gene=gene))]
 	if penalty is not None:
 		arguments += ['-penalty', str(penalty)]
 	# An empty .aux suppresses a warning from IgBLAST. /dev/null does not work.
@@ -128,8 +128,8 @@ class Runner:
 
 	It runs IgBLAST and parses the output for a list of sequences.
 	"""
-	def __init__(self, dbpath, species, sequence_type, penalty, database):
-		self.dbpath = dbpath
+	def __init__(self, blastdb_dir, species, sequence_type, penalty, database):
+		self.blastdb_dir = blastdb_dir
 		self.species = species
 		self.sequence_type = sequence_type
 		self.penalty = penalty
@@ -140,7 +140,7 @@ class Runner:
 		Return tuples (igblast_result, records) where igblast_result is the raw IgBLAST output
 		and records is a list of ExtendedIgBlastRecord objects (the parsed output).
 		"""
-		igblast_result = run_igblast(sequences, self.dbpath, self.species, self.sequence_type,
+		igblast_result = run_igblast(sequences, self.blastdb_dir, self.species, self.sequence_type,
 			self.penalty)
 		parser = ExtendedIgBlastParser(sequences,
 			StringIO(igblast_result), self.database)
@@ -166,6 +166,7 @@ class Database:
 
 	def __init__(self, path):
 		"""path -- path to database directory with V.fasta, D.fasta, J.fasta"""
+		self.path = path
 		with SequenceReader(os.path.join(path, 'V.fasta')) as sr:
 			self.v = {record.name: record.sequence.upper() for record in sr}
 		with SequenceReader(os.path.join(path, 'J.fasta')) as sr:
@@ -183,6 +184,34 @@ class Database:
 		return self._cdr3_ends[chain][gene]
 
 
+def igblast(database, sequences, sequence_type, species=None, threads=None, penalty=None,
+		raw_output=None):
+	"""
+	Run IgBLAST, parse results and yield ExtendedIgBlastRecord objects.
+
+	database -- a Database object
+	sequences -- an iterable of Sequence objects
+	sequence_type -- 'Ig' or 'TCR'
+	threads -- number of threads. If None, then available_cpu_count() is used.
+	raw_output -- If not None, raw IgBLAST output is written to this file
+	"""
+	if threads is None:
+		threads = available_cpu_count()
+	with ExitStack() as stack:
+		# Create the three BLAST databases in a temporary directory
+		blastdb_dir = stack.enter_context(tempfile.TemporaryDirectory())
+		for gene in ['V', 'D', 'J']:
+			makeblastdb(os.path.join(database.path, gene + '.fasta'), os.path.join(blastdb_dir, gene))
+
+		chunks = chunked(sequences, chunksize=1000)
+		runner = Runner(blastdb_dir, species=species, sequence_type=sequence_type, penalty=penalty, database=database)
+		pool = stack.enter_context(multiprocessing.Pool(threads) if threads > 1 else SerialPool())
+		for igblast_output, igblast_records in pool.imap(runner, chunks, chunksize=1):
+			if raw_output:
+				raw_output.write(igblast_output)
+			yield from igblast_records
+
+
 def main(args):
 	database = Database(args.database)
 	detected_cdr3s = 0
@@ -192,33 +221,25 @@ def main(args):
 			raw_output = stack.enter_context(xopen(args.raw, 'w'))
 		else:
 			raw_output = None
-		tmpdir = stack.enter_context(tempfile.TemporaryDirectory())
+		sequences = stack.enter_context(SequenceReader(args.fasta))
+		sequences = islice(sequences, 0, args.limit)
 
-		# Create the three BLAST databases in a temporary directory
-		for gene in list('VDJ'):
-			makeblastdb(os.path.join(args.database, gene + '.fasta'), os.path.join(tmpdir, gene))
-
-		fasta = stack.enter_context(SequenceReader(args.fasta))
-		chunks = chunked(islice(fasta, 0, args.limit), chunksize=1000)
-		runner = Runner(tmpdir, args.species, args.sequence_type, args.penalty, database)
-		pool = stack.enter_context(multiprocessing.Pool(args.threads) if args.threads > 1 else SerialPool())
 		n = 0  # number of records processed so far
-		for igblast_output, igblast_records in pool.imap(runner, chunks, chunksize=1):
-			if raw_output:
-				raw_output.write(igblast_output)
-			for record in igblast_records:
-				n += 1
-				if args.rename is not None:
-					record.query_name = "{}seq{}".format(args.rename, n)
-				d = record.asdict()
-				if d['CDR3_aa']:
-					detected_cdr3s += 1
-				try:
-					writer.write(d)
-				except IOError as e:
-					if e.errno == errno.EPIPE:
-						sys.exit(1)
-					raise
+		for record in igblast(database, sequences, sequence_type=args.sequence_type,
+				species=args.species, threads=args.threads, penalty=args.penalty,
+				raw_output=raw_output):
+			n += 1
+			if args.rename is not None:
+				record.query_name = "{}seq{}".format(args.rename, n)
+			d = record.asdict()
+			if d['CDR3_aa']:
+				detected_cdr3s += 1
+			try:
+				writer.write(d)
+			except IOError as e:
+				if e.errno == errno.EPIPE:
+					sys.exit(1)
+				raise
 
 	cpu_time = get_cpu_time()
 	if cpu_time is not None:
