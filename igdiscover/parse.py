@@ -13,26 +13,12 @@ A few extra things are done in addition to parsing:
 import csv
 import logging
 from collections import namedtuple
-from itertools import groupby
 
 from sqt.dna import reverse_complement
 from .utils import nt_to_aa
 from .species import find_cdr3, CDR3_SEARCH_START
 
 logger = logging.getLogger(__name__)
-
-
-def add_arguments(parser):
-	arg = parser.add_argument
-	arg('--rename', default=None, metavar='PREFIX',
-		help='Rename reads to PREFIXseqN (where N is a number starting at 1)')
-	arg('--vdatabase', '--vdb', metavar='FASTA',
-		help="Path to FASTA file with V genes. Used to fix the 5' ends of V "
-		"gene alignments. If not given, 'N' bases will be inserted instead.")
-	arg('--stats', metavar='FILE',
-		help='Write statistics in JSON format to FILE')
-	arg('igblast', help='IgBLAST output')
-	arg('fasta', help='File with original reads')
 
 
 def none_if_na(s):
