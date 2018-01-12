@@ -180,7 +180,6 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 	- The CDR3 is detected by using a regular expression
 	- The leader is detected within the sequence before the found V gene (by
 	searching for the start codon).
-	- The RACE-specific run of G in the beginning of the sequence is detected.
 	- If the V sequence hit starts at base 2 in the reference, it is extended
 	  one to the left.
 	"""
@@ -233,7 +232,6 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		'VDJ_aa',
 		'name',
 		'barcode',
-		'race_G',
 		'genomic_sequence',
 	]
 
@@ -246,7 +244,6 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		super().__init__(**kwargs)
 		self.query_name, self.size, self.barcode = parse_header(self.query_name)
 		self.genomic_sequence = self.full_sequence
-		self.race_g = None  # TODO since the parse script does not extract the race_G anymore, we don’t have this info available
 		if 'V' in self.hits:
 			self.hits['V'] = self._fixed_v_hit(database)
 		self.utr, self.leader = self._utr_leader()
@@ -514,7 +511,6 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 			VDJ_aa=vdj_aa,
 			name=self.query_name,
 			barcode=self.barcode,
-			race_G=self.race_g,
 			genomic_sequence=self.genomic_sequence,
 		)
 
