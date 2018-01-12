@@ -186,7 +186,6 @@ class Database:
 def main(args):
 	database = Database(args.database)
 	detected_cdr3s = 0
-	old_detected_cdr3s = 0
 	writer = TableWriter(sys.stdout)
 	with ExitStack() as stack:
 		if args.raw:
@@ -214,8 +213,6 @@ def main(args):
 				d = record.asdict()
 				if d['CDR3_aa']:
 					detected_cdr3s += 1
-				if d['CDR3_oldaa']:
-					old_detected_cdr3s += 1
 				try:
 					writer.write(d)
 				except IOError as e:
@@ -229,7 +226,6 @@ def main(args):
 
 	logger.info('%d IgBLAST assignments parsed and written', n)
 	logger.info('CDR3s detected in %.1f%% of all sequences', detected_cdr3s / n * 100)
-	logger.info('CDR3s detected in %.1f%% of all sequences using old method', old_detected_cdr3s / n * 100)
 	if args.stats:
 		stats = {'total': n, 'detected_cdr3s': detected_cdr3s}
 		with open(args.stats, 'w') as f:

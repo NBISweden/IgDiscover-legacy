@@ -219,7 +219,6 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		'CDR2_aa',
 		'CDR3_nt',
 		'CDR3_aa',
-		'CDR3_oldaa',
 		'V_nt',
 		'V_aa',
 		'V_end',
@@ -249,9 +248,6 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		self.utr, self.leader = self._utr_leader()
 		regex_cdr3_alignment = self._fixed_cdr3_alignment_by_regex()
 		self.alignments['CDR3'] = self._find_cdr3(database)
-
-		# TODO temporarily leaving in the old CDR3 alignment
-		self.alignments['CDR3_old'] = regex_cdr3_alignment
 
 	@property
 	def vdj_sequence(self):
@@ -414,8 +410,6 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		cdr2aa = nt_to_aa(cdr2nt) if cdr2nt else None
 		cdr3nt = self.region_sequence('CDR3')
 		cdr3aa = nt_to_aa(cdr3nt) if cdr3nt else None
-		cdr3old = self.region_sequence('CDR3_old')  # TODO remove
-		cdr3old = nt_to_aa(cdr3old) if cdr3old else None  # TODO remove
 		vdj_nt = self.vdj_sequence
 		vdj_aa = nt_to_aa(vdj_nt) if vdj_nt else None
 
@@ -498,7 +492,6 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 			CDR2_aa=cdr2aa,
 			CDR3_nt=cdr3nt,
 			CDR3_aa=cdr3aa,
-			CDR3_oldaa=cdr3old,
 			V_nt=v_nt,
 			V_aa=v_aa,
 			V_end=v_end,
