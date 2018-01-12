@@ -194,7 +194,6 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		'J_gene',
 		'chain',
 		'stop',
-		'productive',
 		'V_covered',
 		'D_covered',
 		'J_covered',
@@ -467,7 +466,6 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 			J_gene=self.j_gene,
 			chain=self.chain,
 			stop=self.has_stop,
-			productive=self.is_productive,
 			V_covered=v_covered,
 			D_covered=d_covered,
 			J_covered=j_covered,
@@ -704,7 +702,6 @@ class TableWriter:
 		"""
 		d = d.copy()
 		d['stop'] = self.yesno(d['stop'])
-		d['productive'] = self.yesno(d['productive'])
 		for name in ('V_covered', 'D_covered', 'J_covered',
 				'FR1_SHM', 'CDR1_SHM', 'FR2_SHM', 'CDR2_SHM', 'FR3_SHM',
 				'V_SHM', 'J_SHM'):
