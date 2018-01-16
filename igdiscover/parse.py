@@ -130,7 +130,8 @@ def parse_header(header):
 
 
 class IgBlastRecord:
-	def __init__(self,
+	def __init__(
+		self,
 		full_sequence,
 		query_name,
 		alignments,
@@ -158,6 +159,25 @@ class IgBlastRecord:
 		self.is_productive = is_productive
 		self.strand = strand
 		self.junction = junction
+
+	def region_sequence(self, region):
+		"""
+		Return the nucleotide sequence of a named region. Allowed names are:
+		CDR1, CDR2, CDR3, FR1, FR2, FR3. For all regions except CDR3, sequences
+		are extracted from the full read using begin and end coordinates from
+		IgBLAST’s "alignment summary" table.
+		"""
+		alignment = self.alignments.get(region, None)
+		if alignment is None:
+			return None
+		if alignment.start is None or alignment.stop is None:
+			return None
+		return self.full_sequence[alignment.start:alignment.stop]
+
+	def __repr__(self):
+		return 'IgBlastRecord(query_name={query_name!r}, ' \
+			'v_gene={v_gene!r}, d_gene={d_gene!r}, j_gene={j_gene!r}, chain={chain!r}, ...)'.format(
+				**vars(self))
 
 
 class ExtendedIgBlastRecord(IgBlastRecord):
@@ -231,7 +251,6 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		if 'V' in self.hits:
 			self.hits['V'] = self._fixed_v_hit(database)
 		self.utr, self.leader = self._utr_leader()
-		regex_cdr3_alignment = self._fixed_cdr3_alignment_by_regex()
 		self.alignments['CDR3'] = self._find_cdr3(database)
 
 	@property
@@ -269,6 +288,7 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 					return before_v[:-i + offset], before_v[-i + offset:]
 		return None, None
 
+	# TODO this is unused
 	def _fixed_cdr3_alignment_by_regex(self):
 		"""
 		Return a repaired AlignmentSummary object for the CDR3 region which
@@ -368,20 +388,6 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 				preceding_base = 'N'
 			d['subject_alignment'] = preceding_base + d['subject_alignment']
 		return Hit(**d)
-
-	def region_sequence(self, region):
-		"""
-		Return sequence of a named region. Allowed names are:
-		CDR1, CDR2, CDR3, FR1, FR2, FR3. For all regions except CDR3, sequences
-		are extracted from the full read using begin and end coordinates from
-		IgBLAST’s "alignment summary" table.
-		"""
-		alignment = self.alignments.get(region, None)
-		if alignment is None:
-			return None
-		if alignment.start is None or alignment.stop is None:
-			return None
-		return self.full_sequence[alignment.start:alignment.stop]
 
 	def asdict(self):
 		"""

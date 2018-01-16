@@ -35,9 +35,10 @@ from xopen import xopen
 
 from sqt import SequenceReader
 from sqt.utils import available_cpu_count
+from sqt.dna import nt_to_aa
 
 from .utils import get_cpu_time, SerialPool
-from .parse import TableWriter, ExtendedIgBlastParser
+from .parse import TableWriter, IgBlastParser, ExtendedIgBlastParser
 from .species import cdr3_start, cdr3_end
 
 
@@ -121,6 +122,8 @@ class IgBlastCache:
 
 def run_igblast(sequences, blastdb_dir, species, sequence_type, penalty=None, use_cache=True) -> str:
 	"""
+	Run the igblastn command-line program.
+
 	sequences -- list of Sequence objects
 	blastdb_dir -- directory that contains BLAST databases. Files in that
 	directory must be databases created by the makeblastdb program and have
@@ -201,8 +204,11 @@ class Runner:
 		"""
 		igblast_result = run_igblast(sequences, self.blastdb_dir, self.species, self.sequence_type,
 			self.penalty)
-		parser = ExtendedIgBlastParser(sequences,
-			StringIO(igblast_result), self.database)
+		sio = StringIO(igblast_result)
+		if self.database is None:
+			parser = IgBlastParser(sequences, sio)
+		else:
+			parser = ExtendedIgBlastParser(sequences, sio, self.database)
 		records = list(parser)
 		assert len(records) == len(sequences)
 		return igblast_result, records
@@ -223,19 +229,26 @@ def makeblastdb(fasta, database_name):
 
 
 class Database:
-
-	def __init__(self, path):
+	def __init__(self, path, sequence_type):
 		"""path -- path to database directory with V.fasta, D.fasta, J.fasta"""
 		self.path = path
+		self.sequence_type = sequence_type
 		with SequenceReader(os.path.join(path, 'V.fasta')) as sr:
-			self.v = {record.name: record.sequence.upper() for record in sr}
+			self._v_records = list(sr)
+		self.v = self._records_to_dict(self._v_records)
 		with SequenceReader(os.path.join(path, 'J.fasta')) as sr:
-			self.j = {record.name: record.sequence.upper() for record in sr}
+			self._j_records = list(sr)
+		self.j = self._records_to_dict(self._j_records)
 		self._cdr3_starts = dict()
 		self._cdr3_ends = dict()
 		for chain in ('heavy', 'kappa', 'lambda', 'alpha', 'beta', 'gamma', 'delta'):
 			self._cdr3_starts[chain] = {name: cdr3_start(s, chain) for name, s in self.v.items()}
 			self._cdr3_ends[chain] = {name: cdr3_end(s, chain) for name, s in self.j.items()}
+		self.v_regions = self._find_v_regions()
+
+	@staticmethod
+	def _records_to_dict(records):
+		return {record.name: record.sequence.upper() for record in records}
 
 	def v_cdr3_start(self, gene, chain):
 		return self._cdr3_starts[chain][gene]
@@ -243,13 +256,35 @@ class Database:
 	def j_cdr3_end(self, gene, chain):
 		return self._cdr3_ends[chain][gene]
 
+	def _find_v_regions(self):
+		"""
+		Run IgBLAST on the V sequences to determine the nucleotide sequences of the
+		FR1, CDR1, FR2, CDR2 and FR3 regions
+		"""
+		v_regions = dict()
+		for record in igblast(self.path, self._v_records, self.sequence_type, threads=1):
+			regions = dict()
+			for region in ('FR1', 'CDR1', 'FR2', 'CDR2', 'FR3'):
+				seq = record.region_sequence(region)
+				if len(seq) % 3 != 0:
+					logger.warning('Length %s of %s region in %s is not divisible by three; region '
+						'info for %r will not be available',
+						len(seq), region, record.query_name, record.query_name)
+					# not codon-aligned, skip entire record
+					break
+				regions[region] = seq
+			else:
+				v_regions[record.query_name] = regions
+		return v_regions
+
 
 def igblast(database, sequences, sequence_type, species=None, threads=None, penalty=None,
 		raw_output=None):
 	"""
-	Run IgBLAST, parse results and yield ExtendedIgBlastRecord objects.
+	Run IgBLAST, parse results and yield (Extended-)IgBlastRecord objects.
 
-	database -- a Database object
+	database -- Path to database directory with V./D./J.fasta files *or* a Database object.
+	    If it is a path, then only IgBlastRecord objects are returned.
 	sequences -- an iterable of Sequence objects
 	sequence_type -- 'Ig' or 'TCR'
 	threads -- number of threads. If None, then available_cpu_count() is used.
@@ -257,11 +292,16 @@ def igblast(database, sequences, sequence_type, species=None, threads=None, pena
 	"""
 	if threads is None:
 		threads = available_cpu_count()
+	if isinstance(database, str):
+		database_dir = database
+		database = None
+	else:
+		database_dir = database.path
 	with ExitStack() as stack:
 		# Create the three BLAST databases in a temporary directory
 		blastdb_dir = stack.enter_context(tempfile.TemporaryDirectory())
 		for gene in ['V', 'D', 'J']:
-			makeblastdb(os.path.join(database.path, gene + '.fasta'), os.path.join(blastdb_dir, gene))
+			makeblastdb(os.path.join(database_dir, gene + '.fasta'), os.path.join(blastdb_dir, gene))
 
 		chunks = chunked(sequences, chunksize=1000)
 		runner = Runner(blastdb_dir, species=species, sequence_type=sequence_type, penalty=penalty, database=database)
@@ -275,7 +315,7 @@ def igblast(database, sequences, sequence_type, species=None, threads=None, pena
 def main(args):
 	global _igblastcache
 	_igblastcache = IgBlastCache()
-	database = Database(args.database)
+	database = Database(args.database, args.sequence_type)
 	detected_cdr3s = 0
 	writer = TableWriter(sys.stdout)
 	with ExitStack() as stack:
