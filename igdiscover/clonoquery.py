@@ -53,24 +53,26 @@ def add_arguments(parser):
 
 def collect(querytable, reftable, mismatches, cdr3_core_slice, cdr3_column):
 	"""
-	Yield tuples (query_rows, similar_rows) where the query_rows are all the
-	rows that have the same result. The similar_rows is a DataFrame with all
-	the rows matching the query.
+	Find all queries from the querytable in the reftable.
+
+	Yield tuples (query_rows, similar_rows) where the query_rows is a list
+	with all the rows that have the same result. similar_rows is a DataFrame
+	whose rows are the ones matching the query.
 	"""
 	# The vjlentype is a "clonotype without CDR3 sequence" (only V, J, CDR3 length)
 	# Determine set of vjlentypes to query
-	groupby = ('V_gene', 'J_gene', 'CDR3_length')
 	query_vjlentypes = defaultdict(list)
 	for row in querytable.itertuples():
 		vjlentype = (row.V_gene, row.J_gene, len(row.CDR3_nt))
 		query_vjlentypes[vjlentype].append(row)
 
+	groupby = ('V_gene', 'J_gene', 'CDR3_length')
 	for vjlentype, vjlen_group in reftable.groupby(groupby):
 		# (v_gene, j_gene, cdr3_length) = vjlentype
 		if vjlentype not in query_vjlentypes:
 			continue
 
-		# Collect results for this vjlentype. The result dict
+		# Collect results for this vjlentype. The results dict
 		# maps row indices (into the vjlen_group) to each query_row,
 		# allowing us to group identical results together.
 		results = defaultdict(list)
@@ -126,7 +128,10 @@ def main(args):
 		else:
 			summary_file = None
 
+		# Print header
 		print(*reftable.columns, sep='\t')
+
+		# Do the actual work
 		for query_rows, result_table in collect(querytable, reftable, args.mismatches,
 				args.cdr3_core, cdr3_column):
 			assert len(query_rows) >= 1
