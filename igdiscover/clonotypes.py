@@ -70,6 +70,9 @@ def is_similar_with_junction(s, t, mismatches, cdr3_core):
 	Return whether strings s and t have at most the given number of mismatches
 	*and* have at least one identical junction.
 	"""
+	# TODO see issue #81
+	if len(s) != len(t):
+		return False
 	if 0 < mismatches < 1:
 		delta = cdr3_core.start if cdr3_core is not None else 0
 		distance_ok = hamming_distance(s, t) <= (len(s) - delta) * mismatches
