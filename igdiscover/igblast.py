@@ -87,7 +87,7 @@ def run_igblast(sequences, blastdb_dir, species, sequence_type, penalty=None):
 	# An empty .aux suppresses a warning from IgBLAST. /dev/null does not work.
 	empty_aux_path = pkg_resources.resource_filename('igdiscover', 'empty.aux')
 	if species is not None:
-		arguments += ['-species', species]
+		arguments += ['-organism', species]
 	arguments += [
 		'-auxiliary_data', empty_aux_path,
 		'-ig_seqtype', sequence_type,
