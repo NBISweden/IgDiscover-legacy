@@ -21,7 +21,7 @@ from sqt.utils import available_cpu_count
 
 from .table import read_table
 from .utils import iterative_consensus, unique_name, downsampled, SerialPool, Merger, has_stop
-from .cluster import cluster_sequences
+from .cluster import cluster_sequences, single_linkage
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +82,7 @@ def add_arguments(parser):
 	arg('table', help='Table with parsed IgBLAST results')
 
 
-Groupinfo = namedtuple('Groupinfo', 'count unique_D unique_J unique_CDR3 unique_barcodes')
+Groupinfo = namedtuple('Groupinfo', 'count unique_D unique_J unique_CDR3 cdr3_clusters unique_barcodes')
 
 SiblingInfo = namedtuple('SiblingInfo', 'sequence requested name group')
 
@@ -178,12 +178,26 @@ class Discoverer:
 	def count_unique_D(self, group):
 		g = group[(group.D_errors == 0) &
 				(group.D_covered >= self.d_coverage) &
-		        (group.D_evalue <= self.d_evalue)]
+				(group.D_evalue <= self.d_evalue)]
 		return len(set(s for s in g.D_gene if s))
 
 	@staticmethod
 	def count_unique_barcodes(group):
 		return len(set(s for s in group.barcode if s))
+
+	@staticmethod
+	def count_cdr3_clusters(sequences, distance=1):
+		"""
+		Cluster sequences by edit distance and return the number of clusters.
+		"""
+		sequences = list(set(sequences))
+		assert len(sequences) == 0 or isinstance(sequences[0], str)
+
+		def linked(s, t):
+			return edit_distance(s, t, distance) <= distance
+
+		components = single_linkage(sequences, linked)
+		return len(components)
 
 	def _collect_siblings(self, gene, group):
 		"""
@@ -300,11 +314,13 @@ class Discoverer:
 			for key, g in groups:
 				unique_J = len(set(s for s in g.J_gene if s))
 				unique_CDR3 = len(set(s for s in g.CDR3_nt if s))
+				cdr3_clusters = self.count_cdr3_clusters(g.CDR3_nt)
 				unique_D = self.count_unique_D(g)
 				unique_barcodes = self.count_unique_barcodes(g)
 				count = len(g.index)
 				info[key] = Groupinfo(count=count, unique_D=unique_D, unique_J=unique_J,
-					unique_CDR3=unique_CDR3, unique_barcodes=unique_barcodes)
+					unique_CDR3=unique_CDR3, cdr3_clusters=cdr3_clusters,
+					unique_barcodes=unique_barcodes)
 			if gene in self.database:
 				database_diff = edit_distance(sibling, self.database[gene])
 			else:
@@ -345,6 +361,7 @@ class Discoverer:
 				Ds_exact=info['exact'].unique_D,
 				Js_exact=info['exact'].unique_J,
 				CDR3s_exact=info['exact'].unique_CDR3,
+				CDR3_clusters=info['exact'].cdr3_clusters,
 				CDR3_exact_ratio='{:.2f}'.format(ratio),
 				approx=approx,
 				Js_approx=Js_approx,
@@ -381,6 +398,7 @@ Candidate = namedtuple('Candidate', [
 	'Ds_exact',
 	'Js_exact',
 	'CDR3s_exact',
+	'CDR3_clusters',
 	'CDR3_exact_ratio',
 	'approx',
 	'Js_approx',
