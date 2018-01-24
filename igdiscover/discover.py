@@ -253,7 +253,10 @@ class Discoverer:
 			if right == int(right):
 				right = int(right)
 			requested = (left, right) == (self.left, self.right)
-			name = '{}-{}'.format(left, right)
+			if (left, right) == (0, 100):
+				name = 'all'
+			else:
+				name = '{}-{}'.format(left, right)
 			yield SiblingInfo(sibling, requested, name, group_in_window)
 
 	def _collect_siblings(self, gene, group):
@@ -368,7 +371,7 @@ class Discoverer:
 				name=sequence_id,
 				source=gene,
 				chain=chain,
-				cluster=sibling_info.name if len(sibling_info.group) < len(group) else 'all',
+				cluster=sibling_info.name,
 				cluster_size=info['window'].count,
 				Js=info['window'].unique_J,
 				CDR3s=info['window'].unique_CDR3,
