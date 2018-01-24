@@ -12,7 +12,7 @@ import os.path
 from collections import namedtuple, Counter
 import multiprocessing
 import random
-from itertools import zip_longest
+from itertools import zip_longest, chain
 import numpy as np
 import pandas as pd
 from sqt import SequenceReader
@@ -203,17 +203,45 @@ class Discoverer:
 		components = single_linkage(sequences, linked)
 		return len(components)
 
-	def _collect_siblings(self, gene, group):
-		"""
-		gene -- gene name
-		group -- pandas.DataFrame of sequences assigned to that gene
+	def _cluster_siblings(self, gene, group):
+		"""Find candidates by clustering sequences assigned to one gene"""
 
-		Yield SiblingInfo objects
+		if self.exact_copies > 1:
+			# Preferentially pick those sequences (for subsampling) that have
+			# multiple exact copies, then fill up with the others
+			exact_group = group[group.copies >= self.exact_copies]
+			indices = downsampled(list(exact_group.index), self.cluster_subsample_size)
+			if len(indices) < self.cluster_subsample_size:
+				not_exact_group = group[group.copies < self.exact_copies]
+				indices.extend(downsampled(list(not_exact_group.index),
+					self.cluster_subsample_size - len(indices)))
+		else:
+			indices = downsampled(list(group.index), self.cluster_subsample_size)
+		# Ignore CDR3 part of the V sequence for clustering
+		sequences_no_cdr3 = list(group.V_no_CDR3.loc[indices])
+		df, linkage, clusters = cluster_sequences(sequences_no_cdr3, MINGROUPSIZE)
+		logger.info('Clustering %d sequences (downsampled to %d) assigned to %r gave %d cluster(s)',
+			len(group), len(indices), gene, len(set(clusters)))
+		cluster_indices = [[] for _ in range(max(clusters) + 1)]
+		for i, cluster_id in enumerate(clusters):
+			cluster_indices[cluster_id].append(indices[i])
+
+		cl = 1
+		for ind in cluster_indices:
+			group_in_window = group.loc[ind]
+			if len(group_in_window) < MINGROUPSIZE:
+				logger.info('Skipping a cluster because it is too small', ind)
+				continue
+			sibling = self._sibling_sequence(gene, group_in_window)
+			name = 'cl{}'.format(cl)
+			yield SiblingInfo(sibling, False, name, group_in_window)
+			cl += 1
+
+	def _window_siblings(self, gene, group):
 		"""
-		group = group.copy()
-		# the original reference sequence for all the IgBLAST assignments in this group
-		database_sequence = self.database.get(gene, None)
-		database_sequence_found = False
+		Find candidates by clustering sequences that have a similar number of differences
+		to the reference sequence
+		"""
 		for left, right in self.windows:
 			left, right = float(left), float(right)
 			group_in_window = group[(left <= group.V_SHM) & (group.V_SHM < right)]
@@ -226,43 +254,27 @@ class Discoverer:
 				right = int(right)
 			requested = (left, right) == (self.left, self.right)
 			name = '{}-{}'.format(left, right)
-			if sibling == database_sequence:
-				database_sequence_found = True
 			yield SiblingInfo(sibling, requested, name, group_in_window)
 
-		if self.cluster:
-			if self.exact_copies > 1:
-				# Preferentially pick those sequences (for subsampling) that have
-				# multiple exact copies, then fill up with the others
-				exact_group = group[group.copies >= self.exact_copies]
-				indices = downsampled(list(exact_group.index), self.cluster_subsample_size)
-				if len(indices) < self.cluster_subsample_size:
-					not_exact_group = group[group.copies < self.exact_copies]
-					indices.extend(downsampled(list(not_exact_group.index),
-						self.cluster_subsample_size - len(indices)))
-			else:
-				indices = downsampled(list(group.index), self.cluster_subsample_size)
-			# Ignore CDR3 part of the V sequence for clustering
-			sequences_no_cdr3 = list(group.V_no_CDR3.loc[indices])
-			df, linkage, clusters = cluster_sequences(sequences_no_cdr3, MINGROUPSIZE)
-			logger.info('Clustering %d sequences (downsampled to %d) assigned to %r gave %d cluster(s)',
-				len(group), len(indices), gene, len(set(clusters)))
-			cluster_indices = [[] for _ in range(max(clusters) + 1)]
-			for i, cluster_id in enumerate(clusters):
-				cluster_indices[cluster_id].append(indices[i])
+	def _collect_siblings(self, gene, group):
+		"""
+		gene -- gene name
+		group -- pandas.DataFrame of sequences assigned to that gene
 
-			cl = 1
-			for ind in cluster_indices:
-				group_in_window = group.loc[ind]
-				if len(group_in_window) < MINGROUPSIZE:
-					logger.info('Skipping a cluster because it is too small', ind)
-					continue
-				sibling = self._sibling_sequence(gene, group_in_window)
-				name = 'cl{}'.format(cl)
-				if sibling == database_sequence:
-					database_sequence_found = True
-				yield SiblingInfo(sibling, False, name, group_in_window)
-				cl += 1
+		Yield SiblingInfo objects
+		"""
+		group = group.copy()
+		# the original reference sequence for all the IgBLAST assignments in this group
+		database_sequence = self.database.get(gene, None)
+		database_sequence_found = False
+
+		candidate_iterators = [self._window_siblings(gene, group)]
+		if self.cluster:
+			candidate_iterators.append(self._cluster_siblings(gene, group))
+		for sibling in chain(*candidate_iterators):
+			if sibling.sequence == database_sequence:
+				database_sequence_found = True
+			yield sibling
 
 		if database_sequence:
 			# If this is a database sequence and there are some exact occurrences of it,
