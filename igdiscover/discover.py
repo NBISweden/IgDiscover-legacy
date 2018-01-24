@@ -52,6 +52,9 @@ def add_arguments(parser):
 			'disable. Default: %(default)s', default=2)
 	arg('--no-cluster', dest='cluster', action='store_false', default=True,
 		help='Do not run linkage cluster analysis.')
+	arg('--cluster-exact', metavar='N', type=int, default=0,
+		help='Treat N exact occurrences of a sequence as a cluster. '
+			'Default: Do not cluster exact occurrences')
 	arg('--max-n-bases', type=int, default=0, metavar='MAXN',
 		help='Remove rows that have more than MAXN "N" nucleotides. If >0, an '
 			'N_bases column is added. Default: %(default)s')
@@ -126,15 +129,16 @@ class Discoverer:
 	"""
 	Discover candidates for novel V genes.
 	"""
-	def __init__(self, database, windows, left, right, cluster, table_output,
-			consensus_threshold, v_error_rate, downsample, cdr3_cluster_differences,
-			cluster_subsample_size, approx_columns, max_n_bases, exact_copies,
-			d_coverage, d_evalue, seed):
+	def __init__(self, database, windows, left, right, cluster, cluster_exact,
+			table_output, consensus_threshold, v_error_rate, downsample,
+			cdr3_cluster_differences, cluster_subsample_size, approx_columns,
+			max_n_bases, exact_copies, d_coverage, d_evalue, seed):
 		self.database = database
 		self.windows = windows
 		self.left = left
 		self.right = right
 		self.cluster = cluster
+		self.cluster_exact = cluster_exact
 		self.table_output = table_output
 		self.consensus_threshold = consensus_threshold
 		self.v_error_rate = v_error_rate
@@ -259,6 +263,29 @@ class Discoverer:
 				name = '{}-{}'.format(left, right)
 			yield SiblingInfo(sibling, requested, name, group_in_window)
 
+	@staticmethod  # TODO unused
+	def without_prefixes(strings):
+		"""
+		Given a list of strings, return a copy in which all strings that are the
+		prefix of another one are removed
+		"""
+		strings = sorted(strings, reverse=True)
+		longer_string = strings[0]
+		result = [longer_string]
+		for s in strings[1:]:
+			if not longer_string.startswith(s):
+				result.append(s)
+				longer_string = s
+		return result
+
+	def _cluster_exact_candidates(self, gene, table):
+		index = 1
+		for sequence, group in table.groupby('V_nt'):
+			if len(group) >= self.cluster_exact:
+				name = 'ex{}'.format(index)
+				index += 1
+				yield SiblingInfo(sequence, False, name, group)
+
 	def _collect_siblings(self, gene, group):
 		"""
 		gene -- gene name
@@ -274,6 +301,8 @@ class Discoverer:
 		candidate_iterators = [self._window_siblings(gene, group)]
 		if self.cluster:
 			candidate_iterators.append(self._cluster_siblings(gene, group))
+		if self.cluster_exact:
+			candidate_iterators.append(self._cluster_exact_candidates(gene, group))
 		for sibling in chain(*candidate_iterators):
 			if sibling.sequence == database_sequence:
 				database_sequence_found = True
@@ -521,10 +550,10 @@ def main(args):
 		groups.append((gene, group))
 
 	discoverer = Discoverer(database, windows, args.left, args.right, args.cluster,
-		args.table_output, args.consensus_threshold, v_error_rate,
+		args.cluster_exact, args.table_output, args.consensus_threshold, v_error_rate,
 		MAXIMUM_SUBSAMPLE_SIZE, cdr3_cluster_differences=args.cdr3_cluster_diff,
-		cluster_subsample_size=args.subsample,
-		approx_columns=args.approx, max_n_bases=args.max_n_bases, exact_copies=args.exact_copies,
+		cluster_subsample_size=args.subsample, approx_columns=args.approx,
+		max_n_bases=args.max_n_bases, exact_copies=args.exact_copies,
 		d_coverage=args.d_coverage, d_evalue=args.d_evalue,
 		seed=seed)
 	n_consensus = 0
