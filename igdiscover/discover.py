@@ -79,6 +79,9 @@ def add_arguments(parser):
 	arg('--d-coverage', '--D-coverage', metavar='COVERAGE', type=float, default=70,
 		help='For Ds_exact, require D matches with a minimum D '
 			'coverage of COVERAGE (in percent). Default: %(default)s)')
+	arg('--cdr3-cluster-diff', metavar='DIFFERENCES', type=int, default=6,
+		help='When clustering CDR3s to computer CDR3_clusters, allow DIFFERENCES '
+		     'between (nucleotide-)sequences. Default: %(default)s')
 	arg('table', help='Table with parsed IgBLAST results')
 
 
@@ -124,7 +127,7 @@ class Discoverer:
 	Discover candidates for novel V genes.
 	"""
 	def __init__(self, database, windows, left, right, cluster, table_output,
-			consensus_threshold, v_error_rate, downsample,
+			consensus_threshold, v_error_rate, downsample, cdr3_cluster_differences,
 			cluster_subsample_size, approx_columns, max_n_bases, exact_copies,
 			d_coverage, d_evalue, seed):
 		self.database = database
@@ -136,6 +139,7 @@ class Discoverer:
 		self.consensus_threshold = consensus_threshold
 		self.v_error_rate = v_error_rate
 		self.downsample = downsample
+		self.cdr3_cluster_differences = cdr3_cluster_differences
 		self.cluster_subsample_size = cluster_subsample_size
 		self.approx_columns = approx_columns
 		self.max_n_bases = max_n_bases
@@ -185,11 +189,11 @@ class Discoverer:
 	def count_unique_barcodes(group):
 		return len(set(s for s in group.barcode if s))
 
-	@staticmethod
-	def count_cdr3_clusters(sequences, distance=1):
+	def count_cdr3_clusters(self, sequences):
 		"""
 		Cluster sequences by edit distance and return the number of clusters.
 		"""
+		distance = self.cdr3_cluster_differences
 		sequences = list(set(sequences))
 		assert len(sequences) == 0 or isinstance(sequences[0], str)
 
@@ -503,7 +507,8 @@ def main(args):
 
 	discoverer = Discoverer(database, windows, args.left, args.right, args.cluster,
 		args.table_output, args.consensus_threshold, v_error_rate,
-		MAXIMUM_SUBSAMPLE_SIZE, cluster_subsample_size=args.subsample,
+		MAXIMUM_SUBSAMPLE_SIZE, cdr3_cluster_differences=args.cdr3_cluster_diff,
+		cluster_subsample_size=args.subsample,
 		approx_columns=args.approx, max_n_bases=args.max_n_bases, exact_copies=args.exact_copies,
 		d_coverage=args.d_coverage, d_evalue=args.d_evalue,
 		seed=seed)
