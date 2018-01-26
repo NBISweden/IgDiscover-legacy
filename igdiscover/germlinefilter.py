@@ -9,7 +9,7 @@ separately:
 
 * Discard sequences with N bases
 * Discard sequences that come from a consensus over too few source sequences (unless whitelisted)
-* Discard sequences with too few unique CDR3s (CDR3s_exact column)
+* Discard sequences with too few unique CDR3s (CDR3_clusters column)
 * Discard sequences with too few unique Js (Js_exact column)
 * Discard sequences identical to one of the database sequences (if DB given)
 * Discard sequences that do not match a set of known good motifs (unless whitelisted)
@@ -86,7 +86,7 @@ def add_arguments(parser):
 		nargs='+')
 
 
-SequenceInfo = namedtuple('_SequenceInfo', ['sequence', 'name', 'CDR3s_exact', 'Ds_exact',
+SequenceInfo = namedtuple('_SequenceInfo', ['sequence', 'name', 'CDR3_clusters', 'Ds_exact',
 	'cluster_size', 'whitelisted', 'is_database', 'cluster_size_is_accurate', 'CDR3_start', 'row'])
 
 
@@ -159,11 +159,11 @@ class SequenceMerger(Merger):
 		if is_same_gene(s.name, t.name):
 			# Check allele ratio. Somewhat similar to cross-mapping, but
 			# this uses sequence names to decide whether two genes can be
-			# alleles of each other and the ratio is between the CDR3s_exact
-			# values
+			# alleles of each other and the ratio is between the
+			# CDR3_clusters values
 			if self._allele_ratio:
 				for u, v in [(s, t), (t, s)]:
-					ratio = u.CDR3s_exact / v.CDR3s_exact
+					ratio = u.CDR3_clusters / v.CDR3_clusters
 					if ratio < self._allele_ratio:
 						logger.info('Allele ratio %.4f too low for %r compared to %r',
 							ratio, u.name, v.name)
@@ -191,7 +191,7 @@ class SequenceMerger(Merger):
 			return t
 
 		# No sequence is whitelisted if we arrive here
-		if s.CDR3s_exact >= t.CDR3s_exact:
+		if s.CDR3_clusters >= t.CDR3_clusters:
 			return s
 		if len(s.sequence) < len(t.sequence):
 			return t
@@ -249,7 +249,7 @@ def main(args):
 		table = table[table.database_diff >= args.minimum_db_diff]
 		if 'N_bases' in table.columns:
 			table = table[table.N_bases <= args.maximum_N]
-		table = table[table.CDR3s_exact >= args.unique_CDR3]
+		table = table[table.CDR3_clusters >= args.unique_CDR3]
 		table = table[table.Js_exact >= args.unique_J]
 		if not args.allow_stop:
 			table = table[(table.has_stop == 0) | (table.whitelist_diff == 0)]
@@ -279,7 +279,7 @@ def main(args):
 		merger.add(SequenceInfo(
 			sequence=row['consensus'],
 			name=row['name'],
-			CDR3s_exact=row['CDR3s_exact'],
+			CDR3_clusters=row['CDR3_clusters'],
 			Ds_exact=row['Ds_exact'],
 			cluster_size=row['cluster_size'],
 			whitelisted=row['whitelist_diff'] == 0,
