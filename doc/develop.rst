@@ -13,23 +13,24 @@ Development
 Installing the development version
 ----------------------------------
 
-To use the most recent IgDiscover version from Git, first :ref:`follow the
-regular installation instructions <quickstart>`. Then do the following:
+To use the most recent IgDiscover version from Git, follow these steps.
 
-1. Uninstall the igdiscover package with::
+1. First :ref:`follow the regular installation instructions <quickstart>`.
+
+2. Uninstall the igdiscover package with::
 
        conda uninstall igdiscover
 
    This removes igdiscover itself, but the dependencies remain (IgBLAST etc.),
    which is what we need.
 
-2. Clone the repository::
+3. Clone the repository::
 
        git clone https://github.com/NBISweden/IgDiscover.git
 
    (Use the git@ URL instead if you are a developer.)
 
-3. Install IgDiscover::
+4. Install IgDiscover::
 
        cd IgDiscover
        python3 -m pip install -e .
