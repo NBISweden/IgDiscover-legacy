@@ -31,7 +31,6 @@ setup(
 		'seaborn==0.7.1',
 		'snakemake>=3.9.0',
 		'cutadapt',
-		'seaborn>=0.6.0',
 		'scipy>=0.16.1',
 		'xopen>=0.1.1',
 		'ruamel.yaml',
