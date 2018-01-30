@@ -16,9 +16,9 @@ def add_arguments(parser):
 		help='Maximal allowed E-value for D gene match. Default: %(default)s')
 	arg('--d-coverage', '--D-coverage', type=float, default=65,
 		help='Minimum D coverage (in percent). Default: %(default)s%%)')
-	arg('--database', metavar='FASTA',
-		help='Restrict plotting to the sequences named in the FASTA file. '
-		'Only the sequence names are used!')
+	arg('--database', '--order', metavar='FASTA',
+		help='Restrict plotting to the sequences named in the FASTA file and sort '
+		     'according to order of the records. Only the sequence names are used!')
 	arg('--x', choices=('V', 'D', 'J'), default='V',
 		help='Type of gene on x axis. Default: %(default)s')
 	arg('--gene', choices=('V', 'D', 'J'), default='J',
@@ -31,6 +31,7 @@ def add_arguments(parser):
 def main(args):
 	usecols = ['V_gene', 'D_gene', 'J_gene', 'V_errors', 'D_errors', 'J_errors', 'D_covered',
 		'D_evalue']
+
 	# Support reading a table without D_errors
 	try:
 		table = read_table(args.table, usecols=usecols)
@@ -71,6 +72,8 @@ def main(args):
 			logger.error('Allele %s not expressed in this dataset', allele)
 			sys.exit(1)
 
+	matrix = matrix.loc[:, alleles]
+
 	if args.database:
 		with SequenceReader(args.database) as f:
 			x_names = [record.name for record in f if record.name in matrix.index]
@@ -78,18 +81,17 @@ def main(args):
 			logger.error('None of the sequence names in %r were found in the input table',
 				args.database)
 			sys.exit(1)
-		allele_expressions = matrix.loc[x_names, alleles]
-	else:
-		allele_expressions = matrix.loc[:, alleles]
+		matrix = matrix.reindex(x_names)
+
 	print('#\n# Allele-specific expression\n#')
-	print(allele_expressions)
+	print(matrix)
 
 	if len(alleles) == 2:
-		allele_expressions.loc[:, alleles[1]] *= -1
+		matrix.loc[:, alleles[1]] *= -1
 
 	# remove all-zero rows
 	# allele_expressions = allele_expressions[(allele_expressions > 0.001).any(axis=1)]
-	ax = allele_expressions.plot(kind='bar', stacked=True, figsize=(12, 6))
+	ax = matrix.plot(kind='bar', stacked=True, figsize=(12, 6))
 	ax.legend(title=None)
 	ax.set_title('Allele-specific expression counts')
 	ax.set_xlabel(args.x + ' gene')
