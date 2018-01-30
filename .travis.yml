@@ -21,7 +21,8 @@ before_install:
   - tar xvf v0.4.tar.gz
 
 install:
-  - conda create -q -n testenv python=$TRAVIS_PYTHON_VERSION pip nose 'sqt>=0.8.0' 'pysam=0.11' 'seaborn=0.7' 'snakemake!=3.13.2' cutadapt muscle pear flash 'igblast=1.7' 'vsearch=1.9.7' fastqc
+  - conda env create -n testenv -f environment.yml
+  - conda install -n testenv nose
   - source activate testenv
   - pip install .
 
