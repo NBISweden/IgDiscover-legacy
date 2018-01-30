@@ -16,9 +16,11 @@ def add_arguments(parser):
 		help='Maximal allowed E-value for D gene match. Default: %(default)s')
 	arg('--d-coverage', '--D-coverage', type=float, default=65,
 		help='Minimum D coverage (in percent). Default: %(default)s%%)')
-	arg('--database', '--order', metavar='FASTA',
-		help='Restrict plotting to the sequences named in the FASTA file and sort '
-		     'according to order of the records. Only the sequence names are used!')
+	arg('--database', metavar='FASTA',
+		help='Restrict plotting to the sequences named in the FASTA file. '
+		     'Only the sequence names are used!')
+	arg('--order', metavar='FASTA',
+		help='Sort genes according to the order of the records in the FASTA file.')
 	arg('--x', choices=('V', 'D', 'J'), default='V',
 		help='Type of gene on x axis. Default: %(default)s')
 	arg('--gene', choices=('V', 'D', 'J'), default='J',
@@ -81,7 +83,17 @@ def main(args):
 			logger.error('None of the sequence names in %r were found in the input table',
 				args.database)
 			sys.exit(1)
-		matrix = matrix.reindex(x_names)
+		matrix = matrix.loc[x_names, :]
+
+	if args.order:
+		with SequenceReader(args.order) as f:
+			names = [r.name.partition('*')[0] for r in f]
+			gene_order = {name: index for index, name in enumerate(names)}
+
+		matrix['V_gene_tmp'] = pd.Series(matrix.index, index=matrix.index).apply(
+			lambda name: name.partition('*')[0]).map(gene_order)
+		matrix.sort_values('V_gene_tmp', inplace=True)
+		del matrix['V_gene_tmp']
 
 	print('#\n# Allele-specific expression\n#')
 	print(matrix)
