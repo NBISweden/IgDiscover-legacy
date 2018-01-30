@@ -32,7 +32,7 @@ setup(
 		'snakemake>=3.9.0',
 		'cutadapt',
 		'scipy>=0.16.1',
-		'xopen>=0.1.1',
+		'xopen>=0.3.2',
 		'ruamel.yaml',
 	],
 	classifiers = [
