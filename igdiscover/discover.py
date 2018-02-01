@@ -193,19 +193,24 @@ class Discoverer:
 	def count_unique_barcodes(group):
 		return len(set(s for s in group.barcode if s))
 
-	def count_cdr3_clusters(self, sequences):
+	def count_cdr3_clusters(self, table):
 		"""
 		Cluster sequences by edit distance and return the number of clusters.
+
+		The sequences are first group by their J assignment and cluster
+		numbers are computed within these groups separately, then summed up.
 		"""
 		distance = self.cdr3_cluster_differences
-		sequences = list(set(sequences))
-		assert len(sequences) == 0 or isinstance(sequences[0], str)
 
 		def linked(s, t):
 			return edit_distance(s, t, distance) <= distance
 
-		components = single_linkage(sequences, linked)
-		return len(components)
+		total = 0
+		for j_gene, group in table.groupby('J_gene'):
+			sequences = list(set(s for s in group.CDR3_nt if s))
+			components = single_linkage(sequences, linked)
+			total += len(components)
+		return total
 
 	def _cluster_siblings(self, gene, group):
 		"""Find candidates by clustering sequences assigned to one gene"""
@@ -362,7 +367,7 @@ class Discoverer:
 			for key, g in groups:
 				unique_J = len(set(s for s in g.J_gene if s))
 				unique_CDR3 = len(set(s for s in g.CDR3_nt if s))
-				cdr3_clusters = self.count_cdr3_clusters(g.CDR3_nt)
+				cdr3_clusters = self.count_cdr3_clusters(g)
 				unique_D = self.count_unique_D(g)
 				unique_barcodes = self.count_unique_barcodes(g)
 				count = len(g.index)

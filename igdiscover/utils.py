@@ -42,7 +42,7 @@ def distances(sequences, band=0.2):
 	for i, s in enumerate(sequences):
 		for j, t in enumerate(sequences):
 			if i < j:
-				m[j,i] = m[i,j] = min(maxdiff+1, edit_distance(s, t, maxdiff=maxdiff))
+				m[j, i] = m[i, j] = min(maxdiff+1, edit_distance(s, t, maxdiff=maxdiff))
 	return m
 
 
