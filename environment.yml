@@ -1,3 +1,5 @@
+# abstract dependencies:
+# python=3.6 sqt seaborn=0.7 snakemake cutadapt muscle pear flash igblast vsearch ruamel.yaml
 channels:
 - bioconda
 - conda-forge
