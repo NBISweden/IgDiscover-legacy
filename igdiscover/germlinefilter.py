@@ -52,8 +52,12 @@ def add_arguments(parser):
 		'The one with more CDR3s is kept. Default: %(default)s')
 	arg('--cross-mapping-ratio', type=float, metavar='RATIO', default=0.02,
 		help='Ratio for detection of cross-mapping artifacts. Default: %(default)s')
-	arg('--allele-ratio', type=float, metavar='RATIO', default=0.1,
-		help='Required allele ratio. Works only for genes named "NAME*ALLELE". Default: %(default)s')
+	arg('--clonotype-ratio', '--allele-ratio', type=float, metavar='RATIO', default=0.1,
+		help='Required ratio of "clonotypes" counts between alleles. '
+		     'Works only for genes named "NAME*ALLELE". Default: %(default)s')
+	arg('--exact-ratio', type=float, metavar='RATIO', default=0.1,
+		help='Required ratio of "exact" counts between alleles. '
+		     'Works only for genes named "NAME*ALLELE". Default: %(default)s')
 	arg('--minimum-db-diff', '-b', type=int, metavar='N', default=0,
 		help='Sequences must have at least N differences to the database '
 		'sequence. Default: %(default)s')
@@ -86,7 +90,7 @@ def add_arguments(parser):
 		nargs='+')
 
 
-SequenceInfo = namedtuple('_SequenceInfo', ['sequence', 'name', 'CDR3_clusters', 'Ds_exact',
+SequenceInfo = namedtuple('_SequenceInfo', ['sequence', 'name', 'clonotypes', 'exact', 'Ds_exact',
 	'cluster_size', 'whitelisted', 'is_database', 'cluster_size_is_accurate', 'CDR3_start', 'row'])
 
 
@@ -94,12 +98,14 @@ class SequenceMerger(Merger):
 	"""
 	Merge sequences that are sufficiently similar into single entries.
 	"""
-	def __init__(self, max_differences, cross_mapping_ratio, allele_ratio, unique_d_ratio,
+	def __init__(self, max_differences, cross_mapping_ratio, clonotype_ratio, exact_ratio,
+			unique_d_ratio,
 			unique_d_threshold):
 		super().__init__()
 		self._max_differences = max_differences
 		self._cross_mapping_ratio = cross_mapping_ratio
-		self._allele_ratio = allele_ratio
+		self._clonotype_ratio = clonotype_ratio
+		self._exact_ratio = exact_ratio
 		self._unique_d_ratio = unique_d_ratio
 		self._unique_d_threshold = unique_d_threshold
 
@@ -157,15 +163,24 @@ class SequenceMerger(Merger):
 
 		# Check criteria based on whether the two sequences are alleles of the same gene
 		if is_same_gene(s.name, t.name):
-			# Check allele ratio. Somewhat similar to cross-mapping, but
+			# Check clonotype allele ratio. Somewhat similar to cross-mapping, but
 			# this uses sequence names to decide whether two genes can be
 			# alleles of each other and the ratio is between the
 			# CDR3_clusters values
-			if self._allele_ratio:
+			if self._clonotype_ratio:
 				for u, v in [(s, t), (t, s)]:
-					ratio = u.CDR3_clusters / v.CDR3_clusters
-					if ratio < self._allele_ratio:
-						logger.info('Allele ratio %.4f too low for %r compared to %r',
+					ratio = u.clonotypes / v.clonotypes
+					if ratio < self._clonotype_ratio:
+						logger.info('Clonotype allele ratio %.4f too low for %r compared to %r',
+							ratio, u.name, v.name)
+						return v
+
+			# Check exact V sequence occurrence allele ratio
+			if self._exact_ratio:
+				for u, v in [(s, t), (t, s)]:
+					ratio = u.exact / v.exact
+					if ratio < self._exact_ratio:
+						logger.info('Allele ratio of exact occurrences %.4f too low for %r compared to %r',
 							ratio, u.name, v.name)
 						return v
 
@@ -191,7 +206,7 @@ class SequenceMerger(Merger):
 			return t
 
 		# No sequence is whitelisted if we arrive here
-		if s.CDR3_clusters >= t.CDR3_clusters:
+		if s.clonotypes >= t.clonotypes:
 			return s
 		if len(s.sequence) < len(t.sequence):
 			return t
@@ -201,7 +216,8 @@ class SequenceMerger(Merger):
 def main(args):
 	if args.unique_D_threshold <= 1:
 		sys.exit('--unique-D-threshold must be at least 1')
-	merger = SequenceMerger(args.max_differences, args.cross_mapping_ratio, args.allele_ratio,
+	merger = SequenceMerger(args.max_differences, args.cross_mapping_ratio,
+		clonotype_ratio=args.clonotype_ratio, exact_ratio=args.exact_ratio,
 		unique_d_ratio=args.unique_D_ratio, unique_d_threshold=args.unique_D_threshold)
 
 	whitelist = dict()
@@ -236,7 +252,9 @@ def main(args):
 		table.rename(columns=dict(
 			consensus_seqs='cluster_size',
 			window_seqs='cluster_size',
-			subset_seqs='cluster_size'), inplace=True)
+			subset_seqs='cluster_size',
+			CDR3_clusters='clonotypes',
+		), inplace=True)
 
 		i = list(table.columns).index('consensus')
 		# whitelist_diff distinguishes between 0 and !=0 only
@@ -249,7 +267,7 @@ def main(args):
 		table = table[table.database_diff >= args.minimum_db_diff]
 		if 'N_bases' in table.columns:
 			table = table[table.N_bases <= args.maximum_N]
-		table = table[table.CDR3_clusters >= args.unique_CDR3]
+		table = table[table.CDR3s_exact >= args.unique_CDR3]
 		table = table[table.Js_exact >= args.unique_J]
 		if not args.allow_stop:
 			table = table[(table.has_stop == 0) | (table.whitelist_diff == 0)]
@@ -279,7 +297,8 @@ def main(args):
 		merger.add(SequenceInfo(
 			sequence=row['consensus'],
 			name=row['name'],
-			CDR3_clusters=row['CDR3_clusters'],
+			clonotypes=row['clonotypes'],
+			exact=row['exact'],
 			Ds_exact=row['Ds_exact'],
 			cluster_size=row['cluster_size'],
 			whitelisted=row['whitelist_diff'] == 0,

@@ -82,13 +82,13 @@ def add_arguments(parser):
 	arg('--d-coverage', '--D-coverage', metavar='COVERAGE', type=float, default=70,
 		help='For Ds_exact, require D matches with a minimum D '
 			'coverage of COVERAGE (in percent). Default: %(default)s)')
-	arg('--cdr3-cluster-diff', metavar='DIFFERENCES', type=int, default=6,
-		help='When clustering CDR3s to computer CDR3_clusters, allow DIFFERENCES '
+	arg('--clonotype-diff', metavar='DIFFERENCES', type=int, default=6,
+		help='When clustering CDR3s to computer the no. of clonotypes, allow DIFFERENCES '
 		     'between (nucleotide-)sequences. Default: %(default)s')
 	arg('table', help='Table with parsed IgBLAST results')
 
 
-Groupinfo = namedtuple('Groupinfo', 'count unique_D unique_J unique_CDR3 cdr3_clusters unique_barcodes')
+Groupinfo = namedtuple('Groupinfo', 'count unique_D unique_J unique_CDR3 clonotypes unique_barcodes')
 
 SiblingInfo = namedtuple('SiblingInfo', 'sequence requested name group')
 
@@ -131,7 +131,7 @@ class Discoverer:
 	"""
 	def __init__(self, database, windows, left, right, cluster, cluster_exact,
 			table_output, consensus_threshold, v_error_rate, downsample,
-			cdr3_cluster_differences, cluster_subsample_size, approx_columns,
+			clonotype_differences, cluster_subsample_size, approx_columns,
 			max_n_bases, exact_copies, d_coverage, d_evalue, seed):
 		self.database = database
 		self.windows = windows
@@ -143,7 +143,7 @@ class Discoverer:
 		self.consensus_threshold = consensus_threshold
 		self.v_error_rate = v_error_rate
 		self.downsample = downsample
-		self.cdr3_cluster_differences = cdr3_cluster_differences
+		self.clonotype_differences = clonotype_differences
 		self.cluster_subsample_size = cluster_subsample_size
 		self.approx_columns = approx_columns
 		self.max_n_bases = max_n_bases
@@ -193,14 +193,14 @@ class Discoverer:
 	def count_unique_barcodes(group):
 		return len(set(s for s in group.barcode if s))
 
-	def count_cdr3_clusters(self, table):
+	def count_clonotypes(self, table):
 		"""
 		Cluster sequences by edit distance and return the number of clusters.
 
 		The sequences are first group by their J assignment and cluster
 		numbers are computed within these groups separately, then summed up.
 		"""
-		distance = self.cdr3_cluster_differences
+		distance = self.clonotype_differences
 
 		def linked(s, t):
 			return edit_distance(s, t, distance) <= distance
@@ -367,12 +367,12 @@ class Discoverer:
 			for key, g in groups:
 				unique_J = len(set(s for s in g.J_gene if s))
 				unique_CDR3 = len(set(s for s in g.CDR3_nt if s))
-				cdr3_clusters = self.count_cdr3_clusters(g)
+				clonotypes = self.count_clonotypes(g)
 				unique_D = self.count_unique_D(g)
 				unique_barcodes = self.count_unique_barcodes(g)
 				count = len(g.index)
 				info[key] = Groupinfo(count=count, unique_D=unique_D, unique_J=unique_J,
-					unique_CDR3=unique_CDR3, cdr3_clusters=cdr3_clusters,
+					unique_CDR3=unique_CDR3, clonotypes=clonotypes,
 					unique_barcodes=unique_barcodes)
 			if gene in self.database:
 				database_diff = edit_distance(sibling, self.database[gene])
@@ -414,7 +414,7 @@ class Discoverer:
 				Ds_exact=info['exact'].unique_D,
 				Js_exact=info['exact'].unique_J,
 				CDR3s_exact=info['exact'].unique_CDR3,
-				CDR3_clusters=info['exact'].cdr3_clusters,
+				clonotypes=info['exact'].clonotypes,
 				CDR3_exact_ratio='{:.2f}'.format(ratio),
 				approx=approx,
 				Js_approx=Js_approx,
@@ -451,7 +451,7 @@ Candidate = namedtuple('Candidate', [
 	'Ds_exact',
 	'Js_exact',
 	'CDR3s_exact',
-	'CDR3_clusters',
+	'clonotypes',
 	'CDR3_exact_ratio',
 	'approx',
 	'Js_approx',
@@ -556,7 +556,7 @@ def main(args):
 
 	discoverer = Discoverer(database, windows, args.left, args.right, args.cluster,
 		args.cluster_exact, args.table_output, args.consensus_threshold, v_error_rate,
-		MAXIMUM_SUBSAMPLE_SIZE, cdr3_cluster_differences=args.cdr3_cluster_diff,
+		MAXIMUM_SUBSAMPLE_SIZE, clonotype_differences=args.clonotype_diff,
 		cluster_subsample_size=args.subsample, approx_columns=args.approx,
 		max_n_bases=args.max_n_bases, exact_copies=args.exact_copies,
 		d_coverage=args.d_coverage, d_evalue=args.d_evalue,

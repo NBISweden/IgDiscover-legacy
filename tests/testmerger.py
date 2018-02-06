@@ -82,20 +82,30 @@ def test_unique_namer():
 	assert namer('NameC') == 'NameCA'
 
 
-def SI(sequence, name, CDR3s_exact, whitelisted=False):
-	return SequenceInfo(sequence, name, CDR3s_exact, Ds_exact=10, cluster_size=100,
-		whitelisted=whitelisted, is_database=False, cluster_size_is_accurate=True,
-		CDR3_start=len(sequence), row=None)
+def SI(sequence, name, clonotypes, whitelisted=False):
+	return SequenceInfo(
+		sequence=sequence,
+		name=name,
+		clonotypes=clonotypes,
+		exact=100,
+		Ds_exact=10,
+		cluster_size=100,
+		whitelisted=whitelisted,
+		is_database=False,
+		cluster_size_is_accurate=True,
+		CDR3_start=len(sequence),
+		row=None
+	)
 
 
 def test_sequence_merger_withCDR3():
-	merger = SequenceMerger(max_differences=1, cross_mapping_ratio=0, allele_ratio=None,
-		unique_d_ratio=None, unique_d_threshold=10)
+	merger = SequenceMerger(max_differences=1, cross_mapping_ratio=0, clonotype_ratio=None,
+		exact_ratio=None, unique_d_ratio=None, unique_d_threshold=10)
 	infos = [
 		SI('ACGTTA', 'Name1', 15),
 		SI('ACGTTAT', 'Name2', 100),  # kept because it is longer
 		SI('ACGCCAT', 'Name3', 15),   # kept because edit distance > 1
-		SI('ACGGTAT', 'Name5', 120),  # kept because it has more CDR3s
+		SI('ACGGTAT', 'Name5', 120),  # kept because it has more clonotypes
 	]
 	merger.add(infos[0]); merged = list(merger)
 	assert len(merged) == 1 and merged[0] == infos[0]
@@ -110,7 +120,8 @@ def test_sequence_merger_withCDR3():
 
 
 def test_sequence_merger_prefix():
-	merger = SequenceMerger(max_differences=1, cross_mapping_ratio=0, allele_ratio=None,
+	merger = SequenceMerger(max_differences=1, cross_mapping_ratio=0, clonotype_ratio=None,
+		exact_ratio=None,
 		unique_d_ratio=None, unique_d_threshold=10)
 	infos = [
 		SI('AAATAA', 'Name1', 117),
@@ -124,8 +135,9 @@ def test_sequence_merger_prefix():
 
 
 def test_merger_check_all_previous():
-	merger = SequenceMerger(max_differences=1, cross_mapping_ratio=0, allele_ratio=None,
-		unique_d_ratio = None, unique_d_threshold = 10)
+	merger = SequenceMerger(max_differences=1, cross_mapping_ratio=0, clonotype_ratio=None,
+		exact_ratio=None,
+		unique_d_ratio=None, unique_d_threshold=10)
 	infos = [
 		SI('ATAAAA', 's1', 11),
 		SI('AAGAAA', 's2', 12),

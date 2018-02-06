@@ -658,6 +658,12 @@ Js_exact
 CDR3s_exact
     How many unique CDR3 sequences were used by the sequences in the set of exact sequences (described above).
 
+clonotypes
+    The estimated number of clonotypes within the set of exact sequences (which is described above).
+    The value is computed by clustering the unique CDR3 sequences associated with all exact
+    occurrences, allowing up to six differences (mismatches, insertions, deletions) and then
+    counting the number of resulting clusters.
+
 database_diff
     The number of differences between the consensus sequence and the sequence of the source gene.
     (Given as edit distance, that is insertion, deletion, mismatch count as one difference each.)

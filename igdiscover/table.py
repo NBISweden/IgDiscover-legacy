@@ -64,6 +64,10 @@ def fix_columns(df):
 		if all(df[col].notnull()):
 			df[col] = df[col].astype(int)
 
+	# TODO backwards compatibility
+	if 'CDR3_clusters' in df.columns:
+		df.rename(columns={'CDR3_clusters': 'clonotypes'}, inplace=True)
+
 
 def read_table(path, usecols=None, log=False):
 	"""

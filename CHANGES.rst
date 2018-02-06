@@ -26,6 +26,12 @@ development version
   to 99% (previously less than 90%).
 * Remove the ability to check discovered genes for required motifs. This has never
   worked well.
+* Add a column ``clonotypes`` to the ``candidates.tab`` that tries to count how many
+  clonotypes are associated with a single candidate (using only exact occurrences).
+  This is intended to replace the ``CDR3s_exact`` column.
+* Add an ``exact_ratio`` to the germline filtering options. This checks the ratio
+  between the exact V occurrence counts (``exact`` column) between alleles.
+* Germline filtering option ``allele_ratio`` was renamed to ``clonotypes_ratio``
 
 v0.8.0 (2017-06-20)
 -------------------
