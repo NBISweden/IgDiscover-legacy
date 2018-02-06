@@ -119,9 +119,6 @@ class IgBlastCache:
 		return data
 
 
-_igblastcache = IgBlastCache()
-
-
 def run_igblast(sequences, blastdb_dir, species, sequence_type, penalty=None, use_cache=True) -> str:
 	"""
 	sequences -- list of Sequence objects
@@ -276,6 +273,8 @@ def igblast(database, sequences, sequence_type, species=None, threads=None, pena
 
 
 def main(args):
+	global _igblastcache
+	_igblastcache = IgBlastCache()
 	database = Database(args.database)
 	detected_cdr3s = 0
 	writer = TableWriter(sys.stdout)
