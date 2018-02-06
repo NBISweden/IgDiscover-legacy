@@ -17,17 +17,19 @@ Postprocessing includes:
 """
 import sys
 import os
+import shutil
 import multiprocessing
 import subprocess
 from contextlib import ExitStack
 from io import StringIO
 from itertools import islice
-
+import hashlib
 import errno
 import pkg_resources
 import logging
 import tempfile
 import json
+import gzip
 
 from xopen import xopen
 
@@ -67,7 +69,60 @@ def add_arguments(parser):
 	arg('fasta', help='File with original reads')
 
 
-def run_igblast(sequences, blastdb_dir, species, sequence_type, penalty=None):
+class IgBlastCache:
+	"""Cache IgBLAST results in ~/.cache"""
+
+	binary = 'igblastn'
+
+	def __init__(self):
+		version_string = subprocess.check_output([IgBlastCache.binary, '-version'])
+		self._hasher = hashlib.md5(version_string)
+		cache_home = os.environ.get('XDG_CACHE_HOME', os.path.expanduser('~/.cache'))
+		self._cachedir = os.path.join(cache_home, 'igdiscover')
+		logger.info('Caching IgBLAST results in %r', self._cachedir)
+		self._lock = multiprocessing.Lock()
+
+	def _path(self, digest):
+		"""Return path to cache file given a digest"""
+		return os.path.join(self._cachedir, digest[:2], digest) + '.txt.gz'
+
+	def _load(self, digest):
+		try:
+			with gzip.open(self._path(digest), 'rt') as f:
+				return f.read()
+		except FileNotFoundError:
+			return None
+
+	def _store(self, digest, data):
+		path = self._path(digest)
+		dir = os.path.dirname(path)
+		os.makedirs(dir, exist_ok=True)
+		with gzip.open(path, 'wt') as f:
+			f.write(data)
+
+	def retrieve(self, variable_arguments, fixed_arguments, blastdb_dir, fasta_str) -> str:
+		hasher = self._hasher.copy()
+		hasher.update(' '.join(fixed_arguments).encode())
+		for gene in 'V', 'D', 'J':
+			with open(os.path.join(blastdb_dir, gene + '.fasta'), 'rb') as f:
+				hasher.update(f.read())
+		hasher.update(fasta_str.encode())
+		digest = hasher.hexdigest()
+		data = self._load(digest)
+		if data is None:
+			full_arguments = [IgBlastCache.binary] + variable_arguments + fixed_arguments
+			data = subprocess.check_output(full_arguments, input=fasta_str,
+				universal_newlines=True)
+			with self._lock:  # TODO does this help?
+				self._store(digest, data)
+
+		return data
+
+
+_igblastcache = IgBlastCache()
+
+
+def run_igblast(sequences, blastdb_dir, species, sequence_type, penalty=None, use_cache=True) -> str:
 	"""
 	sequences -- list of Sequence objects
 	blastdb_dir -- directory that contains BLAST databases. Files in that
@@ -78,18 +133,19 @@ def run_igblast(sequences, blastdb_dir, species, sequence_type, penalty=None):
 	"""
 	if sequence_type not in ('Ig', 'TCR'):
 		raise ValueError('sequence_type must be "Ig" or "TCR"')
-	arguments = ['igblastn']
+	variable_arguments = []
 	for gene in 'V', 'D', 'J':
-		arguments += ['-germline_db_{gene}'.format(gene=gene),
+		variable_arguments += ['-germline_db_{gene}'.format(gene=gene),
 			os.path.join(blastdb_dir, '{gene}'.format(gene=gene))]
-	if penalty is not None:
-		arguments += ['-penalty', str(penalty)]
 	# An empty .aux suppresses a warning from IgBLAST. /dev/null does not work.
 	empty_aux_path = pkg_resources.resource_filename('igdiscover', 'empty.aux')
+	variable_arguments += ['-auxiliary_data', empty_aux_path]
+	arguments = []
+	if penalty is not None:
+		arguments += ['-penalty', str(penalty)]
 	if species is not None:
 		arguments += ['-organism', species]
 	arguments += [
-		'-auxiliary_data', empty_aux_path,
 		'-ig_seqtype', sequence_type,
 		'-num_threads', '1',
 		'-domain_system', 'imgt',
@@ -101,7 +157,13 @@ def run_igblast(sequences, blastdb_dir, species, sequence_type, penalty=None):
 		'-out', '-',  # write to stdout
 	]
 	fasta_str = ''.join(">{}\n{}\n".format(r.name, r.sequence) for r in sequences)
-	return subprocess.check_output(arguments, input=fasta_str, universal_newlines=True)
+
+	if use_cache:
+		global _igblastcache
+		return _igblastcache.retrieve(variable_arguments, arguments, blastdb_dir, fasta_str)
+	else:
+		return subprocess.check_output(['igblastn'] + variable_arguments + arguments, input=fasta_str,
+			universal_newlines=True)
 
 
 def chunked(iterable, chunksize: int):
@@ -158,6 +220,7 @@ def makeblastdb(fasta, database_name):
 		['makeblastdb', '-parse_seqids', '-dbtype', 'nucl', '-in', fasta, '-out', database_name],
 		stderr=subprocess.STDOUT
 	)
+	shutil.copy(fasta, database_name + '.fasta')
 	if b'Error: ' in process_output:
 		raise subprocess.SubprocessError()
 
