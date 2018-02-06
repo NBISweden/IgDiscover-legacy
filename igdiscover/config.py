@@ -113,7 +113,7 @@ class Config:
 
 		for key in ('germline_filter', 'pregermline_filter'):
 			if key in config and 'allele_ratio' in config[key]:
-				config[key]['clonotype_ratio'] = config[key]['germline_filter']
+				config[key]['clonotype_ratio'] = config[key]['allele_ratio']
 		return config
 
 	@classmethod
