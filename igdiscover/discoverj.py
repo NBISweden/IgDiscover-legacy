@@ -180,6 +180,8 @@ def count_occurrences(candidates, table_path, search_columns, other_gene, other_
 		fix_columns(chunk)
 		chunk = chunk[chunk[other_errors] == 0]
 		# concatenate search columns
+		if len(chunk) == 0:  # TODO that this is needed is possibly a pandas bug
+			continue
 		chunk['haystack'] = chunk.loc[:, search_columns].astype(str).sum(axis=1)
 		chunk['haystack'] = chunk['haystack'].str.replace('(', '').replace(')', '')
 
