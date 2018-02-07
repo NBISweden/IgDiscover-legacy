@@ -492,7 +492,6 @@ else:
 
 rule igdiscover_igblast:
 	output:
-		txtgz="{dir}/igblast.txt.gz",
 		tabgz="{dir}/assigned.tab.gz",
 		json="{dir}/stats/assigned.json"
 	input:
@@ -510,7 +509,7 @@ rule igdiscover_igblast:
 	threads: 16
 	shell:
 		"time igdiscover igblast{params.sequence_type}{params.penalty}{params.rename} --threads={threads}"
-		"{params.species} --stats={output.json} --raw={output.txtgz} {params.database} {input.fastagz} | "
+		"{params.species} --stats={output.json} {params.database} {input.fastagz} | "
 		"{GZIP} 2>&1 > {output.tabgz} | tee {log} >&2"
 
 
