@@ -394,9 +394,6 @@ final/dendrogram_(V,D,J).pdf
     These three PDF files contain dendrograms of the V, D and J sequences in the individualized
     database.
 
-final/igblast.txt.gz
-    IgBLAST result (compressed) of running IgBLAST with the discovered database.
-
 final/assigned.tab.gz
     V/D/J gene assignments and other information for each sequence.
     The file is created by parsing the IgBLAST output in the ``igblast.txt.gz`` file.
@@ -419,7 +416,6 @@ final/expressed_(V,D,J).tab, final/expressed_(V,D,J).pdf
     note that the numbers do not include the genes that were discovered in that iteration. For
     example, ``iteration-01/expressed_V.tab`` shows only expression counts of the V genes in the
     starting database.
-
 
 final/errorhistograms.pdf
     A PDF with one page per V gene/allele.
@@ -849,10 +845,11 @@ Allele-ratio filtering
 
 When multiple alleles of the same gene appear in the list of V gene candidates,
 such as IGHV1-2*02 and IGHV1-2*04, the germline filter computes the ratio
-of ``CDR3s_exact`` between them. If the ratio is under a threshold, the
-lower-expressed candidate is discarded. The default threshold is 0.1 and can
-be modified in the configuration file by adjusting the ``allele_ratio``
-settings within the germline filter sections.
+of the values in the ``exact`` and the ``clonotypes`` columns between them.
+If the ratio is under the configured threshold, the candidate with the lower
+count is discarded. See the ``exact_ratio`` and ``clonotype_ratio``
+settings in the ``germline_filter`` and ``pregermline_filter`` sections
+of the configuration file.
 
 
 .. versionadded:: 0.7.0
