@@ -923,6 +923,22 @@ at the same time (but you lose the colors)::
   igdiscover run |& tee logfile.txt
 
 
+Caching of IgBLAST results
+==========================
+
+IgDiscover caches the results of running a set of sequences through IgBLAST. When the same
+dataset is re-analyzed, possibly with different parameters, the cached results are used
+instead of re-running IgBLAST, which saves a lot of time. If the V/D/J database or the
+IgBLAST version has changed, results are not re-used.
+
+The cache is stored in the user’s home directory under ``~/.cache/igdiscover/``. Or, if
+the variable ``$XDG_CACHE_HOME`` is set, at ``$XDG_CACHE_HOME/igdiscover``.
+
+When updating to a newer IgBLAST version, you should delete the cache with
+``rm -r ~/.cache/igdiscover`` to save space. The cache directory will be re-created
+automatically.
+
+
 Terms
 =====
 

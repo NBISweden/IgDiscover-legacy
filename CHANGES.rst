@@ -11,8 +11,8 @@ development version
 * In each iteration, dendrograms are now created not only for V genes, but
   also for D and J genes. The file names are ``dendrogram_D.pdf``,
   ``dendrogram_J.pdf``
-* The V dendrograms are now in  in ``dendrogram_V.pdf`` (no longer
-  ``dendrogram_V.pdf``). This puts all the dendrograms together when looking
+* The V dendrograms are now in ``dendrogram_V.pdf`` (no longer
+  ``V_dendrogram.pdf``). This puts all the dendrograms together when looking
   at the files in the iteration directory.
 * The ``V_usage.tab`` and ``V_usage.pdf`` files are no longer created.
   Instead, ``expressed_V.tab`` and ``expressed_V.pdf`` are created. These
@@ -32,6 +32,10 @@ development version
 * Add an ``exact_ratio`` to the germline filtering options. This checks the ratio
   between the exact V occurrence counts (``exact`` column) between alleles.
 * Germline filtering option ``allele_ratio`` was renamed to ``clonotypes_ratio``
+* Implement a cache for IgBLAST results. When the same dataset is re-analyzed,
+  possibly with different parameters, the cached results are used instead of
+  re-running IgBLAST, which saves a lot of time. If the V/D/J database or the
+  IgBLAST version has changed, results are not re-used.
 
 v0.8.0 (2017-06-20)
 -------------------
