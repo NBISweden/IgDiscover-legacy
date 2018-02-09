@@ -565,7 +565,7 @@ rule igdiscover_count:
 		tab="{dir}/filtered.tab.gz"
 	shell:
 		"igdiscover count --gene={wildcards.gene} "
-		"--allele-ratio=0.1 "
+		"--allele-ratio=0.2 "
 		"--plot={output.plot} {input.tab} > {output.counts}"
 
 
