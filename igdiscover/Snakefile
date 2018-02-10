@@ -37,7 +37,6 @@ DISCOVERY_TARGETS = [
 	'candidates.tab',
 	'new_V_germline.fasta',
 	'new_V_pregermline.fasta',
-	'new_J.fasta',
 ]
 TARGETS = expand('iteration-{nr:02d}/{path}', nr=range(1, config.iterations+1), path=ITERATION_TARGETS + DISCOVERY_TARGETS)
 TARGETS += [
@@ -46,6 +45,9 @@ TARGETS += [
 	'stats/trimming-successful',
 	'stats/stats.json'
 ]
+if config.iterations >= 1:
+	TARGETS += ['iteration-01/new_J.fasta']
+
 FINAL_TARGETS = expand('final/{path}', path=ITERATION_TARGETS)
 
 
@@ -449,10 +451,11 @@ for i in range(2, config.iterations + 1):
 			shell("cp -p {input.fasta} {output.fasta}")
 
 	rule:
+		# Even with multiple iterations, J genes are discovered only once
 		output:
 			fasta='iteration-{nr:02d}/database/J.fasta'.format(nr=i)
 		input:
-			fasta='iteration-{nr:02d}/new_J.fasta'.format(nr=i-1) if config.j_discovery['propagate'] else 'database/J.fasta'
+			fasta='iteration-01/new_J.fasta' if config.j_discovery['propagate'] else 'database/J.fasta'
 		run:
 			ensure_fasta_not_empty(input.fasta, 'J')
 			shell("cp -p {input.fasta} {output.fasta}")
@@ -483,7 +486,7 @@ else:
 		output:
 			fasta='final/database/J.fasta'
 		input:
-			fasta=('iteration-{nr:02d}/new_J.fasta'.format(nr=config.iterations)
+			fasta=('iteration-01/new_J.fasta'
 					if config.j_discovery['propagate'] else 'database/J.fasta')
 		run:
 			ensure_fasta_not_empty(input.fasta, 'J')
@@ -643,11 +646,11 @@ rule igdiscover_germlinefilter:
 rule igdiscover_discover_j:
 	"""Discover potential new J gene sequences"""
 	output:
-		tab="{dir}/new_J.tab",
-		fasta="{dir}/new_J.fasta",
+		tab="iteration-01/new_J.tab",
+		fasta="iteration-01/new_J.fasta",
 	input:
-		j_reference="{dir}/database/J.fasta",
-		tab="{dir}/filtered.tab.gz",
+		j_reference="iteration-01/database/J.fasta",
+		tab="iteration-01/filtered.tab.gz",
 	params:
 		allele_ratio='--allele-ratio={}'.format(config.j_discovery['allele_ratio']),
 		extra=' --cross-mapping-ratio={}'.format(config.j_discovery['cross_mapping_ratio']) if config.j_discovery['cross_mapping_ratio'] else ''
