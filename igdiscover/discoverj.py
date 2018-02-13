@@ -9,6 +9,7 @@ The result table is written to standard output. Use --fasta to also
 generate FASTA output.
 """
 import logging
+import functools
 from collections import Counter
 import pandas as pd
 from sqt import FastaReader
@@ -222,6 +223,27 @@ def discard_substring_occurrences(seq_occ_pairs):
 	return result
 
 
+def initial_vj_candidates(table, column, minimum_length):
+	for sequence, group in table.groupby(column):
+		if len(sequence) < minimum_length or len(group) < 2:
+			continue
+		yield Candidate(None, sequence, max_count=len(group))
+
+
+def initial_d_candidates(table, column, minimum_length, core):
+	d_sequences = Counter(s[core] for s in table[column])
+	# Require more than one occurrence and a minimum length
+	d_sequences = [(s, n) for s, n in d_sequences.most_common()
+		if n > 1 and len(s) >= minimum_length]
+
+	# TODO
+	# - do not use a D core region?
+	# if database is not None:
+	# 	candidates = discard_known(candidates, database)
+	for seq, count in discard_substring_occurrences(d_sequences):
+		yield Candidate(None, seq, max_count=count)
+
+
 def print_table(candidates, other_gene, missing):
 	columns = ['name', 'exact_occ', other_gene + 's', 'CDR3s', 'database', 'database_diff', 'sequence']
 	if missing:
@@ -264,29 +286,16 @@ def main(args):
 	if args.min_count is None:
 		args.min_count = 10 if args.gene == 'D' else 100
 
-	def initial_vj_candidates(table, column):
-		for sequence, group in table.groupby(column):
-			if len(sequence) < MINIMUM_CANDIDATE_LENGTH or len(group) < 2:
-				continue
-			yield sequence, len(group)
-
-	def initial_d_candidates(table, column):
-		d_sequences = Counter(s[args.d_core] for s in table[column])
-		# Require more than one occurrence and a minimum length
-		d_sequences = [(s, n) for s, n in d_sequences.most_common()
-			if n > 1 and len(s) >= args.d_core_length]
-
-		# TODO
-		# - do not use a D core region?
-		# if database is not None:
-		# 	candidates = discard_known(candidates, database)
-		return discard_substring_occurrences(d_sequences)
-
-	candidates_func = initial_d_candidates if args.gene == 'D' else initial_vj_candidates
+	if args.gene == 'D':
+		candidates_func = functools.partial(
+			initial_d_candidates, minimum_length=args.d_core_length, core=args.d_core)
+	else:
+		candidates_func = functools.partial(
+			initial_vj_candidates, minimum_length=MINIMUM_CANDIDATE_LENGTH)
 
 	candidates = []
-	for sequence, count in candidates_func(table, column):
-		candidates.append(Candidate(None, sequence, max_count=count))
+	for candidate in candidates_func(table, column):
+		candidates.append(candidate)
 	logger.info('Collected %s unique %s sequences', len(candidates), args.gene)
 
 	if args.merge:
