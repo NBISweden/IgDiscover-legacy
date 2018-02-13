@@ -50,15 +50,15 @@ def add_arguments(parser):
 
 
 class Candidate:
-	__slots__ = ('name', 'sequence', 'count', 'max_count', 'other_genes', 'db_name',
+	__slots__ = ('name', 'sequence', 'exact_occ', 'max_count', 'other_genes', 'db_name',
 		'db_distance', 'cdr3s', 'missing')
 
-	def __init__(self, name, sequence, count=0, max_count=0, cdr3s=None, other_genes=None,
+	def __init__(self, name, sequence, exact_occ=0, max_count=0, cdr3s=None, other_genes=None,
 			db_name=None, db_distance=None):
 		self.name = name
 		self.sequence = sequence
-		self.count = count
-		self.max_count = max_count  # an upper bound for the count
+		self.exact_occ = exact_occ
+		self.max_count = max_count  # an upper bound for the exact_occ
 		self.cdr3s = cdr3s if cdr3s is not None else set()
 		self.other_genes = other_genes if other_genes is not None else set()
 		self.db_name = db_name
@@ -70,9 +70,9 @@ class Candidate:
 		return len(self.cdr3s)
 
 	def __repr__(self):
-		return 'Candidate({sequence!r}, count={count}, max_count={max_count}, ...)'.format(
+		return 'Candidate({sequence!r}, exact_occ={exact_occ}, max_count={max_count}, ...)'.format(
 			sequence=self.sequence,
-			count=self.count,
+			exact_occ=self.exact_occ,
 			max_count=self.max_count,
 		)
 
@@ -136,11 +136,11 @@ class AlleleRatioMerger(Merger):
 			dist = edit_distance(s_seq, t_seq, 1)
 			if dist > 1:
 				return None
-			total_count = (s.count + t.count)
-			if total_count == 0:
+			total_occ = (s.exact_occ + t.exact_occ)
+			if total_occ == 0:
 				return None
 			for u, v in [(s, t), (t, s)]:
-				ratio = u.count / total_count
+				ratio = u.exact_occ / total_occ
 				if ratio < self._cross_mapping_ratio:
 					# u is probably a cross-mapping artifact of the higher-expressed v
 					logger.info('%r is a cross-mapping artifact of %r (ratio %.4f)',
@@ -171,10 +171,10 @@ def count_occurrences(candidates, table_path, search_columns, other_gene, other_
 
 	Return the updated list of candidates.
 	"""
-	records = {info.sequence: info for info in candidates}
+	candidates_map = {c.sequence: c for c in candidates}
 
 	# Speed up search by looking for the most common sequences first
-	search_order = sorted(records, key=lambda s: records[s].max_count, reverse=True)
+	search_order = sorted(candidates_map, key=lambda s: candidates_map[s].max_count, reverse=True)
 	cols = [other_gene, 'V_errors', 'J_errors', 'CDR3_nt'] + search_columns
 	for chunk in pd.read_csv(table_path, usecols=cols, chunksize=10000, sep='\t'):
 		fix_columns(chunk)
@@ -188,53 +188,53 @@ def count_occurrences(candidates, table_path, search_columns, other_gene, other_
 		for row in chunk.itertuples():
 			for needle in search_order:
 				if needle in row.haystack:
-					record = records[needle]
-					record.count += 1
-					record.other_genes.add(getattr(row, other_gene))
-					record.cdr3s.add(row.CDR3_nt)
+					candidate = candidates_map[needle]
+					candidate.exact_occ += 1
+					candidate.other_genes.add(getattr(row, other_gene))
+					candidate.cdr3s.add(row.CDR3_nt)
 					if merge:
 						# When overlapping candidates have been merged,
 						# there will be no other pattern that is a
 						# substrings of the current search pattern.
 						break
-	return records.values()
+	return candidates_map.values()
 
 
-def discard_substring_occurrences(seq_count_pairs):
+def discard_substring_occurrences(seq_occ_pairs):
 	# Sort by sequence length
-	seq_count_pairs = sorted(seq_count_pairs, key=lambda r: len(r[0]))
+	seq_occ_pairs = sorted(seq_occ_pairs, key=lambda r: len(r[0]))
 	result = []
-	while seq_count_pairs:
-		seq, count = seq_count_pairs.pop()
+	while seq_occ_pairs:
+		seq, exact_occ = seq_occ_pairs.pop()
 		# Keep only those candidates that are not substrings of seq
 		tmp = []
-		for s, n in seq_count_pairs:
+		for s, n in seq_occ_pairs:
 			if seq.find(s) != -1:
-				count += n
+				exact_occ += n
 			else:
 				tmp.append((s, n))
-		seq_count_pairs = tmp
-		result.append((seq, count))
+		seq_occ_pairs = tmp
+		result.append((seq, exact_occ))
 	return result
 
 
-def print_table(records, other_gene, missing):
-	columns = ['name', 'count', other_gene + 's', 'CDR3s', 'database', 'database_diff', 'sequence']
+def print_table(candidates, other_gene, missing):
+	columns = ['name', 'exact_occ', other_gene + 's', 'CDR3s', 'database', 'database_diff', 'sequence']
 	if missing:
 		columns.append('missing')
 	print(*columns, sep='\t')
-	for record in records:
+	for candidate in candidates:
 		columns = [
-			record.name,
-			record.count,
-			len(set(record.other_genes)),
-			record.unique_CDR3,
-			record.db_name if record.db_name is not None else '',
-			record.db_distance if record.db_distance is not None else -1,
-			record.sequence
+			candidate.name,
+			candidate.exact_occ,
+			len(set(candidate.other_genes)),
+			candidate.unique_CDR3,
+			candidate.db_name if candidate.db_name is not None else '',
+			candidate.db_distance if candidate.db_distance is not None else -1,
+			candidate.sequence
 		]
 		if missing:
-			columns.append(record.missing)
+			columns.append(candidate.missing)
 		print(*columns, sep='\t')
 
 
@@ -342,8 +342,8 @@ def main(args):
 		logger.info('After filtering by allele ratio and/or cross-mapping ratio, %d candidates remain',
 			len(records))
 
-	records = sorted(records, key=lambda r: (r.count, r.sequence), reverse=True)
-	records = [r for r in records if r.count >= args.min_count]
+	records = sorted(records, key=lambda r: (r.exact_occ, r.sequence), reverse=True)
+	records = [r for r in records if r.exact_occ >= args.min_count]
 
 	print_table(records, other_gene, missing=args.gene == 'D')
 	if args.fasta:
