@@ -34,8 +34,9 @@ def add_arguments(parser):
 		help='Required allele ratio. Works only for genes named "NAME*ALLELE". Default: %(default)s')
 	arg('--cross-mapping-ratio', type=float, metavar='RATIO', default=None,
 		help='Ratio for detection of cross-mapping artifacts. Default: %(default)s')
-	arg('--min-count', type=int, default=None,
-		help='Minimum count. Default: 10 for D, 100 for V and J')
+	arg('--min-count', metavar='N', type=int, default=None,
+		help='Omit candidates with fewer than N exact occurrences in the input table. '
+			'Default: 10 for D, 100 for V and J')
 
 	# --gene=D options
 	arg('--d-core-length', metavar='L', type=int, default=6,
@@ -152,9 +153,12 @@ class AlleleRatioMerger(Merger):
 
 def count_occurrences(candidates, table_path, search_columns, other_gene, other_errors, merge):
 	"""
-	Count how often each candidate sequence occurs in the genomic_sequence column of
-	an input table. This circumvents inaccurate IgBLAST alignment boundaries.
+	Count how often each candidate sequence occurs in the input table.
+	The columns named in search_columns are concatenated and searched.
+	This circumvents inaccurate IgBLAST alignment boundaries.
 	Rows where the column named by other_errors is not zero are ignored.
+
+	The input table is read in chunks to reduce memory usage.
 
 	candidates -- list of candidates
 	table_path -- path to input table
@@ -165,7 +169,7 @@ def count_occurrences(candidates, table_path, search_columns, other_gene, other_
 
 	The following attributes of the candidates are updated:
 
-	- count
+	- exact_occ
 	- other_genes
 	- cdr3s
 
@@ -189,13 +193,13 @@ def count_occurrences(candidates, table_path, search_columns, other_gene, other_
 			for needle in search_order:
 				if needle in row.haystack:
 					candidate = candidates_map[needle]
-					candidate.exact_occ += 1
+					candidate.exact_occ += 1  # TODO += row.count?
 					candidate.other_genes.add(getattr(row, other_gene))
 					candidate.cdr3s.add(row.CDR3_nt)
 					if merge:
 						# When overlapping candidates have been merged,
 						# there will be no other pattern that is a
-						# substrings of the current search pattern.
+						# substring of the current search pattern.
 						break
 	return candidates_map.values()
 
@@ -334,7 +338,7 @@ def main(args):
 		for record in records:
 			record.name = unique_name(args.gene, record.sequence)
 
-	# Merge by allele ratio
+	# Filter by allele ratio
 	if args.allele_ratio or args.cross_mapping_ratio:
 		arm = AlleleRatioMerger(args.allele_ratio, args.cross_mapping_ratio)
 		arm.extend(records)
@@ -344,8 +348,8 @@ def main(args):
 
 	records = sorted(records, key=lambda r: (r.exact_occ, r.sequence), reverse=True)
 	records = [r for r in records if r.exact_occ >= args.min_count]
-
 	print_table(records, other_gene, missing=args.gene == 'D')
+
 	if args.fasta:
 		with open(args.fasta, 'w') as f:
 			for record in sorted(records, key=lambda r: r.name):
