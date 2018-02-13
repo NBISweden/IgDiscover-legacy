@@ -27,7 +27,7 @@ def add_arguments(parser):
 	arg('--database', metavar='FASTA',
 		help='FASTA file with reference gene sequences')
 	arg('--merge', default=None, action='store_true', help='Merge overlapping genes. '
-		'Default: Enabled for J and D, disabled for V.')
+		'Default: Enabled for D, disabled for J and V.')
 	arg('--no-merge', dest='merge', action='store_false', help='Do not merge overlapping genes')
 	arg('--gene', default='J', choices=('V', 'D', 'J'),
 		help='Which gene category to discover. Default: %(default)s')
@@ -223,24 +223,23 @@ def discard_substring_occurrences(seq_occ_pairs):
 	return result
 
 
-def initial_vj_candidates(table, column, minimum_length):
+def sequence_candidates(table, column, minimum_length, core=slice(None, None)):
+	"""
+	Generate candidates by clustering all sequences in a column
+	(usually V_nt, J_nt). At least two occurrences are required.
+
+	core -- a slice object. If given, the strings in the column are
+	       sliced before being clustered.
+	"""
+	# for sequence, occ in table[column].str[core].value_counts().items():
+	# 	if len(sequence) >= minimum_length and occ >= 2:
+	# 		yield Candidate(None, sequence, max_count=occ)
+	candidates = []
 	for sequence, group in table.groupby(column):
 		if len(sequence) < minimum_length or len(group) < 2:
 			continue
-		yield Candidate(None, sequence, max_count=len(group))
-
-
-def initial_d_candidates(table, column, minimum_length, core):
-	d_sequences = Counter(s[core] for s in table[column])
-	# Require more than one occurrence and a minimum length
-	d_sequences = [(s, n) for s, n in d_sequences.most_common()
-		if n > 1 and len(s) >= minimum_length]
-
-	# TODO
-	# - do not use a D core region?
-	# if database is not None:
-	# 	candidates = discard_known(candidates, database)
-	for seq, count in discard_substring_occurrences(d_sequences):
+		candidates.append((sequence, len(group)))
+	for seq, count in discard_substring_occurrences(candidates):
 		yield Candidate(None, seq, max_count=count)
 
 
@@ -282,20 +281,17 @@ def main(args):
 	logger.info('Keeping %s rows that have no %s mismatches', len(table), other)
 
 	if args.merge is None:
-		args.merge = args.gene != 'V'
+		args.merge = args.gene == 'D'
 	if args.min_count is None:
 		args.min_count = 10 if args.gene == 'D' else 100
 
 	if args.gene == 'D':
-		candidates_func = functools.partial(
-			initial_d_candidates, minimum_length=args.d_core_length, core=args.d_core)
+		candidates = sequence_candidates(
+			table, column, minimum_length=args.d_core_length, core=args.d_core)
 	else:
-		candidates_func = functools.partial(
-			initial_vj_candidates, minimum_length=MINIMUM_CANDIDATE_LENGTH)
-
-	candidates = []
-	for candidate in candidates_func(table, column):
-		candidates.append(candidate)
+		candidates = sequence_candidates(
+			table, column, minimum_length=MINIMUM_CANDIDATE_LENGTH)
+	candidates = list(candidates)
 	logger.info('Collected %s unique %s sequences', len(candidates), args.gene)
 
 	if args.merge:
