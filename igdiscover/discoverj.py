@@ -277,7 +277,7 @@ def main(args):
 
 	def initial_vj_candidates(table, column):
 		for sequence, group in table.groupby(column):
-			if len(sequence) < MINIMUM_CANDIDATE_LENGTH:
+			if len(sequence) < MINIMUM_CANDIDATE_LENGTH or len(group) < 2:
 				continue
 			yield sequence, len(group)
 
