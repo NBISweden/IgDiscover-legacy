@@ -229,13 +229,9 @@ def sequence_candidates(table, column, minimum_length, core=slice(None, None)):
 	core -- a slice object. If given, the strings in the column are
 	       sliced before being clustered.
 	"""
-	# for sequence, occ in table[column].str[core].value_counts().items():
-	# 	if len(sequence) >= minimum_length and occ >= 2:
-	# 		yield Candidate(None, sequence, max_count=occ)
-	for sequence, group in table.groupby(column):
-		if len(sequence) < minimum_length or len(group) < 2:
-			continue
-		yield Candidate(None, sequence, max_count=len(group))
+	for sequence, occ in table[column].str[core].value_counts().items():
+		if len(sequence) >= minimum_length and occ >= 2:
+			yield Candidate(None, sequence, max_count=occ)
 
 
 def print_table(candidates, other_gene, missing):
