@@ -218,21 +218,6 @@ def discard_substring_occurrences(seq_count_pairs):
 	return result
 
 
-# TODO Remove this version of the above that works on strings only
-#
-# def discard_substring_occurrences(sequences):
-# 	"""
-# 	Discard sequences that appear as substrings in others
-# 	"""
-# 	sequences = sorted(sequences, key=len)
-# 	result = []
-# 	while sequences:
-# 		long = sequences.pop()
-# 		sequences = [s for s in sequences if long.find(s) == -1]
-# 		result.append(long)
-# 	return result
-
-
 def print_table(records, other_gene, missing):
 	columns = ['name', 'count', other_gene + 's', 'CDR3s', 'database', 'database_diff', 'sequence']
 	if missing:
