@@ -205,22 +205,20 @@ def count_occurrences(candidates, table_path, search_columns, other_gene, other_
 	return candidates_map.values()
 
 
-def discard_substring_occurrences(seq_occ_pairs):
-	# Sort by sequence length
-	seq_occ_pairs = sorted(seq_occ_pairs, key=lambda r: len(r[0]))
-	result = []
-	while seq_occ_pairs:
-		seq, exact_occ = seq_occ_pairs.pop()
-		# Keep only those candidates that are not substrings of seq
-		tmp = []
-		for s, n in seq_occ_pairs:
-			if seq.find(s) != -1:
-				exact_occ += n
-			else:
-				tmp.append((s, n))
-		seq_occ_pairs = tmp
-		result.append((seq, exact_occ))
-	return result
+def discard_substring_occurrences(candidates):
+	"""
+	Filter a candidate list by discarding candidates whose sequences are
+	substrings of another candidate’s sequence
+	"""
+	# Shorter sequences first
+	candidates = sorted(candidates, key=lambda c: len(c.sequence))
+	for i, short in enumerate(candidates):
+		for long in candidates[i+1:]:
+			if short.sequence in long.sequence:
+				break
+		else:
+			# no substring occurrence - keep this candidate
+			yield short
 
 
 def sequence_candidates(table, column, minimum_length, core=slice(None, None)):
@@ -234,13 +232,10 @@ def sequence_candidates(table, column, minimum_length, core=slice(None, None)):
 	# for sequence, occ in table[column].str[core].value_counts().items():
 	# 	if len(sequence) >= minimum_length and occ >= 2:
 	# 		yield Candidate(None, sequence, max_count=occ)
-	candidates = []
 	for sequence, group in table.groupby(column):
 		if len(sequence) < minimum_length or len(group) < 2:
 			continue
-		candidates.append((sequence, len(group)))
-	for seq, count in discard_substring_occurrences(candidates):
-		yield Candidate(None, seq, max_count=count)
+		yield Candidate(None, sequence, max_count=len(group))
 
 
 def print_table(candidates, other_gene, missing):
@@ -291,8 +286,12 @@ def main(args):
 	else:
 		candidates = sequence_candidates(
 			table, column, minimum_length=MINIMUM_CANDIDATE_LENGTH)
+
 	candidates = list(candidates)
 	logger.info('Collected %s unique %s sequences', len(candidates), args.gene)
+	candidates = list(discard_substring_occurrences(candidates))
+	logger.info('Removing candidate sequences that occur within others results in %s candidates',
+		len(candidates))
 
 	if args.merge:
 		logger.info('Merging overlapping sequences ...')
@@ -307,7 +306,6 @@ def main(args):
 	del table
 
 	logger.info('Counting occurrences ...')
-
 	if args.gene == 'D':
 		search_columns = ['VD_junction', 'D_region', 'DJ_junction']
 	else:
