@@ -284,21 +284,21 @@ def main(args):
 
 	candidates_func = initial_d_candidates if args.gene == 'D' else initial_vj_candidates
 
+	candidates = []
+	for sequence, count in candidates_func(table, column):
+		candidates.append(Candidate(None, sequence, max_count=count))
+	logger.info('Collected %s unique %s sequences', len(candidates), args.gene)
+
 	if args.merge:
 		logger.info('Merging overlapping sequences ...')
 		# Merge candidate sequences that overlap. If one candidate is longer than
 		# another, this is typically a sign that IgBLAST has not extended the
 		# alignment long enough.
 		merger = OverlappingSequenceMerger()
-		for sequence, count in candidates_func(table, column):
-			merger.add(Candidate(None, sequence, max_count=count))
+		for candidate in candidates:
+			merger.add(candidate)
 		logger.info('After merging overlapping %s sequences, %s remain', args.gene, len(merger))
 		candidates = list(merger)
-	else:
-		candidates = []
-		for sequence, count in candidates_func(table, column):
-			candidates.append(Candidate(None, sequence, max_count=count))
-		logger.info('Collected %s unique %s sequences', len(candidates), args.gene)
 	del table
 
 	logger.info('Counting occurrences ...')
