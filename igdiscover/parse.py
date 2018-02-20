@@ -15,6 +15,8 @@ import logging
 from collections import namedtuple
 
 from sqt.dna import reverse_complement
+from sqt.align import edit_distance
+
 from .utils import nt_to_aa
 from .species import find_cdr3, CDR3_SEARCH_START
 
@@ -213,6 +215,11 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		'FR3_SHM',
 		'V_SHM',
 		'J_SHM',
+		'FR1_aa_mut',
+		'CDR1_aa_mut',
+		'FR2_aa_mut',
+		'CDR2_aa_mut',
+		'FR3_aa_mut',
 		'V_errors',
 		'D_errors',
 		'J_errors',
@@ -240,7 +247,8 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 	]
 
 	CHAINS = {
-		'VH': 'heavy', 'VK': 'kappa', 'VL': 'lambda', 'VA': 'alpha', 'VB': 'beta',
+		'VH': 'heavy', 'VK': 'kappa', 'VL': 'lambda',
+		'VA': 'alpha', 'VB': 'beta',
 		'VG': 'gamma', 'VD': 'delta'
 	}
 
@@ -252,6 +260,7 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 			self.hits['V'] = self._fixed_v_hit(database)
 		self.utr, self.leader = self._utr_leader()
 		self.alignments['CDR3'] = self._find_cdr3(database)
+		self._database = database
 
 	@property
 	def vdj_sequence(self):
@@ -361,7 +370,6 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		cdr3_ref_end = database.j_cdr3_end(self.hits['J'].subject_id, self.CHAINS[self.chain])
 		if cdr3_ref_end is None:
 			return None
-		cdr3_ref_end = cdr3_ref_end  #[1]  # cdr3_ref_end[0] is the frame (0, 1 or 2)
 
 		cdr3_query_end = self._find_query_position(hit=self.hits['J'], reference_position=cdr3_ref_end)
 		if cdr3_query_end is None:
@@ -389,22 +397,39 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 			d['subject_alignment'] = preceding_base + d['subject_alignment']
 		return Hit(**d)
 
+	def _aa_region_mutation_rate(self, region, aa_sequence):
+		"""
+		For a given region, compute the mutation rate on the amino-acid level
+		between the query and reference. The rate is computed as edit distance
+		divided by length of the reference.
+
+		Return the rate or None if no information for the region is
+		available.
+		"""
+		try:
+			reference_sequence = self._database.v_regions_aa[self.v_gene][region]
+		except KeyError:
+			return None
+		return edit_distance(aa_sequence, reference_sequence) / len(reference_sequence)
+
 	def asdict(self):
 		"""
 		Return a flattened representation of this record as a dictionary.
 		The dictionary can then be used with e.g. a csv.DictWriter or
 		pandas.DataFrame.from_items.
 		"""
-		cdr1nt = self.region_sequence('CDR1')
-		cdr1aa = nt_to_aa(cdr1nt) if cdr1nt else None
-		cdr2nt = self.region_sequence('CDR2')
-		cdr2aa = nt_to_aa(cdr2nt) if cdr2nt else None
-		cdr3nt = self.region_sequence('CDR3')
-		cdr3aa = nt_to_aa(cdr3nt) if cdr3nt else None
+		nt_regions = dict()
+		aa_regions = dict()
+		for region in ('FR1', 'CDR1', 'FR2', 'CDR2', 'FR3', 'CDR3'):
+			nt_seq = self.region_sequence(region)
+			nt_regions[region] = nt_seq
+			aa_regions[region] = nt_to_aa(nt_seq) if nt_seq else None
+
 		vdj_nt = self.vdj_sequence
 		vdj_aa = nt_to_aa(vdj_nt) if vdj_nt else None
 
-		def shm(region):
+		def nt_mutation_rate(region):
+			"""Nucleotide-level mutation rate in percent"""
 			if region in self.alignments:
 				rar = self.alignments[region]
 				if rar is None or rar.percent_identity is None:
@@ -412,6 +437,16 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 				return 100. - rar.percent_identity
 			else:
 				return None
+
+		def aa_mutation_rate(region):
+			"""Amino-acid level mutation rate in percent"""
+			if aa_regions[region]:
+				rate = self._aa_region_mutation_rate(region, aa_regions[region])
+				if rate is not None:
+					return 100. * rate
+				else:
+					return None
+			return None
 
 		if 'V' in self.hits:
 			v_nt = self.hits['V'].query_sequence
@@ -451,6 +486,7 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		vd_junction = getattr(self.junction, 'vd_junction', None)
 		d_region = getattr(self.junction, 'd_region', None)
 		dj_junction = getattr(self.junction, 'dj_junction', None)
+
 		return dict(
 			count=self.size,
 			V_gene=self.v_gene,
@@ -464,24 +500,29 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 			V_evalue=v_evalue,
 			D_evalue=d_evalue,
 			J_evalue=j_evalue,
-			FR1_SHM=shm('FR1'),
-			CDR1_SHM=shm('CDR1'),
-			FR2_SHM=shm('FR2'),
-			CDR2_SHM=shm('CDR2'),
-			FR3_SHM=shm('FR3'),
+			FR1_SHM=nt_mutation_rate('FR1'),
+			CDR1_SHM=nt_mutation_rate('CDR1'),
+			FR2_SHM=nt_mutation_rate('FR2'),
+			CDR2_SHM=nt_mutation_rate('CDR2'),
+			FR3_SHM=nt_mutation_rate('FR3'),
 			V_SHM=v_shm,
 			J_SHM=j_shm,
+			FR1_aa_mut=aa_mutation_rate('FR1'),
+			CDR1_aa_mut=aa_mutation_rate('CDR1'),
+			FR2_aa_mut=aa_mutation_rate('FR2'),
+			CDR2_aa_mut=aa_mutation_rate('CDR2'),
+			FR3_aa_mut=aa_mutation_rate('FR3'),
 			V_errors=v_errors,
 			D_errors=d_errors,
 			J_errors=j_errors,
 			UTR=self.utr,
 			leader=self.leader,
-			CDR1_nt=cdr1nt,
-			CDR1_aa=cdr1aa,
-			CDR2_nt=cdr2nt,
-			CDR2_aa=cdr2aa,
-			CDR3_nt=cdr3nt,
-			CDR3_aa=cdr3aa,
+			CDR1_nt=nt_regions['CDR1'],
+			CDR1_aa=aa_regions['CDR1'],
+			CDR2_nt=nt_regions['CDR2'],
+			CDR2_aa=aa_regions['CDR2'],
+			CDR3_nt=nt_regions['CDR3'],
+			CDR3_aa=aa_regions['CDR3'],
 			V_nt=v_nt,
 			V_aa=v_aa,
 			V_end=v_end,
@@ -696,7 +737,8 @@ class TableWriter:
 		d['stop'] = self.yesno(d['stop'])
 		for name in ('V_covered', 'D_covered', 'J_covered',
 				'FR1_SHM', 'CDR1_SHM', 'FR2_SHM', 'CDR2_SHM', 'FR3_SHM',
-				'V_SHM', 'J_SHM'):
+				'V_SHM', 'J_SHM', 'FR1_aa_mut', 'CDR1_aa_mut', 'FR2_aa_mut',
+				'CDR2_aa_mut', 'FR3_aa_mut'):
 			if d[name] is not None:
 				d[name] = '{:.1f}'.format(d[name])
 		for name in ('V_evalue', 'D_evalue', 'J_evalue'):
