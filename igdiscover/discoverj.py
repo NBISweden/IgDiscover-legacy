@@ -9,8 +9,6 @@ The result table is written to standard output. Use --fasta to also
 generate FASTA output.
 """
 import logging
-import functools
-from collections import Counter
 import pandas as pd
 from sqt import FastaReader
 from sqt.align import edit_distance
