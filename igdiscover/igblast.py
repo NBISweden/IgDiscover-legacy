@@ -244,7 +244,7 @@ class Database:
 		for chain in ('heavy', 'kappa', 'lambda', 'alpha', 'beta', 'gamma', 'delta'):
 			self._cdr3_starts[chain] = {name: cdr3_start(s, chain) for name, s in self.v.items()}
 			self._cdr3_ends[chain] = {name: cdr3_end(s, chain) for name, s in self.j.items()}
-		self.v_regions = self._find_v_regions()
+		self.v_regions_nt, self.v_regions_aa = self._find_v_regions()
 
 	@staticmethod
 	def _records_to_dict(records):
@@ -258,24 +258,36 @@ class Database:
 
 	def _find_v_regions(self):
 		"""
-		Run IgBLAST on the V sequences to determine the nucleotide sequences of the
+		Run IgBLAST on the V sequences to determine the nucleotide and amino-acid sequences of the
 		FR1, CDR1, FR2, CDR2 and FR3 regions
 		"""
-		v_regions = dict()
+		logger.info('Finding regions in database V sequences')
+		v_regions_nt = dict()
+		v_regions_aa = dict()
 		for record in igblast(self.path, self._v_records, self.sequence_type, threads=1):
-			regions = dict()
+			nt_regions = dict()
+			aa_regions = dict()
 			for region in ('FR1', 'CDR1', 'FR2', 'CDR2', 'FR3'):
-				seq = record.region_sequence(region)
-				if len(seq) % 3 != 0:
-					logger.warning('Length %s of %s region in %s is not divisible by three; region '
-						'info for %r will not be available',
-						len(seq), region, record.query_name, record.query_name)
+				nt_seq = record.region_sequence(region)
+				if len(nt_seq) % 3 != 0:
+					logger.warning('Length %s of %s region in %r is not divisible by three; region '
+						'info for this gene will not be available',
+						len(nt_seq), region, record.query_name)
 					# not codon-aligned, skip entire record
 					break
-				regions[region] = seq
+				nt_regions[region] = nt_seq
+				aa_seq = nt_to_aa(nt_seq)
+				if '*' in aa_seq:
+					logger.warning('The %s region in %s contains a stop codon (%r); region info '
+						'for this gene will not be available',
+						region, record.query_name, aa_seq)
+					break
+				aa_regions[region] = aa_seq
 			else:
-				v_regions[record.query_name] = regions
-		return v_regions
+				v_regions_nt[record.query_name] = nt_regions
+				v_regions_aa[record.query_name] = aa_regions
+
+		return v_regions_nt, v_regions_aa
 
 
 def igblast(database, sequences, sequence_type, species=None, threads=None, penalty=None,
