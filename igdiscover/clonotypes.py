@@ -22,8 +22,9 @@ import logging
 from itertools import islice
 from contextlib import ExitStack
 from collections import Counter
+
+import pandas as pd
 from xopen import xopen
-from sqt.dna import nt_to_aa
 from sqt.align import hamming_distance
 
 from .table import read_table
@@ -32,8 +33,9 @@ from .utils import slice_arg
 
 
 CLONOTYPE_COLUMNS = ['name', 'count', 'V_gene', 'D_gene', 'J_gene', 'CDR3_nt', 'CDR3_aa',
-	'FR1_SHM', 'CDR1_SHM', 'FR2_SHM', 'CDR2_SHM', 'FR3_SHM', 'V_errors', 'J_errors',
-	'V_SHM', 'J_SHM', 'barcode', 'VDJ_nt', 'VDJ_aa']
+	'FR1_SHM', 'CDR1_SHM', 'FR2_SHM', 'CDR2_SHM', 'FR3_SHM',
+	'FR1_aa_mut', 'CDR1_aa_mut', 'FR2_aa_mut', 'CDR2_aa_mut', 'FR3_aa_mut',
+	'V_errors', 'J_errors', 'V_SHM', 'J_SHM', 'barcode', 'VDJ_nt', 'VDJ_aa']
 
 
 logger = logging.getLogger(__name__)
@@ -155,8 +157,13 @@ def group_by_clonotype(table, mismatches, sort, cdr3_core, cdr3_column):
 
 def main(args):
 	logger.info('Reading input table ...')
-	table = read_table(args.table, usecols=CLONOTYPE_COLUMNS)
-	table = table[CLONOTYPE_COLUMNS]
+	usecols = CLONOTYPE_COLUMNS
+	# TODO backwards compatibility
+	if 'FR1_aa_mut' not in pd.read_csv(args.table, nrows=0, sep='\t').columns:
+		usecols = [col for col in usecols if not col.endswith('_aa_mut')]
+
+	table = read_table(args.table, usecols=usecols)
+	table = table[usecols]
 	logger.info('Read table with %s rows', len(table))
 	table.insert(5, 'CDR3_length', table['CDR3_nt'].apply(len))
 	table = table[table['CDR3_length'] > 0]
@@ -168,7 +175,7 @@ def main(args):
 		else:
 			members_file = None
 
-		columns = CLONOTYPE_COLUMNS[:]
+		columns = usecols[:]
 		columns.remove('barcode')
 		columns.remove('count')
 		columns.insert(0, 'count')

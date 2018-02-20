@@ -15,7 +15,8 @@ The table is written to standard output.
 import logging
 from collections import defaultdict
 from contextlib import ExitStack
-from sqt.align import hamming_distance
+
+import pandas as pd
 from xopen import xopen
 
 from .table import read_table
@@ -100,13 +101,18 @@ def collect(querytable, reftable, mismatches, cdr3_core_slice, cdr3_column):
 
 
 def main(args):
-	querytable = read_table(args.querytable, usecols=CLONOTYPE_COLUMNS)
-	querytable = querytable[CLONOTYPE_COLUMNS]  # reorder columns
+	usecols = CLONOTYPE_COLUMNS
+	# TODO backwards compatibility
+	if ('FR1_aa_mut' not in pd.read_csv(args.querytable, nrows=0, sep='\t').columns or
+			'FR1_aa_mut' not in pd.read_csv(args.reftable, nrows=0, sep='\t').columns):
+		usecols = [col for col in usecols if not col.endswith('_aa_mut')]
+	querytable = read_table(args.querytable, usecols=usecols)
+	querytable = querytable[usecols]  # reorder columns
 	# Filter empty rows (happens sometimes)
 	querytable = querytable[querytable.V_gene != '']
 	logger.info('Read query table with %s rows', len(querytable))
-	reftable = read_table(args.reftable, usecols=CLONOTYPE_COLUMNS)
-	reftable = reftable[CLONOTYPE_COLUMNS]
+	reftable = read_table(args.reftable, usecols=usecols)
+	reftable = reftable[usecols]
 	logger.info('Read reference table with %s rows', len(reftable))
 	if args.minimum_count > 1:
 		reftable = reftable[reftable['count'] >= args.minimum_count]
@@ -121,6 +127,7 @@ def main(args):
 
 	cdr3_column = 'CDR3_aa' if args.aa else 'CDR3_nt'
 	summary_columns = ['FR1_SHM', 'CDR1_SHM', 'FR2_SHM', 'CDR2_SHM', 'FR3_SHM', 'V_SHM', 'J_SHM']
+	summary_columns.extend(col for col in usecols if col.endswith('_aa_mut'))
 	with ExitStack() as stack:
 		if args.summary:
 			summary_file = stack.enter_context(xopen(args.summary, 'w'))
