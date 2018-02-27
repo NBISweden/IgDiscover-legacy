@@ -108,7 +108,8 @@ class Hit(_Hit):
 
 	def query_position(self, reference_position):
 		"""
-		Given a position on the reference, return the same position but relative to query.
+		Given a position on the reference, return the same position but relative to
+		the full query sequence.
 		"""
 		# Iterate over alignment columns
 		ref_pos = self.subject_start
@@ -399,12 +400,11 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 
 	def _aa_region_mutations(self, region, aa_sequence):
 		"""
-		For a given region, compute the mutation rate on the amino-acid level
-		between the query and reference. The rate is computed as edit distance
-		divided by length of the reference.
+		For a given region, compute number of amino-acid level mutations
+		between the query and reference.
 
-		Return the rate. Raise KeyError if no information for the region is
-		available.
+		Return a tuple no_of_mutations, aa_region_length. Raise KeyError if no
+		information for the region is available.
 		"""
 		reference_sequence = self._database.v_regions_aa[self.v_gene][region]
 		return edit_distance(aa_sequence, reference_sequence), len(reference_sequence)
@@ -435,9 +435,27 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 			else:
 				return None
 
+		def j_aa_mutation_rate():
+			if 'J' not in self.hits:
+				return None
+			j_subject_id = self.hits['J'].subject_id
+			cdr3_ref_end = self._database.j_cdr3_end(j_subject_id, self.CHAINS[self.chain])
+			if cdr3_ref_end is None:
+				return None
+			cdr3_query_end = self.hits['J'].query_position(reference_position=cdr3_ref_end)
+			if cdr3_query_end is None:
+				return None
+
+			query = self.full_sequence[cdr3_query_end:self.hits['J'].query_end]
+			query_aa = nt_to_aa(query)
+			ref = self._database.j[j_subject_id][cdr3_ref_end:self.hits['J'].subject_end]
+			ref_aa = nt_to_aa(ref)
+			return 100. * edit_distance(ref_aa, query_aa) / len(ref_aa)
+
 		def aa_mutation_rates():
 			"""Amino-acid level mutation rates for all regions and V in percent"""
 			rates = dict()
+			rates['J'] = j_aa_mutation_rate()
 			v_aa_mutations = 0
 			v_aa_length = 0
 			for region in ('FR1', 'CDR1', 'FR2', 'CDR2', 'FR3'):
@@ -453,7 +471,7 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 			else:
 				rates['V'] = 100. * v_aa_mutations / v_aa_length
 				return rates
-			return dict(FR1=None, CDR1=None, FR2=None, CDR2=None, FR3=None, V=None)
+			return dict(FR1=None, CDR1=None, FR2=None, CDR2=None, FR3=None, V=None, J=None)
 
 		aa_rates = aa_mutation_rates()
 
@@ -517,7 +535,7 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 			V_SHM=v_shm,
 			J_SHM=j_shm,
 			V_aa_mut=aa_rates['V'],
-			J_aa_mut=None,
+			J_aa_mut=aa_rates['J'],
 			FR1_aa_mut=aa_rates['FR1'],
 			CDR1_aa_mut=aa_rates['CDR1'],
 			FR2_aa_mut=aa_rates['FR2'],
