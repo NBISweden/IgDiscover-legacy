@@ -106,6 +106,24 @@ class Hit(_Hit):
 	def errors(self):
 		return sum(a != b for a, b in zip(self.subject_alignment, self.query_alignment))
 
+	def query_position(self, reference_position):
+		"""
+		Given a position on the reference, return the same position but relative to query.
+		"""
+		# Iterate over alignment columns
+		ref_pos = self.subject_start
+		query_pos = self.query_start
+		if ref_pos == reference_position:
+			return query_pos
+		for ref_c, query_c in zip(self.subject_alignment, self.query_alignment):
+			if ref_c != '-':
+				ref_pos += 1
+			if query_c != '-':
+				query_pos += 1
+			if ref_pos == reference_position:
+				return query_pos
+		return None
+
 
 def parse_header(header):
 	"""
@@ -258,11 +276,11 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		super().__init__(**kwargs)
 		self.query_name, self.size, self.barcode = parse_header(self.query_name)
 		self.genomic_sequence = self.full_sequence
-		if 'V' in self.hits:
-			self.hits['V'] = self._fixed_v_hit(database)
-		self.utr, self.leader = self._utr_leader()
-		self.alignments['CDR3'] = self._find_cdr3(database)
 		self._database = database
+		if 'V' in self.hits:
+			self.hits['V'] = self._fixed_v_hit()
+		self.utr, self.leader = self._utr_leader()
+		self.alignments['CDR3'] = self._find_cdr3()
 
 	@property
 	def vdj_sequence(self):
@@ -327,27 +345,7 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 		return AlignmentSummary(start=start, stop=end, length=None, matches=None,
 			mismatches=None, gaps=None, percent_identity=None)
 
-	@staticmethod
-	def _find_query_position(hit, reference_position):
-		"""
-		Given a hit and a position on the reference,
-		return the same position but relative to query.
-		"""
-		# Iterate over alignment columns
-		ref_pos = hit.subject_start
-		query_pos = hit.query_start
-		if ref_pos == reference_position:
-			return query_pos
-		for ref_c, query_c in zip(hit.subject_alignment, hit.query_alignment):
-			if ref_c != '-':
-				ref_pos += 1
-			if query_c != '-':
-				query_pos += 1
-			if ref_pos == reference_position:
-				return query_pos
-		return None
-
-	def _find_cdr3(self, database):
+	def _find_cdr3(self):
 		"""
 		Return a repaired AlignmentSummary object that describes the CDR3 region.
 		Return None if no CDR3 detected.
@@ -358,10 +356,10 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 			return None
 
 		# CDR3 start
-		cdr3_ref_start = database.v_cdr3_start(self.hits['V'].subject_id, self.CHAINS[self.chain])
+		cdr3_ref_start = self._database.v_cdr3_start(self.hits['V'].subject_id, self.CHAINS[self.chain])
 		if cdr3_ref_start is None:
 			return None
-		cdr3_query_start = self._find_query_position(hit=self.hits['V'], reference_position=cdr3_ref_start)
+		cdr3_query_start = self.hits['V'].query_position(reference_position=cdr3_ref_start)
 		if cdr3_query_start is None:
 			# Alignment is not long enough to cover CDR3 start position; try to rescue it
 			# by assuming that the alignment would continue without indels.
@@ -369,18 +367,18 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 			cdr3_query_start = hit.query_end + (cdr3_ref_start - hit.subject_end)
 
 		# CDR3 end
-		cdr3_ref_end = database.j_cdr3_end(self.hits['J'].subject_id, self.CHAINS[self.chain])
+		cdr3_ref_end = self._database.j_cdr3_end(self.hits['J'].subject_id, self.CHAINS[self.chain])
 		if cdr3_ref_end is None:
 			return None
 
-		cdr3_query_end = self._find_query_position(hit=self.hits['J'], reference_position=cdr3_ref_end)
+		cdr3_query_end = self.hits['J'].query_position(reference_position=cdr3_ref_end)
 		if cdr3_query_end is None:
 			return None
 
 		return AlignmentSummary(start=cdr3_query_start, stop=cdr3_query_end, length=None, matches=None,
 			mismatches=None, gaps=None, percent_identity=None)
 
-	def _fixed_v_hit(self, database):
+	def _fixed_v_hit(self):
 		"""
 		Extend the V hit to the left if it does not start at the first nucleotide of the V gene.
 		"""
@@ -391,8 +389,8 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 			d['subject_start'] -= 1
 			preceding_query_base = self.full_sequence[d['query_start']]
 			d['query_alignment'] = preceding_query_base + d['query_alignment']
-			if database.v:
-				reference = database.v[hit.subject_id]
+			if self._database.v:
+				reference = self._database.v[hit.subject_id]
 				preceding_base = reference[d['subject_start']]
 			else:
 				preceding_base = 'N'
