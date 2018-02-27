@@ -261,7 +261,6 @@ class Database:
 		Run IgBLAST on the V sequences to determine the nucleotide and amino-acid sequences of the
 		FR1, CDR1, FR2, CDR2 and FR3 regions
 		"""
-		logger.info('Finding regions in database V sequences')
 		v_regions_nt = dict()
 		v_regions_aa = dict()
 		for record in igblast(self.path, self._v_records, self.sequence_type, threads=1):
@@ -285,7 +284,7 @@ class Database:
 						region, str(e))
 					break
 				if '*' in aa_seq:
-					logger.warning('The %s region in %s contains a stop codon (%r); region info '
+					logger.warning('The %s region in %r contains a stop codon (%r); region info '
 						'for this gene will not be available',
 						region, record.query_name, aa_seq)
 					break
