@@ -126,7 +126,8 @@ def main(args):
 			'query table! Did you swap query and reference?')
 
 	cdr3_column = 'CDR3_aa' if args.aa else 'CDR3_nt'
-	summary_columns = ['FR1_SHM', 'CDR1_SHM', 'FR2_SHM', 'CDR2_SHM', 'FR3_SHM', 'V_SHM', 'J_SHM']
+	summary_columns = ['FR1_SHM', 'CDR1_SHM', 'FR2_SHM', 'CDR2_SHM', 'FR3_SHM', 'V_SHM', 'J_SHM',
+		'V_aa_mut', 'J_aa_mut']
 	summary_columns.extend(col for col in usecols if col.endswith('_aa_mut'))
 	with ExitStack() as stack:
 		if args.summary:
