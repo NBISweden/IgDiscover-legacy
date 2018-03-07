@@ -269,6 +269,8 @@ class Database:
 			aa_regions = dict()
 			for region in ('FR1', 'CDR1', 'FR2', 'CDR2', 'FR3'):
 				nt_seq = record.region_sequence(region)
+				if nt_seq is None:
+					break
 				if len(nt_seq) % 3 != 0:
 					logger.warning('Length %s of %s region in %r is not divisible by three; region '
 						'info for this gene will not be available',
