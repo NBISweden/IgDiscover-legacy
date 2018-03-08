@@ -439,6 +439,8 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 			if 'J' not in self.hits:
 				return None
 			j_subject_id = self.hits['J'].subject_id
+			if self.chain not in self.CHAINS:
+				return None
 			cdr3_ref_end = self._database.j_cdr3_end(j_subject_id, self.CHAINS[self.chain])
 			if cdr3_ref_end is None:
 				return None
