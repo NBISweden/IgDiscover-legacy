@@ -21,7 +21,7 @@ before_install:
 
 install:
   - conda env create -n testenv -f environment.yml
-  - conda install -n testenv nose
+  - conda install -n testenv pytest
   - source activate testenv
   - pip install .
 

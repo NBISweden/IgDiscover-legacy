@@ -2,11 +2,12 @@
 Test the SiblingMerger class
 """
 import pandas as pd
+import pytest
+
 from igdiscover.discover import SiblingMerger, SiblingInfo
 from igdiscover.germlinefilter import SequenceMerger, SequenceInfo
 from igdiscover.utils import UniqueNamer
 from igdiscover.rename import PrefixDict
-from nose.tools import raises
 
 
 def test_0():
@@ -159,13 +160,13 @@ class TestPrefixDict:
 			('AGAAC', 13)
 		])
 
-	@raises(KeyError)
 	def test_ambiguous(self):
-		self.pd['AGAA']
+		with pytest.raises(KeyError):
+			self.pd['AGAA']
 
-	@raises(KeyError)
 	def test_missing(self):
-		self.pd['TTAAG']
+		with pytest.raises(KeyError):
+			self.pd['TTAAG']
 
 	def test_existing(self):
 		assert self.pd['AAACCT'] == 7

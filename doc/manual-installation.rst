@@ -4,12 +4,12 @@ Manual installation
 ===================
 
 IgDiscover requires quite a few other software tools that are not included in most Linux
-distributions (or OS X for that matter) and which are also not available from the Python packaging
+distributions (or mac OS) and which are also not available from the Python packaging
 index (PyPI) because they are not Python tools. If you do not use the :ref:`recommended simple
 installation instructions via Conda <simple-installation>`, you need to install those non-Python
 dependencies manually. Regular Python dependencies are automatically pulled in when IgDiscover
 itself is installed in the last step with the ``pip install`` command. The instructions below are
-written for Linux and require if you want to try this on OS X.
+written for Linux and require modifications if you want to try this on OS X.
 
 
 Install non-Python dependencies
@@ -18,7 +18,7 @@ Install non-Python dependencies
 The dependencies are: MUSCLE, FastQC, VSEARCH, IgBLAST, PEAR, and --
 optionally -- flash.
 
-1. Install Python 3. It most likely is already installed on your system, but
+1. Install Python 3.5 or newer. It most likely is already installed on your system, but
    in Debian/Ubuntu, you can get it with ::
 
 	sudo apt-get install python3

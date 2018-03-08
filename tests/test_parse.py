@@ -1,7 +1,6 @@
 """
 """
 from igdiscover.parse import parse_header
-from nose.tools import raises
 
 
 def test():

@@ -3,7 +3,7 @@
 set -euo pipefail
 unset DISPLAY
 
-nosetests --with-doctest -P tests/ igdiscover/
+pytest
 
 rm -rf testrun
 mkdir testrun

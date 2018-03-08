@@ -1,6 +1,7 @@
 from io import StringIO
 import pkg_resources
-from nose.tools import raises
+import pytest
+
 from igdiscover.utils import has_stop, validate_fasta, FastaValidationError, find_overlap, merge_overlapping
 from igdiscover.config import Config
 
@@ -39,19 +40,19 @@ def test_config():
 	# assert empty_config == packaged_config
 
 
-@raises(FastaValidationError)
 def test_validate_empty_record():
-	validate_fasta('tests/data/empty-record.fasta')
+	with pytest.raises(FastaValidationError):
+		validate_fasta('tests/data/empty-record.fasta')
 
 
-@raises(FastaValidationError)
 def test_validate_duplicate_name():
-	validate_fasta('tests/data/duplicate-name.fasta')
+	with pytest.raises(FastaValidationError):
+		validate_fasta('tests/data/duplicate-name.fasta')
 
 
-@raises(FastaValidationError)
 def test_validate_duplicate_sequence():
-	validate_fasta('tests/data/duplicate-sequence.fasta')
+	with pytest.raises(FastaValidationError):
+		validate_fasta('tests/data/duplicate-sequence.fasta')
 
 
 def test_find_overlap():

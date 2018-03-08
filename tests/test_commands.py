@@ -1,9 +1,10 @@
-from igdiscover.__main__ import main
-from nose.tools import assert_raises
-from .utils import datapath, resultpath, capture_stdout, files_equal
-from tempfile import TemporaryDirectory
 import os
 import sys
+from tempfile import TemporaryDirectory
+import pytest
+
+from igdiscover.__main__ import main
+from .utils import datapath, resultpath, files_equal
 
 
 def run(args, expected):
@@ -23,9 +24,9 @@ def run(args, expected):
 
 
 def test_main():
-	with assert_raises(SystemExit) as exc:
+	with pytest.raises(SystemExit) as exc:
 		main(['--version'])
-	assert exc.exception.code == 0
+	assert exc.value.code == 0
 
 
 def test_group_by_barcode_only():
