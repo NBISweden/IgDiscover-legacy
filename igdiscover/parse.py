@@ -449,9 +449,17 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 				return None
 
 			query = self.full_sequence[cdr3_query_end:self.hits['J'].query_end]
-			query_aa = nt_to_aa(query)
+			try:
+				query_aa = nt_to_aa(query)
+			except ValueError:
+				return None
 			ref = self._database.j[j_subject_id][cdr3_ref_end:self.hits['J'].subject_end]
-			ref_aa = nt_to_aa(ref)
+			try:
+				ref_aa = nt_to_aa(ref)
+			except ValueError:
+				return None
+			if not ref_aa:
+				return None
 			return 100. * edit_distance(ref_aa, query_aa) / len(ref_aa)
 
 		def aa_mutation_rates():
