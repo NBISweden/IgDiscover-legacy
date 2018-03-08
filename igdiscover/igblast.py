@@ -278,7 +278,12 @@ class Database:
 					# not codon-aligned, skip entire record
 					break
 				nt_regions[region] = nt_seq
-				aa_seq = nt_to_aa(nt_seq)
+				try:
+					aa_seq = nt_to_aa(nt_seq)
+				except ValueError as e:
+					logger.warning('The %s region could not be converted to amino acids: %s',
+						region, str(e))
+					break
 				if '*' in aa_seq:
 					logger.warning('The %s region in %s contains a stop codon (%r); region info '
 						'for this gene will not be available',
