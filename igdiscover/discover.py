@@ -336,17 +336,16 @@ class Discoverer:
 
 			sibling_no_cdr3 = sibling[:self._guess_cdr3_start(group)]
 			group_exact_V = group[group.V_no_CDR3 == sibling_no_cdr3]
-			if self.approx_columns:
-				group['consensus_diff'] = [edit_distance(v_no_cdr3, sibling_no_cdr3)
-					for v_no_cdr3 in group.V_no_CDR3]
-				group_approximate_V = group[group.consensus_diff <= len(sibling_no_cdr3) * self.v_error_rate]
-			del sibling_no_cdr3
-
 			groups = (
 				('window', sibling_info.group),
 				('exact', group_exact_V))
 			if self.approx_columns:
-				groups += (('approx', group_approximate_V), )
+				group['consensus_diff'] = [edit_distance(v_no_cdr3, sibling_no_cdr3)
+					for v_no_cdr3 in group.V_no_CDR3]
+				group_approximate_V = group[group.consensus_diff <= len(sibling_no_cdr3) * self.v_error_rate]
+				groups += (('approx', group_approximate_V),)
+			del sibling_no_cdr3
+
 			info = dict()
 			for key, g in groups:
 				unique_J = len(set(s for s in g.J_gene if s))
@@ -364,10 +363,7 @@ class Discoverer:
 				database_diff = None
 
 			# Build the Candidate
-			if database_diff == 0:
-				sequence_id = gene
-			else:
-				sequence_id = unique_name(gene, sibling)
+			sequence_id = gene if database_diff == 0 else unique_name(gene, sibling)
 
 			if self.approx_columns:
 				assert info['exact'].count <= info['approx'].count
