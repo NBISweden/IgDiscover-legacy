@@ -8,11 +8,10 @@ import csv
 import hashlib
 import logging
 import sys
-import os.path
 from collections import namedtuple, Counter
 import multiprocessing
 import random
-from itertools import zip_longest, chain
+import itertools
 import numpy as np
 import pandas as pd
 from sqt import SequenceReader
@@ -97,7 +96,7 @@ class SiblingMerger(Merger):
 	"""
 	def merged(self, s, t):
 		chars = []
-		for c1, c2 in zip_longest(s.sequence, t.sequence):
+		for c1, c2 in itertools.zip_longest(s.sequence, t.sequence):
 			if c1 is None:
 				c = c2
 			elif c2 is None:
@@ -286,7 +285,7 @@ class Discoverer:
 			candidate_iterators.append(self._cluster_siblings(gene, group))
 		if self.cluster_exact:
 			candidate_iterators.append(self._cluster_exact_candidates(gene, group))
-		for sibling in chain(*candidate_iterators):
+		for sibling in itertools.chain(*candidate_iterators):
 			if sibling.sequence == database_sequence:
 				database_sequence_found = True
 			yield sibling
