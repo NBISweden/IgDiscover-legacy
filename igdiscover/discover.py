@@ -68,11 +68,6 @@ def add_arguments(parser):
 			'and database will be computed.')
 	arg('--ignore-J', action='store_true', default=False,
 		help='Include also rows without J assignment or J%%SHM>0.')
-	arg('--approx', action='store_true', default=False,
-		help='Count also approximate matches (adds three columns to output table).')
-	arg('--error-rate', metavar='PERCENT', type=float, default=1,
-		help='When finding approximate V gene matches, allow PERCENT errors. '
-			'Default: %(default)s')
 	arg('--exact-copies', metavar='N', type=int, default=1,
 		help='When subsampling, first pick rows whose V gene sequences'
 			'have at least N exact copies in the input. Default: %(default)s')
@@ -130,8 +125,8 @@ class Discoverer:
 	Discover candidates for novel V genes.
 	"""
 	def __init__(self, database, windows, left, right, cluster, cluster_exact,
-			table_output, consensus_threshold, v_error_rate, downsample,
-			clonotype_differences, cluster_subsample_size, approx_columns,
+			table_output, consensus_threshold, downsample,
+			clonotype_differences, cluster_subsample_size,
 			max_n_bases, exact_copies, d_coverage, d_evalue, seed):
 		self.database = database
 		self.windows = windows
@@ -141,11 +136,9 @@ class Discoverer:
 		self.cluster_exact = cluster_exact
 		self.table_output = table_output
 		self.consensus_threshold = consensus_threshold
-		self.v_error_rate = v_error_rate
 		self.downsample = downsample
 		self.clonotype_differences = clonotype_differences
 		self.cluster_subsample_size = cluster_subsample_size
-		self.approx_columns = approx_columns
 		self.max_n_bases = max_n_bases
 		self.exact_copies = exact_copies
 		self.d_coverage = d_coverage
@@ -339,11 +332,6 @@ class Discoverer:
 			groups = (
 				('window', sibling_info.group),
 				('exact', group_exact_v))
-			if self.approx_columns:
-				group['consensus_diff'] = [edit_distance(v_no_cdr3, sibling_no_cdr3)
-					for v_no_cdr3 in group.V_no_CDR3]
-				group_approximate_v = group[group.consensus_diff <= len(sibling_no_cdr3) * self.v_error_rate]
-				groups += (('approx', group_approximate_v),)
 			del sibling_no_cdr3
 
 			info = dict()
@@ -364,16 +352,6 @@ class Discoverer:
 
 			# Build the Candidate
 			sequence_id = gene if database_diff == 0 else unique_name(gene, sibling)
-
-			if self.approx_columns:
-				assert info['exact'].count <= info['approx'].count
-				approx = info['approx'].count
-				js_approx = info['approx'].unique_J
-				cdr3s_approx = info['approx'].unique_CDR3
-			else:
-				approx = None
-				js_approx = None
-				cdr3s_approx = None
 
 			chain = self._guess_chain(sibling_info.group)
 			cdr3_start = self._guess_cdr3_start(sibling_info.group)
@@ -396,9 +374,6 @@ class Discoverer:
 				CDR3s_exact=info['exact'].unique_CDR3,
 				clonotypes=info['exact'].clonotypes,
 				CDR3_exact_ratio='{:.2f}'.format(ratio),
-				approx=approx,
-				Js_approx=js_approx,
-				CDR3s_approx=cdr3s_approx,
 				N_bases=n_bases,
 				database_diff=database_diff,
 				has_stop=int(has_stop(sibling)),
@@ -406,15 +381,6 @@ class Discoverer:
 				consensus=sibling,
 			)
 			candidates.append(candidate)
-
-			# If a window was requested via --left/--right, write the 'approx'
-			# subset to a separate file.
-			if self.table_output and self.approx_columns and any(si.requested for si in sibling_info) and len(group_approximate_v) > 0:
-				if not os.path.exists(self.table_output):
-					os.mkdir(self.table_output)
-				path = os.path.join(self.table_output, gene + '.tab')
-				group_approximate_v.sort('consensus_diff').to_csv(path, sep='\t')
-				logger.info('Wrote %s for window %s-%s', path, self.left, self.right)
 		return candidates
 
 
@@ -433,9 +399,6 @@ Candidate = namedtuple('Candidate', [
 	'CDR3s_exact',
 	'clonotypes',
 	'CDR3_exact_ratio',
-	'approx',
-	'Js_approx',
-	'CDR3s_approx',
 	'N_bases',
 	'database_diff',
 	'has_stop',
@@ -472,9 +435,6 @@ def count_prefixes(sequences):
 
 
 def main(args):
-	v_error_rate = args.error_rate / 100
-	assert 0 <= v_error_rate <= 1
-
 	if args.database:
 		with SequenceReader(args.database) as sr:
 			database = {record.name: record.sequence.upper() for record in sr}
@@ -499,10 +459,6 @@ def main(args):
 		table = table[table.J_SHM == 0][:]
 		logger.info('%s rows remain after discarding J%%SHM > 0', len(table))
 
-	if args.approx:
-		logger.info('Approximate comparisons between V gene sequence and consensus '
-			'allow %.1f%% errors.', v_error_rate*100)
-
 	if args.exact_copies > 1:
 		multiplicities = count_prefixes(table.V_no_CDR3)
 		table['copies'] = table.V_no_CDR3.map(multiplicities)
@@ -510,9 +466,6 @@ def main(args):
 			sum(table.copies >= args.exact_copies), args.exact_copies)
 
 	columns = list(Candidate._fields)
-	if not args.approx:
-		for col in ['approx', 'Js_approx', 'CDR3s_approx']:
-			columns.remove(col)
 	if not args.max_n_bases:
 		columns.remove('N_bases')
 	writer = csv.DictWriter(sys.stdout, fieldnames=columns, delimiter='\t', extrasaction='ignore')
@@ -535,9 +488,9 @@ def main(args):
 		groups.append((gene, group))
 
 	discoverer = Discoverer(database, windows, args.left, args.right, args.cluster,
-		args.cluster_exact, args.table_output, args.consensus_threshold, v_error_rate,
+		args.cluster_exact, args.table_output, args.consensus_threshold,
 		MAXIMUM_SUBSAMPLE_SIZE, clonotype_differences=args.clonotype_diff,
-		cluster_subsample_size=args.subsample, approx_columns=args.approx,
+		cluster_subsample_size=args.subsample,
 		max_n_bases=args.max_n_bases, exact_copies=args.exact_copies,
 		d_coverage=args.d_coverage, d_evalue=args.d_evalue,
 		seed=seed)

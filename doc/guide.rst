@@ -683,17 +683,6 @@ The ``igdiscover discover`` command can also be run by hand with other parameter
 N_bases
     Number of ``N`` bases in the consensus
 
-approx
-    Number of approximate occurrences of the consensus sequence among all sequences assigned to the source gene.
-    See the description for the *exact* column.
-    This *approximate set* is similar to the *exact set*, except that a difference up to a given percentage is allowed when comparing the consensus sequence to the other sequences.
-
-Js_approx
-    Same as *Js_exact*, except that it refers to the approximate occurrences of the consensus sequence.
-
-CDR3s_approx
-    Same as *CDR3s_exact*, except that it refers to the approximate occurrences of the consensus sequence.
-
 
 .. _gene-names:
 
