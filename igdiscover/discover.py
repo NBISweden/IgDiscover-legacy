@@ -267,21 +267,6 @@ class Discoverer:
 				name = '{}-{}'.format(left, right)
 			yield SiblingInfo(sequence=sibling, requested=requested, name=name, group=group)
 
-	@staticmethod  # TODO unused
-	def without_prefixes(strings):
-		"""
-		Given a list of strings, return a copy in which all strings that are the
-		prefix of another one are removed
-		"""
-		strings = sorted(strings, reverse=True)
-		longer_string = strings[0]
-		result = [longer_string]
-		for s in strings[1:]:
-			if not longer_string.startswith(s):
-				result.append(s)
-				longer_string = s
-		return result
-
 	def _cluster_exact_candidates(self, gene, table):
 		index = 1
 		for sequence, group in table.groupby('V_nt'):
