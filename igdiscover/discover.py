@@ -212,51 +212,50 @@ class Discoverer:
 			total += len(components)
 		return total
 
-	def _cluster_siblings(self, gene, group):
+	def _cluster_siblings(self, gene, table):
 		"""Find candidates by clustering sequences assigned to one gene"""
 
 		if self.exact_copies > 1:
 			# Preferentially pick those sequences (for subsampling) that have
 			# multiple exact copies, then fill up with the others
-			exact_group = group[group.copies >= self.exact_copies]
+			exact_group = table[table.copies >= self.exact_copies]
 			indices = downsampled(list(exact_group.index), self.cluster_subsample_size)
 			if len(indices) < self.cluster_subsample_size:
-				not_exact_group = group[group.copies < self.exact_copies]
+				not_exact_group = table[table.copies < self.exact_copies]
 				indices.extend(downsampled(list(not_exact_group.index),
 					self.cluster_subsample_size - len(indices)))
 		else:
-			indices = downsampled(list(group.index), self.cluster_subsample_size)
+			indices = downsampled(list(table.index), self.cluster_subsample_size)
 		# Ignore CDR3 part of the V sequence for clustering
-		sequences_no_cdr3 = list(group.V_no_CDR3.loc[indices])
+		sequences_no_cdr3 = list(table.V_no_CDR3.loc[indices])
 		df, linkage, clusters = cluster_sequences(sequences_no_cdr3, MINGROUPSIZE)
 		logger.info('Clustering %d sequences (downsampled to %d) assigned to %r gave %d cluster(s)',
-			len(group), len(indices), gene, len(set(clusters)))
+			len(table), len(indices), gene, len(set(clusters)))
 		cluster_indices = [[] for _ in range(max(clusters) + 1)]
 		for i, cluster_id in enumerate(clusters):
 			cluster_indices[cluster_id].append(indices[i])
 
-		cl = 1
+		cl = 0
 		for ind in cluster_indices:
-			group_in_window = group.loc[ind]
-			if len(group_in_window) < MINGROUPSIZE:
-				logger.info('Skipping a cluster because it is too small', ind)
+			group = table.loc[ind]
+			if len(group) < MINGROUPSIZE:
 				continue
-			sibling = self._sibling_sequence(gene, group_in_window)
-			name = 'cl{}'.format(cl)
-			yield SiblingInfo(sibling, False, name, group_in_window)
+			sibling = self._sibling_sequence(gene, group)
 			cl += 1
+			yield SiblingInfo(
+				sequence=sibling, requested=False, name='cl{}'.format(cl), group=group)
 
-	def _window_siblings(self, gene, group):
+	def _window_siblings(self, gene, table):
 		"""
 		Find candidates by clustering sequences that have a similar number of differences
 		to the reference sequence
 		"""
 		for left, right in self.windows:
 			left, right = float(left), float(right)
-			group_in_window = group[(left <= group.V_SHM) & (group.V_SHM < right)]
-			if len(group_in_window) < MINGROUPSIZE:
+			group = table[(left <= table.V_SHM) & (table.V_SHM < right)]
+			if len(group) < MINGROUPSIZE:
 				continue
-			sibling = self._sibling_sequence(gene, group_in_window)
+			sibling = self._sibling_sequence(gene, group)
 			if left == int(left):
 				left = int(left)
 			if right == int(right):
@@ -266,7 +265,7 @@ class Discoverer:
 				name = 'all'
 			else:
 				name = '{}-{}'.format(left, right)
-			yield SiblingInfo(sibling, requested, name, group_in_window)
+			yield SiblingInfo(sequence=sibling, requested=requested, name=name, group=group)
 
 	@staticmethod  # TODO unused
 	def without_prefixes(strings):
