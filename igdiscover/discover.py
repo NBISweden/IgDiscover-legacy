@@ -82,7 +82,8 @@ def add_arguments(parser):
 	arg('table', help='Table with parsed IgBLAST results')
 
 
-Groupinfo = namedtuple('Groupinfo', 'count unique_D unique_J unique_CDR3 clonotypes unique_barcodes')
+Groupinfo = namedtuple('Groupinfo',
+	'count unique_D unique_J unique_CDR3 shared_CDR3_ratio clonotypes unique_barcodes')
 
 SiblingInfo = namedtuple('SiblingInfo', 'sequence requested name group')
 
@@ -126,7 +127,7 @@ class Discoverer:
 	def __init__(self, database, windows, left, right, cluster, cluster_exact,
 			table_output, consensus_threshold, downsample,
 			clonotype_differences, cluster_subsample_size,
-			max_n_bases, exact_copies, d_coverage, d_evalue, seed):
+			max_n_bases, exact_copies, d_coverage, d_evalue, seed, cdr3_counts):
 		self.database = database
 		self.windows = windows
 		self.left = left
@@ -143,6 +144,7 @@ class Discoverer:
 		self.d_coverage = d_coverage
 		self.d_evalue = d_evalue
 		self.seed = seed
+		self.cdr3_counts = cdr3_counts
 
 	def _sibling_sequence(self, gene, group):
 		"""
@@ -334,16 +336,20 @@ class Discoverer:
 				('exact', group_exact_v))
 			del sibling_no_cdr3
 
+			other_cdr3_counts = self.cdr3_counts - Counter(s for s in sibling_info.group.CDR3_nt if s)
 			info = dict()
 			for key, g in groups:
+				cdr3_counts = Counter(s for s in g.CDR3_nt if s)
+				unique_cdr3 = len(cdr3_counts)
+				shared_cdr3_ratio = len(other_cdr3_counts & cdr3_counts) / unique_cdr3 if unique_cdr3 > 0 else 0
 				unique_j = len(set(s for s in g.J_gene if s))
-				unique_cdr3 = len(set(s for s in g.CDR3_nt if s))
 				clonotypes = self.count_clonotypes(g)
 				unique_d = self.count_unique_d(g)
 				unique_barcodes = self.count_unique_barcodes(g)
 				count = len(g.index)
 				info[key] = Groupinfo(count=count, unique_D=unique_d, unique_J=unique_j,
-					unique_CDR3=unique_cdr3, clonotypes=clonotypes,
+					unique_CDR3=unique_cdr3, shared_CDR3_ratio=shared_cdr3_ratio,
+					clonotypes=clonotypes,
 					unique_barcodes=unique_barcodes)
 			if gene in self.database:
 				database_diff = edit_distance(sibling, self.database[gene])
@@ -352,7 +358,6 @@ class Discoverer:
 
 			# Build the Candidate
 			sequence_id = gene if database_diff == 0 else unique_name(gene, sibling)
-
 			chain = self._guess_chain(sibling_info.group)
 			cdr3_start = self._guess_cdr3_start(sibling_info.group)
 			try:
@@ -373,10 +378,11 @@ class Discoverer:
 				Js_exact=info['exact'].unique_J,
 				CDR3s_exact=info['exact'].unique_CDR3,
 				clonotypes=info['exact'].clonotypes,
-				CDR3_exact_ratio='{:.2f}'.format(ratio),
+				CDR3_exact_ratio=ratio,
+				CDR3_shared_ratio=info['exact'].shared_CDR3_ratio,
 				N_bases=n_bases,
 				database_diff=database_diff,
-				has_stop=int(has_stop(sibling)),
+				has_stop=has_stop(sibling),
 				CDR3_start=cdr3_start,
 				consensus=sibling,
 			)
@@ -384,7 +390,7 @@ class Discoverer:
 		return candidates
 
 
-Candidate = namedtuple('Candidate', [
+class Candidate(namedtuple('_Candidate', [
 	'name',
 	'source',
 	'chain',
@@ -399,12 +405,19 @@ Candidate = namedtuple('Candidate', [
 	'CDR3s_exact',
 	'clonotypes',
 	'CDR3_exact_ratio',
+	'CDR3_shared_ratio',
 	'N_bases',
 	'database_diff',
 	'has_stop',
 	'CDR3_start',
 	'consensus',
-])
+])):
+	def formatted_dict(self):
+		d = self._asdict()
+		d['has_stop'] = int(d['has_stop'])
+		for name in 'CDR3_exact_ratio', 'CDR3_shared_ratio':
+			d[name] = '{:.2f}'.format(d[name])
+		return d
 
 
 def count_prefixes(sequences):
@@ -487,20 +500,22 @@ def main(args):
 			continue
 		groups.append((gene, group))
 
+	cdr3_counts = Counter(s for s in table.CDR3_nt if s)
+	logger.info('%s unique CDR3s detected overall', len(cdr3_counts))
 	discoverer = Discoverer(database, windows, args.left, args.right, args.cluster,
 		args.cluster_exact, args.table_output, args.consensus_threshold,
 		MAXIMUM_SUBSAMPLE_SIZE, clonotype_differences=args.clonotype_diff,
 		cluster_subsample_size=args.subsample,
 		max_n_bases=args.max_n_bases, exact_copies=args.exact_copies,
 		d_coverage=args.d_coverage, d_evalue=args.d_evalue,
-		seed=seed)
+		seed=seed, cdr3_counts=cdr3_counts)
 	n_consensus = 0
 
 	Pool = SerialPool if args.threads == 1 else multiprocessing.Pool
 	with Pool(args.threads) as pool:
 		for candidates in pool.imap(discoverer, groups, chunksize=1):
 			for candidate in candidates:
-				writer.writerow(candidate._asdict())
+				writer.writerow(candidate.formatted_dict())
 			sys.stdout.flush()
 			n_consensus += len(candidates)
 	logger.info('%s consensus sequences for %s gene(s) computed', n_consensus, len(groups))
