@@ -222,8 +222,9 @@ class Discoverer:
 		# Ignore CDR3 part of the V sequence for clustering
 		sequences_no_cdr3 = list(table.V_no_CDR3.loc[indices])
 		df, linkage, clusters = cluster_sequences(sequences_no_cdr3, MINGROUPSIZE)
-		logger.info('Clustering %d sequences (downsampled to %d) assigned to %r gave %d cluster(s)',
-			len(table), len(indices), gene, len(set(clusters)))
+		n_clusters = len(set(clusters))
+		logger.info('%6d %s assignments generated %d cluster%s',
+			len(table), gene, n_clusters, 's' if n_clusters != 1 else '')
 		cluster_indices = [[] for _ in range(max(clusters) + 1)]
 		for i, cluster_id in enumerate(clusters):
 			cluster_indices[cluster_id].append(indices[i])
