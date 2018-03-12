@@ -183,10 +183,10 @@ class Discoverer:
 		"""
 		return Counter(group.V_CDR3_start).most_common()[0][0]
 
-	def count_unique_D(self, group):
-		g = group[(group.D_errors == 0) &
-				(group.D_covered >= self.d_coverage) &
-				(group.D_evalue <= self.d_evalue)]
+	def count_unique_d(self, table):
+		g = table[(table.D_errors == 0) &
+			(table.D_covered >= self.d_coverage) &
+			(table.D_evalue <= self.d_evalue)]
 		return len(set(s for s in g.D_gene if s))
 
 	@staticmethod
@@ -335,27 +335,27 @@ class Discoverer:
 				continue
 
 			sibling_no_cdr3 = sibling[:self._guess_cdr3_start(group)]
-			group_exact_V = group[group.V_no_CDR3 == sibling_no_cdr3]
+			group_exact_v = group[group.V_no_CDR3 == sibling_no_cdr3]
 			groups = (
 				('window', sibling_info.group),
-				('exact', group_exact_V))
+				('exact', group_exact_v))
 			if self.approx_columns:
 				group['consensus_diff'] = [edit_distance(v_no_cdr3, sibling_no_cdr3)
 					for v_no_cdr3 in group.V_no_CDR3]
-				group_approximate_V = group[group.consensus_diff <= len(sibling_no_cdr3) * self.v_error_rate]
-				groups += (('approx', group_approximate_V),)
+				group_approximate_v = group[group.consensus_diff <= len(sibling_no_cdr3) * self.v_error_rate]
+				groups += (('approx', group_approximate_v),)
 			del sibling_no_cdr3
 
 			info = dict()
 			for key, g in groups:
-				unique_J = len(set(s for s in g.J_gene if s))
-				unique_CDR3 = len(set(s for s in g.CDR3_nt if s))
+				unique_j = len(set(s for s in g.J_gene if s))
+				unique_cdr3 = len(set(s for s in g.CDR3_nt if s))
 				clonotypes = self.count_clonotypes(g)
-				unique_D = self.count_unique_D(g)
+				unique_d = self.count_unique_d(g)
 				unique_barcodes = self.count_unique_barcodes(g)
 				count = len(g.index)
-				info[key] = Groupinfo(count=count, unique_D=unique_D, unique_J=unique_J,
-					unique_CDR3=unique_CDR3, clonotypes=clonotypes,
+				info[key] = Groupinfo(count=count, unique_D=unique_d, unique_J=unique_j,
+					unique_CDR3=unique_cdr3, clonotypes=clonotypes,
 					unique_barcodes=unique_barcodes)
 			if gene in self.database:
 				database_diff = edit_distance(sibling, self.database[gene])
@@ -368,12 +368,12 @@ class Discoverer:
 			if self.approx_columns:
 				assert info['exact'].count <= info['approx'].count
 				approx = info['approx'].count
-				Js_approx = info['approx'].unique_J
-				CDR3s_approx = info['approx'].unique_CDR3
+				js_approx = info['approx'].unique_J
+				cdr3s_approx = info['approx'].unique_CDR3
 			else:
 				approx = None
-				Js_approx = None
-				CDR3s_approx = None
+				js_approx = None
+				cdr3s_approx = None
 
 			chain = self._guess_chain(sibling_info.group)
 			cdr3_start = self._guess_cdr3_start(sibling_info.group)
@@ -397,8 +397,8 @@ class Discoverer:
 				clonotypes=info['exact'].clonotypes,
 				CDR3_exact_ratio='{:.2f}'.format(ratio),
 				approx=approx,
-				Js_approx=Js_approx,
-				CDR3s_approx=CDR3s_approx,
+				Js_approx=js_approx,
+				CDR3s_approx=cdr3s_approx,
 				N_bases=n_bases,
 				database_diff=database_diff,
 				has_stop=int(has_stop(sibling)),
@@ -409,11 +409,11 @@ class Discoverer:
 
 			# If a window was requested via --left/--right, write the 'approx'
 			# subset to a separate file.
-			if self.table_output and self.approx_columns and any(si.requested for si in sibling_info) and len(group_approximate_V) > 0:
+			if self.table_output and self.approx_columns and any(si.requested for si in sibling_info) and len(group_approximate_v) > 0:
 				if not os.path.exists(self.table_output):
 					os.mkdir(self.table_output)
 				path = os.path.join(self.table_output, gene + '.tab')
-				group_approximate_V.sort('consensus_diff').to_csv(path, sep='\t')
+				group_approximate_v.sort('consensus_diff').to_csv(path, sep='\t')
 				logger.info('Wrote %s for window %s-%s', path, self.left, self.right)
 		return candidates
 
