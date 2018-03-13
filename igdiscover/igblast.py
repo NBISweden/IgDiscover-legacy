@@ -18,6 +18,7 @@ Postprocessing includes:
 import sys
 import os
 import shutil
+import time
 import multiprocessing
 import subprocess
 from contextlib import ExitStack
@@ -336,6 +337,7 @@ def main(args):
 	database = Database(args.database, args.sequence_type)
 	detected_cdr3s = 0
 	writer = TableWriter(sys.stdout)
+	start_time = time.time()
 	with ExitStack() as stack:
 		if args.raw:
 			raw_output = stack.enter_context(xopen(args.raw, 'w'))
@@ -361,12 +363,10 @@ def main(args):
 					sys.exit(1)
 				raise
 			if n % 100000 == 0:
-				cpu_time = get_cpu_time()
-				if cpu_time is not None:
-					logger.info('Processed {:10,d} sequences at {:.1f} ms/sequence'.format(n, cpu_time / n * 1E3))
-	cpu_time = get_cpu_time()
-	if cpu_time is not None:
-		logger.info('Processed {:10,d} sequences at {:.1f} ms/sequence'.format(n, cpu_time / n * 1E3))
+				elapsed = time.time() - start_time
+				logger.info('Processed {:10,d} sequences at {:.3f} ms/sequence'.format(n, elapsed / n * 1E3))
+	elapsed = time.time() - start_time
+	logger.info('Processed {:10,d} sequences at {:.1f} ms/sequence'.format(n, elapsed / n * 1E3))
 
 	logger.info('%d IgBLAST assignments parsed and written', n)
 	logger.info('CDR3s detected in %.1f%% of all sequences', detected_cdr3s / n * 100)
