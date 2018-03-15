@@ -560,6 +560,19 @@ rule igdiscover_filter:
 		shell("igdiscover filter {criteria} {input.assigned} | {GZIP} > {output}")
 
 
+rule igdiscover_exact:
+	output:
+		exact="{dir}/exact.tab"
+	input:
+		filtered="{dir}/filtered.tab.gz"
+	shell:
+		# extract rows where V_errors == 0
+		"""
+		zcat {input.filtered} | \
+		awk 'NR==1 {{ for(i=1;i<=NF;i++) if ($i == "V_errors") col=i}};NR==1 || $col == 0' > {output}
+		"""
+
+
 rule igdiscover_count:
 	output:
 		plot="{dir}/expressed_{gene,[VDJ]}.pdf",
