@@ -176,17 +176,17 @@ d_coverage: 70
 # Filtering criteria applied to candidate sequences in all iterations except the last.
 #
 pre_germline_filter:
-  unique_cdr3s: 2      # Minimum number of unique CDR3s (within exact matches)
-  unique_js: 2         # Minimum number of unique J genes (within exact matches)
-  whitelist: true      # Add database sequences to the whitelist
-  cluster_size: 0      # Minimum number of sequences assigned to cluster
-  differences: 0       # Merge sequences if they have at most this number of differences
-  allow_stop: true     # Whether to allow non-productive sequences containing stop codons
+  unique_cdr3s: 2            # Minimum number of unique CDR3s (within exact matches)
+  unique_js: 2               # Minimum number of unique J genes (within exact matches)
+  whitelist: true            # Add database sequences to the whitelist
+  cluster_size: 0            # Minimum number of sequences assigned to cluster
+  differences: 0             # Merge sequences if they have at most this number of differences
+  allow_stop: true           # Whether to allow non-productive sequences containing stop codons
   cross_mapping_ratio: 0.02  # Threshold for removal of cross-mapping artifacts (set to 0 to disable)
-  clonotype_ratio: 0.12  # Required minimum ratio of clonotype counts between alleles of the same gene
-  exact_ratio: 0.12      # Required minimum ratio of "exact" counts between alleles of the same gene
-  unique_d_ratio: 0.3  # Minimum Ds_exact ratio between alleles
-  unique_d_threshold: 10  # Check Ds_exact ratio only if highest-expressed allele has at least this Ds_exact count
+  clonotype_ratio: 0.12      # Required minimum ratio of clonotype counts between alleles of the same gene
+  exact_ratio: 0.12          # Required minimum ratio of "exact" counts between alleles of the same gene
+  unique_d_ratio: 0.3        # Minimum Ds_exact ratio between alleles
+  unique_d_threshold: 10     # Check Ds_exact ratio only if highest-expressed allele has at least this Ds_exact count
 
 
 # Filtering criteria applied to candidate sequences in the last iteration.
