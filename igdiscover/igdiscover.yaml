@@ -200,8 +200,8 @@ germline_filter:
   differences: 0       # Merge sequences if they have at most this number of differences
   allow_stop: false    # Whether to allow non-productive sequences containing stop codons
   cross_mapping_ratio: 0.02  # Threshold for removal of cross-mapping artifacts (set to 0 to disable)
-  clonotype_ratio: 0.1  # Required minimum ratio of clonotype counts between alleles of the same gene
-  exact_ratio: 0.1      # Required minimum ratio of "exact" counts between alleles of the same gene
+  clonotype_ratio: 0.12  # Required minimum ratio of clonotype counts between alleles of the same gene
+  exact_ratio: 0.12     # Required minimum ratio of "exact" counts between alleles of the same gene
   unique_d_ratio: 0.3  # Minimum Ds_exact ratio between alleles
   unique_d_threshold: 10  # Check Ds_exact ratio only if highest-expressed allele has at least this Ds_exact count
 
@@ -210,5 +210,5 @@ germline_filter:
 
 j_discovery:
   allele_ratio: 0.2         # Required minimum ratio between alleles of a single gene
-  cross_mapping_ratio: null # Threshold for removal of cross-mapping artifacts.
+  cross_mapping_ratio: 0.1  # Threshold for removal of cross-mapping artifacts.
   propagate: true           # Use J genes discovered in iteration 1 in subsequent ones
