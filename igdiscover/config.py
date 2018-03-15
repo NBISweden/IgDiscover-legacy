@@ -52,8 +52,8 @@ class Config:
 			differences=0,
 			allow_stop=True,
 			cross_mapping_ratio=0.02,
-			clonotype_ratio=0.1,
-			exact_ratio=0.1,
+			clonotype_ratio=0.12,
+			exact_ratio=0.12,
 			unique_d_ratio=0.3,
 			unique_d_threshold=10
 		)
@@ -65,12 +65,12 @@ class Config:
 			differences=0,
 			allow_stop=False,
 			cross_mapping_ratio=0.02,
-			clonotype_ratio=0.1,
-			exact_ratio=0.1,
+			clonotype_ratio=0.12,
+			exact_ratio=0.12,
 			unique_d_ratio=0.3,
 			unique_d_threshold=10
 		)
-		self.j_discovery = dict(allele_ratio=0.2, cross_mapping_ratio=None, propagate=True)
+		self.j_discovery = dict(allele_ratio=0.2, cross_mapping_ratio=0.1, propagate=True)
 		self.cdr3_location = 'detect'
 
 		self.read_from(file)
