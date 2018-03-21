@@ -15,28 +15,36 @@ Installing the development version
 
 To use the most recent IgDiscover version from Git, follow these steps.
 
-1. First :ref:`follow the regular installation instructions <quickstart>`.
+1. If you haven’t done so, install miniconda. See the first steps of the
+   :ref:`regular installation instructions <install-with-conda>`. Do not install
+   IgDiscover, yet!
 
-2. Uninstall the igdiscover package with::
-
-       conda uninstall igdiscover
-
-   This removes igdiscover itself, but the dependencies remain (IgBLAST etc.),
-   which is what we need.
-
-3. Clone the repository::
+2. Clone the IgDiscover repository::
 
        git clone https://github.com/NBISweden/IgDiscover.git
 
    (Use the git@ URL instead if you are a developer.)
 
-4. Install IgDiscover::
+4. Create a new Conda environment using the ``environment.yml`` file in the
+   repository::
 
        cd IgDiscover
-       python3 -m pip install -e .
+       conda env create -n igdiscover -f environment.yml
 
-If you are a developer, you may also want to look into Conda environments and
-use those.
+   You can choose a different environment name by changing the name after the
+   ``-n`` parameter. This may be necessary, when you already have a regular
+   (non-developer) IgDiscover installation in an ``igdiscover`` environment
+   that you don’t want to overwrite.
+
+5. Activate the environment::
+
+       source activate igdiscover
+
+   (Or use whichever name you chose above.)
+
+6. Install IgDiscover in “editable” mode::
+
+       python3 -m pip install -e .
 
 Whenever you want to update the software::
 
@@ -55,7 +63,7 @@ Go to the ``doc/`` directory in the repository, then run::
 
 to build the documentation locally. Open ``_build/html/index.html`` in
 a browser. The layout is different from the `version shown on
-Read the Docs <https://igdiscover.readthedocs.io/>`_, but allows you to
+Read the Docs <https://docs.igdiscover.se/>`_, but allows you to
 preview any changes you may have made.
 
 

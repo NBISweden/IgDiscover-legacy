@@ -2,119 +2,90 @@
 Installation
 ============
 
-.. _quickstart:
+IgDiscover is written in Python 3 and is developed on Linux. The tool also
+runs on macOS, but is not as well tested on that platform.
 
-Quickstart
-----------
+For installation on either system, we recommend that you follow the instructions
+below, which will first explain how to install the `Conda <http://conda.io/docs/>`__
+package manager. IgDiscover is available as a
+Conda-package from `the bioconda channel <https://bioconda.github.io/bioconda>`__.
+Using Conda will make the installation easy because all dependencies are also
+available as Conda packages and can thus be installed automatically along with
+IgDiscover.
 
-Try these instructions first. If they don’t work, continue reading below.
-
-
-Linux
-~~~~~
-
-On Linux, open a terminal window and run these commands. Copy and paste
-each line separately::
-
-	wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
-	bash Miniconda3-latest-Linux-x86_64.sh
-
-Close the terminal window and open a new one. Then run::
-
-	conda install -c bioconda igdiscover
-	igdiscover --version
-
-If the last command outputs the current version of IgDiscover, it worked! Skip
-to the next section if you have problems.
+There are also :ref:`non-Conda installation instructions <manual-installation>`
+if you cannot use Conda.
 
 
-OS X/macOS
-~~~~~~~~~~
+.. _install-with-conda:
 
-On macOS, `follow the miniconda <https://conda.io/docs/install/quick.html#os-x-miniconda-install>`_
-installation instructions. Then open a terminal window and run::
+Installing IgDiscover with Conda
+--------------------------------
 
-	conda install -c bioconda igdiscover
-	igdiscover --version
+1. Install `Conda <https://conda.io/>`__ by following the `conda installation
+   instructions <https://conda.io/docs/user-guide/install/>`_
+   as appropriate for your system. You will need to choose between a “Miniconda”
+   and “Anaconda” installation. We recommend Miniconda as the download is
+   smaller. If you are in a hurry, these two commands are usually sufficient to
+   install Miniconda on Linux (read the linked document for macOS instructions)::
 
-If the last command outputs the current version of IgDiscover, it worked!
-Keep reading if you have problems.
+       wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
+       bash Miniconda3-latest-Linux-x86_64.sh
 
+   When the installer asks you about modifying the ``PATH`` in your ``.bashrc``
+   file, answer ``yes``.
 
-.. _simple-installation:
+2. Close the terminal window and open a new one. Then test whether conda is
+   installed correctly by running ::
 
-Conda
------
+       conda --version
 
-IgDiscover is written in Python 3 and runs on Linux and OS X. Be aware that running on OS X is not
-as well tested as on Linux, yet.
+   If you see the conda version number, it worked.
+3. Set up Conda so that it can access the
+   `bioconda channel <https://bioconda.github.io/>`__.
+   For that, follow `the instructions on the bioconda
+   website <https://bioconda.github.io/#set-up-channels>`_
+   or simply run these commands::
 
-IgDiscover is easy to install because the program itself and its dependencies are available as
-`Conda <http://conda.pydata.org/docs/>`_ packages. Conda makes it possible to install IgDiscover
-with a single command, but Conda itself needs to be installed first. Since IgDiscover depends on
-many programs that are not available in most Linux distributions (or OS X for that matter), we
-recommend using Conda, but :ref:`non-Conda installation instructions <manual-installation>` are
-also available.
+       conda config --add channels defaults
+       conda config --add channels conda-forge
+       conda config --add channels bioconda
+4. Install IgDiscover with this command::
 
-First, `download and install miniconda <http://conda.pydata.org/docs/install/quick.html>`_.
-That page has instructions for both Linux and OS X. If you are on Linux, either follow the
-instructions there or try these commands::
+       conda create -n igdiscover igdiscover
 
-	wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
-	bash Miniconda3-latest-Linux-x86_64.sh
+   This will create a new so-called “environment” for IgDiscover. **Whenever you
+   want to run IgDiscover, you will need to activate the environment with this
+   command**::
 
-Accept the license, and when you get the question “Do you wish the installer to
-prepend the Miniconda3 install location to PATH in your /home/.../.bashrc”,
-answer ``yes``. If you don’t, you need to note down the ``export PATH=...``
-that the installer prints somewhere and type it in every time before using
-Conda or IgDiscover.
+       source activate igdiscover
 
-.. note::
-    If you use ``zsh`` instead of ``bash`` (applies to Bio-Linux, for example),
-    then you need to manually add the ``export PATH=...`` line to the end of
-    the file ``/home/your-user-name/.zshrc`` instead. The conda installer does
-    not do this for you!
+5. Make sure you have activated the ``igdiscover`` environment.
+   Then test whether IgDiscover is correctly installed with this command::
 
-    Alternatively, change your default shell to bash by running
-    ``chsh -s /bin/bash``.
+       igdiscover --version
 
-Next, close the terminal window and open a new one. Make sure that Conda is
-installed by typing in ``conda list``. If everything is working, you should see
-a list of some packages andd IgDiscover can now be installed.
+   If you see the version number of IgDiscover, it worked!
 
-Install IgDiscover from `the bioconda channel <https://bioconda.github.io/bioconda>`_
-with this command::
-
-	conda install -c bioconda igdiscover python=3.5
-
-The ``python=3.5`` is needed because Conda comes with a default of Python 3.6,
-but bioconda offers only packages for Python 3.5.
-
-Then make sure that it works by running ::
-
-	igdiscover --version
-
-and you should see the version number of IgDiscover.
-
-You should now :ref:`run IgDiscover on the test data set <test>`.
+6. You can now :ref:`run IgDiscover on the test data set <test>` to familiarize
+   yourself with how it works.
 
 
-If you cannot or do not want to use Conda, you need to follow the
-:ref:`manual installation instructions <manual-installation>`.
-
-
-Troubleshooting on OS X
------------------------
-
-If you get the error ::
-
-    ValueError: unknown locale: UTF-8
-
-Then follow `these instructions <http://conda.pydata.org/docs/troubleshooting.html#unknown-locale>`_.
+.. _troubleshooting:
 
 
 Troubleshooting on Linux
 ------------------------
+
+If you use ``zsh`` instead of ``bash`` (applies to Bio-Linux, for example),
+the ``$PATH`` environment variable will not be setup correctly by the
+Conda installer. The miniconda installer adds a line ``export PATH=...`` to the
+to the end of your ``/home/your-user-name/.bashrc`` file. Copy that line from
+the file and add it to the end of the file ``/home/your-user-name/.zshrc``
+instead.
+
+Alternatively, change your default shell to bash by running
+``chsh -s /bin/bash``.
 
 If you use conda and see an error that includes something like this::
 
@@ -126,6 +97,17 @@ installation of IgDiscover is interfering with the conda installation.
 The easiest way to solve this problem is to delete the directory ``.local/`` in
 your home directory, see also :ref:`how to remove IgDiscover from a Linux
 system <removing-igdiscover>`.
+
+
+Troubleshooting on macOS
+------------------------
+
+If you get the error ::
+
+    ValueError: unknown locale: UTF-8
+
+Then follow `these instructions <https://conda.io/docs/user-guide/troubleshooting.html#macos-error-valueerror-unknown-locale-utf-8>`_.
+
 
 Development version
 -------------------

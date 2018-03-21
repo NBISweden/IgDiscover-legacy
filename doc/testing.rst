@@ -63,5 +63,5 @@ our Nature Communications paper from 2016, in particular
 `ERR1760498 <https://www.ebi.ac.uk/ena/data/view/ERR1760498>`_, which is the data for the human “H1”
 sample (multiplex PCR, IgM heavy chain).
 
-Data used for testing TCR detection (human, RACE): `SRR2905677 <https://www.ncbi.nlm.nih.gov/sra/SRR2905677/`_ and
+Data used for testing TCR detection (human, RACE): `SRR2905677 <https://www.ncbi.nlm.nih.gov/sra/SRR2905677/>`_ and
 `SRR2905710 <https://www.ncbi.nlm.nih.gov/sra/SRR2905710/>`_.
