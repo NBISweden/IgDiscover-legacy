@@ -2,8 +2,8 @@
 Changes
 =======
 
-development version
--------------------
+v0.9 (2018-03-22)
+-----------------
 
 * Implemented allele ratio filtering for J gene discovery
 * J genes are discovered as part of the pipeline (previously, one needed
