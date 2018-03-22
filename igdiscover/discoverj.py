@@ -36,6 +36,9 @@ def add_arguments(parser):
 	arg('--min-count', metavar='N', type=int, default=None,
 		help='Omit candidates with fewer than N exact occurrences in the input table. '
 			'Default: 10 for D, 100 for V and J')
+	arg('--no-perfect-matches', dest='perfect_matches', default=True, action='store_false',
+		help='Do not filter out sequences for which the V assignment (or J for --gene=V) '
+			'has more than one error')
 
 	# --gene=D options
 	arg('--d-core-length', metavar='L', type=int, default=6,
@@ -150,7 +153,7 @@ class AlleleRatioMerger(Merger):
 		return None
 
 
-def count_occurrences(candidates, table_path, search_columns, other_gene, other_errors, merge):
+def count_occurrences(candidates, table_path, search_columns, other_gene, other_errors, merge, perfect_matches):
 	"""
 	Count how often each candidate sequence occurs in the input table.
 	The columns named in search_columns are concatenated and searched.
@@ -181,7 +184,8 @@ def count_occurrences(candidates, table_path, search_columns, other_gene, other_
 	cols = [other_gene, 'V_errors', 'J_errors', 'CDR3_nt'] + search_columns
 	for chunk in pd.read_csv(table_path, usecols=cols, chunksize=10000, sep='\t'):
 		fix_columns(chunk)
-		chunk = chunk[chunk[other_errors] == 0]
+		if perfect_matches:
+			chunk = chunk[chunk[other_errors] == 0]
 		# concatenate search columns
 		if len(chunk) == 0:  # TODO that this is needed is possibly a pandas bug
 			continue
@@ -219,16 +223,16 @@ def discard_substring_occurrences(candidates):
 			yield short
 
 
-def sequence_candidates(table, column, minimum_length, core=slice(None, None)):
+def sequence_candidates(table, column, minimum_length, core=slice(None, None), min_occ=2):
 	"""
 	Generate candidates by clustering all sequences in a column
-	(usually V_nt, J_nt). At least two occurrences are required.
+	(usually V_nt, J_nt). At least min_occ occurrences are required.
 
 	core -- a slice object. If given, the strings in the column are
 	       sliced before being clustered.
 	"""
 	for sequence, occ in table[column].str[core].value_counts().items():
-		if len(sequence) >= minimum_length and occ >= 2:
+		if len(sequence) >= minimum_length and occ >= min_occ:
 			yield Candidate(None, sequence, max_count=occ)
 
 
@@ -266,8 +270,9 @@ def main(args):
 	table = read_table(args.table,
 		usecols=['count', 'V_gene', 'J_gene', 'V_errors', 'J_errors', column, 'CDR3_nt'])
 	logger.info('Table with %s rows read', len(table))
-	table = table[table[other_errors] == 0]
-	logger.info('Keeping %s rows that have no %s mismatches', len(table), other)
+	if args.perfect_matches:
+		table = table[table[other_errors] == 0]
+		logger.info('Keeping %s rows that have no %s mismatches', len(table), other)
 
 	if args.merge is None:
 		args.merge = args.gene == 'D'
@@ -277,6 +282,9 @@ def main(args):
 	if args.gene == 'D':
 		candidates = sequence_candidates(
 			table, column, minimum_length=args.d_core_length, core=args.d_core)
+	elif args.gene == 'J':
+		candidates = sequence_candidates(
+			table, column, minimum_length=MINIMUM_CANDIDATE_LENGTH, min_occ=100)
 	else:
 		candidates = sequence_candidates(
 			table, column, minimum_length=MINIMUM_CANDIDATE_LENGTH)
@@ -302,10 +310,12 @@ def main(args):
 	logger.info('Counting occurrences ...')
 	if args.gene == 'D':
 		search_columns = ['VD_junction', 'D_region', 'DJ_junction']
+	elif args.gene == 'J':
+		search_columns = ['DJ_junction', 'J_nt']
 	else:
 		search_columns = ['genomic_sequence']
 	records = count_occurrences(candidates, args.table, search_columns, other_gene, other_errors,
-		args.merge)
+		args.merge, args.perfect_matches)
 
 	logger.info('%d records', len(records))
 	# Assign names etc.
