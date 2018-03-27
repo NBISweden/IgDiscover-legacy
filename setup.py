@@ -28,7 +28,7 @@ setup(
 		'pandas>=0.16.2',
 		'numpy',
 		'matplotlib>=1.5.0',
-		'seaborn==0.7.1',
+		'seaborn',
 		'snakemake>=3.9.0',
 		'cutadapt',
 		'scipy>=0.16.1',
