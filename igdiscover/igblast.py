@@ -83,8 +83,6 @@ class IgBlastCache:
 		self._cachedir = os.path.join(cache_home, 'igdiscover')
 		logger.info('Caching IgBLAST results in %r', self._cachedir)
 		self._lock = multiprocessing.Lock()
-		self._cache_hits = 0
-		self._cache_misses = 0
 
 	def _path(self, digest):
 		"""Return path to cache file given a digest"""
@@ -119,17 +117,8 @@ class IgBlastCache:
 				universal_newlines=True)
 			with self._lock:  # TODO does this help?
 				self._store(digest, data)
-			self._cache_misses += 1
-		else:
-			self._cache_hits += 1
 
 		return data
-
-	def cache_stats(self):
-		return self._cache_misses, self._cache_hits
-
-	def cache_hit_rate(self):
-		return self._cache_hits / (self._cache_misses + self._cache_hits)
 
 
 def run_igblast(sequences, blastdb_dir, species, sequence_type, penalty=None, use_cache=True) -> str:
@@ -375,13 +364,10 @@ def main(args):
 				elapsed = time.time() - start_time
 				if elapsed >= last_status_update + 60:
 					logger.info(
-						'Processed {:10,d} sequences at {:.3f} ms/sequence, {:.1%} cache hits'.format(
-							n, elapsed / n * 1E3, _igblastcache.cache_hit_rate()))
+						'Processed {:10,d} sequences at {:.3f} ms/sequence'.format(n, elapsed / n * 1E3))
 					last_status_update = elapsed
 	elapsed = time.time() - start_time
-	logger.info(
-		'Processed {:10,d} sequences at {:.3f} ms/sequence, {:.1%} cache hits'.format(
-			n, elapsed / n * 1E3, _igblastcache.cache_hit_rate()))
+	logger.info('Processed {:10,d} sequences at {:.1f} ms/sequence'.format(n, elapsed / n * 1E3))
 
 	logger.info('%d IgBLAST assignments parsed and written', n)
 	logger.info('CDR3s detected in %.1f%% of all sequences', detected_cdr3s / n * 100)
