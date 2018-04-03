@@ -16,7 +16,7 @@ from collections import namedtuple
 import functools
 
 from sqt.dna import reverse_complement
-from sqt.align import edit_distance
+from sqt.align import edit_distance, hamming_distance
 
 from .utils import nt_to_aa
 from .species import find_cdr3, CDR3_SEARCH_START
@@ -399,17 +399,6 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 			d['subject_alignment'] = preceding_base + d['subject_alignment']
 		return Hit(**d)
 
-	def _aa_region_mutations(self, region, aa_sequence):
-		"""
-		For a given region, compute number of amino-acid level mutations
-		between the query and reference.
-
-		Return a tuple no_of_mutations, aa_region_length. Raise KeyError if no
-		information for the region is available.
-		"""
-		reference_sequence = self._database.v_regions_aa[self.v_gene][region]
-		return edit_distance(aa_sequence, reference_sequence), len(reference_sequence)
-
 	def asdict(self):
 		"""
 		Return a flattened representation of this record as a dictionary.
@@ -473,9 +462,20 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 				if not aa_regions[region]:
 					break
 				try:
-					mutations, length = self._aa_region_mutations(region, aa_regions[region])
+					reference_sequence = self._database.v_regions_aa[self.v_gene][region]
 				except KeyError:
 					break
+				aa_sequence = aa_regions[region]
+
+				# We previously computed edit distance, but some FR1 alignments are reported
+				# with a frameshift by IgBLAST. By requiring that reference and query FR1
+				# lengths are identical, we can filter out these cases (and use Hamming distance
+				# to get a bit of a speedup)
+				if len(nt_regions[region]) != len(self._database.v_regions_nt[self.v_gene][region]):
+					break
+				mutations = hamming_distance(reference_sequence, aa_sequence)
+				length = len(reference_sequence)
+				assert not (region == 'FR1' and mutations / length >= 0.8)
 				rates[region] = 100. * mutations / length
 				v_aa_mutations += mutations
 				v_aa_length += length
