@@ -13,6 +13,7 @@ A few extra things are done in addition to parsing:
 import csv
 import logging
 from collections import namedtuple
+import functools
 
 from sqt.dna import reverse_complement
 from sqt.align import edit_distance
@@ -56,7 +57,7 @@ def split_by_section(iterable, section_starts):
 	if header is not None:
 		yield (header, lines)
 
-
+# Each alignment summary describes a region in the V region (FR1, CDR1, etc. up to CDR3)
 AlignmentSummary = namedtuple('AlignmentSummary', 'start stop length matches mismatches gaps percent_identity')
 JunctionVDJ = namedtuple('JunctionVDJ', 'v_end vd_junction d_region dj_junction j_start')
 JunctionVJ = namedtuple('JunctionVJ', 'v_end vj_junction j_start')
@@ -598,13 +599,22 @@ class IgBlastParser:
 		'Total queries = ',
 	])
 
-	def __init__(self, sequences, igblast_lines):
+	def __init__(self, sequences, igblast_lines, database=None):
+		"""
+		If a database is given, iterating over this object will
+		yield ExtendedIgBlastRecord objects, otherwise 'normal' IgBlastRecord objects
+		"""
 		self._sequences = sequences
 		self._igblast_lines = igblast_lines
+		self._database = database
+		if self._database is None:
+			self._create_record = IgBlastRecord
+		else:
+			self._create_record = functools.partial(ExtendedIgBlastRecord, database=self._database)
 
 	def __iter__(self):
 		"""
-		Yield IgBlastRecord objects
+		Yield (Extended-)IgBlastRecord objects
 		"""
 		zipped = zip(self._sequences, split_by_section(self._igblast_lines, ['# IGBLASTN']))
 		for fasta_record, (record_header, record_lines) in zipped:
@@ -695,7 +705,7 @@ class IgBlastParser:
 				assert chain in (None, 'VL', 'VH', 'VK', 'NON', 'VA', 'VB', 'VG', 'VD'), chain
 				assert qsequence == full_sequence[hit.query_start:hit.query_start+len(qsequence)]
 
-		return IgBlastRecord(
+		return self._create_record(
 			query_name=query_name,
 			alignments=alignments,
 			v_gene=v_gene,
@@ -740,16 +750,6 @@ class IgBlastParser:
 		hit = Hit(subject_id, query_start, query_alignment, subject_start,
 			subject_alignment, subject_length, percent_identity, evalue)
 		return hit, gene
-
-
-class ExtendedIgBlastParser:
-	def __init__(self, sequences, igblast_lines, database):
-		self._parser = IgBlastParser(sequences, igblast_lines)
-		self._database = database
-
-	def __iter__(self):
-		for record in self._parser:
-			yield ExtendedIgBlastRecord(self._database, **record.__dict__)
 
 
 class TableWriter:

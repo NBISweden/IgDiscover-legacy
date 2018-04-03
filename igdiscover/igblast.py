@@ -39,7 +39,7 @@ from sqt.utils import available_cpu_count
 from sqt.dna import nt_to_aa
 
 from .utils import get_cpu_time, SerialPool
-from .parse import TableWriter, IgBlastParser, ExtendedIgBlastParser
+from .parse import TableWriter, IgBlastParser
 from .species import cdr3_start, cdr3_end
 
 
@@ -201,15 +201,12 @@ class Runner:
 	def __call__(self, sequences):
 		"""
 		Return tuples (igblast_result, records) where igblast_result is the raw IgBLAST output
-		and records is a list of ExtendedIgBlastRecord objects (the parsed output).
+		and records is a list of (Extended-)IgBlastRecord objects (the parsed output).
 		"""
 		igblast_result = run_igblast(sequences, self.blastdb_dir, self.species, self.sequence_type,
 			self.penalty)
 		sio = StringIO(igblast_result)
-		if self.database is None:
-			parser = IgBlastParser(sequences, sio)
-		else:
-			parser = ExtendedIgBlastParser(sequences, sio, self.database)
+		parser = IgBlastParser(sequences, sio, self.database)
 		records = list(parser)
 		assert len(records) == len(sequences)
 		return igblast_result, records
