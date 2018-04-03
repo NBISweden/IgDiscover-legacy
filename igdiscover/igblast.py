@@ -346,6 +346,7 @@ def main(args):
 	detected_cdr3s = 0
 	writer = TableWriter(sys.stdout)
 	start_time = time.time()
+	last_status_update = 0
 	with ExitStack() as stack:
 		if args.raw:
 			raw_output = stack.enter_context(xopen(args.raw, 'w'))
@@ -370,11 +371,13 @@ def main(args):
 				if e.errno == errno.EPIPE:
 					sys.exit(1)
 				raise
-			if n % 100000 == 0:
+			if n % 1000 == 0:
 				elapsed = time.time() - start_time
-				logger.info(
-					'Processed {:10,d} sequences at {:.3f} ms/sequence, {:.1%} cache hits'.format(
-						n, elapsed / n * 1E3, _igblastcache.cache_hit_rate()))
+				if elapsed >= last_status_update + 60:
+					logger.info(
+						'Processed {:10,d} sequences at {:.3f} ms/sequence, {:.1%} cache hits'.format(
+							n, elapsed / n * 1E3, _igblastcache.cache_hit_rate()))
+					last_status_update = elapsed
 	elapsed = time.time() - start_time
 	logger.info(
 		'Processed {:10,d} sequences at {:.3f} ms/sequence, {:.1%} cache hits'.format(
