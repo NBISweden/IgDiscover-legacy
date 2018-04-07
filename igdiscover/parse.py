@@ -475,7 +475,10 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 					break
 				mutations = hamming_distance(reference_sequence, aa_sequence)
 				length = len(reference_sequence)
-				assert not (region == 'FR1' and mutations / length >= 0.8)
+				# If the mutation rate is still obviously too high, assume something went
+				# wrong and skip mutation rate assignment
+				if region == 'FR1' and mutations / length >= 0.8:
+					break
 				rates[region] = 100. * mutations / length
 				v_aa_mutations += mutations
 				v_aa_length += length
