@@ -11,6 +11,7 @@ from .utils import downsampled, plural_s
 from .cluster import cluster_sequences
 
 logger = logging.getLogger(__name__)
+sns.set()
 
 
 def add_arguments(parser):
