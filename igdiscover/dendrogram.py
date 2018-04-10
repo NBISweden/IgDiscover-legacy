@@ -13,6 +13,7 @@ from igdiscover.utils import distances
 
 
 logger = logging.getLogger(__name__)
+sns.set()
 
 
 def add_arguments(parser):

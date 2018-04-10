@@ -83,6 +83,7 @@ def plot_counts(counts, gene_type):
 	import matplotlib.pyplot as plt
 	import seaborn as sns
 	import numpy as np
+	sns.set()
 
 	fig = plt.figure(figsize=((50 + len(counts) * 5) / 25.4, 210/25.4))
 	matplotlib.rcParams.update({'font.size': 14})
