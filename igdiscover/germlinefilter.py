@@ -328,7 +328,7 @@ def main(args):
 			overall_table.loc[row[0], 'whitelist_diff'] = distance
 	else:
 		overall_table.whitelist_diff.replace(-1, '', inplace=True)
-	print(overall_table.to_csv(sep='\t', index=False, float_format='%.1f'), end='')
+	print(overall_table.to_csv(sep='\t', index=False, float_format='%.2f'), end='')
 
 	if args.fasta:
 		with open(args.fasta, 'w') as f:
