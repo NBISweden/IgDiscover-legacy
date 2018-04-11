@@ -40,6 +40,8 @@ def add_arguments(parser):
 	arg('--gene', '-g', action='append', default=[],
 		help='Compute consensus for this gene. Can be given multiple times. '
 			'Default: Compute for all genes.')
+	arg('--limit', type=int, default=None, metavar='N',
+		help='Skip remaining genes as soon as at least N candidates were generated. Default: No limit')
 	arg('--left', '-l', type=float, metavar='ERROR-RATE',
 		help='For consensus, include only sequences that have at least this '
 			'error rate (in percent). Default: %(default)s', default=0)
@@ -509,13 +511,15 @@ def main(args):
 		max_n_bases=args.max_n_bases, exact_copies=args.exact_copies,
 		d_coverage=args.d_coverage, d_evalue=args.d_evalue,
 		seed=seed, cdr3_counts=cdr3_counts)
-	n_consensus = 0
 
 	Pool = SerialPool if args.threads == 1 else multiprocessing.Pool
+	n_candidates = 0
 	with Pool(args.threads) as pool:
 		for candidates in pool.imap(discoverer, groups, chunksize=1):
 			for candidate in candidates:
 				writer.writerow(candidate.formatted_dict())
+			n_candidates += len(candidates)
+			if args.limit is not None and n_candidates >= args.limit:
+				break
 			sys.stdout.flush()
-			n_consensus += len(candidates)
-	logger.info('%s consensus sequences for %s gene(s) computed', n_consensus, len(groups))
+	logger.info('%s candidate sequences for %s gene(s) generated', n_candidates, len(groups))
