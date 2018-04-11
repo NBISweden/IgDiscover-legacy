@@ -608,7 +608,7 @@ rule igdiscover_discover:
 		ignore_j=' --ignore-J' if config.ignore_j else '',
 		seed=' --seed={}'.format(config.seed) if config.seed is not None else '',
 		exact_copies=' --exact-copies={}'.format(config.exact_copies) if config.exact_copies is not None else ''
-	threads: 6
+	threads: 128
 	shell:
 		"time igdiscover discover -j {threads}{params.seed}{params.ignore_j}{params.exact_copies} "
 		"--d-coverage={config.d_coverage} "
