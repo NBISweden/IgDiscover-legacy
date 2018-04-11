@@ -7,10 +7,10 @@ import re
 import random
 import hashlib
 import resource
-from collections import OrderedDict
+from collections import OrderedDict, Counter
 
 import numpy as np
-from sqt.align import edit_distance, multialign, consensus
+from sqt.align import edit_distance, multialign
 from sqt.dna import GENETIC_CODE, nt_to_aa as _nt_to_aa
 from sqt import SequenceReader
 from cutadapt.align import Aligner
@@ -58,6 +58,39 @@ def distances(sequences, band=0.2):
 	return m
 
 
+# copied from sqt and modified
+def consensus(aligned, threshold=0.7, ambiguous='N', keep_gaps=False):
+	"""
+	Compute a consensus from multialign() output, allowing degraded sequences
+	in the 3' end.
+
+	aligned -- a dict mapping names to sequences or a list of sequences
+	keep_gaps -- whether the returned sequence contains gaps (-)
+	"""
+	n = len(aligned)
+	result = []
+	if hasattr(aligned, 'values'):
+		sequences = aligned.values()
+	else:
+		sequences = aligned
+
+	active = int(len(aligned) * 0.05)
+	for i, chars in enumerate(reversed(list(zip(*sequences)))):
+		counter = Counter(chars)
+		active = max(n - counter['-'], active)
+		assert counter['-'] >= n - active
+		counter['-'] -= n - active
+		char, freq = counter.most_common(1)[0]
+		if i >= 10:  # TODO hard-coded
+			active = n
+		if freq / active >= threshold:
+			if keep_gaps or char != '-':
+				result.append(char)
+		else:
+			result.append(ambiguous)
+	return ''.join(result[::-1])
+
+
 def iterative_consensus(sequences, program='muscle-medium', threshold=0.6,
 		subsample_size=200, maximum_subsample_size=1600):
 	"""
@@ -70,6 +103,7 @@ def iterative_consensus(sequences, program='muscle-medium', threshold=0.6,
 	while True:
 		sample = downsampled(sequences, subsample_size)
 		aligned = multialign(OrderedDict(enumerate(sample)), program=program)
+
 		cons = consensus(aligned, threshold=threshold).strip('N')
 		if 'N' not in cons:
 			# This consensus is good enough
