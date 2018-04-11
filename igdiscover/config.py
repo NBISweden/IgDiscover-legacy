@@ -54,6 +54,7 @@ class Config:
 			cross_mapping_ratio=0.02,
 			clonotype_ratio=0.12,
 			exact_ratio=0.12,
+			cdr3_shared_ratio=0.8,
 			unique_d_ratio=0.3,
 			unique_d_threshold=10
 		)
@@ -67,6 +68,7 @@ class Config:
 			cross_mapping_ratio=0.02,
 			clonotype_ratio=0.12,
 			exact_ratio=0.12,
+			cdr3_shared_ratio=0.8,
 			unique_d_ratio=0.3,
 			unique_d_threshold=10
 		)

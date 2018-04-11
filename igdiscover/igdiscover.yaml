@@ -185,6 +185,7 @@ pre_germline_filter:
   cross_mapping_ratio: 0.02  # Threshold for removal of cross-mapping artifacts (set to 0 to disable)
   clonotype_ratio: 0.12      # Required minimum ratio of clonotype counts between alleles of the same gene
   exact_ratio: 0.12          # Required minimum ratio of "exact" counts between alleles of the same gene
+  cdr3_shared_ratio: 0.8     # Maximum allowed CDR3_shared_ratio
   unique_d_ratio: 0.3        # Minimum Ds_exact ratio between alleles
   unique_d_threshold: 10     # Check Ds_exact ratio only if highest-expressed allele has at least this Ds_exact count
 
@@ -202,6 +203,7 @@ germline_filter:
   cross_mapping_ratio: 0.02  # Threshold for removal of cross-mapping artifacts (set to 0 to disable)
   clonotype_ratio: 0.12      # Required minimum ratio of clonotype counts between alleles of the same gene
   exact_ratio: 0.12          # Required minimum ratio of "exact" counts between alleles of the same gene
+  cdr3_shared_ratio: 0.8     # Maximum allowed CDR3_shared_ratio
   unique_d_ratio: 0.3        # Minimum Ds_exact ratio between alleles
   unique_d_threshold: 10     # Check Ds_exact ratio only if highest-expressed allele has at least this Ds_exact count
 

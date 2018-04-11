@@ -54,10 +54,12 @@ def add_arguments(parser):
 		help='Ratio for detection of cross-mapping artifacts. Default: %(default)s')
 	arg('--clonotype-ratio', '--allele-ratio', type=float, metavar='RATIO', default=0.1,
 		help='Required ratio of "clonotypes" counts between alleles. '
-		     'Works only for genes named "NAME*ALLELE". Default: %(default)s')
+			'Works only for genes named "NAME*ALLELE". Default: %(default)s')
 	arg('--exact-ratio', type=float, metavar='RATIO', default=0.1,
 		help='Required ratio of "exact" counts between alleles. '
-		     'Works only for genes named "NAME*ALLELE". Default: %(default)s')
+			'Works only for genes named "NAME*ALLELE". Default: %(default)s')
+	arg('--cdr3-shared-ratio', type=float, metavar='RATIO', default=1.0,
+		help='Maximum allowed CDR3_shared_ratio. Default: %(default)s')
 	arg('--minimum-db-diff', '-b', type=int, metavar='N', default=0,
 		help='Sequences must have at least N differences to the database '
 		'sequence. Default: %(default)s')
@@ -268,6 +270,7 @@ def main(args):
 		if 'N_bases' in table.columns:
 			table = table[table.N_bases <= args.maximum_N]
 		table = table[table.CDR3s_exact >= args.unique_CDR3]
+		table = table[table.CDR3_shared_ratio <= args.cdr3_shared_ratio]
 		table = table[table.Js_exact >= args.unique_J]
 		if not args.allow_stop:
 			table = table[(table.has_stop == 0) | (table.whitelist_diff == 0)]

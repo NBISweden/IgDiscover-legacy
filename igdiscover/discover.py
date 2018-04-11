@@ -80,7 +80,7 @@ def add_arguments(parser):
 			'coverage of COVERAGE (in percent). Default: %(default)s)')
 	arg('--clonotype-diff', metavar='DIFFERENCES', type=int, default=6,
 		help='When clustering CDR3s to computer the no. of clonotypes, allow DIFFERENCES '
-		     'between (nucleotide-)sequences. Default: %(default)s')
+			'between (nucleotide-)sequences. Default: %(default)s')
 	arg('table', help='Table with parsed IgBLAST results')
 
 
