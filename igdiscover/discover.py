@@ -481,7 +481,7 @@ def main(args):
 	columns = list(Candidate._fields)
 	if not args.max_n_bases:
 		columns.remove('N_bases')
-	writer = csv.DictWriter(sys.stdout, fieldnames=columns, delimiter='\t', extrasaction='ignore')
+	writer = csv.DictWriter(sys.stdout, fieldnames=columns, delimiter='\t', lineterminator='\n', extrasaction='ignore')
 	writer.writeheader()
 	genes = set(args.gene)
 	if args.window_width:
