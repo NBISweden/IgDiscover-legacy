@@ -37,12 +37,24 @@ def distances(sequences, band=0.2):
 	Entry [i,j] in the matrix is the edit distance between sequences[i]
 	and sequences[j].
 	"""
+	# Pre-compute distances between unique sequences
+	unique_sequences = list(set(sequences))
+	unique_distances = dict()  # maps (seq1, seq2) tuples to edit distance
+	maxdiff = max((int(len(s) * band) for s in sequences), default=0)  # TODO double-check this
+	for i, s in enumerate(unique_sequences):
+		for j, t in enumerate(unique_sequences):
+			if i < j:
+				dist = min(maxdiff+1, edit_distance(s, t, maxdiff=maxdiff))
+				unique_distances[(t, s)] = dist
+				unique_distances[(s, t)] = dist
+
+	# Fill the result matrix
 	m = np.zeros((len(sequences), len(sequences)), dtype=float)
-	maxdiff = max((int(len(s) * band) for s in sequences), default=0)
 	for i, s in enumerate(sequences):
 		for j, t in enumerate(sequences):
 			if i < j:
-				m[j, i] = m[i, j] = min(maxdiff+1, edit_distance(s, t, maxdiff=maxdiff))
+				d = 0 if s == t else unique_distances[(s, t)]
+				m[j, i] = m[i, j] = d
 	return m
 
 
