@@ -1,5 +1,5 @@
 """
-Discover candidate new V genes within a single antibody library.
+Discover candidate new V genes within a single antibody library
 
 Existing V sequences are grouped by their V gene assignment, and within each
 group, consensus sequences are computed.
@@ -19,7 +19,8 @@ from sqt.align import edit_distance
 from sqt.utils import available_cpu_count
 
 from .table import read_table
-from .utils import iterative_consensus, unique_name, downsampled, SerialPool, Merger, has_stop
+from .utils import (iterative_consensus, unique_name, downsampled, SerialPool, Merger, has_stop,
+	describe_nt_change)
 from .cluster import cluster_sequences, single_linkage
 
 logger = logging.getLogger(__name__)
@@ -355,8 +356,10 @@ class Discoverer:
 					unique_barcodes=unique_barcodes)
 			if gene in self.database:
 				database_diff = edit_distance(sibling, self.database[gene])
+				database_changes = describe_nt_change(self.database[gene], sibling)
 			else:
 				database_diff = None
+				database_changes = None
 
 			# Build the Candidate
 			sequence_id = gene if database_diff == 0 else unique_name(gene, sibling)
@@ -384,6 +387,7 @@ class Discoverer:
 				CDR3_shared_ratio=info['exact'].shared_CDR3_ratio,
 				N_bases=n_bases,
 				database_diff=database_diff,
+				database_changes=database_changes,
 				has_stop=has_stop(sibling),
 				CDR3_start=cdr3_start,
 				consensus=sibling,
@@ -410,6 +414,7 @@ class Candidate(namedtuple('_Candidate', [
 	'CDR3_shared_ratio',
 	'N_bases',
 	'database_diff',
+	'database_changes',
 	'has_stop',
 	'CDR3_start',
 	'consensus',
