@@ -1,16 +1,16 @@
 """
 Query two ...
 """
+import sys
 import logging
 from itertools import islice
 from collections import Counter
 from io import StringIO
-import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import FigureCanvasPdf, PdfPages
 import pandas as pd
 import seaborn as sns
 
-sns.set()#style='white')
+sns.set(style='white')
 logger = logging.getLogger(__name__)
 CM = 1 / 2.54
 
@@ -23,11 +23,13 @@ def add_arguments(parser):
 		help='Read only the first N clonotypes of each table (for fast testing)')
 	arg('--minsize', default=5, type=int, metavar='N',
 		help='Require at least N members in each dataset to plot a clonotype')
+	arg('--names', metavar='NAME[,NAME]...',
+		help='Comma-separated list of dataset names to be used in the legend')
 	arg('pdf', help='PDF output')
 	arg('tables', nargs='+', help='clonotype member tables')
 
 
-def read_dataset(path, cdr3_column='CDR3_aa', limit=None):
+def read_dataset(path, cdr3_column='CDR3_aa', limit=None, minsize=1):
 	usecols = [
 		'V_gene',
 		'J_gene',
@@ -42,26 +44,43 @@ def read_dataset(path, cdr3_column='CDR3_aa', limit=None):
 	]
 	column_names = list(pd.read_csv(path, sep='\t', nrows=0).columns)
 	assert 'CDR3_length' in column_names
+	logger.info('Reading %s', path)
 	with open(path) as f:
 		data = f.read()
 	first = True
 	tables = []
-	for chunk in islice(data.split('\n\n'), limit):
+	for i, chunk in enumerate(islice(data.split('\n\n'), limit), 1):
+		if not chunk:
+			# The file ends with an empty line that needs to be skipped
+			continue
 		table = pd.read_csv(StringIO(chunk), sep='\t', usecols=usecols, header=0 if first else None,
 			names=column_names)
 		first = False
 		assert len(set(table[cdr3_column])) == 1
-		tables.append(table.set_index(['V_gene', 'J_gene', cdr3_column]).sort_index())
+		if len(table) >= minsize:
+			tables.append(table.set_index(['V_gene', 'J_gene', cdr3_column]).sort_index())
+		if i % 10000 == 0:
+			logger.info('Read %s clones', i)
+	logger.info('Read %s clones', i)
 	return pd.concat(tables)
 
 
 def main(args):
+	logger.info('Will plot results to %s', args.pdf)
 	cdr3_column = 'CDR3_nt' if args.nt else 'CDR3_aa'
 	n_datasets = len(args.tables)
-	datasets = (read_dataset(path, limit=args.limit) for path in args.tables)
+	if args.names:
+		names = args.names.split(',')
+		if len(names) != n_datasets:
+			logger.error('%s dataset names given, but %s datasets provided', len(names), n_datasets)
+			sys.exit(1)
+	else:
+		names = list(range(n_datasets))
+
+	datasets = (read_dataset(path, limit=args.limit, minsize=args.minsize) for path in args.tables)
 	df = pd.concat(datasets, keys=range(n_datasets), names=['dataset_id'])
 	logger.info('Read %s tables', n_datasets)
-	df.rename(columns=lambda x: x[:-4], inplace=True)
+	df.rename(columns=lambda x: x[:-4], inplace=True)  # Removes _SHM suffix
 	cols = ['V_gene', 'J_gene', cdr3_column]
 	n = 0
 	with PdfPages(args.pdf) as pages:
@@ -78,7 +97,9 @@ def main(args):
 			table = group.stack()
 			table.index.set_names('region', level=1, inplace=True)
 			table.name = 'SHM'
-			g = sns.factorplot(data=table.reset_index(), x='region', y='SHM', hue='dataset_id',
+			table = table.reset_index()
+			table = table.assign(Dataset=table['dataset_id'].map(lambda i: names[i]))
+			g = sns.factorplot(data=table, x='region', y='SHM', hue='Dataset',
 				kind='violin', size=5, aspect=2)
 			dscounts = ' vs '.join(str(counter[i]) for i in range(n_datasets))
 			g.fig.suptitle('V: {} – J: {} – CDR3: {} ({})'.format(v_gene, j_gene, cdr3, dscounts))
