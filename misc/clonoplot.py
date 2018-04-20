@@ -10,7 +10,7 @@ from matplotlib.backends.backend_pdf import FigureCanvasPdf, PdfPages
 import pandas as pd
 import seaborn as sns
 
-sns.set(style='white')
+sns.set(style='white', font_scale=1.5, rc={"lines.linewidth": 1}))
 logger = logging.getLogger(__name__)
 CM = 1 / 2.54
 
@@ -100,7 +100,7 @@ def main(args):
 			table = table.reset_index()
 			table = table.assign(Dataset=table['dataset_id'].map(lambda i: names[i]))
 			g = sns.factorplot(data=table, x='region', y='SHM', hue='Dataset',
-				kind='violin', size=5, aspect=2)
+				kind='violin', size=16*CM, aspect=2)
 			dscounts = ' vs '.join(str(counter[i]) for i in range(n_datasets))
 			g.fig.suptitle('V: {} – J: {} – CDR3: {} ({})'.format(v_gene, j_gene, cdr3, dscounts))
 			g.set_axis_labels('Region')
