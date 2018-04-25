@@ -47,7 +47,7 @@ def add_arguments(parser):
 	arg('--cluster-size', type=int, metavar='N', default=0,
 		help='Consensus must represent at least N sequences. '
 		'Default: %(default)s')
-	arg('--max-differences', type=int, metavar='MAXDIFF', default=1,
+	arg('--max-differences', type=int, metavar='MAXDIFF', default=0,
 		help='Merge sequences if they have at most MAXDIFF differences. '
 		'The one with more CDR3s is kept. Default: %(default)s')
 	arg('--cross-mapping-ratio', type=float, metavar='RATIO', default=0.02,
