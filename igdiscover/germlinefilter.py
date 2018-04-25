@@ -171,6 +171,8 @@ class SequenceMerger(Merger):
 			# CDR3_clusters values
 			if self._clonotype_ratio:
 				for u, v in [(s, t), (t, s)]:
+					if v.clonotypes == 0:
+						continue
 					ratio = u.clonotypes / v.clonotypes
 					if ratio < self._clonotype_ratio:
 						logger.info('Clonotype allele ratio %.4f too low for %r compared to %r',
