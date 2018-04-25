@@ -18,3 +18,4 @@ testrun
 dist/
 igblast/
 *.pyc
+.pytest_cache/
