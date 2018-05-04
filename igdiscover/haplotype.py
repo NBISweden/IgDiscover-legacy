@@ -64,17 +64,23 @@ class GeneMissing(Exception):
 
 
 def sorted_haplotype(haplotypes, gene_order):
-	# import ipdb; ipdb.set_trace()
-	d = {name: i for i, name in enumerate(gene_order)}
+	gene_order = {name: i for i, name in enumerate(gene_order)}
 
 	def keyfunc(hap):
 		name = hap[0] if hap[0] else hap[1]
-		gene = name.partition('*')[0]
+		gene, _, allele = name.partition('*')
 		try:
-			return d[gene]
+			allele = int(allele)
+		except ValueError:
+			allele = 999
+		try:
+			index = gene_order[gene]
 		except KeyError:
-			raise GeneMissing(gene)
-
+			#raise GeneMissing(gene)
+			logger.warning('Gene %s not found in gene order file, placing it at the end',
+				gene)
+			index = 1000000
+		return index * 1000 + allele
 	return sorted(haplotypes, key=keyfunc)
 
 
@@ -234,12 +240,12 @@ def main(args):
 			haplotype.extend(cooccurrences(coexpressions, het_alleles, target_groups))
 
 		if gene_order is not None:
-			try:
-				haplotype = sorted_haplotype(haplotype, gene_order)
-			except GeneMissing as e:
-				logger.error('Could not sort genes: gene %r not found in %r',
-					str(e), args.order)
-				sys.exit(1)
+			# try:
+			haplotype = sorted_haplotype(haplotype, gene_order)
+			# except GeneMissing as e:
+			# 	logger.error('Could not sort genes: gene %r not found in %r',
+			# 		str(e), args.order)
+			# 	sys.exit(1)
 
 		print('# {}:'.format(' vs '.join(het_alleles)))
 		print('haplotype1', 'haplotype2', 'type', 'count1', 'count2', sep='\t')

@@ -87,11 +87,20 @@ def main(args):
 
 	if args.order:
 		with SequenceReader(args.order) as f:
-			names = [r.name.partition('*')[0] for r in f]
-			gene_order = {name: index for index, name in enumerate(names)}
+			ordered_names = [r.name.partition('*')[0] for r in f]
+		gene_order = {name: index for index, name in enumerate(ordered_names)}
 
-		matrix['V_gene_tmp'] = pd.Series(matrix.index, index=matrix.index).apply(
-			lambda name: name.partition('*')[0]).map(gene_order)
+		def orderfunc(full_name):
+			name, _, allele = full_name.partition('*')
+			allele = int(allele)
+			try:
+				index = gene_order[name]
+			except KeyError:
+				logger.warning('Gene name %s not found in %r, placing it at the end',
+					name, args.order)
+				index = 1000000
+			return index * 1000 + allele
+		matrix['V_gene_tmp'] = pd.Series(matrix.index, index=matrix.index).apply(orderfunc)
 		matrix.sort_values('V_gene_tmp', inplace=True)
 		del matrix['V_gene_tmp']
 
