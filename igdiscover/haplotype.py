@@ -3,7 +3,9 @@ Determine haplotypes based on co-occurrences of alleles
 """
 import sys
 import logging
+from typing import List, Tuple, Iterator
 import pandas as pd
+from argparse import ArgumentParser
 from sqt import SequenceReader
 from .table import read_table
 
@@ -19,7 +21,7 @@ HETEROZYGOUS_THRESHOLD = 0.1
 EXPRESSED_RATIO = 0.1
 
 
-def add_arguments(parser):
+def add_arguments(parser: ArgumentParser):
 	arg = parser.add_argument
 	arg('--d-evalue', type=float, default=1E-4,
 		help='Maximal allowed E-value for D gene match. Default: %(default)s')
@@ -37,10 +39,10 @@ def add_arguments(parser):
 	arg('table', help='Table with parsed and filtered IgBLAST results')
 
 
-def expression_counts(table, gene_type):
+def expression_counts(table: pd.DataFrame, gene_type: str) -> Iterator[pd.DataFrame]:
 	"""
-	Return a DataFrame with gene and allele as the row index and columns 'name' and
-	'count'. When 'name' is VH1-1*01, gene would be 'VH1-1' and allele
+	Yield DataFrames for each gene with gene and allele as the row index and columns 'name' and
+	'count'. For example, when 'name' is VH1-1*01, gene would be 'VH1-1' and allele
 	would be '01'.
 	"""
 	counts = table.groupby(gene_type + '_gene').size()
@@ -48,15 +50,30 @@ def expression_counts(table, gene_type):
 	expressions = pd.DataFrame(
 		{'gene': names, 'allele': alleles, 'count': counts, 'name': counts.index},
 		columns=['gene', 'allele', 'name', 'count']).set_index(['gene', 'allele'])
-	return expressions
+	del alleles
 
+	# Example expressions at this point:
+	#
+	#                             name  count
+	# gene       allele
+	# IGHV1-18   01        IGHV1-18*01    166
+	#            03        IGHV1-18*03      1
+	# IGHV1-2    02         IGHV1-2*02     85
+	#            04         IGHV1-2*04     16
+	# IGHV1-24   01        IGHV1-24*01      5
 
-def filter_alleles(table):
-	"""
-	Remove alleles that have too low expression relative to the highest-expressed allele
-	"""
-	max_expression = table['count'].max()
-	return table[table['count'] >= HETEROZYGOUS_THRESHOLD * max_expression]
+	logger.info('Heterozygous %s genes:', gene_type)
+	for _, alleles in expressions.groupby(level='gene'):
+		# Remove alleles that have too low expression relative to the highest-expressed allele
+		max_expression = alleles['count'].max()
+		alleles = alleles[alleles['count'] >= HETEROZYGOUS_THRESHOLD * max_expression]
+		if len(alleles) >= 2:
+			logger.info('%s with alleles %s -- Counts: %s',
+				alleles.index[0][0],
+				', '.join(alleles['name']),
+				', '.join(str(x) for x in alleles['count'])
+			)
+		yield alleles
 
 
 class GeneMissing(Exception):
@@ -76,7 +93,6 @@ def sorted_haplotype(haplotypes, gene_order):
 		try:
 			index = gene_order[gene]
 		except KeyError:
-			#raise GeneMissing(gene)
 			logger.warning('Gene %s not found in gene order file, placing it at the end',
 				gene)
 			index = 1000000
@@ -85,26 +101,26 @@ def sorted_haplotype(haplotypes, gene_order):
 
 
 class HeterozygousGene:
-	def __init__(self, name, alleles):
+	def __init__(self, name: str, alleles: List[str]):
 		"""
-		name -- name of this gene, such as VH4-4
+		name -- name of this gene, such as 'VH4-4'
 		alleles -- list of its alleles, such as ['VH4-4*01', 'VH4-4*02']
 		"""
 		self.name = name
 		self.alleles = alleles
 
 
-def compute_coexpressions(table, gene_type1, gene_type2):
+def compute_coexpressions(table: pd.DataFrame, gene_type1: str, gene_type2: str):
 	coexpressions = table.groupby(
 		(gene_type1 + '_gene', gene_type2 + '_gene')).size().to_frame()
 	coexpressions.columns = ['count']
 	return coexpressions
 
 
-def cooccurrences(coexpressions, het_alleles, target_groups):
+def cooccurrences(coexpressions, het_alleles: Tuple[str, str], target_groups):
 	"""
-	het_alleles -- a two-element list of alleles of a heterozygous gene,
-	such as ['IGHJ6*02', 'IGHJ6*03'].
+	het_alleles -- a pair of alleles of a heterozygous gene,
+	such as ('IGHJ6*02', 'IGHJ6*03').
 	"""
 	assert len(het_alleles) == 2
 
@@ -153,6 +169,31 @@ def cooccurrences(coexpressions, het_alleles, target_groups):
 	return haplotype
 
 
+def read_and_filter(path: str, d_evalue: float, d_coverage: float):
+	usecols = ['V_gene', 'D_gene', 'J_gene', 'V_errors', 'D_errors', 'J_errors', 'D_covered',
+		'D_evalue']
+	# Support reading a table without D_errors
+	try:
+		table = read_table(path, usecols=usecols)
+	except ValueError:
+		usecols.remove('D_errors')
+		table = read_table(path, usecols=usecols)
+	logger.info('Table with %s rows read', len(table))
+
+	table = table[table.V_errors == 0]
+	logger.info('%s rows remain after requiring V errors = 0', len(table))
+	table = table[table.J_errors == 0]
+	logger.info('%s rows remain after requiring J errors = 0', len(table))
+	table = table[table.D_evalue <= d_evalue]
+	logger.info('%s rows remain after requiring D E-value <= %s', len(table), d_evalue)
+	table = table[table.D_covered >= d_coverage]
+	logger.info('%s rows remain after requiring D coverage >= %s', len(table), d_coverage)
+	if 'D_errors' in table.columns:
+		table = table[table.D_errors == 0]
+		logger.info('%s rows remain after requiring D errors = 0', len(table))
+	return table
+
+
 def main(args):
 	if args.het == args.gene:
 		logger.error('Gene types given for --het and --gene must not be the same')
@@ -162,68 +203,22 @@ def main(args):
 			gene_order = [r.name for r in sr]
 	else:
 		gene_order = None
-	usecols = ['V_gene', 'D_gene', 'J_gene', 'V_errors', 'D_errors', 'J_errors', 'D_covered',
-		'D_evalue']
-	# Support reading a table without D_errors
-	try:
-		table = read_table(args.table, usecols=usecols)
-	except ValueError:
-		usecols.remove('D_errors')
-		table = read_table(args.table, usecols=usecols)
-	logger.info('Table with %s rows read', len(table))
-
-	table = table[table.V_errors == 0]
-	logger.info('%s rows remain after requiring V errors = 0', len(table))
-	table = table[table.J_errors == 0]
-	logger.info('%s rows remain after requiring J errors = 0', len(table))
-	table = table[table.D_evalue <= args.d_evalue]
-	logger.info('%s rows remain after requiring D E-value <= %s', len(table), args.d_evalue)
-	table = table[table.D_covered >= args.d_coverage]
-	logger.info('%s rows remain after requiring D coverage >= %s', len(table), args.d_coverage)
-	if 'D_errors' in table.columns:
-		table = table[table.D_errors == 0]
-		logger.info('%s rows remain after requiring D errors = 0', len(table))
-
-	# Pre-compute expression levels
-	expressions = {gt: expression_counts(table, gt) for gt in ('V', 'D', 'J')}
-
-	for gene_type in ('V', 'D', 'J'):
-		logger.info('Heterozygous %s genes:', gene_type)
-		for _, group in expressions[gene_type].groupby(level='gene'):
-			group = filter_alleles(group)
-			if len(group) >= 2:
-				logger.info('%s with alleles %s -- Counts: %s',
-					group.index[0][0],
-					', '.join(group['name']),
-					', '.join(str(x) for x in group['count'])
-				)
-
-	def count_heterozygous(groups):
-		return sum(1 for g in groups if len(g) > 1)
-
-	def filtered_group(gene_type):
-		"""Group on gene level, filter out low-expressed genes in each group"""
-		result = []
-		for _, group in expressions[gene_type].groupby(level='gene'):
-			result.append(filter_alleles(group))
-		return result
-
 	het_gene_type = args.het
-
 	if args.gene:
 		target_gene_types = [args.gene]
 	else:
 		target_gene_types = {'V': ['D', 'J'], 'D': ['V', 'J'], 'J': ['V', 'D']}[het_gene_type]
-	filtered_groups = {gene_type: filtered_group(gene_type) for gene_type in ['V', 'D', 'J']}
-	# het_groups and target_groups are expressions grouped by gene (one row is an allele)
-	het_groups = filtered_groups[het_gene_type]
+
+	table = read_and_filter(args.table, args.d_evalue, args.d_coverage)
+	het_expressions = {
+		gene_type: list(expression_counts(table, gene_type)) for gene_type in ['V', 'D', 'J']}
 
 	coexpressions_dict = {
 		gene_type: compute_coexpressions(table, het_gene_type, gene_type)
 		for gene_type in ['V', 'D', 'J']}
 
-	for het_alleles in het_groups:
-		het_alleles = list(het_alleles['name'])
+	for het_alleles in het_expressions[het_gene_type]:
+		het_alleles = tuple(het_alleles['name'])
 		if len(het_alleles) == 1:
 			continue
 		if len(het_alleles) != 2:
@@ -236,16 +231,11 @@ def main(args):
 		haplotype = []
 		for target_gene_type in target_gene_types:
 			coexpressions = coexpressions_dict[target_gene_type]
-			target_groups = filtered_groups[target_gene_type]
+			target_groups = het_expressions[target_gene_type]
 			haplotype.extend(cooccurrences(coexpressions, het_alleles, target_groups))
 
 		if gene_order is not None:
-			# try:
 			haplotype = sorted_haplotype(haplotype, gene_order)
-			# except GeneMissing as e:
-			# 	logger.error('Could not sort genes: gene %r not found in %r',
-			# 		str(e), args.order)
-			# 	sys.exit(1)
 
 		print('# {}:'.format(' vs '.join(het_alleles)))
 		print('haplotype1', 'haplotype2', 'type', 'count1', 'count2', sep='\t')
