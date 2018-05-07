@@ -27,12 +27,6 @@ def add_arguments(parser: ArgumentParser):
 		help='Maximal allowed E-value for D gene match. Default: %(default)s')
 	arg('--d-coverage', '--D-coverage', type=float, default=65,
 		help='Minimum D coverage (in percent). Default: %(default)s%%)')
-	arg('--het', metavar='GENETYPE', choices=('V', 'D', 'J'), default='J',
-		help='Use heterozygous GENETYPE genes as anchoring point for haplotyping. '
-			'Default: %(default)s')
-	arg('--gene', metavar='GENETYPE', choices=('V', 'D', 'J'),
-		help='Haplotype genes of this GENETYPE. Default is to haplotype all except '
-			'the --het gene')
 	arg('--order', metavar='FASTA', default=None,
 		help='Sort the output according to the order of the records in '
 			'this FASTA file.')
@@ -76,6 +70,23 @@ def expression_counts(table: pd.DataFrame, gene_type: str) -> Iterator[pd.DataFr
 		yield alleles
 
 
+def pick_best_het_gene(expressions: pd.DataFrame):
+	"""
+	Given a list of tables of gene expressions, return the table of the gene that has
+	highest expression count and is heterozygous
+	"""
+	best_ex = None
+	best_count = 0
+	for ex in expressions:
+		if len(ex) != 2:
+			continue
+		count = ex['count'].sum()
+		if count > best_count:
+			best_ex = ex
+			best_count = count
+	return best_ex
+
+
 class GeneMissing(Exception):
 	pass
 
@@ -111,6 +122,7 @@ class HeterozygousGene:
 
 
 def compute_coexpressions(table: pd.DataFrame, gene_type1: str, gene_type2: str):
+	assert gene_type1 != gene_type2
 	coexpressions = table.groupby(
 		(gene_type1 + '_gene', gene_type2 + '_gene')).size().to_frame()
 	coexpressions.columns = ['count']
@@ -195,50 +207,45 @@ def read_and_filter(path: str, d_evalue: float, d_coverage: float):
 
 
 def main(args):
-	if args.het == args.gene:
-		logger.error('Gene types given for --het and --gene must not be the same')
-		sys.exit(1)
 	if args.order is not None:
 		with SequenceReader(args.order) as sr:
 			gene_order = [r.name for r in sr]
 	else:
 		gene_order = None
-	het_gene_type = args.het
-	if args.gene:
-		target_gene_types = [args.gene]
-	else:
-		target_gene_types = {'V': ['D', 'J'], 'D': ['V', 'J'], 'J': ['V', 'D']}[het_gene_type]
 
 	table = read_and_filter(args.table, args.d_evalue, args.d_coverage)
 	het_expressions = {
-		gene_type: list(expression_counts(table, gene_type)) for gene_type in ['V', 'D', 'J']}
+		gene_type: list(expression_counts(table, gene_type)) for gene_type in 'VDJ'}
 
-	coexpressions_dict = {
-		gene_type: compute_coexpressions(table, het_gene_type, gene_type)
-		for gene_type in ['V', 'D', 'J']}
+	best_het_genes = {gene_type: pick_best_het_gene(het_expressions[gene_type]) for gene_type in 'VDJ'}
 
-	for het_alleles in het_expressions[het_gene_type]:
-		het_alleles = tuple(het_alleles['name'])
-		if len(het_alleles) == 1:
+	for gene_type in 'VDJ':
+		bhg = best_het_genes[gene_type]
+		text = bhg.index[0][0] if bhg is not None else 'none found'
+		logger.info('Most highly expressed heterozygous %s gene: %s',
+			gene_type, text)
+
+	# Use het. V to haplotype J
+	# Use het. J to haplotype V and D
+	print('haplotype1', 'haplotype2', 'type', 'count1', 'count2', sep='\t')
+
+	# FIXME
+	# phasing of V vs D vs J (across gene types) is not accurate
+	for het_gene, targets in (
+		('V', ('J',)),
+		('J', ('D', 'V')),
+	):
+		het_alleles = best_het_genes[het_gene]
+		if het_alleles is None:
 			continue
-		if len(het_alleles) != 2:
-			logger.warning('More than two alleles found: %s. Skipping!',
-				', '.join(het_alleles))
-			continue
-
-		logger.info('Using heterozygous %s gene alleles %s and %s to haplotype genes',
-			het_gene_type, het_alleles[0], het_alleles[1])
-		haplotype = []
-		for target_gene_type in target_gene_types:
-			coexpressions = coexpressions_dict[target_gene_type]
+		for target_gene_type in targets:
+			coexpressions = compute_coexpressions(table, het_gene, target_gene_type)
 			target_groups = het_expressions[target_gene_type]
-			haplotype.extend(cooccurrences(coexpressions, het_alleles, target_groups))
+			haplotype = cooccurrences(coexpressions, tuple(het_alleles['name']), target_groups)
 
-		if gene_order is not None:
-			haplotype = sorted_haplotype(haplotype, gene_order)
-
-		print('# {}:'.format(' vs '.join(het_alleles)))
-		print('haplotype1', 'haplotype2', 'type', 'count1', 'count2', sep='\t')
-		for h1, h2, typ, count in haplotype:
-			print(h1, h2, typ, count[0], count[1], sep='\t')
-		print()
+			print('# {} haplotype from {}'.format(het_gene, ' and '.join(het_alleles['name'])))
+			if gene_order is not None:
+				haplotype = sorted_haplotype(haplotype, gene_order)
+			for h1, h2, typ, count in haplotype:
+				print(h1, h2, typ, count[0], count[1], sep='\t')
+			print()
