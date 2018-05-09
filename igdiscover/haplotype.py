@@ -181,6 +181,39 @@ def cooccurrences(coexpressions, het_alleles: Tuple[str, str], target_groups):
 	return haplotype
 
 
+class HaplotypePair:
+	"""Haplotype pair for a single gene type (V/D/J)"""
+
+	def __init__(self, haplotype, gene_type, het1, het2):
+		self.haplotype = haplotype
+		self.gene_type = gene_type
+		self.het1 = het1
+		self.het2 = het2
+
+	def sort(self, order):
+		self.haplotype = sorted_haplotype(self.haplotype, order)
+
+	def switch(self):
+		"""Swap the two haplotypes"""
+		self.het2, self.het1 = self.het1, self.het2
+		haplotype = []
+		for name1, name2, type_, counts in self.haplotype:
+			assert len(counts) == 2
+			counts = counts[1], counts[0]
+			haplotype.append((name2, name1, type_, counts))
+		self.haplotype = haplotype
+
+	def to_tsv(self, header=True) -> str:
+		lines = []
+		if header:
+			lines.append('\t'.join(['haplotype1', 'haplotype2', 'type', 'count1', 'count2']))
+		lines.append(
+			'# {} haplotype from {} and {}'.format(self.gene_type, self.het1, self.het2))
+		for h1, h2, typ, count in self.haplotype:
+			lines.append('\t'.join([h1, h2, typ, str(count[0]), str(count[1])]))
+		return '\n'.join(lines) + '\n'
+
+
 def read_and_filter(path: str, d_evalue: float, d_coverage: float):
 	usecols = ['V_gene', 'D_gene', 'J_gene', 'V_errors', 'D_errors', 'J_errors', 'D_covered',
 		'D_evalue']
@@ -225,27 +258,40 @@ def main(args):
 		logger.info('Most highly expressed heterozygous %s gene: %s',
 			gene_type, text)
 
-	# Use het. V to haplotype J
-	# Use het. J to haplotype V and D
-	print('haplotype1', 'haplotype2', 'type', 'count1', 'count2', sep='\t')
+	blocks = []
 
-	# FIXME
-	# phasing of V vs D vs J (across gene types) is not accurate
-	for het_gene, targets in (
-		('V', ('J',)),
-		('J', ('D', 'V')),
+	for target_gene_type, het_gene in (
+		('J', 'V'),
+		('D', 'J'),
+		('V', 'J'),
 	):
 		het_alleles = best_het_genes[het_gene]
 		if het_alleles is None:
 			continue
-		for target_gene_type in targets:
-			coexpressions = compute_coexpressions(table, het_gene, target_gene_type)
-			target_groups = het_expressions[target_gene_type]
-			haplotype = cooccurrences(coexpressions, tuple(het_alleles['name']), target_groups)
+		coexpressions = compute_coexpressions(table, het_gene, target_gene_type)
+		target_groups = het_expressions[target_gene_type]
+		het1, het2 = het_alleles['name']
+		haplotype = cooccurrences(coexpressions, (het1, het2), target_groups)
+		block = HaplotypePair(haplotype, target_gene_type, het1, het2)
+		if gene_order:
+			block.sort(gene_order)
+		blocks.append(block)
 
-			print('# {} haplotype from {}'.format(het_gene, ' and '.join(het_alleles['name'])))
-			if gene_order is not None:
-				haplotype = sorted_haplotype(haplotype, gene_order)
-			for h1, h2, typ, count in haplotype:
-				print(h1, h2, typ, count[0], count[1], sep='\t')
-			print()
+	# Get the phasing right across blocks
+	assert len(blocks) in (0, 1, 3)
+	if len(blocks) == 3:
+		j_hap, d_hap, v_hap = blocks
+		assert j_hap.gene_type == 'J'
+		assert d_hap.gene_type == 'D'
+		assert v_hap.gene_type == 'V'
+		assert d_hap.het1 == v_hap.het1
+		assert d_hap.het2 == v_hap.het2
+		for name1, name2, _, _ in j_hap.haplotype:
+			if (name1, name2) == (v_hap.het2, v_hap.het1):
+				j_hap.switch()
+				break
+
+	header = True
+	for block in blocks:
+		print(block.to_tsv(header=header))
+		header = False
