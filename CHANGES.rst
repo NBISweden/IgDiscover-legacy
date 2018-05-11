@@ -2,6 +2,36 @@
 Changes
 =======
 
+v0.10 (2018-05-11)
+------------------
+
+* When computing a consensus sequence, allow some sequences to be truncated in
+  the 3' end. Many of the discovered novel V alleles were truncated by one
+  nucleotide in the 3' end because IgBLAST does not always extend the
+  alignment to the end of the V sequence. If these slightly too short V
+  sequences were in the majority, their consensus would lead to a truncated
+  sequence as well. The new consensus algorithm allows for this effect at the
+  3' end and can therefore more often than previously find the full sequence.
+  Example::
+
+     TACTGTGCGAGAGA (seq 1)
+     TACTGTGCGAGAGA (seq 2)
+     TACTGTGCGAGAG- (seq 3)
+     TACTGTGCGAG--- (seq 4)
+     TACTGTGCGAG--- (seq 5)
+
+     TACTGTGCGAGAG  (previous consensus)
+     TACTGTGCGAGAGA (new consensus)
+* Add a column ``database_changes`` to the ``new_V_germline.tab`` file that
+  describes how the novel sequence differs from the database sequence. Example:
+  ``93C>T; 114A>G``
+* Allow filtering by ``CDR3_shared_ratio`` and do so by default (needs
+  documentation)
+* Cache the edit distance when computing the distance matrix. Speeds up the
+  ``discover`` command slightly.
+* ``discover``: Use more than six CPU cores if available
+* ``igblast``: Print progress every minute
+
 v0.9 (2018-03-22)
 -----------------
 
