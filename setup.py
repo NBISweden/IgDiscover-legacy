@@ -36,7 +36,7 @@ setup(
 		'ruamel.yaml',
 	],
 	classifiers = [
-		"Development Status :: 3 - Alpha",
+		"Development Status :: 4 - Beta",
 		"Environment :: Console",
 		"Intended Audience :: Science/Research",
 		"License :: OSI Approved :: MIT License",
