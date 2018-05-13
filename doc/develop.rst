@@ -79,6 +79,14 @@ a Git tag::
 
 The ``v`` prefix is mandatory.
 
+Then:
+
+* ``tests/run.sh``
+* ``python3 setup.py sdist``
+* ``twine upload sdist/igdiscover-0.10.tar.gz``
+* Update bioconda recipe
+
+
 .. _removing-igdiscover:
 
 Removing IgDiscover from a Linux system
