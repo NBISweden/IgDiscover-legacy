@@ -1,7 +1,6 @@
 """
 Determine haplotypes based on co-occurrences of alleles
 """
-import sys
 import logging
 from typing import List, Tuple, Iterator
 import pandas as pd
@@ -30,6 +29,8 @@ def add_arguments(parser: ArgumentParser):
 	arg('--order', metavar='FASTA', default=None,
 		help='Sort the output according to the order of the records in '
 			'this FASTA file.')
+	arg('--plot', metavar='FILE', default=None,
+		help='Write a haplotype structure plot to FILE')
 	arg('table', help='Table with parsed and filtered IgBLAST results')
 
 
@@ -85,30 +86,6 @@ def pick_best_het_gene(expressions: pd.DataFrame):
 			best_ex = ex
 			best_count = count
 	return best_ex
-
-
-class GeneMissing(Exception):
-	pass
-
-
-def sorted_haplotype(haplotypes, gene_order):
-	gene_order = {name: i for i, name in enumerate(gene_order)}
-
-	def keyfunc(hap):
-		name = hap[0] if hap[0] else hap[1]
-		gene, _, allele = name.partition('*')
-		try:
-			allele = int(allele)
-		except ValueError:
-			allele = 999
-		try:
-			index = gene_order[gene]
-		except KeyError:
-			logger.warning('Gene %s not found in gene order file, placing it at the end',
-				gene)
-			index = 1000000
-		return index * 1000 + allele
-	return sorted(haplotypes, key=keyfunc)
 
 
 class HeterozygousGene:
@@ -196,8 +173,29 @@ class HaplotypePair:
 		self.het1 = het1
 		self.het2 = het2
 
-	def sort(self, order):
-		self.haplotype = sorted_haplotype(self.haplotype, order)
+	def sort(self, order: List[str]) -> None:
+		"""
+		Sort the haplotype
+		order -- list a names of genes in the desired order
+		"""
+		gene_order = {name: i for i, name in enumerate(order)}
+
+		def keyfunc(hap):
+			name = hap[0] if hap[0] else hap[1]
+			gene, _, allele = name.partition('*')
+			try:
+				allele = int(allele)
+			except ValueError:
+				allele = 999
+			try:
+				index = gene_order[gene]
+			except KeyError:
+				logger.warning('Gene %s not found in gene order file, placing it at the end',
+					gene)
+				index = 1000000
+			return index * 1000 + allele
+
+		self.haplotype = sorted(self.haplotype, key=keyfunc)
 
 	def switch(self):
 		"""Swap the two haplotypes"""
@@ -209,7 +207,7 @@ class HaplotypePair:
 			haplotype.append((name2, name1, type_, counts))
 		self.haplotype = haplotype
 
-	def to_tsv(self, header=True) -> str:
+	def to_tsv(self, header: bool=True) -> str:
 		lines = []
 		if header:
 			lines.append('\t'.join(['haplotype1', 'haplotype2', 'type', 'count1', 'count2']))
@@ -218,6 +216,68 @@ class HaplotypePair:
 		for h1, h2, typ, count in self.haplotype:
 			lines.append('\t'.join([h1, h2, typ, str(count[0]), str(count[1])]))
 		return '\n'.join(lines) + '\n'
+
+
+def plot_haplotypes(blocks):
+	from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+	from matplotlib.figure import Figure
+	from matplotlib.patches import Patch
+
+	colormap = dict(homozygous='cornflowerblue', heterozygous='lightgreen', deletion='gold',
+		duplication='crimson', unknown='gray')
+	labels = [[], []]
+	heights = [[], []]
+	names = []
+	colors = []
+	positions = []
+	pos = 0
+	for block in blocks:
+		for hap1, hap2, type_, (count1, count2) in block.haplotype:
+			label = hap1 if hap1 else hap2
+			hap1 = ('*' + hap1.partition('*')[2]) if hap1 else ''
+			hap2 = ('*' + hap2.partition('*')[2]) if hap2 else ''
+			names.append(label.partition('*')[0])
+			positions.append(pos)
+			pos += 1
+			colors.append(colormap.get(type_, colormap['unknown']))
+			heights[0].append(1 if hap1 else 0)
+			heights[1].append(1 if hap2 else 0)
+			labels[0].append(hap1)
+			labels[1].append(hap2)
+		pos += 2
+
+	n = len(names)
+	assert len(labels[0]) == len(labels[1]) == len(colors) == len(heights[0]) == len(heights[1]) == n
+
+	fig = Figure(figsize=(8, 24))
+	FigureCanvas(fig)
+	axes = fig.subplots(ncols=2)
+	for i in 0, 1:
+		axes[i].barh(y=positions, width=heights[i], color=colors)
+		axes[i].set_yticklabels(labels[i])
+		axes[i].set_ylim((-0.5, max(positions) + 0.5))
+
+	ax_center = axes[0].twinx()
+	ax_center.set_yticks(axes[0].get_yticks())
+	ax_center.set_ylim(axes[0].get_ylim())
+	ax_center.set_yticklabels(names)
+
+	for ax in axes[0], axes[1], ax_center:
+		ax.invert_yaxis()
+		for spine in ax.spines.values():
+			spine.set_visible(False)
+		ax.set_xticks([])
+		ax.set_yticks(positions)
+		ax.tick_params(left=False, right=False, labelsize=12)
+	axes[1].tick_params(labelleft=False, labelright=True)
+
+	# Legend
+	legend_patches = [Patch(color=col, label=label) for label, col in colormap.items()]
+	fig.legend(handles=legend_patches, loc=2, mode='expand', ncol=5, )
+	fig.tight_layout()
+	fig.subplots_adjust(top=1 - 2 / len(names))
+
+	return fig
 
 
 def read_and_filter(path: str, d_evalue: float, d_coverage: float):
@@ -256,16 +316,16 @@ def main(args):
 	het_expressions = {
 		gene_type: list(expression_counts(table, gene_type)) for gene_type in 'VDJ'}
 
+	# Determine most highly expressed heterozygous genes
 	best_het_genes = {gene_type: pick_best_het_gene(het_expressions[gene_type]) for gene_type in 'VDJ'}
-
 	for gene_type in 'VDJ':
 		bhg = best_het_genes[gene_type]
 		text = bhg.index[0][0] if bhg is not None else 'none found'
 		logger.info('Most highly expressed heterozygous %s gene: %s',
 			gene_type, text)
 
+	# Create HaplotypePair objects ('blocks') for each gene type
 	blocks = []
-
 	for target_gene_type, het_gene in (
 		('J', 'V'),
 		('D', 'J'),
@@ -283,7 +343,7 @@ def main(args):
 			block.sort(gene_order)
 		blocks.append(block)
 
-	# Get the phasing right across blocks
+	# Get the phasing right across blocks (i.e., swap J haplotypes if necessary)
 	assert len(blocks) in (0, 1, 3)
 	if len(blocks) == 3:
 		j_hap, d_hap, v_hap = blocks
@@ -297,7 +357,13 @@ def main(args):
 				j_hap.switch()
 				break
 
+	# Print the table
 	header = True
 	for block in blocks:
 		print(block.to_tsv(header=header))
 		header = False
+
+	# Create plot if requested
+	if args.plot:
+		fig = plot_haplotypes(blocks)
+		fig.savefig(args.plot)
