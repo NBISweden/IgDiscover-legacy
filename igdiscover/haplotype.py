@@ -171,11 +171,17 @@ def cooccurrences(coexpressions, het_alleles: Tuple[str, str], target_groups):
 		elif is_expressed_list == [[False, True], [True, False]]:
 			haplotype.append((names[1], names[0], 'heterozygous', (counts[0][1], counts[1][0])))
 		else:
+			type_ = ''  # unknown
+			# Somewhat arbitrary criteria for a "duplication":
+			# 1) one heterozygous allele, 2) at least three alleles in total
+			n_true = sum(x.count(True) for x in is_expressed_list)
+			if ([True, False] in is_expressed_list or [False, True] in is_expressed_list) and n_true > 2:
+				type_ = 'duplication'
 			for is_expressed, name, count in zip(is_expressed_list, names, counts):
 				haplotype.append((
 					name if is_expressed[0] else '',
 					name if is_expressed[1] else '',
-					'',
+					type_,
 					count,
 				))
 	return haplotype
