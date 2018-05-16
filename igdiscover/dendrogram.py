@@ -4,8 +4,6 @@ Draw a dendrogram of sequences in a FASTA file.
 import logging
 import numpy as np
 import matplotlib
-import matplotlib.pyplot as plt
-import seaborn as sns
 from scipy.spatial import distance
 from scipy.cluster import hierarchy
 from sqt import FastaReader
@@ -13,7 +11,6 @@ from igdiscover.utils import distances
 
 
 logger = logging.getLogger(__name__)
-sns.set()
 
 
 def add_arguments(parser):
@@ -60,6 +57,11 @@ def main(args):
 		logger.info('%s sequence(s) marked as "new"', n_new)
 	else:
 		labels = [s.name for s in sequences]
+
+	import seaborn as sns
+	import matplotlib.pyplot as plt
+	sns.set()
+
 	sns.set_style("white")
 	font_size = 297 / 25.4 * 72 / (len(labels) + 5)
 	font_size = min(16, max(6, font_size))

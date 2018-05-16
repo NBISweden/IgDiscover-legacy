@@ -11,6 +11,11 @@ name. Use --database to change this.
 import sys
 import logging
 import pandas as pd
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+from matplotlib.figure import Figure
+import matplotlib
+import seaborn as sns
+import numpy as np
 from sqt import SequenceReader
 from .table import read_table
 from .utils import natural_sort_key
@@ -78,16 +83,11 @@ def compute_expressions(table, gene_type):
 
 def plot_counts(counts, gene_type):
 	"""Plot expression counts. Return a Figure object"""
-	import matplotlib
-	matplotlib.use('agg')
-	import matplotlib.pyplot as plt
-	import seaborn as sns
-	import numpy as np
 	sns.set()
-
-	fig = plt.figure(figsize=((50 + len(counts) * 5) / 25.4, 210/25.4))
+	fig = Figure(figsize=((50 + len(counts) * 5) / 25.4, 210/25.4))
 	matplotlib.rcParams.update({'font.size': 14})
-	ax = fig.gca()
+	FigureCanvas(fig)
+	ax = fig.add_subplot(111)
 	ax.set_title('{} gene usage'.format(gene_type))
 	ax.set_xlabel('{} gene'.format(gene_type))
 	ax.set_ylabel('Count')

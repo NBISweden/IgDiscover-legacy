@@ -3,15 +3,11 @@ Plot a clustermap of all sequences assigned to a gene
 """
 import os.path
 import logging
-import matplotlib
-matplotlib.use('agg')
-import seaborn as sns
 from .table import read_table
 from .utils import downsampled, plural_s
 from .cluster import cluster_sequences
 
 logger = logging.getLogger(__name__)
-sns.set()
 
 
 def add_arguments(parser):
@@ -42,13 +38,15 @@ def plot_clustermap(sequences, title, plotpath, size=300, dpi=200):
 
 	Return the number of clusters.
 	"""
+	import seaborn as sns
+
 	logger.info('Clustering %d sequences (downsampled to at most %d)', len(sequences), size)
 	sequences = downsampled(sequences, size)
 	df, linkage, clusters = cluster_sequences(sequences)
 
 	palette = sns.color_palette([(0.15, 0.15, 0.15)])
 	palette += sns.color_palette('Spectral', n_colors=max(clusters), desat=0.9)
-	row_colors = [ palette[cluster_id] for cluster_id in clusters ]
+	row_colors = [palette[cluster_id] for cluster_id in clusters]
 	cm = sns.clustermap(df,
 			row_linkage=linkage,
 			col_linkage=linkage,
@@ -72,6 +70,11 @@ def plot_clustermap(sequences, title, plotpath, size=300, dpi=200):
 
 
 def main(args):
+	import matplotlib
+	matplotlib.use('agg')
+	import seaborn as sns
+	sns.set()
+
 	if not os.path.exists(args.directory):
 		os.mkdir(args.directory)
 	table = read_table(args.table)
