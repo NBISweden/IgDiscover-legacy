@@ -29,7 +29,7 @@ def add_arguments(parser: ArgumentParser):
 	arg('--order', metavar='FASTA', default=None,
 		help='Sort the output according to the order of the records in '
 			'this FASTA file.')
-	arg('--plot', metavar='FILE', default=None,
+	arg('--structure-plot', metavar='FILE', default=None,
 		help='Write a haplotype structure plot to FILE')
 	arg('table', help='Table with parsed and filtered IgBLAST results')
 
@@ -364,6 +364,6 @@ def main(args):
 		header = False
 
 	# Create plot if requested
-	if args.plot:
+	if args.structure_plot:
 		fig = plot_haplotypes(blocks)
-		fig.savefig(args.plot)
+		fig.savefig(args.structure_plot)
