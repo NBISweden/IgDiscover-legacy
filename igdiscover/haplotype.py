@@ -224,7 +224,7 @@ def plot_haplotypes(blocks):
 	from matplotlib.patches import Patch
 
 	colormap = dict(homozygous='cornflowerblue', heterozygous='lightgreen', deletion='gold',
-		duplication='crimson', unknown='gray')
+		duplication='crimson')
 	labels = [[], []]
 	heights = [[], []]
 	names = []
@@ -233,13 +233,16 @@ def plot_haplotypes(blocks):
 	pos = 0
 	for block in blocks:
 		for hap1, hap2, type_, (count1, count2) in block.haplotype:
+			if type_ == '':
+				# Skip unknown types
+				continue
 			label = hap1 if hap1 else hap2
 			hap1 = ('*' + hap1.partition('*')[2]) if hap1 else ''
 			hap2 = ('*' + hap2.partition('*')[2]) if hap2 else ''
 			names.append(label.partition('*')[0])
 			positions.append(pos)
 			pos += 1
-			colors.append(colormap.get(type_, colormap['unknown']))
+			colors.append(colormap[type_])
 			heights[0].append(1 if hap1 else 0)
 			heights[1].append(1 if hap2 else 0)
 			labels[0].append(hap1)
