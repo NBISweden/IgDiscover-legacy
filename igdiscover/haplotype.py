@@ -29,8 +29,10 @@ def add_arguments(parser: ArgumentParser):
 	arg('--order', metavar='FASTA', default=None,
 		help='Sort the output according to the order of the records in '
 			'this FASTA file.')
+	arg('--plot', metavar='FILE', default=None,
+		help='Write a haplotype plot to FILE')
 	arg('--structure-plot', metavar='FILE', default=None,
-		help='Write a haplotype structure plot to FILE')
+		help='Write a haplotype structure plot (counts binarized 0 and 1) to FILE')
 	arg('table', help='Table with parsed and filtered IgBLAST results')
 
 
@@ -148,7 +150,7 @@ def cooccurrences(coexpressions, het_alleles: Tuple[str, str], target_groups):
 		elif is_expressed_list == [[False, True], [True, False]]:
 			haplotype.append((names[1], names[0], 'heterozygous', (counts[0][1], counts[1][0])))
 		else:
-			type_ = ''  # unknown
+			type_ = 'unknown'
 			# Somewhat arbitrary criteria for a "duplication":
 			# 1) one heterozygous allele, 2) at least three alleles in total
 			n_true = sum(x.count(True) for x in is_expressed_list)
@@ -218,13 +220,15 @@ class HaplotypePair:
 		return '\n'.join(lines) + '\n'
 
 
-def plot_haplotypes(blocks):
+def plot_haplotypes(blocks: List[HaplotypePair], show_unknown: bool=False, binarize: bool=False):
 	from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 	from matplotlib.figure import Figure
 	from matplotlib.patches import Patch
 
 	colormap = dict(homozygous='cornflowerblue', heterozygous='lightgreen', deletion='gold',
-		duplication='crimson')
+		duplication='crimson', unknown='gray')
+	if not show_unknown:
+		del colormap['unknown']
 	labels = [[], []]
 	heights = [[], []]
 	names = []
@@ -233,20 +237,22 @@ def plot_haplotypes(blocks):
 	pos = 0
 	for block in blocks:
 		for hap1, hap2, type_, (count1, count2) in block.haplotype:
-			if type_ == '':
-				# Skip unknown types
+			if not show_unknown and type_ == 'unknown':
 				continue
+			if binarize:
+				count1 = 1 if hap1 else 0
+				count2 = 1 if hap2 else 0
 			label = hap1 if hap1 else hap2
 			hap1 = ('*' + hap1.partition('*')[2]) if hap1 else ''
 			hap2 = ('*' + hap2.partition('*')[2]) if hap2 else ''
-			names.append(label.partition('*')[0])
-			positions.append(pos)
-			pos += 1
-			colors.append(colormap[type_])
-			heights[0].append(1 if hap1 else 0)
-			heights[1].append(1 if hap2 else 0)
+			heights[0].append(count1)
+			heights[1].append(count2)
 			labels[0].append(hap1)
 			labels[1].append(hap2)
+			names.append(label.partition('*')[0])
+			colors.append(colormap[type_])
+			positions.append(pos)
+			pos += 1
 		pos += 2
 
 	n = len(names)
@@ -260,19 +266,33 @@ def plot_haplotypes(blocks):
 		axes[i].set_yticklabels(labels[i])
 		axes[i].set_ylim((-0.5, max(positions) + 0.5))
 
+	# Add center axis
 	ax_center = axes[0].twinx()
 	ax_center.set_yticks(axes[0].get_yticks())
 	ax_center.set_ylim(axes[0].get_ylim())
 	ax_center.set_yticklabels(names)
 
+	# Synchronize x limits on both axes (has no effect if binarize is True)
+	max_x = max(axes[i].get_xlim()[1] for i in range(2))
+	for ax in axes:
+		ax.set_xlim(right=max_x)
+	axes[0].invert_xaxis()
+
 	for ax in axes[0], axes[1], ax_center:
 		ax.invert_yaxis()
 		for spine in ax.spines.values():
 			spine.set_visible(False)
-		ax.set_xticks([])
+		if binarize:
+			ax.set_xticks([])
+		else:
+			ax.set_axisbelow(True)
+			ax.grid(True, axis='x')
 		ax.set_yticks(positions)
 		ax.tick_params(left=False, right=False, labelsize=12)
 	axes[1].tick_params(labelleft=False, labelright=True)
+	if not binarize:
+		axes[0].spines['right'].set_visible(True)
+		axes[1].spines['left'].set_visible(True)
 
 	# Legend
 	legend_patches = [Patch(color=col, label=label) for label, col in colormap.items()]
@@ -366,7 +386,10 @@ def main(args):
 		print(block.to_tsv(header=header))
 		header = False
 
-	# Create plot if requested
+	# Create plots if requested
+	if args.plot:
+		fig = plot_haplotypes(blocks, show_unknown=True)
+		fig.savefig(args.plot)
 	if args.structure_plot:
-		fig = plot_haplotypes(blocks)
+		fig = plot_haplotypes(blocks, binarize=True)
 		fig.savefig(args.structure_plot)
