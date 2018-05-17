@@ -273,7 +273,7 @@ def plot_haplotypes(blocks):
 
 	# Legend
 	legend_patches = [Patch(color=col, label=label) for label, col in colormap.items()]
-	fig.legend(handles=legend_patches, loc=2, mode='expand', ncol=5, )
+	fig.legend(handles=legend_patches, loc='upper center', ncol=len(legend_patches))
 	fig.tight_layout()
 	fig.subplots_adjust(top=1 - 2 / len(names))
 
