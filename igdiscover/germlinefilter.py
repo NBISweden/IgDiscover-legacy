@@ -182,6 +182,8 @@ class SequenceMerger(Merger):
 			# Check exact V sequence occurrence allele ratio
 			if self._exact_ratio:
 				for u, v in [(s, t), (t, s)]:
+					if v.exact == 0:
+						continue
 					ratio = u.exact / v.exact
 					if ratio < self._exact_ratio:
 						logger.info('Allele ratio of exact occurrences %.4f too low for %r compared to %r',
