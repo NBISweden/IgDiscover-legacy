@@ -54,7 +54,7 @@ Installing IgDiscover with Conda
 
        conda create -n igdiscover igdiscover
 
-   This will create a new so-called “environment” for IgDiscover. **Whenever you
+   This will create a new so-called “environment” for IgDiscover (retry if it fails). **Whenever you
    want to run IgDiscover, you will need to activate the environment with this
    command**::
 
@@ -65,7 +65,12 @@ Installing IgDiscover with Conda
 
        igdiscover --version
 
-   If you see the version number of IgDiscover, it worked!
+   If you see the version number of IgDiscover, it worked! If an error message appears that says 
+   "The 'networkx' distribution was not found and is required by snakemake", install networkx manually with:
+      
+       pip install networkx==2.1
+
+   Then retry to check the igdiscover version.
 
 6. You can now :ref:`run IgDiscover on the test data set <test>` to familiarize
    yourself with how it works.
