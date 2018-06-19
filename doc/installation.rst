@@ -66,7 +66,7 @@ Installing IgDiscover with Conda
        igdiscover --version
 
    If you see the version number of IgDiscover, it worked! If an error message appears that says 
-   "The 'networkx' distribution was not found and is required by snakemake", install networkx manually with:
+   "The 'networkx' distribution was not found and is required by snakemake", install networkx manually with::
       
        pip install networkx==2.1
 
