@@ -29,13 +29,16 @@ def add_arguments(parser):
 	arg('--no-merge', dest='merge', action='store_false', help='Do not merge overlapping genes')
 	arg('--gene', default='J', choices=('V', 'D', 'J'),
 		help='Which gene category to discover. Default: %(default)s')
+	arg('--j-coverage', type=float, default=None, metavar='PERCENT',
+		help='Require that the sequence covers at least PERCENT of the J gene. '
+		'Default: 90 when --gene=J; 0 otherwise')
 	arg('--allele-ratio', type=float, metavar='RATIO', default=0.1,
 		help='Required allele ratio. Works only for genes named "NAME*ALLELE". Default: %(default)s')
 	arg('--cross-mapping-ratio', type=float, metavar='RATIO', default=None,
 		help='Ratio for detection of cross-mapping artifacts. Default: %(default)s')
 	arg('--min-count', metavar='N', type=int, default=None,
 		help='Omit candidates with fewer than N exact occurrences in the input table. '
-			'Default: 10 for D, 100 for V and J')
+			'Default: 10 for D; 100 for V and J')
 	arg('--no-perfect-matches', dest='perfect_matches', default=True, action='store_false',
 		help='Do not filter out sequences for which the V assignment (or J for --gene=V) '
 			'has more than one error')
@@ -268,8 +271,13 @@ def main(args):
 	other_gene = other + '_gene'
 	other_errors = other + '_errors'
 	table = read_table(args.table,
-		usecols=['count', 'V_gene', 'J_gene', 'V_errors', 'J_errors', column, 'CDR3_nt'])
+		usecols=['count', 'V_gene', 'J_gene', 'V_errors', 'J_errors', 'J_covered', column, 'CDR3_nt'])
 	logger.info('Table with %s rows read', len(table))
+	if args.j_coverage is None and args.gene == 'J':
+		args.j_coverage = 90
+	if args.j_coverage:
+		table = table[table['J_covered'] >= args.j_coverage]
+		logger.info('Keeping %s rows that have J_covered >= %s', len(table), args.j_coverage)
 	if args.perfect_matches:
 		table = table[table[other_errors] == 0]
 		logger.info('Keeping %s rows that have no %s mismatches', len(table), other)
