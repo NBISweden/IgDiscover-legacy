@@ -61,7 +61,6 @@ def main(args):
 	import seaborn as sns
 	import matplotlib.pyplot as plt
 	sns.set()
-
 	sns.set_style("white")
 	font_size = 297 / 25.4 * 72 / (len(labels) + 5)
 	font_size = min(16, max(6, font_size))
