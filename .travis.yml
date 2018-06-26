@@ -16,8 +16,8 @@ before_install:
   - conda update -q conda
   - conda config --add channels defaults --add channels conda-forge --add channels bioconda
   - conda info -a
-  - wget https://bitbucket.org/igdiscover/testdata/get/v0.4.tar.gz
-  - tar xvf v0.4.tar.gz
+  - wget https://bitbucket.org/igdiscover/testdata/downloads/igdiscover-testdata-0.5.tar.gz
+  - tar xvf igdiscover-testdata-0.5.tar.gz
 
 install:
   - conda env create -n testenv -f environment.yml
