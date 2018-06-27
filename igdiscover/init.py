@@ -3,6 +3,7 @@ Create and initialize a new analysis directory.
 """
 import glob
 import logging
+import re
 import os
 import os.path
 import sys
@@ -129,11 +130,13 @@ def guess_paired_path(path):
 	'file.2.fastq.gz'  # if that file exists
 	"""
 	base, name = os.path.split(path)
-	glob_pattern = os.path.join(base, name.replace('1', '?'))
-	paths = [p for p in glob.glob(glob_pattern) if is_1_2(p, path) and '_R1_' not in p]
-	if len(paths) != 1:
-		return None
-	return paths[0]
+	# All lone 1 digits replaced with '?'
+	name_with_globs = re.sub(r'(?<![0-9])1(?![0-9])', '?', name)
+	glob_pattern = os.path.join(base, name_with_globs)
+	paths = [p for p in glob.glob(glob_pattern) if is_1_2(p, path)]
+	if len(paths) == 1:
+		return paths[0]
+	return None
 
 
 class UnknownFileFormatError(Exception):
