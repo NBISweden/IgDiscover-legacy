@@ -47,9 +47,6 @@ def add_arguments(parser):
 	arg('--cluster-size', type=int, metavar='N', default=0,
 		help='Consensus must represent at least N sequences. '
 		'Default: %(default)s')
-	arg('--max-differences', type=int, metavar='MAXDIFF', default=0,
-		help='Merge sequences if they have at most MAXDIFF differences. '
-		'The one with more CDR3s is kept. Default: %(default)s')
 	arg('--cross-mapping-ratio', type=float, metavar='RATIO', default=0.02,
 		help='Ratio for detection of cross-mapping artifacts. Default: %(default)s')
 	arg('--clonotype-ratio', '--allele-ratio', type=float, metavar='RATIO', default=0.1,
@@ -100,11 +97,10 @@ class SequenceMerger(Merger):
 	"""
 	Merge sequences that are sufficiently similar into single entries.
 	"""
-	def __init__(self, max_differences, cross_mapping_ratio, clonotype_ratio, exact_ratio,
+	def __init__(self, cross_mapping_ratio, clonotype_ratio, exact_ratio,
 			unique_d_ratio,
 			unique_d_threshold):
 		super().__init__()
-		self._max_differences = max_differences
 		self._cross_mapping_ratio = cross_mapping_ratio
 		self._clonotype_ratio = clonotype_ratio
 		self._exact_ratio = exact_ratio
@@ -118,8 +114,7 @@ class SequenceMerger(Merger):
 
 		Two sequences are Sequences can also be discarded if llele ratio, cross-mapping ratio or unique_d ratio criteria
 
-		Two sequences are considered to be similar if their edit distance is at most
-		max_differences (see constructor). If one of the sequences is longer, the 'overhanging'
+		If one of the sequences is longer, the 'overhanging'
 		bases are ignored at either the 5' end or the 3' end, whichever gives the lower
 		edit distance.
 
@@ -143,11 +138,11 @@ class SequenceMerger(Merger):
 		if len(s_no_cdr3) != len(t_no_cdr3):
 			t_prefix = t_no_cdr3[:len(s_no_cdr3)]
 			t_suffix = t_no_cdr3[-len(s_no_cdr3):]
-			dist_prefix = edit_distance(s_no_cdr3, t_prefix, max(self._max_differences, 1))
-			dist_suffix = edit_distance(s_no_cdr3, t_suffix, max(self._max_differences, 1))
+			dist_prefix = edit_distance(s_no_cdr3, t_prefix, 1)
+			dist_suffix = edit_distance(s_no_cdr3, t_suffix, 1)
 			dist = min(dist_prefix, dist_suffix)
 		else:
-			dist = edit_distance(s_no_cdr3, t_no_cdr3, max(self._max_differences, 1))
+			dist = edit_distance(s_no_cdr3, t_no_cdr3, 1)
 
 		# Check for cross-mapping
 		# We check for dist <= 1 (and not ==1) since there may be
@@ -199,7 +194,7 @@ class SequenceMerger(Merger):
 								ratio, v.name, u.name)
 							return u
 
-		if dist > self._max_differences:
+		if dist > 0:
 			return None  # keep both
 
 		# If we get here, then the two candidates are too similar. Unless they are
@@ -222,9 +217,13 @@ class SequenceMerger(Merger):
 def main(args):
 	if args.unique_D_threshold <= 1:
 		sys.exit('--unique-D-threshold must be at least 1')
-	merger = SequenceMerger(args.max_differences, args.cross_mapping_ratio,
-		clonotype_ratio=args.clonotype_ratio, exact_ratio=args.exact_ratio,
-		unique_d_ratio=args.unique_D_ratio, unique_d_threshold=args.unique_D_threshold)
+	merger = SequenceMerger(
+		cross_mapping_ratio=args.cross_mapping_ratio,
+		clonotype_ratio=args.clonotype_ratio,
+		exact_ratio=args.exact_ratio,
+		unique_d_ratio=args.unique_D_ratio,
+		unique_d_threshold=args.unique_D_threshold
+	)
 
 	whitelist = dict()
 	for path in args.whitelist:
