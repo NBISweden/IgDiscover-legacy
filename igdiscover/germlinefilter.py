@@ -12,7 +12,6 @@ separately:
 * Discard sequences with too few unique CDR3s (CDR3_clusters column)
 * Discard sequences with too few unique Js (Js_exact column)
 * Discard sequences identical to one of the database sequences (if DB given)
-* Discard sequences that do not match a set of known good motifs (unless whitelisted)
 * Discard sequences that contain a stop codon (has_stop column) (unless whitelisted)
 
 The following criteria involve comparison of candidates against each other:
@@ -24,7 +23,6 @@ The following criteria involve comparison of candidates against each other:
 
 If you provide a whitelist of sequences, then the candidates that appear on it
 * are not checked for the cluster size criterion,
-* do not need to match a set of known good motifs,
 * are never considered near-duplicates,
 * are allowed to contain a stop codon.
 
