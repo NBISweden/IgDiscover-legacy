@@ -631,12 +631,15 @@ CDR3s
     This number says how many different CDR3 sequences were found for all sequences that the consensus in this row was computed from.
 
 exact
-    The number of exact occurrences of the consensus sequence among all sequences assigned to the source gene.
+    The number of exact occurrences of the consensus sequence among all sequences assigned to the
+    source gene, ignoring the 3' junction region.
 
-    To clarify, we describe how the set of exact sequences is found:
-    First, all sequences assigned to a source gene are clustered.
-    A consensus is then computed from each cluster.
-    Then we look back at *all* sequences assigned to the source gene and find exact occurrences of that consensus sequence.
+    To clarify: While the consensus sequence is computed only from a subset of sequences assigned
+    to a source gene, *all* sequences assigned to the source gene are searched for exact occurrences
+    of that consensus sequence.
+
+    When comparing sequences, they are first truncated at the 3' end by removing those (typically
+    8) bases that correspond to the CDR3 region.
 
 barcodes_exact
     How many unique barcode sequences were used by the sequences in the set of exact sequences
