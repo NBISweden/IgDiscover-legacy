@@ -29,7 +29,7 @@ setup(
 		'numpy',
 		'matplotlib>=1.5.0',
 		'seaborn',
-		'snakemake>=3.9.0',
+		'snakemake>=4.5,<5',
 		'cutadapt',
 		'scipy>=0.16.1',
 		'xopen>=0.3.2',
