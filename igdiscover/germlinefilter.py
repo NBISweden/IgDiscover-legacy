@@ -268,14 +268,6 @@ def main(args):
 	overall_table = None
 	for path in args.tables:
 		table = pd.read_csv(path, sep='\t')
-		# TODO remove this after deprecation period
-		table.rename(columns=dict(
-			consensus_seqs='cluster_size',
-			window_seqs='cluster_size',
-			subset_seqs='cluster_size',
-			CDR3_clusters='clonotypes',
-		), inplace=True)
-
 		i = list(table.columns).index('consensus')
 		# whitelist_diff distinguishes between 0 and !=0 only
 		# at this point. Accurate edit distances are computed later.
