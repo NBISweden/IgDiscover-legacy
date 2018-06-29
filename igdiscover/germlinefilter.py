@@ -212,29 +212,23 @@ class SequenceMerger(Merger):
 		return t
 
 
-def main(args):
-	if args.unique_D_threshold <= 1:
-		sys.exit('--unique-D-threshold must be at least 1')
-	merger = SequenceMerger(
-		cross_mapping_ratio=args.cross_mapping_ratio,
-		clonotype_ratio=args.clonotype_ratio,
-		exact_ratio=args.exact_ratio,
-		unique_d_ratio=args.unique_D_ratio,
-		unique_d_threshold=args.unique_D_threshold
-	)
-
-	whitelist = dict()
-	for path in args.whitelist:
+class Whitelist:
+	def __init__(self, path):
+		self._sequences = dict()
 		for record in FastaReader(path):
-			whitelist[record.sequence.upper()] = record.name
-	logger.info('%d unique sequences in whitelist', len(whitelist))
+			self._sequences[record.sequence.upper()] = record.name
 
-	def whitelist_dist(sequence):
-		if sequence in whitelist:
-			return 0, whitelist[sequence]
+	def closest(self, sequence):
+		"""
+		Search for the whitelist sequence that is closest to the given sequence.
+
+		Return tuple (distance, name).
+		"""
+		if sequence in self._sequences:
+			return 0, self._sequences[sequence]
 		mindist = len(sequence)
 		distances = []
-		for seq, name in whitelist.items():
+		for seq, name in self._sequences.items():
 			ed = edit_distance(seq, sequence, maxdiff=mindist)
 			distances.append((ed, name))
 			if ed == 1:
@@ -245,6 +239,29 @@ def main(args):
 			mindist = min(mindist, ed)
 		distance, name = min(distances)
 		return distance, name
+
+	def __len__(self):
+		return len(self._sequences)
+
+	def __contains__(self, other):
+		return other in self._sequences
+
+
+def main(args):
+	if args.unique_D_threshold <= 1:
+		sys.exit('--unique-D-threshold must be at least 1')
+	merger = SequenceMerger(
+		cross_mapping_ratio=args.cross_mapping_ratio,
+		clonotype_ratio=args.clonotype_ratio,
+		exact_ratio=args.exact_ratio,
+		unique_d_ratio=args.unique_D_ratio,
+		unique_d_threshold=args.unique_D_threshold
+	)
+	if args.whitelist:
+		whitelist = Whitelist(args.whitelist)
+		logger.info('%d unique sequences in whitelist', len(whitelist))
+	else:
+		whitelist = None
 
 	# Read in tables
 	total_unfiltered = 0
@@ -326,9 +343,9 @@ def main(args):
 
 	# Because whitelist_dist() is expensive, this is run when
 	# all of the filtering has already been done
-	if whitelist:
+	if whitelist is not None:
 		for row in overall_table.itertuples():
-			distance, name = whitelist_dist(overall_table.loc[row[0], 'consensus'])
+			distance, name = whitelist.closest(overall_table.loc[row[0], 'consensus'])
 			overall_table.loc[row[0], 'closest_whitelist'] = name
 			overall_table.loc[row[0], 'whitelist_diff'] = distance
 	else:
