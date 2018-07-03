@@ -3,6 +3,7 @@ Determine haplotypes based on co-occurrences of alleles
 """
 import logging
 from typing import List, Tuple, Iterator
+from itertools import product
 import pandas as pd
 from argparse import ArgumentParser
 from sqt import SequenceReader
@@ -71,23 +72,6 @@ def expression_counts(table: pd.DataFrame, gene_type: str) -> Iterator[pd.DataFr
 				', '.join(str(x) for x in alleles['count'])
 			)
 		yield alleles
-
-
-def pick_best_het_gene(expressions: pd.DataFrame):
-	"""
-	Given a list of tables of gene expressions, return the table of the gene that has
-	highest expression count and is heterozygous
-	"""
-	best_ex = None
-	best_count = 0
-	for ex in expressions:
-		if len(ex) != 2:
-			continue
-		count = ex['count'].sum()
-		if count > best_count:
-			best_ex = ex
-			best_count = count
-	return best_ex
 
 
 class HeterozygousGene:
@@ -336,35 +320,87 @@ def main(args):
 		gene_order = None
 
 	table = read_and_filter(args.table, args.d_evalue, args.d_coverage)
-	het_expressions = {
-		gene_type: list(expression_counts(table, gene_type)) for gene_type in 'VDJ'}
 
-	# Determine most highly expressed heterozygous genes
-	best_het_genes = {gene_type: pick_best_het_gene(het_expressions[gene_type]) for gene_type in 'VDJ'}
+	expressions = dict()
+	het_expressions = dict()  # these are also sorted, most highly expressed first
 	for gene_type in 'VDJ':
-		bhg = best_het_genes[gene_type]
-		text = bhg.index[0][0] if bhg is not None else 'none found'
-		logger.info('Most highly expressed heterozygous %s gene: %s',
-			gene_type, text)
+		ex = list(expression_counts(table, gene_type))
+		expressions[gene_type] = ex
+		het_ex = [e for e in ex if len(e) == 2]
+		if het_ex:
+			# Pick most highly expressed
+			het_expressions[gene_type] = sorted(het_ex, key=lambda e: e['count'].sum(), reverse=True)[:5]
+		else:
+			# Force at least something to be plotted
+			het_expressions[gene_type] = [None]
 
-	# Create HaplotypePair objects ('blocks') for each gene type
-	blocks = []
-	for target_gene_type, het_gene in (
-		('J', 'V'),
-		('D', 'J'),
-		('V', 'J'),
-	):
-		het_alleles = best_het_genes[het_gene]
-		if het_alleles is None:
-			continue
-		coexpressions = compute_coexpressions(table, het_gene, target_gene_type)
-		target_groups = het_expressions[target_gene_type]
-		het1, het2 = het_alleles['name']
-		haplotype = cooccurrences(coexpressions, (het1, het2), target_groups)
-		block = HaplotypePair(haplotype, target_gene_type, het1, het2)
-		if gene_order:
-			block.sort(gene_order)
-		blocks.append(block)
+	block_lists = []
+
+	# We want to avoid using a gene classifed as 'duplicate' for haplotyping, but the
+	# classification is only known after we have done the haplotyping, so we try it
+	# until we found a combination that works
+	products = list(product(het_expressions['J'], het_expressions['V']))
+	for attempt, (het_j, het_v) in enumerate(products):
+		best_het_genes = {
+			'V': het_v,
+			'D': het_expressions['D'][0] if het_expressions['D'] else None,
+			'J': het_j,
+		}
+		for gene_type in 'VDJ':
+			bhg = best_het_genes[gene_type]
+			text = bhg.index[0][0] if bhg is not None else 'none found'
+			logger.info('Heterozygous %s gene to use for haplotyping: %s',
+				gene_type, text)
+
+		# Create HaplotypePair objects ('blocks') for each gene type
+		blocks = []
+
+		for target_gene_type, het_gene in (
+			('J', 'V'),
+			('D', 'J'),
+			('V', 'J'),
+		):
+			het_alleles = best_het_genes[het_gene]
+			if het_alleles is None:
+				continue
+			coexpressions = compute_coexpressions(table, het_gene, target_gene_type)
+			target_groups = expressions[target_gene_type]
+			het1, het2 = het_alleles['name']
+			haplotype = cooccurrences(coexpressions, (het1, het2), target_groups)
+			block = HaplotypePair(haplotype, target_gene_type, het1, het2)
+			if gene_order:
+				block.sort(gene_order)
+			blocks.append(block)
+
+		if het_j is None or het_v is None:
+			break
+		het_used = set(sum([list(h['name']) for h in best_het_genes.values()], []))
+		het_is_duplicate = False
+		for block in blocks:
+			if block.gene_type == 'D':
+				continue
+
+			# This nested loop is put in a separate generator so we can easily 'break'
+			# out of both loops at the same time.
+			def nameiter():
+				for name1, name2, type_, _ in block.haplotype:
+					for name in name1, name2:
+						yield name, type_
+
+			for name, type_ in nameiter():
+				if name in het_used and type_ != 'heterozygous':
+					het_is_duplicate = True
+					logger.warning('%s not classified as "heterozygous" during haplotyping, '
+						'attempting to use different alleles', name)
+					break
+			if het_is_duplicate:
+				break
+		block_lists.append(blocks)
+		if not het_is_duplicate:
+			break
+	else:
+		logger.warning('No other alleles remain, using first found solution')
+		blocks = block_lists[0]
 
 	# Get the phasing right across blocks (i.e., swap J haplotypes if necessary)
 	assert len(blocks) in (0, 1, 3)
