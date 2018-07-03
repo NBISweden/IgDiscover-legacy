@@ -1,6 +1,7 @@
 """
 Determine haplotypes based on co-occurrences of alleles
 """
+import sys
 import logging
 from typing import List, Tuple, Iterator
 from itertools import product
@@ -23,13 +24,14 @@ EXPRESSED_RATIO = 0.1
 
 def add_arguments(parser: ArgumentParser):
 	arg = parser.add_argument
+	arg('--v-gene', help='V gene to use for haplotyping J. Default: Auto-detected')
 	arg('--d-evalue', type=float, default=1E-4,
 		help='Maximal allowed E-value for D gene match. Default: %(default)s')
 	arg('--d-coverage', '--D-coverage', type=float, default=65,
 		help='Minimum D coverage (in percent). Default: %(default)s%%)')
 	arg('--order', metavar='FASTA', default=None,
 		help='Sort the output according to the order of the records in '
-			'this FASTA file.')
+			'the given FASTA file.')
 	arg('--plot', metavar='FILE', default=None,
 		help='Write a haplotype plot to FILE')
 	arg('--structure-plot', metavar='FILE', default=None,
@@ -334,6 +336,17 @@ def main(args):
 			# Force at least something to be plotted
 			het_expressions[gene_type] = [None]
 
+	if args.v_gene:
+		het_ex = [e for e in expressions['V'] if len(e) == 2]
+		for ex in het_ex:
+			if (args.v_gene in ex.index and not ex.loc[args.v_gene].empty) or (args.v_gene in ex['name'].values):
+				het_expressions['V'] = [ex]
+				break
+		else:
+			logger.error('The gene or allele %s was not found in the list of heterozygous V genes. '
+				'It cannot be used with the --v-gene option.', args.v_gene)
+			sys.exit(1)
+
 	block_lists = []
 
 	# We want to avoid using a gene classifed as 'duplicate' for haplotyping, but the
@@ -390,8 +403,9 @@ def main(args):
 			for name, type_ in nameiter():
 				if name in het_used and type_ != 'heterozygous':
 					het_is_duplicate = True
-					logger.warning('%s not classified as "heterozygous" during haplotyping, '
-						'attempting to use different alleles', name)
+					if not args.v_gene:
+						logger.warning('%s not classified as "heterozygous" during haplotyping, '
+							'attempting to use different alleles', name)
 					break
 			if het_is_duplicate:
 				break
@@ -399,7 +413,8 @@ def main(args):
 		if not het_is_duplicate:
 			break
 	else:
-		logger.warning('No other alleles remain, using first found solution')
+		if not args.v_gene:
+			logger.warning('No other alleles remain, using first found solution')
 		blocks = block_lists[0]
 
 	# Get the phasing right across blocks (i.e., swap J haplotypes if necessary)
