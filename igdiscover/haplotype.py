@@ -387,7 +387,7 @@ def main(args):
 
 		if het_j is None or het_v is None:
 			break
-		het_used = set(sum([list(h['name']) for h in best_het_genes.values()], []))
+		het_used = set(sum([list(h['name']) for h in best_het_genes.values() if h is not None], []))
 		het_is_duplicate = False
 		for block in blocks:
 			if block.gene_type == 'D':
