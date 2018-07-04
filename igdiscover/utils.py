@@ -7,8 +7,9 @@ import re
 import random
 import hashlib
 import resource
-from collections import OrderedDict, Counter
+from collections import OrderedDict, Counter, defaultdict
 from itertools import groupby
+from typing import List, Tuple
 
 import numpy as np
 from sqt.align import edit_distance, multialign, consensus, globalalign
@@ -446,3 +447,55 @@ def describe_nt_change(s: str, t: str):
 			changes.append(change)
 			index += len(deleted)
 	return '; '.join(changes)
+
+
+class ChimeraFinder:
+	def __init__(self, sequences: List[str], min_length: int=10):
+		self._sequences = sequences
+		self._min_length = min_length
+		self._build_index()
+
+	def _build_index(self):
+		min_length = self._min_length
+		# Create two dictionaries that map all prefixes and suffixes to indexes of all
+		# sequences they occur in
+		prefixes = defaultdict(list)
+		suffixes = defaultdict(list)
+
+		for i, sequence in enumerate(self._sequences):
+			if len(sequence) < min_length:
+				continue
+			for stop in range(min_length, len(sequence) + 1):
+				prefix = sequence[:stop]
+				prefixes[prefix].append(i)
+			for start in range(0, len(sequence) + 1 - min_length):
+				suffix = sequence[start:]
+				suffixes[suffix].append(i)
+		self._prefixes = prefixes
+		self._suffixes = suffixes
+
+	def find_exact(self, query: str):
+		"""
+		Find out whether the query string can be explained as a concatenation of
+		a prefix of one of the strings plus a suffix of one of the strings in
+		the given list of sequences. Both the prefix and the suffix must have a
+		length of at least min_length.
+
+		If the answer is yes, a tuple (prefix_length, prefix_indices, suffix_indices)
+		is returned where prefix_length is the length of the query prefix,
+		prefix_indices is a list of int indices into the sequences of all possible
+		prefix sequences that match, and suffix_indices is the same for the suffix.
+
+		The prefix_length returned is the first that yields a result. More are
+		possible.
+
+		If the answer is no, None is returned.
+		"""
+		min_length = self._min_length
+		for split_index in range(min_length, len(query) + 1 - min_length):
+			prefix = query[:split_index]
+			suffix = query[split_index:]
+			if prefix in self._prefixes and suffix in self._suffixes:
+				return (split_index, self._prefixes[prefix], self._suffixes[suffix])
+
+		return None

@@ -645,6 +645,8 @@ rule igdiscover_germlinefilter:
 				criteria += ['--whitelist=' + path]
 		if conf['allow_stop']:
 			criteria += ['--allow-stop']
+		# if conf['allow_chimeras']:
+		#	criteria += ['--allow-chimeras']
 		criteria += ['--unique-CDR3={}'.format(conf['unique_cdr3s'])]
 		criteria += ['--cluster-size={}'.format(conf['cluster_size'])]
 		criteria += ['--unique-J={}'.format(conf['unique_js'])]

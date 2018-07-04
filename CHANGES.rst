@@ -2,6 +2,14 @@
 Changes
 =======
 
+development version
+-------------------
+
+* Added detection of chimeras to the (pre-)germline filters. Any novel allele that can be explained
+  as a chimera of two unmodified reference alleles is marked in the ``new_V_germline.tab`` file
+  (the candidate is currently not discarded).
+
+
 v0.10 (2018-05-11)
 ------------------
 

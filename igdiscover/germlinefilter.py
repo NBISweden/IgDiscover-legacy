@@ -35,7 +35,7 @@ import pandas as pd
 from sqt import FastaReader
 from sqt.align import edit_distance
 
-from .utils import UniqueNamer, Merger, is_same_gene
+from .utils import UniqueNamer, Merger, is_same_gene, ChimeraFinder
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +77,8 @@ def add_arguments(parser):
 	arg('--allow-stop', action='store_true', default=False,
 		help='Allow stop codons in sequences (uses the has_stop column).'
 			'Default: Do not allow stop codons.')
+	# arg('--allow-chimeras', action='store_true', default=False,
+	# 	help='Do not filter out chimeric sequences. Default: Discard chimeras')
 	arg('--whitelist', metavar='FASTA', default=[], action='append',
 		help='Sequences that are never discarded or merged with others, '
 			'even if criteria for discarding them would apply (except cross-mapping artifact '
@@ -250,6 +252,32 @@ class Whitelist:
 		return other in self._sequences
 
 
+def is_chimera(table, whitelist):
+	result = pd.Series('', index=table.index, dtype=object)
+	if whitelist:
+		whitelisted = table[table['whitelist_diff'] == 0]
+	else:
+		whitelisted = table[table['database_diff'] == 0]
+	chimera_finder = ChimeraFinder(list(whitelisted['consensus']))
+	for row in table[(table['whitelist_diff'] != 0) & (table['database_diff'] != 0)].itertuples():
+		query = row.consensus
+		chimera_result = chimera_finder.find_exact(query)
+		if chimera_result:
+			(prefix_length, prefix_indices, suffix_indices) = chimera_result
+			suffix_length = len(query) - prefix_length
+			prefix_name = whitelisted.iloc[prefix_indices[0]]['name']
+			suffix_row = whitelisted.iloc[suffix_indices[0]]
+			suffix_name = suffix_row['name']
+			suffix_sequence = suffix_row['consensus']
+			logger.info('Removing %s (diffs.: %d) as it appears to be a chimera of '
+				'%s:1..%d and %s:%d..%d', row.name, row.whitelist_diff, prefix_name, prefix_length,
+				suffix_name, len(suffix_sequence) - suffix_length + 1, len(suffix_sequence))
+			result.loc[row.Index] = '{}:1..{}+{}:{}..{}'.format(prefix_name, prefix_length,
+				suffix_name, len(suffix_sequence) - suffix_length + 1, len(suffix_sequence))
+
+	return result
+
+
 def main(args):
 	if args.unique_D_threshold <= 1:
 		sys.exit('--unique-D-threshold must be at least 1')
@@ -260,13 +288,10 @@ def main(args):
 		unique_d_ratio=args.unique_D_ratio,
 		unique_d_threshold=args.unique_D_threshold
 	)
-	if args.whitelist:
-		whitelist = Whitelist()
-		for path in args.whitelist:
-			whitelist.add_fasta(path)
-		logger.info('%d unique sequences in whitelist', len(whitelist))
-	else:
-		whitelist = None
+	whitelist = Whitelist()
+	for path in args.whitelist:
+		whitelist.add_fasta(path)
+	logger.info('%d unique sequences in whitelist', len(whitelist))
 
 	# Read in tables
 	total_unfiltered = 0
@@ -340,13 +365,21 @@ def main(args):
 
 	# Because whitelist_dist() is expensive, this is run when
 	# all of the filtering has already been done
-	if whitelist is not None:
+	if whitelist:
 		for row in overall_table.itertuples():
 			distance, name = whitelist.closest(overall_table.loc[row[0], 'consensus'])
 			overall_table.loc[row[0], 'closest_whitelist'] = name
 			overall_table.loc[row[0], 'whitelist_diff'] = distance
 	else:
 		overall_table.whitelist_diff.replace(-1, '', inplace=True)
+
+	i = list(overall_table.columns).index('database_diff')
+	overall_table.insert(i, 'chimera', is_chimera(overall_table, whitelist))
+
+	# Discard chimeric sequences
+	# if not args.allow_chimeras:
+	#   overall_table = overall_table[~is_chimera(overall_table, whitelist)].copy()
+
 	print(overall_table.to_csv(sep='\t', index=False, float_format='%.2f'), end='')
 
 	if args.fasta:
