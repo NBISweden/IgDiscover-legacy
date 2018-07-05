@@ -213,10 +213,13 @@ class SequenceMerger(Merger):
 
 
 class Whitelist:
-	def __init__(self, path):
+	def __init__(self):
 		self._sequences = dict()
-		for record in FastaReader(path):
-			self._sequences[record.sequence.upper()] = record.name
+
+	def add_fasta(self, path):
+		with FastaReader(path) as fr:
+			for record in fr:
+				self._sequences[record.sequence.upper()] = record.name
 
 	def closest(self, sequence):
 		"""
@@ -258,7 +261,9 @@ def main(args):
 		unique_d_threshold=args.unique_D_threshold
 	)
 	if args.whitelist:
-		whitelist = Whitelist(args.whitelist)
+		whitelist = Whitelist()
+		for path in args.whitelist:
+			whitelist.add_fasta(path)
 		logger.info('%d unique sequences in whitelist', len(whitelist))
 	else:
 		whitelist = None
