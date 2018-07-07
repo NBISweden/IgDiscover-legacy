@@ -124,6 +124,17 @@ class Config:
 			return Config(file=f)
 
 
+class GlobalConfig:
+	def __init__(self):
+		self.use_cache = False
+		path = os.getenv('XDG_CONFIG_HOME', os.path.expanduser('~/.config'))
+		path = os.path.join(path, 'igdiscover.conf')
+		if os.path.exists(path):
+			with open(path) as f:
+				config = ruamel.yaml.safe_load(f)
+			self.use_cache = config.get('use_cache', False)
+
+
 def add_arguments(parser):
 	arg = parser.add_argument
 	arg('--set', nargs=2, default=[], metavar=('KEY', 'VALUE'), action='append',
