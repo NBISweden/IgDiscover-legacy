@@ -29,6 +29,9 @@ def add_arguments(parser: ArgumentParser):
 		help='Maximal allowed E-value for D gene match. Default: %(default)s')
 	arg('--d-coverage', '--D-coverage', type=float, default=65,
 		help='Minimum D coverage (in percent). Default: %(default)s%%)')
+	arg('--restrict', metavar='FASTA',
+		help='Restrict analysis to the genes named in the FASTA file. '
+			'Only the sequence names are used!')
 	arg('--order', metavar='FASTA', default=None,
 		help='Sort the output according to the order of the records in '
 			'the given FASTA file.')
@@ -322,6 +325,16 @@ def main(args):
 		gene_order = None
 
 	table = read_and_filter(args.table, args.d_evalue, args.d_coverage)
+
+	if args.restrict is not None:
+		with SequenceReader(args.restrict) as sr:
+			restrict_names = set(r.name for r in sr)
+		table = table[table['V_gene'].map(lambda name: name in restrict_names)]
+		logger.info('After restricting to V genes named in %r, %d rows remain', args.restrict,
+			len(table))
+		if len(table) == 0:
+			logger.error('No rows remain, cannot continue')
+			sys.exit(1)
 
 	expressions = dict()
 	het_expressions = dict()  # these are also sorted, most highly expressed first
