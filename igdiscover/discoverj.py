@@ -41,7 +41,7 @@ def add_arguments(parser):
 			'Default: 10 for D; 100 for V and J')
 	arg('--no-perfect-matches', dest='perfect_matches', default=True, action='store_false',
 		help='Do not filter out sequences for which the V assignment (or J for --gene=V) '
-			'has more than one error')
+			'has at least one error')
 
 	# --gene=D options
 	arg('--d-core-length', metavar='L', type=int, default=6,
@@ -229,7 +229,7 @@ def discard_substring_occurrences(candidates):
 def sequence_candidates(table, column, minimum_length, core=slice(None, None), min_occ=2):
 	"""
 	Generate candidates by clustering all sequences in a column
-	(usually V_nt, J_nt). At least min_occ occurrences are required.
+	(V_nt, D_nt or J_nt). At least min_occ occurrences are required.
 
 	core -- a slice object. If given, the strings in the column are
 	       sliced before being clustered.
@@ -301,6 +301,9 @@ def main(args):
 	logger.info('Collected %s unique %s sequences', len(candidates), args.gene)
 	candidates = list(discard_substring_occurrences(candidates))
 	logger.info('Removing candidate sequences that occur within others results in %s candidates',
+		len(candidates))
+	candidates = [candidate for candidate in candidates if 'N' not in candidate.sequence]
+	logger.info('Removing candidates containing "N" results in %s candidates',
 		len(candidates))
 
 	if args.merge:
