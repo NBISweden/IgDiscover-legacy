@@ -242,7 +242,7 @@ def discard_substring_occurrences(candidates):
 			yield short
 
 
-def sequence_candidates(table, column, minimum_length, core=slice(None, None), min_occ=2):
+def sequence_candidates(table, column, minimum_length, core=slice(None, None), min_occ=3):
 	"""
 	Generate candidates by clustering all sequences in a column
 	(V_nt, D_nt or J_nt). At least min_occ occurrences are required.
@@ -338,7 +338,7 @@ def main(args):
 			table, column, minimum_length=args.d_core_length, core=args.d_core)
 	elif args.gene == 'J':
 		candidates = sequence_candidates(
-			table, column, minimum_length=MINIMUM_CANDIDATE_LENGTH, min_occ=3)
+			table, column, minimum_length=MINIMUM_CANDIDATE_LENGTH)
 	else:
 		candidates = sequence_candidates(
 			table, column, minimum_length=MINIMUM_CANDIDATE_LENGTH)
