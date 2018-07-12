@@ -34,7 +34,7 @@ def add_arguments(parser):
 	arg('--j-coverage', type=float, default=None, metavar='PERCENT',
 		help='Require that the sequence covers at least PERCENT of the J gene. '
 		'Default: 90 when --gene=J; 0 otherwise')
-	arg('--allele-ratio', type=float, metavar='RATIO', default=0.1,
+	arg('--allele-ratio', type=float, metavar='RATIO', default=0.2,
 		help='Required allele ratio. Works only for genes named "NAME*ALLELE". Default: %(default)s')
 	arg('--cross-mapping-ratio', type=float, metavar='RATIO', default=None,
 		help='Ratio for detection of cross-mapping artifacts. Default: %(default)s')
