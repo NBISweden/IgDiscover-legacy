@@ -410,7 +410,7 @@ def main(args):
 		logger.info('After filtering by allele ratio and/or cross-mapping ratio, %d candidates remain',
 			len(records))
 
-	records = sorted(records, key=lambda r: (r.exact_occ, r.sequence), reverse=True)
+	records = sorted(records, key=lambda r: r.name)
 	records = [r for r in records if r.exact_occ >= args.min_count]
 	print_table(records, other_gene, missing=args.gene == 'D')
 
