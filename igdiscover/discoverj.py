@@ -15,6 +15,7 @@ from sqt.align import edit_distance
 from .utils import Merger, merge_overlapping, unique_name, is_same_gene, slice_arg
 from .table import read_table, fix_columns
 
+
 logger = logging.getLogger(__name__)
 
 MINIMUM_CANDIDATE_LENGTH = 5
@@ -156,7 +157,18 @@ class AlleleRatioMerger(Merger):
 		return None
 
 
-def count_occurrences(candidates, table_path, search_columns, other_gene, other_errors, merge, perfect_matches):
+def filter_by_allele_ratio(table, allele_ratio):
+	arm = AlleleRatioMerger(allele_ratio, cross_mapping_ratio=None)
+	renamed_counts = table.reset_index().rename(columns={'gene': 'name'})
+	arm.extend(renamed_counts.itertuples(index=False))
+	counts = pd.DataFrame(list(arm), columns=renamed_counts.columns) \
+		.rename(columns={'name': 'gene'}) \
+		.set_index('gene')
+	return counts
+
+
+def count_occurrences(candidates, table_path, search_columns, other_gene, other_errors, merge,
+		perfect_matches):
 	"""
 	Count how often each candidate sequence occurs in the input table.
 	The columns named in search_columns are concatenated and searched.
@@ -237,6 +249,36 @@ def sequence_candidates(table, column, minimum_length, core=slice(None, None), m
 	for sequence, occ in table[column].str[core].value_counts().items():
 		if len(sequence) >= minimum_length and occ >= min_occ:
 			yield Candidate(None, sequence, max_count=occ)
+
+
+def count_unique_cdr3(table):
+	return len(set(s for s in table.CDR3_nt if s))
+
+
+def count_unique_gene(table, gene_type):
+	return len(set(s for s in table[gene_type + '_gene'] if s))
+
+
+def compute_expressions(table, gene_type):
+	"""Compute expression counts of known genes"""
+	assert gene_type in {'V', 'D', 'J'}
+	columns = ('gene', 'count', 'unique_CDR3')
+	for gt in 'V', 'D', 'J':
+		if gene_type != gt:
+			columns += ('unique_' + gt,)
+	gene_column = gene_type + '_gene'
+	rows = []
+	for gene, group in table.groupby(gene_column):
+		if gene == '':
+			continue
+		unique_cdr3 = count_unique_cdr3(group)
+		row = dict(gene=gene, count=len(group), unique_CDR3=unique_cdr3)
+		for gt in 'V', 'D', 'J':
+			if gene_type != gt:
+				row['unique_' + gt] = count_unique_gene(group, gene_type=gt)
+		rows.append(row)
+	counts = pd.DataFrame(rows, columns=columns).set_index('gene')
+	return counts
 
 
 def print_table(candidates, other_gene, missing):
