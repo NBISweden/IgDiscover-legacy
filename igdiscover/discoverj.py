@@ -364,6 +364,40 @@ def main(args):
 		candidates = list(merger)
 	del table
 
+	logger.info('%d candidates', len(candidates))
+	# Assign names etc.
+	if database:
+		for candidate in candidates:
+			distances = [(edit_distance(db.sequence, candidate.sequence), db) for db in database]
+			candidate.db_distance, closest = min(distances, key=lambda x: x[0])
+			candidate.db_name = closest.name
+
+			if candidate.db_distance == 0:
+				candidate.name = closest.name
+			else:
+				# Exact db sequence not found, is there one that contains
+				# this candidate as a substring?
+				for db_record in database:
+					index = db_record.sequence.find(candidate.sequence)
+					if index == -1:
+						continue
+					if args.gene == 'D':
+						start = db_record.sequence.find(candidate.sequence)
+						prefix = db_record.sequence[:start]
+						suffix = db_record.sequence[start + len(candidate.sequence):]
+						candidate.missing = '{}...{}'.format(prefix, suffix)
+					else:
+						# Replace this record with the full-length version
+						candidate.sequence = db_record.sequence
+						candidate.db_distance = 0
+					candidate.name = db_record.name
+					break
+				else:
+					candidate.name = unique_name(closest.name, candidate.sequence)
+	else:
+		for candidate in candidates:
+			candidate.name = unique_name(args.gene, candidate.sequence)
+
 	logger.info('Counting occurrences ...')
 	if args.gene == 'D':
 		search_columns = ['VD_junction', 'D_region', 'DJ_junction']
@@ -371,58 +405,24 @@ def main(args):
 		search_columns = ['DJ_junction', 'J_nt']
 	else:
 		search_columns = ['genomic_sequence']
-	records = count_occurrences(candidates, args.table, search_columns, other_gene, other_errors,
+	candidates = count_occurrences(candidates, args.table, search_columns, other_gene, other_errors,
 		args.merge, args.perfect_matches)
-
-	logger.info('%d records', len(records))
-	# Assign names etc.
-	if database:
-		for record in records:
-			distances = [(edit_distance(db.sequence, record.sequence), db) for db in database]
-			record.db_distance, closest = min(distances, key=lambda x: x[0])
-			record.db_name = closest.name
-
-			if record.db_distance == 0:
-				record.name = closest.name
-			else:
-				# Exact db sequence not found, is there one that contains
-				# this candidate as a substring?
-				for db_record in database:
-					index = db_record.sequence.find(record.sequence)
-					if index == -1:
-						continue
-					if args.gene == 'D':
-						start = db_record.sequence.find(record.sequence)
-						prefix = db_record.sequence[:start]
-						suffix = db_record.sequence[start + len(record.sequence):]
-						record.missing = '{}...{}'.format(prefix, suffix)
-					else:
-						# Replace this record with the full-length version
-						record.sequence = db_record.sequence
-						record.db_distance = 0
-					record.name = db_record.name
-					break
-				else:
-					record.name = unique_name(closest.name, record.sequence)
-	else:
-		for record in records:
-			record.name = unique_name(args.gene, record.sequence)
 
 	# Filter by allele ratio
 	if args.allele_ratio or args.cross_mapping_ratio:
 		arm = AlleleRatioMerger(args.allele_ratio, args.cross_mapping_ratio)
-		arm.extend(records)
-		records = list(arm)
+		arm.extend(candidates)
+		candidates = list(arm)
 		logger.info('After filtering by allele ratio and/or cross-mapping ratio, %d candidates remain',
-			len(records))
+			len(candidates))
 
-	records = sorted(records, key=lambda r: r.name)
-	records = [r for r in records if r.exact_occ >= args.min_count]
-	print_table(records, other_gene, missing=args.gene == 'D')
+	candidates = sorted(candidates, key=lambda c: c.name)
+	candidates = [c for c in candidates if c.exact_occ >= args.min_count]
+	print_table(candidates, other_gene, missing=args.gene == 'D')
 
 	if args.fasta:
 		with open(args.fasta, 'w') as f:
-			for record in sorted(records, key=lambda r: r.name):
-				print('>{}\n{}'.format(record.name, record.sequence), file=f)
+			for candidate in sorted(candidates, key=lambda r: r.name):
+				print('>{}\n{}'.format(candidate.name, candidate.sequence), file=f)
 
-	logger.info('Wrote %d genes', len(records))
+	logger.info('Wrote %d genes', len(candidates))
