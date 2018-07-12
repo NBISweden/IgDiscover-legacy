@@ -10,6 +10,7 @@ generate FASTA output.
 """
 import logging
 import pandas as pd
+from collections import defaultdict
 from sqt import FastaReader
 from sqt.align import edit_distance
 from .utils import Merger, merge_overlapping, unique_name, is_same_gene, slice_arg
@@ -194,9 +195,10 @@ def count_occurrences(candidates, table_path, search_columns, other_gene, other_
 	"""
 	candidates_map = {c.sequence: c for c in candidates}
 
-	# Speed up search by looking for the most common sequences first
-	search_order = sorted(candidates_map, key=lambda s: candidates_map[s].max_count, reverse=True)
+	search_order = [c.sequence for c in candidates]
 	cols = [other_gene, 'V_errors', 'J_errors', 'CDR3_nt'] + search_columns
+
+	search_cache = defaultdict(list)  # map haystack sequence to list of candidates that occur in it
 	for chunk in pd.read_csv(table_path, usecols=cols, chunksize=10000, sep='\t'):
 		fix_columns(chunk)
 		if perfect_matches:
@@ -208,17 +210,19 @@ def count_occurrences(candidates, table_path, search_columns, other_gene, other_
 		chunk['haystack'] = chunk['haystack'].str.replace('(', '').replace(')', '')
 
 		for row in chunk.itertuples():
-			for needle in search_order:
-				if needle in row.haystack:
-					candidate = candidates_map[needle]
-					candidate.exact_occ += 1  # TODO += row.count?
-					candidate.other_genes.add(getattr(row, other_gene))
-					candidate.cdr3s.add(row.CDR3_nt)
-					if merge:
-						# When overlapping candidates have been merged,
-						# there will be no other pattern that is a
-						# substring of the current search pattern.
-						break
+			if row.haystack not in search_cache:
+				for needle in search_order:
+					if needle in row.haystack:
+						search_cache[row.haystack].append(candidates_map[needle])
+			for candidate in search_cache[row.haystack]:
+				candidate.exact_occ += 1  # TODO += row.count?
+				candidate.other_genes.add(getattr(row, other_gene))
+				candidate.cdr3s.add(row.CDR3_nt)
+				if merge:
+					# When overlapping candidates have been merged,
+					# there will be no other pattern that is a
+					# substring of the current search pattern.
+					break
 	return candidates_map.values()
 
 
