@@ -338,7 +338,7 @@ def main(args):
 			table, column, minimum_length=args.d_core_length, core=args.d_core)
 	elif args.gene == 'J':
 		candidates = sequence_candidates(
-			table, column, minimum_length=MINIMUM_CANDIDATE_LENGTH, min_occ=100)
+			table, column, minimum_length=MINIMUM_CANDIDATE_LENGTH, min_occ=3)
 	else:
 		candidates = sequence_candidates(
 			table, column, minimum_length=MINIMUM_CANDIDATE_LENGTH)
