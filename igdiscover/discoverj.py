@@ -417,7 +417,7 @@ def main(args):
 			len(candidates))
 
 	candidates = sorted(candidates, key=lambda c: c.name)
-	candidates = [c for c in candidates if c.exact_occ >= args.min_count]
+	candidates = [c for c in candidates if c.exact_occ >= args.min_count or c.db_distance == 0]
 	print_table(candidates, other_gene, missing=args.gene == 'D')
 
 	if args.fasta:
