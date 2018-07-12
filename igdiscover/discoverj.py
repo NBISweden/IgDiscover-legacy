@@ -387,15 +387,21 @@ def main(args):
 			else:
 				# Exact db sequence not found, is there one that contains
 				# this candidate as a substring?
-				is_substring = [db for db in database
-					if db.sequence.find(record.sequence) != -1]
-				if is_substring:
-					db = is_substring[-1]
-					start = db.sequence.find(record.sequence)
-					prefix = db.sequence[:start]
-					suffix = db.sequence[start + len(record.sequence):]
-					record.name = db.name
-					record.missing = '{}...{}'.format(prefix, suffix)
+				for db_record in database:
+					index = db_record.sequence.find(record.sequence)
+					if index == -1:
+						continue
+					if args.gene == 'D':
+						start = db_record.sequence.find(record.sequence)
+						prefix = db_record.sequence[:start]
+						suffix = db_record.sequence[start + len(record.sequence):]
+						record.missing = '{}...{}'.format(prefix, suffix)
+					else:
+						# Replace this record with the full-length version
+						record.sequence = db_record.sequence
+						record.db_distance = 0
+					record.name = db_record.name
+					break
 				else:
 					record.name = unique_name(closest.name, record.sequence)
 	else:
