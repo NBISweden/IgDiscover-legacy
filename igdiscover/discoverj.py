@@ -40,7 +40,7 @@ def add_arguments(parser):
 		help='Ratio for detection of cross-mapping artifacts. Default: %(default)s')
 	arg('--min-count', metavar='N', type=int, default=None,
 		help='Omit candidates with fewer than N exact occurrences in the input table. '
-			'Default: 10 for D; 100 for V and J')
+			'Default: 1 for J; 10 for D; 100 for V')
 	arg('--no-perfect-matches', dest='perfect_matches', default=True, action='store_false',
 		help='Do not filter out sequences for which the V assignment (or J for --gene=V) '
 			'has at least one error')
@@ -331,7 +331,7 @@ def main(args):
 	if args.merge is None:
 		args.merge = args.gene == 'D'
 	if args.min_count is None:
-		args.min_count = 10 if args.gene == 'D' else 100
+		args.min_count = {'J': 1, 'D': 10, 'V': 100}[args.gene]  # TODO J is fine, but D and V?
 
 	if args.gene == 'D':
 		candidates = sequence_candidates(
