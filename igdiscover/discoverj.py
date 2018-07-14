@@ -36,7 +36,7 @@ def add_arguments(parser):
 		'Default: 90 when --gene=J; 0 otherwise')
 	arg('--allele-ratio', type=float, metavar='RATIO', default=0.2,
 		help='Required allele ratio. Works only for genes named "NAME*ALLELE". Default: %(default)s')
-	arg('--cross-mapping-ratio', type=float, metavar='RATIO', default=None,
+	arg('--cross-mapping-ratio', type=float, metavar='RATIO', default=0.1,
 		help='Ratio for detection of cross-mapping artifacts. Default: %(default)s')
 	arg('--min-count', metavar='N', type=int, default=None,
 		help='Omit candidates with fewer than N exact occurrences in the input table. '

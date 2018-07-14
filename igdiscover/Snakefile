@@ -672,9 +672,9 @@ rule igdiscover_discover_j:
 		tab="iteration-01/filtered.tab.gz",
 	params:
 		allele_ratio='--allele-ratio={}'.format(config.j_discovery['allele_ratio']),
-		extra=' --cross-mapping-ratio={}'.format(config.j_discovery['cross_mapping_ratio']) if config.j_discovery['cross_mapping_ratio'] else ''
+		cross_mapping_ratio=' --cross-mapping-ratio={}'.format(config.j_discovery['cross_mapping_ratio'])
 	shell:
-		"time igdiscover discoverj {params.allele_ratio}{params.extra} "
+		"time igdiscover discoverj {params.allele_ratio}{params.cross_mapping_ratio} "
 		"--database={input.j_reference} "
 		"--fasta={output.fasta} "
 		"{input.tab} > {output.tab}"
