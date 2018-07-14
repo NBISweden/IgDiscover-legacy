@@ -23,19 +23,19 @@ UTR_MEDIAN_DEVIATION = 0.1
 def add_arguments(parser):
 	arg = parser.add_argument
 	arg('--max-V-errors', '--max-error-percentage', '-e', dest='max_v_errors',
-	    metavar='PERCENT', type=float, default=1,
+		metavar='PERCENT', type=float, default=1,
 		help='Allow PERCENT errors in V gene match. Default: %(default)s')
 	arg('--max-FR1-errors', dest='max_fr1_errors', metavar='PERCENT', type=float, default=None,
-	    help='Allow PERCENT errors in FR1 region.')
+		help='Allow PERCENT errors in FR1 region.')
 	arg('--max-CDR1-errors', dest='max_cdr1_errors', metavar='PERCENT', type=float, default=None,
-	    help='Allow PERCENT errors in CDR1 region.')
+		help='Allow PERCENT errors in CDR1 region.')
 	arg('--min-consensus-size', type=int, default=1, metavar='N',
-	    help='Require at least N sequences for consensus. Default: %(default)s')
+		help='Require at least N sequences for consensus. Default: %(default)s')
 	arg('--consensus-threshold', '-t', metavar='PERCENT',
 		type=float, default=75,
 		help='Threshold for consensus computation. Default: %(default)s%%')
 	arg('--no-ambiguous', '--no-N', default=False, action='store_true',
-	    help='Discard consensus sequences with ambiguous bases')
+		help='Discard consensus sequences with ambiguous bases')
 	arg('--part', choices=['UTR', 'leader', 'UTR+leader'],
 		default='UTR+leader', help='Which part of the sequence before the V '
 		'gene match to analyze. Default: %(default)s')
@@ -72,7 +72,8 @@ def main(args):
 			continue
 
 		counter = Counter(group['UTR_length'])
-		logger.debug('Sequence length/count table: %s', ', '.join('{}: {}'.format(l,c) for l, c in counter.most_common()))
+		logger.debug('Sequence length/count table: %s',
+			', '.join('{}: {}'.format(l, c) for l, c in counter.most_common()))
 
 		if args.part == 'leader':
 			sequences = list(group['leader'])
