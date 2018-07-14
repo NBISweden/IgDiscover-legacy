@@ -11,6 +11,8 @@ generate FASTA output.
 import logging
 import pandas as pd
 from collections import defaultdict
+from typing import List
+
 from sqt import FastaReader
 from sqt.align import edit_distance
 from .utils import Merger, merge_overlapping, unique_name, is_same_gene, slice_arg
@@ -285,6 +287,24 @@ def compute_expressions(table, gene_type):
 	return counts
 
 
+def make_whitelist(table, database, gene_type: str, allele_ratio=None) -> List[str]:
+	"""
+	Return a list of sequences that represent expressed alleles
+	"""
+	assert gene_type in {'V', 'D', 'J'}
+	# Compute expression counts in the same way the 'igdiscover count' command would do it
+	counts = compute_expressions(table, gene_type)
+	if allele_ratio:
+		counts = filter_by_allele_ratio(counts, allele_ratio)
+	names = list(counts.index)
+
+	# Construct whitelist from all expressed alleles
+	database = {r.name: r.sequence for r in database}
+	sequences = [database[name] for name in names]
+
+	return sequences
+
+
 def print_table(candidates, other_gene, missing):
 	columns = ['name', 'exact_occ', other_gene + 's', 'CDR3s', 'database', 'database_diff', 'sequence']
 	if missing:
@@ -317,8 +337,9 @@ def main(args):
 	other_gene = other + '_gene'
 	other_errors = other + '_errors'
 	table = read_table(args.table,
-		usecols=['count', 'V_gene', 'J_gene', 'V_errors', 'J_errors', 'J_covered', column, 'CDR3_nt'])
+		usecols=['count', 'V_gene', 'D_gene', 'J_gene', 'V_errors', 'J_errors', 'J_covered', column, 'CDR3_nt'])
 	logger.info('Table with %s rows read', len(table))
+
 	if args.j_coverage is None and args.gene == 'J':
 		args.j_coverage = 90
 	if args.j_coverage:
@@ -331,7 +352,7 @@ def main(args):
 	if args.merge is None:
 		args.merge = args.gene == 'D'
 	if args.min_count is None:
-		args.min_count = {'J': 1, 'D': 10, 'V': 100}[args.gene]  # TODO J is fine, but D and V?
+		args.min_count = {'J': 1, 'D': 10, 'V': 100}[args.gene]  # TODO J is fine, but are D and V?
 
 	if args.gene == 'D':
 		candidates = sequence_candidates(
@@ -345,6 +366,16 @@ def main(args):
 
 	candidates = list(candidates)
 	logger.info('Collected %s unique %s sequences', len(candidates), args.gene)
+
+	# Add whitelisted sequences
+	if database:
+		whitelist = make_whitelist(table, database, args.gene, args.allele_ratio)
+		missing_whitelisted = set(whitelist) - set(c.sequence for c in candidates)
+		for sequence in missing_whitelisted:
+			candidates.append(Candidate(None, sequence))
+		logger.info('Added %d whitelisted sequence%s',
+			len(missing_whitelisted), 's' if len(missing_whitelisted) != 1 else '')
+
 	candidates = list(discard_substring_occurrences(candidates))
 	logger.info('Removing candidate sequences that occur within others results in %s candidates',
 		len(candidates))
