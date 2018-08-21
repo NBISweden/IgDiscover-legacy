@@ -54,6 +54,23 @@ Whenever you want to update the software::
 It may also be necessary to repeat the ``python3 -m pip install -e .`` step.
 
 
+IgBLAST result cache
+--------------------
+
+For development, in particular when running tests repeatedly, you should enable the IgBLAST
+result cache. The cache stores IgBLAST output. If the same dataset with the same dataset is run
+a second time, the result is retrieved from the cache and IgBLAST is not re-run. This saves a lot
+of time when re-running datasets, but may also fill up the cache directory ``~/.cache/igdiscover/``.
+Also, in production, datasets are usually not re-run with the same settings, which is why
+caching is disabled by default.
+
+To enable the cache, create a file ``~/.config/igdiscover.conf`` with the following content::
+
+    use_cache: true
+
+The file is in YAML format, but at the moment, no other settings are supported.
+
+
 Building the documentation
 --------------------------
 
@@ -78,6 +95,14 @@ a Git tag::
     git tag v0.5
 
 The ``v`` prefix is mandatory.
+
+Then:
+
+* ``tests/run.sh``
+* ``python3 setup.py sdist``
+* ``twine upload sdist/igdiscover-0.10.tar.gz``
+* Update bioconda recipe
+
 
 .. _removing-igdiscover:
 

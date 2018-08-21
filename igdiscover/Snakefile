@@ -619,7 +619,7 @@ rule igdiscover_discover:
 def db_whitelist_or_not(wildcards):
 	filterconf = config.pre_germline_filter if wildcards.pre == 'pre' else config.germline_filter
 	if filterconf['whitelist']:
-	    # Use original (non-iteration-specific) database as whitelist
+		# Use original (non-iteration-specific) database as whitelist
 		return 'database/V.fasta'
 	else:
 		return []
@@ -634,6 +634,8 @@ rule igdiscover_germlinefilter:
 		tab='iteration-{nr}/candidates.tab',
 		db_whitelist=db_whitelist_or_not,
 		whitelist='whitelist.fasta' if os.path.exists('whitelist.fasta') else []
+	log:
+		'iteration-{nr}/new_V_{pre,(pre|)}germline.log'
 	run:
 		nr = int(wildcards.nr, base=10)
 		conf = config.pre_germline_filter if wildcards.pre == 'pre' else config.germline_filter
@@ -643,7 +645,8 @@ rule igdiscover_germlinefilter:
 				criteria += ['--whitelist=' + path]
 		if conf['allow_stop']:
 			criteria += ['--allow-stop']
-		criteria += ['--max-differences={}'.format(conf['differences'])]
+		# if conf['allow_chimeras']:
+		#	criteria += ['--allow-chimeras']
 		criteria += ['--unique-CDR3={}'.format(conf['unique_cdr3s'])]
 		criteria += ['--cluster-size={}'.format(conf['cluster_size'])]
 		criteria += ['--unique-J={}'.format(conf['unique_js'])]
@@ -654,7 +657,9 @@ rule igdiscover_germlinefilter:
 		criteria += ['--unique-D-ratio={}'.format(conf['unique_d_ratio'])]
 		criteria += ['--unique-D-threshold={}'.format(conf['unique_d_threshold'])]
 		criteria = ' '.join(criteria)
-		shell("igdiscover germlinefilter {criteria} --fasta={output.fasta} {input.tab} > {output.tab}")
+		shell("igdiscover germlinefilter {criteria} --fasta={output.fasta} {input.tab} "
+		      "2> >(tee {log} >&2) "
+		      "> {output.tab}")
 
 
 rule igdiscover_discover_j:
@@ -667,9 +672,9 @@ rule igdiscover_discover_j:
 		tab="iteration-01/filtered.tab.gz",
 	params:
 		allele_ratio='--allele-ratio={}'.format(config.j_discovery['allele_ratio']),
-		extra=' --cross-mapping-ratio={}'.format(config.j_discovery['cross_mapping_ratio']) if config.j_discovery['cross_mapping_ratio'] else ''
+		cross_mapping_ratio=' --cross-mapping-ratio={}'.format(config.j_discovery['cross_mapping_ratio'])
 	shell:
-		"time igdiscover discoverj {params.allele_ratio}{params.extra} "
+		"time igdiscover discoverj {params.allele_ratio}{params.cross_mapping_ratio} "
 		"--database={input.j_reference} "
 		"--fasta={output.fasta} "
 		"{input.tab} > {output.tab}"

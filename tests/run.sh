@@ -13,6 +13,7 @@ igdiscover init --db=testdata/database --reads=testdata/reads.1.fastq.gz testrun
 
 cd testrun/paired
 igdiscover run
+igdiscover run iteration-01/exact.tab
 cd ../..
 
 # Use the merged file from above as input again

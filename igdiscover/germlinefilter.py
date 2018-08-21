@@ -12,7 +12,6 @@ separately:
 * Discard sequences with too few unique CDR3s (CDR3_clusters column)
 * Discard sequences with too few unique Js (Js_exact column)
 * Discard sequences identical to one of the database sequences (if DB given)
-* Discard sequences that do not match a set of known good motifs (unless whitelisted)
 * Discard sequences that contain a stop codon (has_stop column) (unless whitelisted)
 
 The following criteria involve comparison of candidates against each other:
@@ -24,7 +23,6 @@ The following criteria involve comparison of candidates against each other:
 
 If you provide a whitelist of sequences, then the candidates that appear on it
 * are not checked for the cluster size criterion,
-* do not need to match a set of known good motifs,
 * are never considered near-duplicates,
 * are allowed to contain a stop codon.
 
@@ -37,7 +35,7 @@ import pandas as pd
 from sqt import FastaReader
 from sqt.align import edit_distance
 
-from .utils import UniqueNamer, Merger, is_same_gene
+from .utils import UniqueNamer, Merger, is_same_gene, ChimeraFinder
 
 logger = logging.getLogger(__name__)
 
@@ -47,9 +45,6 @@ def add_arguments(parser):
 	arg('--cluster-size', type=int, metavar='N', default=0,
 		help='Consensus must represent at least N sequences. '
 		'Default: %(default)s')
-	arg('--max-differences', type=int, metavar='MAXDIFF', default=0,
-		help='Merge sequences if they have at most MAXDIFF differences. '
-		'The one with more CDR3s is kept. Default: %(default)s')
 	arg('--cross-mapping-ratio', type=float, metavar='RATIO', default=0.02,
 		help='Ratio for detection of cross-mapping artifacts. Default: %(default)s')
 	arg('--clonotype-ratio', '--allele-ratio', type=float, metavar='RATIO', default=0.1,
@@ -82,6 +77,8 @@ def add_arguments(parser):
 	arg('--allow-stop', action='store_true', default=False,
 		help='Allow stop codons in sequences (uses the has_stop column).'
 			'Default: Do not allow stop codons.')
+	# arg('--allow-chimeras', action='store_true', default=False,
+	# 	help='Do not filter out chimeric sequences. Default: Discard chimeras')
 	arg('--whitelist', metavar='FASTA', default=[], action='append',
 		help='Sequences that are never discarded or merged with others, '
 			'even if criteria for discarding them would apply (except cross-mapping artifact '
@@ -100,11 +97,10 @@ class SequenceMerger(Merger):
 	"""
 	Merge sequences that are sufficiently similar into single entries.
 	"""
-	def __init__(self, max_differences, cross_mapping_ratio, clonotype_ratio, exact_ratio,
+	def __init__(self, cross_mapping_ratio, clonotype_ratio, exact_ratio,
 			unique_d_ratio,
 			unique_d_threshold):
 		super().__init__()
-		self._max_differences = max_differences
 		self._cross_mapping_ratio = cross_mapping_ratio
 		self._clonotype_ratio = clonotype_ratio
 		self._exact_ratio = exact_ratio
@@ -118,8 +114,7 @@ class SequenceMerger(Merger):
 
 		Two sequences are Sequences can also be discarded if llele ratio, cross-mapping ratio or unique_d ratio criteria
 
-		Two sequences are considered to be similar if their edit distance is at most
-		max_differences (see constructor). If one of the sequences is longer, the 'overhanging'
+		If one of the sequences is longer, the 'overhanging'
 		bases are ignored at either the 5' end or the 3' end, whichever gives the lower
 		edit distance.
 
@@ -143,11 +138,11 @@ class SequenceMerger(Merger):
 		if len(s_no_cdr3) != len(t_no_cdr3):
 			t_prefix = t_no_cdr3[:len(s_no_cdr3)]
 			t_suffix = t_no_cdr3[-len(s_no_cdr3):]
-			dist_prefix = edit_distance(s_no_cdr3, t_prefix, max(self._max_differences, 1))
-			dist_suffix = edit_distance(s_no_cdr3, t_suffix, max(self._max_differences, 1))
+			dist_prefix = edit_distance(s_no_cdr3, t_prefix, 1)
+			dist_suffix = edit_distance(s_no_cdr3, t_suffix, 1)
 			dist = min(dist_prefix, dist_suffix)
 		else:
-			dist = edit_distance(s_no_cdr3, t_no_cdr3, max(self._max_differences, 1))
+			dist = edit_distance(s_no_cdr3, t_no_cdr3, 1)
 
 		# Check for cross-mapping
 		# We check for dist <= 1 (and not ==1) since there may be
@@ -199,7 +194,7 @@ class SequenceMerger(Merger):
 								ratio, v.name, u.name)
 							return u
 
-		if dist > self._max_differences:
+		if dist > 0:
 			return None  # keep both
 
 		# If we get here, then the two candidates are too similar. Unless they are
@@ -219,25 +214,26 @@ class SequenceMerger(Merger):
 		return t
 
 
-def main(args):
-	if args.unique_D_threshold <= 1:
-		sys.exit('--unique-D-threshold must be at least 1')
-	merger = SequenceMerger(args.max_differences, args.cross_mapping_ratio,
-		clonotype_ratio=args.clonotype_ratio, exact_ratio=args.exact_ratio,
-		unique_d_ratio=args.unique_D_ratio, unique_d_threshold=args.unique_D_threshold)
+class Whitelist:
+	def __init__(self):
+		self._sequences = dict()
 
-	whitelist = dict()
-	for path in args.whitelist:
-		for record in FastaReader(path):
-			whitelist[record.sequence.upper()] = record.name
-	logger.info('%d unique sequences in whitelist', len(whitelist))
+	def add_fasta(self, path):
+		with FastaReader(path) as fr:
+			for record in fr:
+				self._sequences[record.sequence.upper()] = record.name
 
-	def whitelist_dist(sequence):
-		if sequence in whitelist:
-			return 0, whitelist[sequence]
+	def closest(self, sequence):
+		"""
+		Search for the whitelist sequence that is closest to the given sequence.
+
+		Return tuple (distance, name).
+		"""
+		if sequence in self._sequences:
+			return 0, self._sequences[sequence]
 		mindist = len(sequence)
 		distances = []
-		for seq, name in whitelist.items():
+		for seq, name in self._sequences.items():
 			ed = edit_distance(seq, sequence, maxdiff=mindist)
 			distances.append((ed, name))
 			if ed == 1:
@@ -249,19 +245,59 @@ def main(args):
 		distance, name = min(distances)
 		return distance, name
 
+	def __len__(self):
+		return len(self._sequences)
+
+	def __contains__(self, other):
+		return other in self._sequences
+
+
+def is_chimera(table, whitelist):
+	result = pd.Series('', index=table.index, dtype=object)
+	if whitelist:
+		whitelisted = table[table['whitelist_diff'] == 0]
+	else:
+		whitelisted = table[table['database_diff'] == 0]
+	chimera_finder = ChimeraFinder(list(whitelisted['consensus']))
+	for row in table[(table['whitelist_diff'] != 0) & (table['database_diff'] != 0)].itertuples():
+		query = row.consensus
+		chimera_result = chimera_finder.find_exact(query)
+		if chimera_result:
+			(prefix_length, prefix_indices, suffix_indices) = chimera_result
+			suffix_length = len(query) - prefix_length
+			prefix_name = whitelisted.iloc[prefix_indices[0]]['name']
+			suffix_row = whitelisted.iloc[suffix_indices[0]]
+			suffix_name = suffix_row['name']
+			suffix_sequence = suffix_row['consensus']
+			logger.info('Removing %s (diffs.: %d) as it appears to be a chimera of '
+				'%s:1..%d and %s:%d..%d', row.name, row.whitelist_diff, prefix_name, prefix_length,
+				suffix_name, len(suffix_sequence) - suffix_length + 1, len(suffix_sequence))
+			result.loc[row.Index] = '{}:1..{}+{}:{}..{}'.format(prefix_name, prefix_length,
+				suffix_name, len(suffix_sequence) - suffix_length + 1, len(suffix_sequence))
+
+	return result
+
+
+def main(args):
+	if args.unique_D_threshold <= 1:
+		sys.exit('--unique-D-threshold must be at least 1')
+	merger = SequenceMerger(
+		cross_mapping_ratio=args.cross_mapping_ratio,
+		clonotype_ratio=args.clonotype_ratio,
+		exact_ratio=args.exact_ratio,
+		unique_d_ratio=args.unique_D_ratio,
+		unique_d_threshold=args.unique_D_threshold
+	)
+	whitelist = Whitelist()
+	for path in args.whitelist:
+		whitelist.add_fasta(path)
+	logger.info('%d unique sequences in whitelist', len(whitelist))
+
 	# Read in tables
 	total_unfiltered = 0
 	overall_table = None
 	for path in args.tables:
 		table = pd.read_csv(path, sep='\t')
-		# TODO remove this after deprecation period
-		table.rename(columns=dict(
-			consensus_seqs='cluster_size',
-			window_seqs='cluster_size',
-			subset_seqs='cluster_size',
-			CDR3_clusters='clonotypes',
-		), inplace=True)
-
 		i = list(table.columns).index('consensus')
 		# whitelist_diff distinguishes between 0 and !=0 only
 		# at this point. Accurate edit distances are computed later.
@@ -331,11 +367,19 @@ def main(args):
 	# all of the filtering has already been done
 	if whitelist:
 		for row in overall_table.itertuples():
-			distance, name = whitelist_dist(overall_table.loc[row[0], 'consensus'])
+			distance, name = whitelist.closest(overall_table.loc[row[0], 'consensus'])
 			overall_table.loc[row[0], 'closest_whitelist'] = name
 			overall_table.loc[row[0], 'whitelist_diff'] = distance
 	else:
 		overall_table.whitelist_diff.replace(-1, '', inplace=True)
+
+	i = list(overall_table.columns).index('database_diff')
+	overall_table.insert(i, 'chimera', is_chimera(overall_table, whitelist))
+
+	# Discard chimeric sequences
+	# if not args.allow_chimeras:
+	#   overall_table = overall_table[~is_chimera(overall_table, whitelist)].copy()
+
 	print(overall_table.to_csv(sep='\t', index=False, float_format='%.2f'), end='')
 
 	if args.fasta:

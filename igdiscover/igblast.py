@@ -41,6 +41,7 @@ from sqt.dna import nt_to_aa
 from .utils import get_cpu_time, SerialPool
 from .parse import TableWriter, IgBlastParser
 from .species import cdr3_start, cdr3_end
+from .config import GlobalConfig
 
 
 logger = logging.getLogger(__name__)
@@ -191,12 +192,13 @@ class Runner:
 
 	It runs IgBLAST and parses the output for a list of sequences.
 	"""
-	def __init__(self, blastdb_dir, species, sequence_type, penalty, database):
+	def __init__(self, blastdb_dir, species, sequence_type, penalty, database, use_cache):
 		self.blastdb_dir = blastdb_dir
 		self.species = species
 		self.sequence_type = sequence_type
 		self.penalty = penalty
 		self.database = database
+		self.use_cache = use_cache
 
 	def __call__(self, sequences):
 		"""
@@ -204,7 +206,7 @@ class Runner:
 		and records is a list of (Extended-)IgBlastRecord objects (the parsed output).
 		"""
 		igblast_result = run_igblast(sequences, self.blastdb_dir, self.species, self.sequence_type,
-			self.penalty)
+			self.penalty, self.use_cache)
 		sio = StringIO(igblast_result)
 		parser = IgBlastParser(sequences, sio, self.database)
 		records = list(parser)
@@ -295,7 +297,7 @@ class Database:
 
 
 def igblast(database, sequences, sequence_type, species=None, threads=None, penalty=None,
-		raw_output=None):
+		raw_output=None, use_cache=False):
 	"""
 	Run IgBLAST, parse results and yield (Extended-)IgBlastRecord objects.
 
@@ -320,7 +322,8 @@ def igblast(database, sequences, sequence_type, species=None, threads=None, pena
 			makeblastdb(os.path.join(database_dir, gene + '.fasta'), os.path.join(blastdb_dir, gene))
 
 		chunks = chunked(sequences, chunksize=1000)
-		runner = Runner(blastdb_dir, species=species, sequence_type=sequence_type, penalty=penalty, database=database)
+		runner = Runner(blastdb_dir, species=species, sequence_type=sequence_type, penalty=penalty,
+			database=database, use_cache=use_cache)
 		pool = stack.enter_context(multiprocessing.Pool(threads) if threads > 1 else SerialPool())
 		for igblast_output, igblast_records in pool.imap(runner, chunks, chunksize=1):
 			if raw_output:
@@ -329,8 +332,12 @@ def igblast(database, sequences, sequence_type, species=None, threads=None, pena
 
 
 def main(args):
-	global _igblastcache
-	_igblastcache = IgBlastCache()
+	config = GlobalConfig()
+	if config.use_cache:
+		global _igblastcache
+		_igblastcache = IgBlastCache()
+	else:
+		logger.info('IgBLAST cache disabled')
 	database = Database(args.database, args.sequence_type)
 	detected_cdr3s = 0
 	writer = TableWriter(sys.stdout)
@@ -347,7 +354,7 @@ def main(args):
 		n = 0  # number of records processed so far
 		for record in igblast(database, sequences, sequence_type=args.sequence_type,
 				species=args.species, threads=args.threads, penalty=args.penalty,
-				raw_output=raw_output):
+				raw_output=raw_output, use_cache=config.use_cache):
 			n += 1
 			if args.rename is not None:
 				record.query_name = "{}seq{}".format(args.rename, n)

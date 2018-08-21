@@ -14,7 +14,7 @@ import pandas as pd
 from sqt import SequenceReader
 from .table import read_table
 from .utils import natural_sort_key
-from .discoverj import AlleleRatioMerger
+from .discoverj import filter_by_allele_ratio, compute_expressions
 
 logger = logging.getLogger(__name__)
 
@@ -48,46 +48,18 @@ def add_arguments(parser):
 	arg('table', help='Table with parsed and filtered IgBLAST results')
 
 
-def count_unique_cdr3(table):
-	return len(set(s for s in table.CDR3_nt if s))
-
-
-def count_unique_gene(table, gene_type):
-	return len(set(s for s in table[gene_type + '_gene'] if s))
-
-
-def compute_expressions(table, gene_type):
-	columns = ('gene', 'count', 'unique_CDR3')
-	for gt in 'V', 'D', 'J':
-		if gene_type != gt:
-			columns += ('unique_' + gt,)
-	gene_column = gene_type + '_gene'
-	rows = []
-	for gene, group in table.groupby(gene_column):
-		if gene == '':
-			continue
-		unique_cdr3 = count_unique_cdr3(group)
-		row = dict(gene=gene, count=len(group), unique_CDR3=unique_cdr3)
-		for gt in 'V', 'D', 'J':
-			if gene_type != gt:
-				row['unique_' + gt] = count_unique_gene(group, gene_type=gt)
-		rows.append(row)
-	counts = pd.DataFrame(rows, columns=columns).set_index('gene')
-	return counts
-
-
 def plot_counts(counts, gene_type):
 	"""Plot expression counts. Return a Figure object"""
+	from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+	from matplotlib.figure import Figure
 	import matplotlib
-	matplotlib.use('agg')
-	import matplotlib.pyplot as plt
 	import seaborn as sns
 	import numpy as np
 	sns.set()
-
-	fig = plt.figure(figsize=((50 + len(counts) * 5) / 25.4, 210/25.4))
+	fig = Figure(figsize=((50 + len(counts) * 5) / 25.4, 210/25.4))
 	matplotlib.rcParams.update({'font.size': 14})
-	ax = fig.gca()
+	FigureCanvas(fig)
+	ax = fig.add_subplot(111)
 	ax.set_title('{} gene usage'.format(gene_type))
 	ax.set_xlabel('{} gene'.format(gene_type))
 	ax.set_ylabel('Count')
@@ -143,15 +115,11 @@ def main(args):
 		logger.error('--database and --allele-ratio cannot be used at the same time.')
 		sys.exit(1)
 
+	logger.info('Computed expressions for %d genes', len(counts))
 	if args.allele_ratio is not None:
-		arm = AlleleRatioMerger(args.allele_ratio, cross_mapping_ratio=None)
-		renamed_counts = counts.reset_index().rename(columns={'gene': 'name'})
-		arm.extend(renamed_counts.itertuples(index=False))
-		counts = pd.DataFrame(list(arm), columns=renamed_counts.columns) \
-			.rename(columns={'name': 'gene'}) \
-			.set_index('gene')
+		counts = filter_by_allele_ratio(counts, args.allele_ratio)
 		logger.info(
-			'After filtering by allele ratio and/or cross-mapping ratio, %d candidates remain',
+			'After filtering by allele ratio, %d genes remain',
 			len(counts))
 
 	# logger.info('%d sequences were not assigned a %s gene', unassigned, args.gene)

@@ -100,7 +100,7 @@ def SI(sequence, name, clonotypes, whitelisted=False):
 
 
 def test_sequence_merger_withCDR3():
-	merger = SequenceMerger(max_differences=1, cross_mapping_ratio=0, clonotype_ratio=None,
+	merger = SequenceMerger(cross_mapping_ratio=0, clonotype_ratio=None,
 		exact_ratio=None, unique_d_ratio=None, unique_d_threshold=10)
 	infos = [
 		SI('ACGTTA', 'Name1', 15),
@@ -117,39 +117,22 @@ def test_sequence_merger_withCDR3():
 	merger.add(infos[2]); merged = list(merger)
 	assert len(merged) == 2 and merged[0] == infos[1] and merged[1] == infos[2]
 	merger.add(infos[3]); merged = list(merger)
-	assert len(merged) == 2 and merged[0] == infos[2] and merged[1] == infos[3]
+	assert len(merged) == 3 and merged[0:3] == infos[1:4]
 
 
 def test_sequence_merger_prefix():
-	merger = SequenceMerger(max_differences=1, cross_mapping_ratio=0, clonotype_ratio=None,
+	merger = SequenceMerger(cross_mapping_ratio=0, clonotype_ratio=None,
 		exact_ratio=None,
 		unique_d_ratio=None, unique_d_threshold=10)
 	infos = [
 		SI('AAATAA', 'Name1', 117),
-		SI('AAACAAG', 'Name2', 10),
+		SI('AAATAAG', 'Name2', 10),
 	]
 	merger.add(infos[0])
 	merger.add(infos[1])
 	merged = list(merger)
 	assert len(merged) == 1
 	assert merged[0] == infos[0], (merged, infos)
-
-
-def test_merger_check_all_previous():
-	merger = SequenceMerger(max_differences=1, cross_mapping_ratio=0, clonotype_ratio=None,
-		exact_ratio=None,
-		unique_d_ratio=None, unique_d_threshold=10)
-	infos = [
-		SI('ATAAAA', 's1', 11),
-		SI('AAGAAA', 's2', 12),
-		SI('AAACAA', 's3', 13),
-		SI('AAAAAA', 'Final', 200),
-	]
-	for info in infos:
-		merger.add(info)
-	merged = list(merger)
-	assert len(merged) == 1
-	assert merged[0] == infos[3]
 
 
 class TestPrefixDict:

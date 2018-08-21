@@ -47,7 +47,7 @@ def main(args):
 	if args.gene == 'J' or args.x == 'J':
 		table = table[table.J_errors == 0]
 		logger.info('%s rows remain after requiring J errors = 0', len(table))
-	elif args.gene == 'D' or args.x == 'D':
+	if args.gene == 'D' or args.x == 'D':
 		table = table[table.D_evalue <= args.d_evalue]
 		logger.info('%s rows remain after requiring D E-value <= %s', len(table), args.d_evalue)
 		table = table[table.D_covered >= args.d_coverage]
@@ -87,11 +87,20 @@ def main(args):
 
 	if args.order:
 		with SequenceReader(args.order) as f:
-			names = [r.name.partition('*')[0] for r in f]
-			gene_order = {name: index for index, name in enumerate(names)}
+			ordered_names = [r.name.partition('*')[0] for r in f]
+		gene_order = {name: index for index, name in enumerate(ordered_names)}
 
-		matrix['V_gene_tmp'] = pd.Series(matrix.index, index=matrix.index).apply(
-			lambda name: name.partition('*')[0]).map(gene_order)
+		def orderfunc(full_name):
+			name, _, allele = full_name.partition('*')
+			allele = int(allele)
+			try:
+				index = gene_order[name]
+			except KeyError:
+				logger.warning('Gene name %s not found in %r, placing it at the end',
+					name, args.order)
+				index = 1000000
+			return index * 1000 + allele
+		matrix['V_gene_tmp'] = pd.Series(matrix.index, index=matrix.index).apply(orderfunc)
 		matrix.sort_values('V_gene_tmp', inplace=True)
 		del matrix['V_gene_tmp']
 

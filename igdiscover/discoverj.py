@@ -10,10 +10,14 @@ generate FASTA output.
 """
 import logging
 import pandas as pd
+from collections import defaultdict
+from typing import List
+
 from sqt import FastaReader
 from sqt.align import edit_distance
 from .utils import Merger, merge_overlapping, unique_name, is_same_gene, slice_arg
 from .table import read_table, fix_columns
+
 
 logger = logging.getLogger(__name__)
 
@@ -32,16 +36,16 @@ def add_arguments(parser):
 	arg('--j-coverage', type=float, default=None, metavar='PERCENT',
 		help='Require that the sequence covers at least PERCENT of the J gene. '
 		'Default: 90 when --gene=J; 0 otherwise')
-	arg('--allele-ratio', type=float, metavar='RATIO', default=0.1,
+	arg('--allele-ratio', type=float, metavar='RATIO', default=0.2,
 		help='Required allele ratio. Works only for genes named "NAME*ALLELE". Default: %(default)s')
-	arg('--cross-mapping-ratio', type=float, metavar='RATIO', default=None,
+	arg('--cross-mapping-ratio', type=float, metavar='RATIO', default=0.1,
 		help='Ratio for detection of cross-mapping artifacts. Default: %(default)s')
 	arg('--min-count', metavar='N', type=int, default=None,
 		help='Omit candidates with fewer than N exact occurrences in the input table. '
-			'Default: 10 for D; 100 for V and J')
+			'Default: 1 for J; 10 for D; 100 for V')
 	arg('--no-perfect-matches', dest='perfect_matches', default=True, action='store_false',
 		help='Do not filter out sequences for which the V assignment (or J for --gene=V) '
-			'has more than one error')
+			'has at least one error')
 
 	# --gene=D options
 	arg('--d-core-length', metavar='L', type=int, default=6,
@@ -156,7 +160,18 @@ class AlleleRatioMerger(Merger):
 		return None
 
 
-def count_occurrences(candidates, table_path, search_columns, other_gene, other_errors, merge, perfect_matches):
+def filter_by_allele_ratio(table, allele_ratio):
+	arm = AlleleRatioMerger(allele_ratio, cross_mapping_ratio=None)
+	renamed_counts = table.reset_index().rename(columns={'gene': 'name'})
+	arm.extend(renamed_counts.itertuples(index=False))
+	counts = pd.DataFrame(list(arm), columns=renamed_counts.columns) \
+		.rename(columns={'name': 'gene'}) \
+		.set_index('gene')
+	return counts
+
+
+def count_occurrences(candidates, table_path, search_columns, other_gene, other_errors, merge,
+		perfect_matches):
 	"""
 	Count how often each candidate sequence occurs in the input table.
 	The columns named in search_columns are concatenated and searched.
@@ -182,9 +197,10 @@ def count_occurrences(candidates, table_path, search_columns, other_gene, other_
 	"""
 	candidates_map = {c.sequence: c for c in candidates}
 
-	# Speed up search by looking for the most common sequences first
-	search_order = sorted(candidates_map, key=lambda s: candidates_map[s].max_count, reverse=True)
+	search_order = [c.sequence for c in candidates]
 	cols = [other_gene, 'V_errors', 'J_errors', 'CDR3_nt'] + search_columns
+
+	search_cache = defaultdict(list)  # map haystack sequence to list of candidates that occur in it
 	for chunk in pd.read_csv(table_path, usecols=cols, chunksize=10000, sep='\t'):
 		fix_columns(chunk)
 		if perfect_matches:
@@ -196,17 +212,19 @@ def count_occurrences(candidates, table_path, search_columns, other_gene, other_
 		chunk['haystack'] = chunk['haystack'].str.replace('(', '').replace(')', '')
 
 		for row in chunk.itertuples():
-			for needle in search_order:
-				if needle in row.haystack:
-					candidate = candidates_map[needle]
-					candidate.exact_occ += 1  # TODO += row.count?
-					candidate.other_genes.add(getattr(row, other_gene))
-					candidate.cdr3s.add(row.CDR3_nt)
-					if merge:
-						# When overlapping candidates have been merged,
-						# there will be no other pattern that is a
-						# substring of the current search pattern.
-						break
+			if row.haystack not in search_cache:
+				for needle in search_order:
+					if needle in row.haystack:
+						search_cache[row.haystack].append(candidates_map[needle])
+			for candidate in search_cache[row.haystack]:
+				candidate.exact_occ += 1  # TODO += row.count?
+				candidate.other_genes.add(getattr(row, other_gene))
+				candidate.cdr3s.add(row.CDR3_nt)
+				if merge:
+					# When overlapping candidates have been merged,
+					# there will be no other pattern that is a
+					# substring of the current search pattern.
+					break
 	return candidates_map.values()
 
 
@@ -226,10 +244,10 @@ def discard_substring_occurrences(candidates):
 			yield short
 
 
-def sequence_candidates(table, column, minimum_length, core=slice(None, None), min_occ=2):
+def sequence_candidates(table, column, minimum_length, core=slice(None, None), min_occ=3):
 	"""
 	Generate candidates by clustering all sequences in a column
-	(usually V_nt, J_nt). At least min_occ occurrences are required.
+	(V_nt, D_nt or J_nt). At least min_occ occurrences are required.
 
 	core -- a slice object. If given, the strings in the column are
 	       sliced before being clustered.
@@ -237,6 +255,54 @@ def sequence_candidates(table, column, minimum_length, core=slice(None, None), m
 	for sequence, occ in table[column].str[core].value_counts().items():
 		if len(sequence) >= minimum_length and occ >= min_occ:
 			yield Candidate(None, sequence, max_count=occ)
+
+
+def count_unique_cdr3(table):
+	return len(set(s for s in table.CDR3_nt if s))
+
+
+def count_unique_gene(table, gene_type):
+	return len(set(s for s in table[gene_type + '_gene'] if s))
+
+
+def compute_expressions(table, gene_type):
+	"""Compute expression counts of known genes"""
+	assert gene_type in {'V', 'D', 'J'}
+	columns = ('gene', 'count', 'unique_CDR3')
+	for gt in 'V', 'D', 'J':
+		if gene_type != gt:
+			columns += ('unique_' + gt,)
+	gene_column = gene_type + '_gene'
+	rows = []
+	for gene, group in table.groupby(gene_column):
+		if gene == '':
+			continue
+		unique_cdr3 = count_unique_cdr3(group)
+		row = dict(gene=gene, count=len(group), unique_CDR3=unique_cdr3)
+		for gt in 'V', 'D', 'J':
+			if gene_type != gt:
+				row['unique_' + gt] = count_unique_gene(group, gene_type=gt)
+		rows.append(row)
+	counts = pd.DataFrame(rows, columns=columns).set_index('gene')
+	return counts
+
+
+def make_whitelist(table, database, gene_type: str, allele_ratio=None) -> List[str]:
+	"""
+	Return a list of sequences that represent expressed alleles
+	"""
+	assert gene_type in {'V', 'D', 'J'}
+	# Compute expression counts in the same way the 'igdiscover count' command would do it
+	counts = compute_expressions(table, gene_type)
+	if allele_ratio:
+		counts = filter_by_allele_ratio(counts, allele_ratio)
+	names = list(counts.index)
+
+	# Construct whitelist from all expressed alleles
+	database = {r.name: r.sequence for r in database}
+	sequences = [database[name] for name in names]
+
+	return sequences
 
 
 def print_table(candidates, other_gene, missing):
@@ -271,8 +337,9 @@ def main(args):
 	other_gene = other + '_gene'
 	other_errors = other + '_errors'
 	table = read_table(args.table,
-		usecols=['count', 'V_gene', 'J_gene', 'V_errors', 'J_errors', 'J_covered', column, 'CDR3_nt'])
+		usecols=['count', 'V_gene', 'D_gene', 'J_gene', 'V_errors', 'J_errors', 'J_covered', column, 'CDR3_nt'])
 	logger.info('Table with %s rows read', len(table))
+
 	if args.j_coverage is None and args.gene == 'J':
 		args.j_coverage = 90
 	if args.j_coverage:
@@ -285,22 +352,35 @@ def main(args):
 	if args.merge is None:
 		args.merge = args.gene == 'D'
 	if args.min_count is None:
-		args.min_count = 10 if args.gene == 'D' else 100
+		args.min_count = {'J': 1, 'D': 10, 'V': 100}[args.gene]  # TODO J is fine, but are D and V?
 
 	if args.gene == 'D':
 		candidates = sequence_candidates(
 			table, column, minimum_length=args.d_core_length, core=args.d_core)
 	elif args.gene == 'J':
 		candidates = sequence_candidates(
-			table, column, minimum_length=MINIMUM_CANDIDATE_LENGTH, min_occ=100)
+			table, column, minimum_length=MINIMUM_CANDIDATE_LENGTH)
 	else:
 		candidates = sequence_candidates(
 			table, column, minimum_length=MINIMUM_CANDIDATE_LENGTH)
 
 	candidates = list(candidates)
 	logger.info('Collected %s unique %s sequences', len(candidates), args.gene)
+
+	# Add whitelisted sequences
+	if database:
+		whitelist = make_whitelist(table, database, args.gene, args.allele_ratio)
+		missing_whitelisted = set(whitelist) - set(c.sequence for c in candidates)
+		for sequence in missing_whitelisted:
+			candidates.append(Candidate(None, sequence))
+		logger.info('Added %d whitelisted sequence%s',
+			len(missing_whitelisted), 's' if len(missing_whitelisted) != 1 else '')
+
 	candidates = list(discard_substring_occurrences(candidates))
 	logger.info('Removing candidate sequences that occur within others results in %s candidates',
+		len(candidates))
+	candidates = [candidate for candidate in candidates if 'N' not in candidate.sequence]
+	logger.info('Removing candidates containing "N" results in %s candidates',
 		len(candidates))
 
 	if args.merge:
@@ -315,6 +395,40 @@ def main(args):
 		candidates = list(merger)
 	del table
 
+	logger.info('%d candidates', len(candidates))
+	# Assign names etc.
+	if database:
+		for candidate in candidates:
+			distances = [(edit_distance(db.sequence, candidate.sequence), db) for db in database]
+			candidate.db_distance, closest = min(distances, key=lambda x: x[0])
+			candidate.db_name = closest.name
+
+			if candidate.db_distance == 0:
+				candidate.name = closest.name
+			else:
+				# Exact db sequence not found, is there one that contains
+				# this candidate as a substring?
+				for db_record in database:
+					index = db_record.sequence.find(candidate.sequence)
+					if index == -1:
+						continue
+					if args.gene == 'D':
+						start = db_record.sequence.find(candidate.sequence)
+						prefix = db_record.sequence[:start]
+						suffix = db_record.sequence[start + len(candidate.sequence):]
+						candidate.missing = '{}...{}'.format(prefix, suffix)
+					else:
+						# Replace this record with the full-length version
+						candidate.sequence = db_record.sequence
+						candidate.db_distance = 0
+					candidate.name = db_record.name
+					break
+				else:
+					candidate.name = unique_name(closest.name, candidate.sequence)
+	else:
+		for candidate in candidates:
+			candidate.name = unique_name(args.gene, candidate.sequence)
+
 	logger.info('Counting occurrences ...')
 	if args.gene == 'D':
 		search_columns = ['VD_junction', 'D_region', 'DJ_junction']
@@ -322,52 +436,24 @@ def main(args):
 		search_columns = ['DJ_junction', 'J_nt']
 	else:
 		search_columns = ['genomic_sequence']
-	records = count_occurrences(candidates, args.table, search_columns, other_gene, other_errors,
+	candidates = count_occurrences(candidates, args.table, search_columns, other_gene, other_errors,
 		args.merge, args.perfect_matches)
-
-	logger.info('%d records', len(records))
-	# Assign names etc.
-	if database:
-		for record in records:
-			distances = [(edit_distance(db.sequence, record.sequence), db) for db in database]
-			record.db_distance, closest = min(distances, key=lambda x: x[0])
-			record.db_name = closest.name
-
-			if record.db_distance == 0:
-				record.name = closest.name
-			else:
-				# Exact db sequence not found, is there one that contains
-				# this candidate as a substring?
-				is_substring = [db for db in database
-					if db.sequence.find(record.sequence) != -1]
-				if is_substring:
-					db = is_substring[-1]
-					start = db.sequence.find(record.sequence)
-					prefix = db.sequence[:start]
-					suffix = db.sequence[start + len(record.sequence):]
-					record.name = db.name
-					record.missing = '{}...{}'.format(prefix, suffix)
-				else:
-					record.name = unique_name(closest.name, record.sequence)
-	else:
-		for record in records:
-			record.name = unique_name(args.gene, record.sequence)
 
 	# Filter by allele ratio
 	if args.allele_ratio or args.cross_mapping_ratio:
 		arm = AlleleRatioMerger(args.allele_ratio, args.cross_mapping_ratio)
-		arm.extend(records)
-		records = list(arm)
+		arm.extend(candidates)
+		candidates = list(arm)
 		logger.info('After filtering by allele ratio and/or cross-mapping ratio, %d candidates remain',
-			len(records))
+			len(candidates))
 
-	records = sorted(records, key=lambda r: (r.exact_occ, r.sequence), reverse=True)
-	records = [r for r in records if r.exact_occ >= args.min_count]
-	print_table(records, other_gene, missing=args.gene == 'D')
+	candidates = sorted(candidates, key=lambda c: c.name)
+	candidates = [c for c in candidates if c.exact_occ >= args.min_count or c.db_distance == 0]
+	print_table(candidates, other_gene, missing=args.gene == 'D')
 
 	if args.fasta:
 		with open(args.fasta, 'w') as f:
-			for record in sorted(records, key=lambda r: r.name):
-				print('>{}\n{}'.format(record.name, record.sequence), file=f)
+			for candidate in sorted(candidates, key=lambda r: r.name):
+				print('>{}\n{}'.format(candidate.name, candidate.sequence), file=f)
 
-	logger.info('Wrote %d genes', len(records))
+	logger.info('Wrote %d genes', len(candidates))

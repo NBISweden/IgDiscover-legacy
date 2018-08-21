@@ -49,8 +49,8 @@ class Config:
 			unique_js=2,
 			whitelist=True,
 			cluster_size=0,
-			differences=0,
 			allow_stop=True,
+			# allow_chimeras=False,
 			cross_mapping_ratio=0.02,
 			clonotype_ratio=0.12,
 			exact_ratio=0.12,
@@ -63,8 +63,8 @@ class Config:
 			unique_js=3,
 			whitelist=True,
 			cluster_size=100,
-			differences=0,
 			allow_stop=False,
+			# allow_chimeras=False,
 			cross_mapping_ratio=0.02,
 			clonotype_ratio=0.12,
 			exact_ratio=0.12,
@@ -122,6 +122,17 @@ class Config:
 	def from_default_path(cls):
 		with open(cls.DEFAULT_PATH) as f:
 			return Config(file=f)
+
+
+class GlobalConfig:
+	def __init__(self):
+		self.use_cache = False
+		path = os.getenv('XDG_CONFIG_HOME', os.path.expanduser('~/.config'))
+		path = os.path.join(path, 'igdiscover.conf')
+		if os.path.exists(path):
+			with open(path) as f:
+				config = ruamel.yaml.safe_load(f)
+			self.use_cache = config.get('use_cache', False)
 
 
 def add_arguments(parser):
