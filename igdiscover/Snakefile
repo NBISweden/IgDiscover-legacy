@@ -771,7 +771,7 @@ rule json_stats:
 		iterations = []
 		prev_sequences = set(get_sequences(input.original_db))
 		size = len(prev_sequences)
-		info = OrderedDict(size=size)
+		info = OrderedDict({'db_size': size})
 		iterations.append(info)
 		for i, (pre_germline_path, germline_path) in enumerate(
 				zip(input.v_pre_germline, input.v_germline)):
@@ -785,12 +785,12 @@ rule json_stats:
 			lost_pre = len(prev_sequences - pre_germline_sequences)
 
 			info = OrderedDict()
-			info['size'] = len(germline_sequences)
-			info['gained'] = gained
-			info['lost'] = lost
-			info['size_pre'] = len(pre_germline_sequences)
-			info['gained_pre'] = gained_pre
-			info['lost_pre'] = lost_pre
+			info['db_size'] = len(germline_sequences)
+			info['db_gained'] = gained
+			info['db_lost'] = lost
+			info['db_size_pre'] = len(pre_germline_sequences)
+			info['db_gained_pre'] = gained_pre
+			info['db_lost_pre'] = lost_pre
 			iterations.append(info)
 			prev_sequences = pre_germline_sequences
 		d['iterations'] = iterations
