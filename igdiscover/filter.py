@@ -11,6 +11,7 @@ Discard the following rows in the table:
 The filtered table is printed to standard output.
 """
 import logging
+import json
 import pandas as pd
 
 from .table import fix_columns
@@ -29,25 +30,34 @@ def add_arguments(parser):
 	arg('--j-coverage', type=float, default=60, metavar='PERCENT',
 		help='Require that the sequence covers at least PERCENT of the J gene. '
 		'Default: %(default)s')
+	arg('--json', metavar='FILE', help='Write statistics to FILE')
 	arg('table', help='Table with filtered IgBLAST results.')
 
 
 class FilteringStatistics:
-	__slots__ = ('n', 'vjassigned', 'stop', 'v_evalue', 'v_coverage', 'j_coverage')
+	__slots__ = ('total', 'has_vj_assignment', 'has_no_stop', 'good_v_evalue', 'good_v_coverage',
+	'good_j_coverage', 'has_cdr3')
 
 	def __init__(self):
-		self.n = 0
-		self.vjassigned = 0
-		self.stop = 0
-		self.v_evalue = 0
-		self.v_coverage = 0
-		self.j_coverage = 0
+		self.total = 0
+		self.has_vj_assignment = 0
+		self.has_no_stop = 0
+		self.good_v_evalue = 0
+		self.good_v_coverage = 0
+		self.good_j_coverage = 0
+		self.has_cdr3 = 0
 
 	def __iadd__(self, other):
 		for att in self.__slots__:
 			v = getattr(self, att)
 			setattr(self, att, v + getattr(other, att))
 		return self
+
+	def asdict(self):
+		d = dict()
+		for att in self.__slots__:
+			d[att] = getattr(self, att)
+		return d
 
 
 def filtered_table(table,
@@ -66,40 +76,39 @@ def filtered_table(table,
 	Return the filtered table.
 	"""
 	stats = FilteringStatistics()
-	stats.n = len(table)
+	stats.total = len(table)
 	# Both V and J must be assigned
 	# (Note V_gene and J_gene columns use empty strings instead of NA)
 	filtered = table[(table['V_gene'] != '') & (table['J_gene'] != '')][:]
-	stats.vjassigned = len(filtered)
+	stats.has_vj_assignment = len(filtered)
 	filtered['V_gene'] = pd.Categorical(filtered['V_gene'])
 
 	# Filter out sequences that have a stop codon
 	filtered = filtered[filtered.stop == 'no']
-	stats.stop = len(filtered)
+	stats.has_no_stop = len(filtered)
 
 	# Filter out sequences with a too low V gene hit E-value
 	filtered = filtered[filtered.V_evalue <= v_gene_evalue]
-	stats.v_evalue = len(filtered)
+	stats.good_v_evalue = len(filtered)
 
 	# Filter out sequences with too low V gene coverage
 	filtered = filtered[filtered.V_covered >= v_gene_coverage]
-	stats.v_coverage = len(filtered)
+	stats.good_v_coverage = len(filtered)
 
 	# Filter out sequences with too low J gene coverage
 	filtered = filtered[filtered.J_covered >= j_gene_coverage]
-	stats.j_coverage = len(filtered)
+	stats.good_j_coverage = len(filtered)
 
+	stats.has_cdr3 = sum(filtered['CDR3_nt'] != '')
 	return filtered, stats
 
 
 def main(args):
-	n = 0
 	first = True
 	written = 0
 	stats = FilteringStatistics()
 	for chunk in pd.read_csv(args.table, chunksize=10000, float_precision='high', sep='\t'):
 		fix_columns(chunk)
-		n += len(chunk)
 		filtered, chunk_stats = filtered_table(chunk, v_gene_coverage=args.v_coverage,
 			j_gene_coverage=args.j_coverage, v_gene_evalue=args.v_evalue)
 		stats += chunk_stats
@@ -107,10 +116,16 @@ def main(args):
 		first = False
 		written += len(filtered)
 
-	logger.info('%s rows in input table', stats.n)
-	logger.info('%s rows have both V and J assignment', stats.vjassigned)
-	logger.info('%s of those do not have a stop codon', stats.stop)
-	logger.info('%s of those have an E-value of at most %s', stats.v_evalue, args.v_evalue)
-	logger.info('%s of those cover the V gene by at least %s%%', stats.v_coverage, args.v_coverage)
-	logger.info('%s of those cover the J gene by at least %s%%', stats.j_coverage, args.j_coverage)
+	logger.info('%s rows in input table', stats.total)
+	logger.info('%s rows have both V and J assignment', stats.has_vj_assignment)
+	logger.info('%s of those do not have a stop codon', stats.has_no_stop)
+	logger.info('%s of those have an E-value of at most %s', stats.good_v_evalue, args.v_evalue)
+	logger.info('%s of those cover the V gene by at least %s%%', stats.good_v_coverage, args.v_coverage)
+	logger.info('%s of those cover the J gene by at least %s%%', stats.good_j_coverage, args.j_coverage)
 	logger.info('%d rows written', written)
+	logger.info('%s rows have a recognized CDR3 (these are not filtered)', stats.has_cdr3)
+
+	if args.json:
+		with open(args.json, 'w') as f:
+			json.dump(stats.asdict(), f, indent=2)
+			print(file=f)

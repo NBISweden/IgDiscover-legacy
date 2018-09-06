@@ -546,7 +546,8 @@ rule check_parsing:
 
 rule igdiscover_filter:
 	output:
-		filtered="{dir}/filtered.tab.gz"
+		filtered="{dir}/filtered.tab.gz",
+		json="{dir}/stats/filtered.json"
 	input:
 		assigned="{dir}/assigned.tab.gz",
 		success="{dir}/stats/parsing-successful"
@@ -556,7 +557,7 @@ rule igdiscover_filter:
 		criteria += ['--j-coverage={}'.format(conf['j_coverage'])]
 		criteria += ['--v-evalue={}'.format(conf['v_evalue'])]
 		criteria = ' '.join(criteria)
-		shell("igdiscover filter {criteria} {input.assigned} | {GZIP} > {output}")
+		shell("igdiscover filter --json={output.json} {criteria} {input.assigned} | {GZIP} > {output.filtered}")
 
 
 rule igdiscover_exact:
