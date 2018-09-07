@@ -155,9 +155,11 @@ def cluster_sequences(records):
 GROUPS_HEADER = ['barcode', 'cdr3', 'name', 'sequence']
 
 
-def write_group(csvfile, barcode, sequences):
+def write_group(csvfile, barcode, sequences, with_cdr3):
 	for sequence in sequences:
-		row = [barcode, sequence.cdr3, sequence.name.split(maxsplit=1)[0], sequence.sequence]
+		row = [barcode, sequence.name.split(maxsplit=1)[0], sequence.sequence]
+		if with_cdr3:
+			row[1:1] = [sequence.cdr3]
 		csvfile.writerow(row)
 	csvfile.writerow([])
 
@@ -262,7 +264,7 @@ def main(args):
 			for cluster in clusters:
 				sizes.append(len(cluster))
 				if group_out:
-					write_group(group_out, barcode, cluster)
+					write_group(group_out, barcode, cluster, with_cdr3=group_by_cdr3)
 				if len(cluster) == 1:
 					n_singletons += 1
 				if len(cluster) < MIN_CONSENSUS_SEQUENCES:
