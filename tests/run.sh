@@ -12,6 +12,7 @@ mkdir testrun
 igdiscover init --db=testdata/database --reads=testdata/reads.1.fastq.gz testrun/paired
 
 cd testrun/paired
+igdiscover config --set barcode_length_3prime 21
 igdiscover run
 igdiscover run iteration-01/exact.tab
 cd ../..
