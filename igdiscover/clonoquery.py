@@ -67,7 +67,7 @@ def collect(querytable, reftable, mismatches, cdr3_core_slice, cdr3_column):
 		vjlentype = (row.V_gene, row.J_gene, len(row.CDR3_nt))
 		query_vjlentypes[vjlentype].append(row)
 
-	groupby = ('V_gene', 'J_gene', 'CDR3_length')
+	groupby = ['V_gene', 'J_gene', 'CDR3_length']
 	for vjlentype, vjlen_group in reftable.groupby(groupby):
 		# (v_gene, j_gene, cdr3_length) = vjlentype
 		if vjlentype not in query_vjlentypes:
