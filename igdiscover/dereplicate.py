@@ -11,10 +11,10 @@ Use --trim-g to remove initial runs of G at the 5' end (artifact from RACE proto
 These are removed after the barcode is removed.
 """
 
-import sys
 import logging
 from collections import defaultdict
 from itertools import islice
+import json
 
 from sqt import SequenceReader
 
@@ -33,13 +33,13 @@ def add_arguments(parser):
 	arg('--barcode-length', '-b', type=int, default=0,
 		help="Length of barcode. Positive for 5' barcode, negative for 3' barcode. "
 		     "Default: %(default)s")
+	arg('--json', metavar="FILE", help="Write statistics to FILE")
 	arg('fastx', metavar='FASTA/FASTQ',
 		help='FASTA or FASTQ file (can be gzip-compressed) with sequences')
 
 
 def main(args):
 	barcode_length = args.barcode_length
-
 	too_short = 0
 	n = 0
 	sequences = defaultdict(list)  # maps sequences to a list of Sequence objects containing them
@@ -86,3 +86,11 @@ def main(args):
 	logger.info('%s sequences processed', n)
 	logger.info('%s sequences long enough', n - too_short)
 	logger.info('%s dereplicated sequences written', n_written)
+
+	if args.json:
+		stats = {
+			'groups_written': n_written,
+		}
+		with open(args.json, 'w') as f:
+			json.dump(stats, f, indent=2)
+			print(file=f)
