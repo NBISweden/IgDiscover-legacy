@@ -51,10 +51,8 @@ import logging
 from collections import Counter, defaultdict
 from contextlib import ExitStack
 from itertools import islice
+import json
 
-import matplotlib
-matplotlib.use('agg')
-import matplotlib.pyplot as plt
 from sqt.align import consensus
 from sqt import SequenceReader
 from xopen import xopen
@@ -90,6 +88,7 @@ def add_arguments(parser):
 		help='Minimum sequence length')
 	arg('--barcode-length', '-b', type=int, default=12,
 		help="Length of barcode. Positive for 5' barcode, negative for 3' barcode. Default: %(default)s")
+	arg('--json', metavar="FILE", help="Write statistics to FILE")
 	arg('fastx', metavar='FASTA/FASTQ',
 		help='FASTA or FASTQ file (can be gzip-compressed) with sequences')
 
@@ -225,6 +224,28 @@ def collect_barcode_groups(
 	return barcodes
 
 
+def plot_sizes(sizes, path):
+	from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+	from matplotlib.figure import Figure
+	import matplotlib
+	import seaborn as sns
+	sns.set()
+	fig = Figure()
+	matplotlib.rcParams.update({'font.size': 14})
+	FigureCanvas(fig)
+	ax = fig.add_subplot(111)
+	v, _, _ = ax.hist(sizes, bins=100)
+	ax.set_ylim(0, v[1:].max() * 1.1)
+	ax.set_xlabel('Group size')
+	ax.set_ylabel('Read frequency')
+	ax.set_title('Histogram of group sizes (>1)')
+	ax.grid(axis='x')
+	ax.tick_params(direction='out', top=False, right=False)
+	fig.set_tight_layout(True)
+	fig.savefig(path)
+	logger.info('Plotted group sizes to %r', path)
+
+
 def main(args):
 	if args.barcode_length == 0:
 		sys.exit("Barcode length must be non-zero")
@@ -306,18 +327,20 @@ def main(args):
 	if args.groups_output:
 		logger.info('Groups written to %r', args.groups_output)
 
-	if args.plot_sizes:
-		matplotlib.rcParams.update({'font.size': 14})
-		fig = plt.figure()
-		ax = fig.gca()
-		v, _, _ = ax.hist(sizes, bins=100)
-		ax.set_ylim(0, v[1:].max()*1.1)
-		ax.set_xlabel('Group size')
-		ax.set_ylabel('Read frequency')
-		ax.set_title('Histogram of group sizes (>1)')
-		ax.grid(axis='x')
-		ax.tick_params(direction='out', top=False, right=False)
-		fig.set_tight_layout(True)
-		fig.savefig(args.plot_sizes)
-		logger.info('Plotted group sizes to %r', args.plot_sizes)
+	assert sum(sizes) == sum(len(v) for v in barcodes.values())
+	if args.json:
+		sizes_counter = Counter(sizes)
+		stats = {
+			'unique_barcodes': len(barcodes),
+			'barcode_singletons': barcode_singletons,
+			'groups_written': n_clusters,
+			'group_size_1': sizes_counter[1],
+			'group_size_2': sizes_counter[2],
+			'group_size_3plus': sum(v for k, v in sizes_counter.items() if k >= 3),
+		}
+		with open(args.json, 'w') as f:
+			json.dump(stats, f, indent=2)
+			print(file=f)
 
+	if args.plot_sizes:
+		plot_sizes(sizes, args.plot_sizes)
