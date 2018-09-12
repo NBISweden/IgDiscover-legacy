@@ -19,7 +19,7 @@ def add_arguments(parser):
 	arg = parser.add_argument
 	arg('--minimum-group-size', '-m', metavar='N', default=None, type=int,
 		help="Plot only genes with at least N assigned sequences. "
-		"Default: 0.1% of assigned sequences or 100, whichever is smaller.")
+		"Default: 0.1%% of assigned sequences or 100, whichever is smaller.")
 	arg('--ignore-J', action='store_true', default=False,
 		help='Include also rows without J assignment or J%%SHM>0.')
 	arg('table', help='Table with parsed IgBLAST results')
