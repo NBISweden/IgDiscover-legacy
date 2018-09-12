@@ -86,7 +86,7 @@ def main(args):
 		table = table[table.J_SHM == 0][:]
 		logger.info('%s rows remain after discarding J%%SHM > 0', len(table))
 
-	path_sanitizer = { ord(c): None for c in "\\/*?[]=\"'" }
+	path_sanitizer = {ord(c): None for c in "\\/*?[]=\"'"}
 	genes = frozenset(args.gene)
 	n = 0
 	too_few = 0
@@ -107,6 +107,5 @@ def main(args):
 			#print('number of Ns:', cons.count('N'))
 		#if len(consensus_sequences) >= 2:
 			#print('difference between consensuses:', edit_distance(*consensus_sequences[:2]))
-
 
 	logger.info('%s plots created (%s skipped because of too few sequences)', n, too_few)
