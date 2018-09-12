@@ -25,9 +25,9 @@ def add_arguments(parser):
 		help='Use only rows with J%%SHM >= VALUE')
 	arg('--multi', metavar='PDF', default=None,
 		help='Plot individual error frequency histograms (for each V gene) to this PDF file')
-	arg('--distribution', metavar='PDF', default=None,
-		help='Plot a single page with all error frequency distributions')
-	arg('table', help='Table with parsed IgBLAST results')
+	arg('--boxplot', metavar='PDF', default=None,
+		help='Plot a single page with box(en)plots of V SHM for multiple genes')
+	arg('table', metavar='FILTERED.TAB.GZ', help='Table with parsed IgBLAST results')
 
 
 def plot_difference_histogram(group, gene_name, bins=np.arange(20.1)):
@@ -58,7 +58,7 @@ def plot_difference_histogram(group, gene_name, bins=np.arange(20.1)):
 
 def main(args):
 	table = read_table(args.table, usecols=['V_gene', 'J_gene', 'V_SHM', 'J_SHM', 'CDR3_nt'])
-	if not args.multi and not args.distribution:
+	if not args.multi and not args.boxplot:
 		print('Don’t know what to do', file=sys.stderr)
 		sys.exit(2)
 
@@ -93,7 +93,7 @@ def main(args):
 
 		logger.info('Wrote %r', args.multi)
 
-	if args.distribution:
+	if args.boxplot:
 		aspect = 1 + len(genes) / 32
 		g = sns.catplot(x='V_gene', y='V_SHM', kind='boxen', order=genes, data=table,
 			height=2 * 2.54, aspect=aspect, color='g')
@@ -101,5 +101,5 @@ def main(args):
 		g.set(ylabel='% V SHM (nt)')
 		g.set(xlabel='V gene')
 		g.set_xticklabels(rotation=90)
-		g.savefig(args.distribution)
-		logger.info('Wrote %r', args.distribution)
+		g.savefig(args.boxplot)
+		logger.info('Wrote %r', args.boxplot)

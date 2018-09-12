@@ -720,13 +720,13 @@ rule stats_correlation_V_J:
 rule plot_errorhistograms:
 	output:
 		multi_pdf='{dir}/errorhistograms.pdf',
-		dist_pdf='{dir}/v-shm-distributions.pdf'
+		boxplot_pdf='{dir}/v-shm-distributions.pdf'
 	input:
 		table='{dir}/filtered.tab.gz'
 	params:
 		ignore_j='--max-j-shm=0' if config.ignore_j else ''
 	shell:
-		'igdiscover errorplot {params.ignore_j} --multi={output.multi_pdf} --distribution={output.dist_pdf} {input.table}'
+		'igdiscover errorplot {params.ignore_j} --multi={output.multi_pdf} --boxplot={output.boxplot_pdf} {input.table}'
 
 
 rule dendrogram:
