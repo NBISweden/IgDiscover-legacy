@@ -4,10 +4,13 @@ Plot histograms of differences to reference V gene
 For each gene, a histogram is plotted that shows how often a sequence was
 assigned to that gene at a certain percentage difference.
 """
+import sys
 import logging
+import numpy as np
+import seaborn as sns
 from matplotlib.backends.backend_pdf import FigureCanvasPdf, PdfPages
 from matplotlib.figure import Figure
-import numpy as np
+
 from .table import read_table
 
 logger = logging.getLogger(__name__)
@@ -18,10 +21,13 @@ def add_arguments(parser):
 	arg('--minimum-group-size', '-m', metavar='N', default=None, type=int,
 		help="Plot only genes with at least N assigned sequences. "
 		"Default: 0.1%% of assigned sequences or 100, whichever is smaller.")
-	arg('--ignore-J', action='store_true', default=False,
-		help='Include also rows without J assignment or J%%SHM>0.')
+	arg('--max-j-shm', metavar='VALUE', type=float, default=None,
+		help='Use only rows with J%%SHM >= VALUE')
+	arg('--multi', metavar='PDF', default=None,
+		help='Plot individual error frequency histograms (for each V gene) to this PDF file')
+	arg('--distribution', metavar='PDF', default=None,
+		help='Plot a single page with all error frequency distributions')
 	arg('table', help='Table with parsed IgBLAST results')
-	arg('pdf', help='Plot error frequency histograms to this PDF file', default=None)
 
 
 def plot_difference_histogram(group, gene_name, bins=np.arange(20.1)):
@@ -29,8 +35,8 @@ def plot_difference_histogram(group, gene_name, bins=np.arange(20.1)):
 	Plot a histogram of percentage differences for a specific gene.
 	"""
 	exact_matches = group[group.V_SHM == 0]
-	CDR3s_exact = len(set(s for s in exact_matches.CDR3_nt if s))
-	Js_exact = len(set(exact_matches.J_gene))
+	cdr3s_exact = len(set(s for s in exact_matches.CDR3_nt if s))
+	js_exact = len(set(exact_matches.J_gene))
 
 	fig = Figure(figsize=(100/25.4, 60/25.4))
 	ax = fig.gca()
@@ -42,7 +48,7 @@ def plot_difference_histogram(group, gene_name, bins=np.arange(20.1)):
 	ax.text(0.25, 0.95,
 		'{:,} ({:.1%}) exact matches\n  {} unique CDR3\n  {} unique J'.format(
 			len(exact_matches), len(exact_matches) / len(group),
-			CDR3s_exact, Js_exact),
+			cdr3s_exact, js_exact),
 		transform=ax.transAxes, fontsize=10,
 		bbox=dict(boxstyle='round', facecolor='white', alpha=0.5),
 		horizontalalignment='left', verticalalignment='top')
@@ -51,14 +57,18 @@ def plot_difference_histogram(group, gene_name, bins=np.arange(20.1)):
 
 
 def main(args):
-	table = read_table(args.table)
+	table = read_table(args.table, usecols=['V_gene', 'J_gene', 'V_SHM', 'J_SHM', 'CDR3_nt'])
+	if not args.multi and not args.distribution:
+		print('Don’t know what to do', file=sys.stderr)
+		sys.exit(2)
 
 	# Discard rows with any mutation within J at all
 	logger.info('%s rows read', len(table))
-	if not args.ignore_J:
-		# Discard rows with any mutation within J at all
-		table = table[table.J_SHM == 0][:]
-		logger.info('%s rows remain after discarding J%%SHM > 0', len(table))
+	if args.max_j_shm is not None:
+		# Discard rows with too many J mutations
+		table = table[table.J_SHM <= args.max_j_shm][:]
+		logger.info('%s rows remain after keeping only those with J%%SHM <= %s',
+			len(table), args.max_j_shm)
 
 	if args.minimum_group_size is None:
 		total = len(table)
@@ -66,14 +76,30 @@ def main(args):
 		logger.info('Skipping genes with less than %s assignments', minimum_group_size)
 	else:
 		minimum_group_size = args.minimum_group_size
-	n = 0
-	too_few = 0
-	with PdfPages(args.pdf) as pages:
-		for gene, group in table.groupby('V_gene'):
-			if len(group) < minimum_group_size:
-				too_few += 1
-				continue
-			fig = plot_difference_histogram(group, gene)
-			n += 1
-			FigureCanvasPdf(fig).print_figure(pages, bbox_inches='tight')
-	logger.info('%s plots created (%s skipped because of too few sequences)', n, too_few)
+
+	# Genes with high enough assignment count
+	all_genes = table['V_gene'].unique()
+	genes = sorted(table['V_gene'].value_counts().loc[lambda x: x >= minimum_group_size].index)
+	gene_set = set(genes)
+
+	logger.info('%s out of %s genes have enough assignments', len(genes), len(all_genes))
+	if args.multi:
+		with PdfPages(args.multi) as pages:
+			for gene, group in table.groupby('V_gene'):
+				if gene not in gene_set:
+					continue
+				fig = plot_difference_histogram(group, gene)
+				FigureCanvasPdf(fig).print_figure(pages, bbox_inches='tight')
+
+		logger.info('Wrote %r', args.multi)
+
+	if args.distribution:
+		aspect = 1 + len(genes) / 32
+		g = sns.catplot(x='V_gene', y='V_SHM', kind='boxen', order=genes, data=table,
+			height=2 * 2.54, aspect=aspect, color='g')
+		# g.set(ylim=(-.1, None))
+		g.set(ylabel='% V SHM (nt)')
+		g.set(xlabel='V gene')
+		g.set_xticklabels(rotation=90)
+		g.savefig(args.distribution)
+		logger.info('Wrote %r', args.distribution)

@@ -28,7 +28,8 @@ if config.debug:
 # Targets for each iteration
 ITERATION_TARGETS = [
 	'clusterplots/done',
-	'errorhistograms.pdf'
+	'errorhistograms.pdf',
+	'v-shm-distributions.pdf',
 ] + expand(['expressed_{gene}.tab', 'expressed_{gene}.pdf', 'dendrogram_{gene}.pdf'], gene=['V', 'D', 'J'])
 
 # Targets for non-final iterations
@@ -718,13 +719,14 @@ rule stats_correlation_V_J:
 
 rule plot_errorhistograms:
 	output:
-		pdf='{dir}/errorhistograms.pdf',
+		multi_pdf='{dir}/errorhistograms.pdf',
+		dist_pdf='{dir}/v-shm-distributions.pdf'
 	input:
 		table='{dir}/filtered.tab.gz'
 	params:
-		ignore_j='--ignore-J' if config.ignore_j else ''
+		ignore_j='--max-j-shm=0' if config.ignore_j else ''
 	shell:
-		'igdiscover errorplot {params.ignore_j} {input.table} {output.pdf}'
+		'igdiscover errorplot {params.ignore_j} --multi={output.multi_pdf} --distribution={output.dist_pdf} {input.table}'
 
 
 rule dendrogram:
