@@ -10,7 +10,7 @@ from matplotlib.backends.backend_pdf import FigureCanvasPdf, PdfPages
 import pandas as pd
 import seaborn as sns
 
-sns.set(style='white', font_scale=1.5, rc={"lines.linewidth": 1}))
+sns.set(style='white', font_scale=1.5, rc={"lines.linewidth": 1})
 logger = logging.getLogger(__name__)
 CM = 1 / 2.54
 
