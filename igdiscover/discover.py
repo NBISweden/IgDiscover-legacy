@@ -376,6 +376,11 @@ class Discoverer:
 				ratio = info['exact'].count / info['exact'].unique_CDR3
 			except ZeroDivisionError:
 				ratio = 0
+
+			# Apply some very light filtering on non-database sequences
+			if database_diff > 0 and info['exact'].count < 2:
+				continue
+
 			candidate = Candidate(
 				name=sequence_id,
 				source=gene,
