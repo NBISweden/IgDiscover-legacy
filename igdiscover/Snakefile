@@ -606,7 +606,8 @@ rule igdiscover_clusterplot:
 rule igdiscover_discover:
 	"""Discover potential new V gene sequences"""
 	output:
-		tab="{dir}/candidates.tab"
+		tab="{dir}/candidates.tab",
+		read_names="{dir}/read_names_map.tab",
 	input:
 		v_reference="{dir}/database/V.fasta",
 		tab="{dir}/filtered.tab.gz"
@@ -618,6 +619,7 @@ rule igdiscover_discover:
 	shell:
 		"time igdiscover discover -j {threads}{params.seed}{params.ignore_j}{params.exact_copies} "
 		"--d-coverage={config.d_coverage} "
+		"--read-names={output.read_names} "
 		"--subsample={config.subsample} --database={input.v_reference} "
 		"{input.tab} > {output.tab}"
 

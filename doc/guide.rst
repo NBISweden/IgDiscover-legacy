@@ -435,6 +435,14 @@ iteration-xx/candidates.tab
     A table with candidate novel V alleles (or genes).
     This is a list of sequences found through the *windowing strategy* or *linkage cluster analysis*, as discussed in our paper.
 
+iteration-xx/read_names_map.tab
+    For each candidate novel V allele listed in ``candidates.tab``, this file contains one row that
+    lists which sequences went into generating this candidate. Only the exact matches are listed,
+    that is, the number of listed sequence names should be equal to the value in the *exact*
+    column. Each line in this file contains tab-separated values. The first is name of the
+    candidate, the others are the names of the sequences. Some of these sequences may be consensus
+    sequences if barcode grouping was enabled, so in that case, this will not be a read name.
+
 iteration-xx/new_V_germline.fasta, iteration-xx/new_V_pregermline.fasta
     The discovered list of V genes for this iteration.
     The file is created from the ``candidates.tab`` file by applying either the germline or pre-germline filter.

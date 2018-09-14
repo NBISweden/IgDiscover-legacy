@@ -5,13 +5,15 @@ Existing V sequences are grouped by their V gene assignment, and within each
 group, consensus sequences are computed.
 """
 import csv
+import sys
 import hashlib
 import logging
-import sys
-from collections import namedtuple, Counter
-import multiprocessing
 import random
 import itertools
+import multiprocessing
+from contextlib import ExitStack
+from collections import namedtuple, Counter
+
 import numpy as np
 import pandas as pd
 from sqt import SequenceReader
@@ -19,9 +21,9 @@ from sqt.align import edit_distance
 from sqt.utils import available_cpu_count
 
 from .table import read_table
+from .cluster import cluster_sequences, single_linkage
 from .utils import (iterative_consensus, unique_name, downsampled, SerialPool, Merger, has_stop,
 	describe_nt_change)
-from .cluster import cluster_sequences, single_linkage
 
 logger = logging.getLogger(__name__)
 
@@ -62,12 +64,6 @@ def add_arguments(parser):
 			'N_bases column is added. Default: %(default)s')
 	arg('--subsample', metavar='N', type=int, default=1000,
 		help='When clustering, use N randomly chosen sequences. Default: %(default)s')
-	arg('--table-output', '-o', metavar='DIRECTORY',
-		help='Output tables for all analyzed genes to DIRECTORY. '
-			'Files will be named <GENE>.tab.')
-	arg('--database', metavar='FASTA', default=None,
-		help='FASTA file with V genes. If provided, differences between consensus '
-			'and database will be computed.')
 	arg('--ignore-J', action='store_true', default=False,
 		help='Include also rows without J assignment or J%%SHM>0.')
 	arg('--exact-copies', metavar='N', type=int, default=1,
@@ -82,11 +78,21 @@ def add_arguments(parser):
 	arg('--clonotype-diff', metavar='DIFFERENCES', type=int, default=6,
 		help='When clustering CDR3s to computer the no. of clonotypes, allow DIFFERENCES '
 			'between (nucleotide-)sequences. Default: %(default)s')
+
+	arg('--table-output', '-o', metavar='DIRECTORY',
+		help='Output tables for all analyzed genes to DIRECTORY. '
+			'Files will be named <GENE>.tab.')
+	arg('--database', metavar='FASTA', default=None,
+		help='FASTA file with V genes. If provided, differences between consensus '
+			'and database will be computed.')
+	arg('--read-names', metavar='FILE',
+		help='Write names of reads with exact matches used in discovering each candidate '
+			'to FILE')
 	arg('table', help='Table with parsed IgBLAST results')
 
 
 Groupinfo = namedtuple('Groupinfo',
-	'count unique_D unique_J unique_CDR3 shared_CDR3_ratio clonotypes unique_barcodes')
+	'count unique_D unique_J unique_CDR3 shared_CDR3_ratio clonotypes read_names unique_barcodes')
 
 SiblingInfo = namedtuple('SiblingInfo', 'sequence requested name group')
 
@@ -350,9 +356,10 @@ class Discoverer:
 				unique_d = self.count_unique_d(g)
 				unique_barcodes = self.count_unique_barcodes(g)
 				count = len(g.index)
+				read_names = list(g.name)
 				info[key] = Groupinfo(count=count, unique_D=unique_d, unique_J=unique_j,
 					unique_CDR3=unique_cdr3, shared_CDR3_ratio=shared_cdr3_ratio,
-					clonotypes=clonotypes,
+					clonotypes=clonotypes, read_names=read_names,
 					unique_barcodes=unique_barcodes)
 			if gene in self.database:
 				database_diff = edit_distance(sibling, self.database[gene])
@@ -391,6 +398,7 @@ class Discoverer:
 				has_stop=has_stop(sibling),
 				CDR3_start=cdr3_start,
 				consensus=sibling,
+				read_names=info['exact'].read_names,
 			)
 			candidates.append(candidate)
 		return candidates
@@ -418,12 +426,14 @@ class Candidate(namedtuple('_Candidate', [
 	'has_stop',
 	'CDR3_start',
 	'consensus',
+	'read_names',
 ])):
 	def formatted_dict(self):
 		d = self._asdict()
 		d['has_stop'] = int(d['has_stop'])
 		for name in 'CDR3_exact_ratio', 'CDR3_shared_ratio':
 			d[name] = '{:.2f}'.format(d[name])
+		del d['read_names']
 		return d
 
 
@@ -488,6 +498,7 @@ def main(args):
 	columns = list(Candidate._fields)
 	if not args.max_n_bases:
 		columns.remove('N_bases')
+	columns.remove('read_names')
 	writer = csv.DictWriter(sys.stdout, fieldnames=columns, delimiter='\t', lineterminator='\n', extrasaction='ignore')
 	writer.writeheader()
 	genes = set(args.gene)
@@ -519,10 +530,16 @@ def main(args):
 
 	Pool = SerialPool if args.threads == 1 else multiprocessing.Pool
 	n_candidates = 0
-	with Pool(args.threads) as pool:
+	read_names_file = None
+	with ExitStack() as stack:
+		pool = stack.enter_context(Pool(args.threads))
+		if args.read_names:
+			read_names_file = stack.enter_context(open(args.read_names, 'w'))
 		for candidates in pool.imap(discoverer, groups, chunksize=1):
 			for candidate in candidates:
 				writer.writerow(candidate.formatted_dict())
+				if read_names_file:
+					print(candidate.name, *candidate.read_names, sep='\t', file=read_names_file)
 			n_candidates += len(candidates)
 			if args.limit is not None and n_candidates >= args.limit:
 				break
