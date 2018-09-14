@@ -119,7 +119,7 @@ flash_maximum_overlap: 300
 #  true: yes, rename
 #  false: no, do not rename
 #
-rename: true
+rename: false
 
 
 # Whether debugging is enabled or not. Currently, if this is set to true,

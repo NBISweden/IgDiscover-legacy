@@ -39,7 +39,7 @@ class Config:
 		self.stranded = False
 		self.forward_primers = None
 		self.reverse_primers = None
-		self.rename = True
+		self.rename = False
 		self.race_g = False
 		self.seed = 1
 		self.exact_copies = None
