@@ -3,9 +3,11 @@
 Bubble plot
 """
 import logging
-import pandas as pd
-import matplotlib.pyplot as plt
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+from matplotlib.figure import Figure
+import matplotlib
 import seaborn as sns
+import pandas as pd
 import numpy as np
 
 #sns.set(style='white', font_scale=1.5, rc={"lines.linewidth": 1})
@@ -22,14 +24,38 @@ def main(args):
 	df = pd.read_table(args.table, sep=';', index_col=0)
 	dfu = df.unstack().reset_index()
 	dfu.columns = ['compartment', 'clone', 'size']
-	fig = plt.figure(figsize=(10, 6))
-	sns.scatterplot(data=dfu, x='clone', y='compartment', size=df.values.flatten(), alpha=0.8, sizes=(5, 4000))
-	ax = fig.gca()
+	colors = {
+		"BLOOD": "#990000",
+		"BM": "#0000CC",
+		"SPLEEN": "#336600",
+		"LN": "#999999",
+		"GUT": "#660099"
+	}
+
+	fig = Figure(figsize=(8, 10))#, sharex=True, sharey=True)
+	FigureCanvas(fig)
+	ax = fig.add_subplot(111)
+
+	sns.scatterplot(
+		data=dfu, y='clone', x='compartment', hue='compartment', size=df.values.flatten(),
+		sizes=(0, 600), palette=colors.values(), ax=ax)
+
 	ax.set_xlabel('Traced lineages')
 	ax.set_ylabel('')
-	ax.set_ylim(-0.6, len(df.columns) - 0.4)
-	plt.xticks(rotation=90)
-	plt.legend(bbox_to_anchor=(1.1, 0.55), loc=6, labelspacing=7, borderaxespad=0., scatterpoints=1, handletextpad=4, frameon=False)
+	ax.set_ylim(-0.6, len(df.index) - 0.4)
+	#ax.xaxis.set_tick_params(rotation=90)
+	ax.grid(axis='y', linestyle=':')
+	ax.set_axisbelow(True)
+
+	handles, labels = ax.get_legend_handles_labels()
+	handles = handles[2+len(df.columns):]
+	labels = labels[2+len(df.columns):]
+	ax.legend(
+		handles, labels, bbox_to_anchor=(1.1, 0.55),
+		loc=6, labelspacing=3, borderaxespad=0.,
+		handletextpad=1,
+		frameon=False)#, title='')
+
 	fig.savefig(args.pdf, bbox_inches='tight')
 	logger.info('File %r written', args.pdf)
 
