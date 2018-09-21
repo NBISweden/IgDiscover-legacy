@@ -51,6 +51,8 @@ def add_arguments(parser):
 	arg = parser.add_argument
 	arg('--threads', '-t', '-j', type=int, default=available_cpu_count(),
 		help='Number of threads. Default: no. of available CPUs (%(default)s)')
+	arg('--cache', action='store_true', default=None, help='Use the cache')
+	arg('--no-cache', action='store_false', dest='cache', default=None, help='Do not use the cache')
 	arg('--penalty', type=int, choices=(-1, -2, -3, -4), default=None,
 		help='BLAST mismatch penalty (default: -1)')
 	arg('--species', default=None,
@@ -333,7 +335,10 @@ def igblast(database, sequences, sequence_type, species=None, threads=None, pena
 
 def main(args):
 	config = GlobalConfig()
-	if config.use_cache:
+	use_cache = config.use_cache
+	if args.cache is not None:
+		use_cache = args.cache
+	if use_cache:
 		global _igblastcache
 		_igblastcache = IgBlastCache()
 	else:
@@ -354,7 +359,7 @@ def main(args):
 		n = 0  # number of records processed so far
 		for record in igblast(database, sequences, sequence_type=args.sequence_type,
 				species=args.species, threads=args.threads, penalty=args.penalty,
-				raw_output=raw_output, use_cache=config.use_cache):
+				raw_output=raw_output, use_cache=use_cache):
 			n += 1
 			if args.rename is not None:
 				record.query_name = "{}seq{}".format(args.rename, n)
