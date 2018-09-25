@@ -7,6 +7,7 @@ import pandas as pd
 import io
 import os
 import sys
+import re
 
 
 def add_arguments(parser):
@@ -19,21 +20,25 @@ def add_arguments(parser):
 def read_one_file(path, field_name):
 	with open(path) as f:
 		header = f.readline()
-		sections = f.read().strip().split('\n\n')
+		sections = re.split(r'\n\t*\n', f.read().strip())
 	column_names = header.strip().split('\t')
-	sio = io.StringIO(sections[0])
-	sio.readline()
 
 	queries = dict()
 	for section in sections:
 		sio = io.StringIO(section)
-		query = sio.readline()
-		if not query.startswith('#'):
-			print(f'query is: {query!r}')
-		assert query.startswith('# Query: '), query
-		query_name = query.split('\t')[0].partition('# Query: ')[2]
+		n = section.count('# Query: ')
+		if n > 100:
+			print(repr(section[:10000]))
+		query_names = []
+		for i in range(n):
+			query = sio.readline()
+			assert query.startswith('# Query: '), query
+			query_name = query.split('\t')[0].partition('# Query: ')[2]
+			query_names.append(query_name)
 		table = pd.read_table(sio, header=None, names=column_names, usecols=(field_name,))
-		queries[query_name] = table[field_name]
+		# print('Read a table with {} entries'.format(len(table)), file=sys.stderr)
+		for query_name in query_names:
+			queries[query_name] = table[field_name]
 	return queries
 
 
@@ -51,10 +56,12 @@ def main(args):
 	for queries in files.values():
 		maxlen = max(maxlen, max(len(q) for q in queries.values()))
 
+	assert len(set(query_names)) == len(query_names)
 	df = pd.DataFrame(index=range(maxlen))
 	for query_name in query_names:
 		long_enough_in_all_files = all(len(files[file].get(query_name, [])) >= args.n for file in files)
 		if not long_enough_in_all_files:
+			print('Query {} has too few values in at least one file'.format(query_name), file=sys.stderr)
 			continue
 		for file in files:
 			column_name = '{file}-{query_name}'.format(file=file, query_name=query_name)
