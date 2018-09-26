@@ -2,6 +2,7 @@
 """
 Extract V_SHM values from multiple clonoquery tables
 """
+from collections import OrderedDict
 import logging
 import pandas as pd
 import io
@@ -43,7 +44,7 @@ def read_one_file(path, field_name):
 
 
 def main(args):
-	files = {os.path.basename(path): read_one_file(path, args.field) for path in args.paths}
+	files = OrderedDict((os.path.basename(path), read_one_file(path, args.field)) for path in args.paths)
 	print('read {} files'.format(len(files)), file=sys.stderr)
 
 	query_names = dict()
