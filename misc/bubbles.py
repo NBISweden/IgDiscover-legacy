@@ -16,15 +16,25 @@ logger = logging.getLogger(__name__)
 
 def add_arguments(parser):
 	arg = parser.add_argument
+	arg('--scale', default=1.0, type=float, help='scaling factor for bubble size (default %(default)s)')
 	arg('pdf', help='PDF output')
 	arg('table', help='Input table')
 
 
 def main(args):
-	df = pd.read_table(args.table, index_col=0)
+	with open(args.table) as f:
+		# Try to auto-detect the separator
+		if ';' in f.read():
+			kwargs = {'sep': ';'}
+		else:
+			kwargs = {}
+	df = pd.read_table(args.table, index_col=0, **kwargs)
+	m = len(df.index)
+	n_compartments = len(df.columns)
 	logger.info('Table with %s rows read', len(df))
-	dfu = df.unstack().reset_index()
-	dfu.columns = ['compartment', 'clone', 'size']
+	logger.info('%s compartments', n_compartments)
+	df = df.unstack().reset_index()
+	df.columns = ['compartment', 'clone', 'size']
 	colors = {
 		"BLOOD": "#990000",
 		"BM": "#0000CC",
@@ -33,24 +43,24 @@ def main(args):
 		"GUT": "#660099"
 	}
 
-	fig = Figure(figsize=(8, 10))#, sharex=True, sharey=True)
+	fig = Figure(figsize=((n_compartments+2)*.6, (m+1)*.4))#, sharex=True, sharey=True)
 	FigureCanvas(fig)
 	ax = fig.add_subplot(111)
 
 	sns.scatterplot(
-		data=dfu, y='clone', x='compartment', hue='compartment', size=df.values.flatten(),
-		sizes=(0, 600), palette=colors.values(), ax=ax)
+		data=df, y='clone', x='compartment', hue='compartment', size='size',
+		sizes=(0, args.scale * 1000), palette=colors.values(), ax=ax)
 
 	ax.set_xlabel('Traced lineages')
 	ax.set_ylabel('')
-	ax.set_ylim(-0.6, len(df.index) - 0.4)
+	ax.set_ylim(-1, m)
 	#ax.xaxis.set_tick_params(rotation=90)
 	ax.grid(axis='y', linestyle=':')
 	ax.set_axisbelow(True)
 
 	handles, labels = ax.get_legend_handles_labels()
-	handles = handles[2+len(df.columns):]
-	labels = labels[2+len(df.columns):]
+	handles = handles[2+n_compartments:]
+	labels = labels[2+n_compartments:]
 	ax.legend(
 		handles, labels, bbox_to_anchor=(1.1, 0.55),
 		loc=6, labelspacing=3, borderaxespad=0.,
