@@ -21,7 +21,8 @@ def add_arguments(parser):
 
 
 def main(args):
-	df = pd.read_table(args.table, sep=';', index_col=0)
+	df = pd.read_table(args.table, index_col=0)
+	logger.info('Table with %s rows read', len(df))
 	dfu = df.unstack().reset_index()
 	dfu.columns = ['compartment', 'clone', 'size']
 	colors = {
