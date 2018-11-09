@@ -282,12 +282,14 @@ if config.forward_primers:
 		input: fastaq='reads/2-merged.{ext}.gz', mergesuccess='stats/merging-successful'
 		resources: time=120
 		log: 'reads/3-forward-primer-trimmed.cutadapt.log'
-		run:
-			primers = config.forward_primers
-			param = ' '.join('-g ^{}'.format(seq) for seq in primers)
-			if not config.stranded:
-				param += ' ' + ' '.join('-a {}$'.format(reverse_complement(seq)) for seq in config.forward_primers)
-			shell("cutadapt --discard-untrimmed {param} -o {output.fastaq} {input.fastaq} | tee {log}")
+		params:
+			fwd_primers=''.join(' -g ^{}'.format(seq) for seq in config.forward_primers),
+			rev_primers=''.join(' -a {}$'.format(reverse_complement(seq)) for seq in config.forward_primers) if not config.stranded else '',
+		shell:
+			"cutadapt --discard-untrimmed"
+			"{params.fwd_primers}"
+			"{params.rev_primers}"
+			" -o {output.fastaq} {input.fastaq} | tee {log}"
 else:
 	# No trimming, just symlink the file
 	rule dont_trim_forward_primers:
@@ -305,14 +307,15 @@ if config.reverse_primers:
 		input: fastaq='reads/3-forward-primer-trimmed.{ext}.gz'
 		resources: time=120
 		log: 'reads/4-trimmed.cutadapt.log'
-		run:
-			primers = config.reverse_primers
+		params:
 			# Reverse primers should appear reverse-complemented at the 3' end
 			# of the merged read.
-			param = ' '.join('-a {}$'.format(reverse_complement(seq)) for seq in primers)
-			if not config.stranded:
-				param += ' ' + ' '.join('-g ^{}'.format(seq) for seq in config.reverse_primers)
-			shell("cutadapt --discard-untrimmed {param} -o {output.fastaq} {input.fastaq} | tee {log}")
+			fwd_primers=''.join(' -a {}$'.format(reverse_complement(seq)) for seq in config.reverse_primers),
+			rev_primers=''.join(' -g ^{}'.format(seq) for seq in config.reverse_primers) if not config.stranded else ''
+		shell:
+			"cutadapt --discard-untrimmed"
+			"{params.fwd_primers} {params.rev_primers}"
+			" -o {output.fastaq} {input.fastaq} | tee {log}"
 
 else:
 	# No trimming, just symlink the file
@@ -365,6 +368,16 @@ rule check_trimming:
 			sys.exit(1)
 
 
+def group_cdr3_arg():
+	if not config.cdr3_location:
+		cdr3_arg = ''
+	elif config.cdr3_location == 'detect':
+		cdr3_arg = ' --real-cdr3'
+	else:
+		cdr3_arg = ' --pseudo-cdr3={}:{}'.format(*config.cdr3_location)
+	return cdr3_arg
+
+
 for ext in ('fasta', 'fastq'):
 	if config.barcode_length and config.barcode_consensus:
 		rule:
@@ -377,17 +390,18 @@ for ext in ('fasta', 'fastq'):
 			input:
 				fastaq='reads/4-trimmed.{ext}.gz'.format(ext=ext), success='stats/trimming-successful'
 			log: 'reads/4-sequences.fasta.gz.log'
-			run:
-				if not config.cdr3_location:
-					cdr3_arg = ''
-				elif config.cdr3_location == 'detect':
-					cdr3_arg = ' --real-cdr3'
-				else:
-					cdr3_arg = ' --pseudo-cdr3={}:{}'.format(*config.cdr3_location)
-				race_arg = ' --trim-g' if config.race_g else ''
-				shell("igdiscover group{cdr3_arg} --json={output.json} --minimum-length={config.minimum_merged_read_length} "
-				      "--groups-output={output.groups} --barcode-length={config.barcode_length}{race_arg} "
-				      "--plot-sizes={output.pdf} {input.fastaq} 2> {log} | {GZIP} > {output.fastagz}")
+			params:
+				race_arg=' --trim-g' if config.race_g else '',
+				cdr3_arg=group_cdr3_arg(),
+			shell:
+				"igdiscover group"
+				"{params.cdr3_arg}{params.race_arg}"
+				" --json={output.json}"
+				" --minimum-length={config.minimum_merged_read_length}"
+				" --groups-output={output.groups}"
+				" --barcode-length={config.barcode_length}"
+				" --plot-sizes={output.pdf}"
+				" {input.fastaq} 2> {log} | {GZIP} > {output.fastagz}"
 
 	else:
 		rule:
@@ -399,13 +413,13 @@ for ext in ('fasta', 'fastq'):
 				fastaq='reads/4-trimmed.{ext}.gz'.format(ext=ext), success='stats/trimming-successful',
 			params:
 				barcode_length=' --barcode-length={}'.format(config.barcode_length) if config.barcode_length else '',
-				race_arg = ' --trim-g' if config.race_g else ''
+				race_arg = ' --trim-g' if config.race_g else '',
 			shell:
-				'igdiscover dereplicate{params.barcode_length}{params.race_arg} ' \
-				'--json={output.json} ' \
-				'--minimum-length={config.minimum_merged_read_length} ' \
-				'{input.fastaq} | {GZIP} ' \
-				'> {output.fastagz}'
+				"igdiscover dereplicate"
+				"{params.barcode_length}{params.race_arg}"
+				" --json={output.json}"
+				" --minimum-length={config.minimum_merged_read_length}"
+				" {input.fastaq} | {GZIP} > {output.fastagz}"
 
 
 rule copy_d_database:
