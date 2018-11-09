@@ -633,6 +633,29 @@ def db_whitelist_or_not(wildcards):
 		return []
 
 
+def germlinefilter_criteria(wildcards, input):
+	nr = int(wildcards.nr, base=10)
+	conf = config.pre_germline_filter if wildcards.pre == 'pre' else config.germline_filter
+	criteria = []
+	for path in [input.db_whitelist, input.whitelist]:
+		if path:
+			criteria += ['--whitelist=' + path]
+	if conf['allow_stop']:
+		criteria += ['--allow-stop']
+	# if conf['allow_chimeras']:
+	#	criteria += ['--allow-chimeras']
+	criteria += ['--unique-CDR3={}'.format(conf['unique_cdr3s'])]
+	criteria += ['--cluster-size={}'.format(conf['cluster_size'])]
+	criteria += ['--unique-J={}'.format(conf['unique_js'])]
+	criteria += ['--cross-mapping-ratio={}'.format(conf['cross_mapping_ratio'])]
+	criteria += ['--clonotype-ratio={}'.format(conf['clonotype_ratio'])]
+	criteria += ['--exact-ratio={}'.format(conf['exact_ratio'])]
+	criteria += ['--cdr3-shared-ratio={}'.format(conf['cdr3_shared_ratio'])]
+	criteria += ['--unique-D-ratio={}'.format(conf['unique_d_ratio'])]
+	criteria += ['--unique-D-threshold={}'.format(conf['unique_d_threshold'])]
+	return ' '.join(criteria)
+
+
 rule igdiscover_germlinefilter:
 	"""Construct a new database out of the discovered sequences"""
 	output:
@@ -641,33 +664,16 @@ rule igdiscover_germlinefilter:
 	input:
 		tab='iteration-{nr}/candidates.tab',
 		db_whitelist=db_whitelist_or_not,
-		whitelist='whitelist.fasta' if os.path.exists('whitelist.fasta') else []
+		whitelist='whitelist.fasta' if os.path.exists('whitelist.fasta') else [],
+	params:
+		criteria=germlinefilter_criteria
 	log:
 		'iteration-{nr}/new_V_{pre,(pre|)}germline.log'
-	run:
-		nr = int(wildcards.nr, base=10)
-		conf = config.pre_germline_filter if wildcards.pre == 'pre' else config.germline_filter
-		criteria = []
-		for path in [input.db_whitelist, input.whitelist]:
-			if path:
-				criteria += ['--whitelist=' + path]
-		if conf['allow_stop']:
-			criteria += ['--allow-stop']
-		# if conf['allow_chimeras']:
-		#	criteria += ['--allow-chimeras']
-		criteria += ['--unique-CDR3={}'.format(conf['unique_cdr3s'])]
-		criteria += ['--cluster-size={}'.format(conf['cluster_size'])]
-		criteria += ['--unique-J={}'.format(conf['unique_js'])]
-		criteria += ['--cross-mapping-ratio={}'.format(conf['cross_mapping_ratio'])]
-		criteria += ['--clonotype-ratio={}'.format(conf['clonotype_ratio'])]
-		criteria += ['--exact-ratio={}'.format(conf['exact_ratio'])]
-		criteria += ['--cdr3-shared-ratio={}'.format(conf['cdr3_shared_ratio'])]
-		criteria += ['--unique-D-ratio={}'.format(conf['unique_d_ratio'])]
-		criteria += ['--unique-D-threshold={}'.format(conf['unique_d_threshold'])]
-		criteria = ' '.join(criteria)
-		shell("igdiscover germlinefilter {criteria} --fasta={output.fasta} {input.tab} "
-		      "2> >(tee {log} >&2) "
-		      "> {output.tab}")
+	shell:
+		"igdiscover germlinefilter {params.criteria}"
+		" --fasta={output.fasta} {input.tab} "
+		" 2> >(tee {log} >&2) "
+		" > {output.tab}"
 
 
 rule igdiscover_discover_j:
