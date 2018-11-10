@@ -1,6 +1,4 @@
 # kate: syntax Python; space-indent off; tab-width 4; indent-width 4;
-"""
-"""
 import shutil
 import textwrap
 import json
@@ -314,7 +312,7 @@ if config.reverse_primers:
 			rev_primers=''.join(' -g ^{}'.format(seq) for seq in config.reverse_primers) if not config.stranded else ''
 		shell:
 			"cutadapt --discard-untrimmed"
-			"{params.fwd_primers} {params.rev_primers}"
+			"{params.fwd_primers}{params.rev_primers}"
 			" -o {output.fastaq} {input.fastaq} | tee {log}"
 
 else:
@@ -587,10 +585,8 @@ rule igdiscover_exact:
 		filtered="{dir}/filtered.tab.gz"
 	shell:
 		# extract rows where V_errors == 0
-		"""
-		zcat {input.filtered} | \
-		awk 'NR==1 {{ for(i=1;i<=NF;i++) if ($i == "V_errors") col=i}};NR==1 || $col == 0' > {output}
-		"""
+		"zcat {input.filtered} |"
+		" awk 'NR==1 {{ for(i=1;i<=NF;i++) if ($i == "V_errors") col=i}};NR==1 || $col == 0' > {output}"
 
 
 rule igdiscover_count:
@@ -631,11 +627,11 @@ rule igdiscover_discover:
 		exact_copies=' --exact-copies={}'.format(config.exact_copies) if config.exact_copies is not None else ''
 	threads: 128
 	shell:
-		"time igdiscover discover -j {threads}{params.seed}{params.ignore_j}{params.exact_copies} "
-		"--d-coverage={config.d_coverage} "
-		"--read-names={output.read_names} "
-		"--subsample={config.subsample} --database={input.v_reference} "
-		"{input.tab} > {output.tab}"
+		"time igdiscover discover -j {threads}{params.seed}{params.ignore_j}{params.exact_copies}"
+		" --d-coverage={config.d_coverage}"
+		" --read-names={output.read_names}"
+		" --subsample={config.subsample} --database={input.v_reference}"
+		" {input.tab} > {output.tab}"
 
 
 def db_whitelist_or_not(wildcards):
