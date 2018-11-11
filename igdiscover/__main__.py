@@ -46,6 +46,7 @@ COMMANDS = [
 	'dendrogram',
 	'rename',
 	'union',
+	'dbdiff',
 	'clonotypes',
 	'clonoquery',
 	'plotalleles',
