@@ -2,9 +2,13 @@ Bootstrap: docker
 From: conda/miniconda3
 
 %post
+    conda info
     conda config --add channels conda-forge --add channels bioconda
     conda install -y igdiscover
     conda clean --all
+
+%environment
+    export PYTHONNOUSERSITE=x
 
 %runscript
     exec igdiscover "$@"
