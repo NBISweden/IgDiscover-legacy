@@ -109,31 +109,11 @@ def check_exact_duplicate_sequences(records):
 			sequences[record.sequence] = record.name
 
 
-def main(args):
-	with FastaReader(args.a) as f:
-		a_records = list(f)
-	with FastaReader(args.b) as f:
-		b_records = list(f)
-
-	print('A:', len(a_records), 'records')
-	print('B:', len(b_records), 'records')
-	for records, path in ((a_records, args.a), (b_records, args.b)):
-		dups = list(check_duplicate_names(records))
-		if dups:
-			print('Duplicate record names found in', path)
-			for name in dups:
-				print('-', name)
-
-	for record, path in ((a_records, args.a), (b_records, args.b)):
-		dups = list(check_exact_duplicate_sequences(records))
-		if dups:
-			print('Duplicate sequences found in', path)
-			for name, name_orig in dups:
-				print('-', name, 'is identical to earlier record', name_orig)
-
-	#b_sequences = {record.sequence: record.name for record in b_records}
+def pair_up(a_records, b_records):
+	b_records = b_records[:]
 	only_a = []
 	pairs = []
+	# Try to find a partner (either identical or similar) for every A sequence
 	for a in a_records:
 		best_score = -10000
 		best = None
@@ -150,26 +130,55 @@ def main(args):
 			b_records.remove(best)
 			pairs.append((a, best))
 		else:
-			#print('Only in A:', a.name)
-			#, 'length diff:', length_diff, 'hamming', dist_prefixes, dist_suffixes)
 			only_a.append(a)
-
 	only_b = b_records
-	print('Only in A', len(only_a))
+	identical = [(a, b) for a, b in pairs if a.sequence == b.sequence]
+	similar = [(a, b) for a, b in pairs if a.sequence != b.sequence]
+
+	return only_a, only_b, identical, similar
+
+
+def main(args):
+	with FastaReader(args.a) as f:
+		a_records = list(f)
+	with FastaReader(args.b) as f:
+		b_records = list(f)
+
+	for records, path in ((a_records, args.a), (b_records, args.b)):
+		dups = list(check_duplicate_names(records))
+		if dups:
+			print('Duplicate record names found in', path)
+			for name in dups:
+				print('-', name)
+
+	for record, path in ((a_records, args.a), (b_records, args.b)):
+		dups = list(check_exact_duplicate_sequences(records))
+		if dups:
+			print('Duplicate sequences found in', path)
+			for name, name_orig in dups:
+				print('-', name, 'is identical to earlier record', name_orig)
+
+	only_a, only_b, identical, similar = pair_up(a_records, b_records)
+
+	# One-line summary
+	print('A:', len(a_records), 'records')
+	print('B:', len(b_records), 'records')
+	print('{} lost. {} gained. {} identical. {} similar.'.format(len(only_a), len(only_b), len(identical), len(similar)))
+	print()
+	print('## Only in A')
 	for record in only_a:
 		print('-', record.name)
-	print('Only in B', len(only_b))
+	print()
+	print('## Only in B')
 	for record in only_b:
 		print('+', record.name)
-
-	identical = [(a, b) for a, b in pairs if a.sequence == b.sequence]
-	print('## Identical', len(identical))
+	print()
+	print('## Identical')
 	for a, b in identical:
 		print('=', a.name, '--', b.name)
-
-	pairs = [(a, b) for a, b in pairs if a.sequence != b.sequence]
-	print('## Similar', len(pairs))
-	for a, b in pairs:
+	print()
+	print('## Similar')
+	for a, b in similar:
 		l = min(len(a.sequence), len(b.sequence))
 		length_diff = max(len(a.sequence), len(b.sequence)) - l
 		dist_prefixes = hamming_distance(a.sequence[:l], b.sequence[:l])
