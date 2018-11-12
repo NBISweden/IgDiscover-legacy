@@ -41,12 +41,12 @@ TARGETS += [
 	'stats/readlengths.pdf',
 	'stats/merging-successful',
 	'stats/trimming-successful',
-	'stats/stats.json'
+	'stats/stats_nofinal.json'
 ]
 if config.iterations >= 1:
 	TARGETS += ['iteration-01/new_J.fasta']
 
-FINAL_TARGETS = expand('final/{path}', path=ITERATION_TARGETS)
+FINAL_TARGETS = expand('final/{path}', path=ITERATION_TARGETS) + ['stats/stats.json']
 
 
 rule all:
@@ -777,15 +777,14 @@ def count_sequences(path):
 	return n
 
 
-rule json_stats:
-	output: json='stats/stats.json'
+rule json_stats_nofinal:
+	output: json='stats/stats_nofinal.json'
 	input:
 		original_db='database/V.fasta',
 		v_pre_germline=['iteration-{:02d}/new_V_pregermline.fasta'.format(i+1) for i in range(config.iterations)],
 		v_germline=['iteration-{:02d}/new_V_germline.fasta'.format(i+1) for i in range(config.iterations)],
 		filtered_stats=['iteration-{:02d}/stats/filtered.json'.format(i+1) for i in range(config.iterations)],
 		group_stats='stats/groups.json',
-		final_stats='final/stats/filtered.json',
 		reads='stats/reads.json',
 		trimmed='stats/trimmed.json'
 	run:
@@ -803,9 +802,6 @@ rule json_stats:
 		with open(input.group_stats) as f:
 			rp['grouping'] = json.load(f)
 		d['read_preprocessing'] = rp
-
-		with open(input.final_stats) as f:
-			d['assignment_filtering'] = json.load(f)
 
 		prev_sequences = set(get_sequences(input.original_db))
 		size = len(prev_sequences)
@@ -835,6 +831,23 @@ rule json_stats:
 			iterations.append(iteration_info)
 			prev_sequences = pre_germline_sequences
 		d['iterations'] = iterations
+
+		with open(output.json, 'w') as f:
+			json.dump(d, f, indent=2)
+			print(file=f)
+
+
+rule json_stats:
+	output: json='stats/stats.json'
+	input:
+		stats_nofinal='stats/stats_nofinal.json',
+		final_stats='final/stats/filtered.json',
+	run:
+		with open(input.stats_nofinal) as f:
+			d = json.load(f)
+
+		with open(input.final_stats) as f:
+			d['assignment_filtering'] = json.load(f)
 
 		with open(output.json, 'w') as f:
 			json.dump(d, f, indent=2)
