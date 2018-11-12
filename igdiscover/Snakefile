@@ -585,8 +585,8 @@ rule igdiscover_exact:
 		filtered="{dir}/filtered.tab.gz"
 	shell:
 		# extract rows where V_errors == 0
-		"zcat {input.filtered} |"
-		" awk 'NR==1 {{ for(i=1;i<=NF;i++) if ($i == "V_errors") col=i}};NR==1 || $col == 0' > {output}"
+		"""zcat {input.filtered} |"""
+		""" awk 'NR==1 {{ for(i=1;i<=NF;i++) if ($i == "V_errors") col=i}};NR==1 || $col == 0' > {output}"""
 
 
 rule igdiscover_count:
