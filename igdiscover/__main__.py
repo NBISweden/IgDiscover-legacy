@@ -71,6 +71,7 @@ def main(arguments=None):
 		help='Save profiling information to igdiscover.prof')
 	parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
 
+	show_cpustats = dict()
 	subparsers = parser.add_subparsers()
 	for command_name in COMMANDS:
 		module = importlib.import_module('.' + command_name, 'igdiscover')
@@ -78,6 +79,8 @@ def main(arguments=None):
 			help=module.__doc__.split('\n')[1], description=module.__doc__)
 		subparser.set_defaults(func=module.main)
 		module.add_arguments(subparser)
+		if hasattr(module, 'do_not_show_cpustats'):
+			show_cpustats[module.main] = False
 
 	args = parser.parse_args(arguments)
 	if not hasattr(args, 'func'):
@@ -88,7 +91,7 @@ def main(arguments=None):
 		logger.info('Wrote profiling data to igdiscover.prof')
 	else:
 		args.func(args)
-	if sys.platform == 'linux':
+	if sys.platform == 'linux' and show_cpustats.get(args.func, True):
 		rself = resource.getrusage(resource.RUSAGE_SELF)
 		rchildren = resource.getrusage(resource.RUSAGE_CHILDREN)
 		memory_kb = rself.ru_maxrss + rchildren.ru_maxrss
