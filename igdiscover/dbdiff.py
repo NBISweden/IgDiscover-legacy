@@ -18,6 +18,19 @@ def add_arguments(parser):
 	arg('b', help='FASTA file with actual sequences')
 
 
+RED = "\x1b[0;31m"
+GREEN = "\x1b[0;32m"
+RESET = "\x1b[0m"
+
+
+def red(s):
+	return RED + s + RESET
+
+
+def green(s):
+	return GREEN + s + RESET
+
+
 def check_duplicate_names(records):
 	names = set()
 	for record in records:
@@ -64,6 +77,52 @@ def pair_up(a_records, b_records):
 	return only_a, only_b, identical, similar
 
 
+def print_similar(a, b):
+	l = min(len(a.sequence), len(b.sequence))
+	length_diff = max(len(a.sequence), len(b.sequence)) - l
+	dist_prefixes = hamming_distance(a.sequence[:l], b.sequence[:l])
+	dist_suffixes = hamming_distance(a.sequence[-l:], b.sequence[-l:])
+	if dist_prefixes <= dist_suffixes:
+		a_prefix = ''
+		b_prefix = ''
+		a_common = a.sequence[:l]
+		b_common = b.sequence[:l]
+		a_suffix = a.sequence[l:]
+		b_suffix = b.sequence[l:]
+	else:
+		a_prefix = a.sequence[:-l]
+		b_prefix = b.sequence[:-l]
+		a_common = a.sequence[-l:]
+		b_common = b.sequence[-l:]
+		a_suffix = ''
+		b_suffix = ''
+
+	def format_indel(a, b):
+		if len(a) > len(b):
+			assert len(b) == 0
+			return red('{-' + a + '}')
+		elif len(b) > len(a):
+			assert len(a) == 0
+			return green('{+' + b + '}')
+		else:
+			return ''
+
+	s = format_indel(a_prefix, b_prefix)
+	edits = []
+	for i, (ac, bc) in enumerate(zip(a_common, b_common)):
+		if ac != bc:
+			edits.append('{' + red(ac) + ' → ' + green(bc) + '}')
+		else:
+			edits.append(ac)
+	s += ''.join(edits)
+
+	s += format_indel(a_suffix, b_suffix)
+
+	print('~', a.name, '--', b.name)
+	print(s)
+	print()
+
+
 def main(args):
 	with FastaReader(args.a) as f:
 		a_records = list(f)
@@ -105,9 +164,4 @@ def main(args):
 	print()
 	print('## Similar')
 	for a, b in similar:
-		l = min(len(a.sequence), len(b.sequence))
-		length_diff = max(len(a.sequence), len(b.sequence)) - l
-		dist_prefixes = hamming_distance(a.sequence[:l], b.sequence[:l])
-		dist_suffixes = hamming_distance(a.sequence[-l:], b.sequence[-l:])
-		print('~', a.name, '--', b.name, 'length_diff', length_diff, 'hamming distance', min(dist_prefixes, dist_suffixes))
-
+		print_similar(a, b)
