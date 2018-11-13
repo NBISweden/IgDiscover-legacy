@@ -3,6 +3,8 @@ Compare two germline gene databases given as FASTA files
 """
 import sys
 import logging
+import numpy as np
+from scipy.optimize import linear_sum_assignment
 from sqt import FastaReader
 from sqt.align import hamming_distance
 #from .utils import natural_sort_key
@@ -48,33 +50,58 @@ def check_exact_duplicate_sequences(records):
 			sequences[record.sequence] = record.name
 
 
-def pair_up(a_records, b_records):
-	b_records = b_records[:]
-	only_a = []
-	pairs = []
-	# Try to find a partner (either identical or similar) for every A sequence
-	for a in a_records:
-		best_score = -10000
-		best = None
-		for b in b_records:
-			l = min(len(a.sequence), len(b.sequence))
-			length_diff = max(len(a.sequence), len(b.sequence)) - l
-			dist_prefixes = hamming_distance(a.sequence[:l], b.sequence[:l])
-			dist_suffixes = hamming_distance(a.sequence[-l:], b.sequence[-l:])
-			score = l - 5 * min(dist_prefixes, dist_suffixes) - length_diff
-			if score >= l - 19 and score > best_score:
-				best_score = score
-				best = b
-		if best is not None:
-			b_records.remove(best)
-			pairs.append((a, best))
-		else:
-			only_a.append(a)
-	only_b = b_records
-	identical = [(a, b) for a, b in pairs if a.sequence == b.sequence]
-	similar = [(a, b) for a, b in pairs if a.sequence != b.sequence]
+def compare(a, b):
+	"""Return cost of comparing a to b"""
 
-	return only_a, only_b, identical, similar
+	l = min(len(a.sequence), len(b.sequence))
+	length_diff = max(len(a.sequence), len(b.sequence)) - l
+	dist_prefixes = hamming_distance(a.sequence[:l], b.sequence[:l])
+	dist_suffixes = hamming_distance(a.sequence[-l:], b.sequence[-l:])
+
+	return 5 * min(dist_prefixes, dist_suffixes) + length_diff
+
+
+def pair_up_identical(a_records, b_records):
+	identical = []
+	b_map = {record.sequence: record for record in b_records}
+	a_rest = []
+	for a in a_records:
+		if a.sequence in b_map:
+			identical.append((a, b_map[a.sequence]))
+			del b_map[a.sequence]
+		else:
+			a_rest.append(a)
+
+	return identical, a_rest, list(b_map.values())
+
+
+def pair_up(a_records, b_records, max_cost=20):
+	# Pair up identical sequences first
+	identical, a_records, b_records = pair_up_identical(a_records[:], b_records[:])
+
+	# Compare all vs all and fill in a score matrix
+	m = len(a_records)
+	n = len(b_records)
+	cost = np.zeros((m, n), dtype=int)
+	for i, a in enumerate(a_records):
+		for j, b in enumerate(b_records):
+			cost[i, j] = compare(a, b)
+
+	# Solve minimum weighted bipartite matching
+	assignment = linear_sum_assignment(cost)
+	similar = []
+	a_similar = set()
+	b_similar = set()
+	for i, j in zip(*assignment):
+		if cost[i, j] <= max_cost:
+			similar.append((a_records[i], b_records[j]))
+			a_similar.add(i)
+			b_similar.add(j)
+
+	a_only = [a for i, a in enumerate(a_records) if i not in a_similar]
+	b_only = [b for j, b in enumerate(b_records) if j not in b_similar]
+
+	return a_only, b_only, identical, similar
 
 
 def print_similar(a, b):
