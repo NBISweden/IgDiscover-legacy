@@ -115,9 +115,15 @@ class IgBlastCache:
 		digest = hasher.hexdigest()
 		data = self._load(digest)
 		if data is None:
-			full_arguments = [IgBlastCache.binary] + variable_arguments + fixed_arguments
-			data = subprocess.check_output(full_arguments, input=fasta_str,
-				universal_newlines=True)
+			with tempfile.TemporaryDirectory() as tmpdir:
+				path = os.path.join(tmpdir, 'igblast.txt')
+				full_arguments = [IgBlastCache.binary] + variable_arguments + fixed_arguments\
+					+ ['-out', path]
+				output = subprocess.check_output(full_arguments, input=fasta_str,
+					universal_newlines=True)
+				assert output == ''
+				with open(path) as f:
+					data = f.read()
 			with self._lock:  # TODO does this help?
 				self._store(digest, data)
 
@@ -149,6 +155,7 @@ def run_igblast(sequences, blastdb_dir, species, sequence_type, penalty=None, us
 		arguments += ['-penalty', str(penalty)]
 	if species is not None:
 		arguments += ['-organism', species]
+
 	arguments += [
 		'-ig_seqtype', sequence_type,
 		'-num_threads', '1',
@@ -158,7 +165,6 @@ def run_igblast(sequences, blastdb_dir, species, sequence_type, penalty=None, us
 		'-num_alignments_J', '1',
 		'-outfmt', '7 sseqid qstart qseq sstart sseq pident slen evalue',
 		'-query', '-',
-		'-out', '-',  # write to stdout
 	]
 	fasta_str = ''.join(">{}\n{}\n".format(r.name, r.sequence) for r in sequences)
 
@@ -166,8 +172,17 @@ def run_igblast(sequences, blastdb_dir, species, sequence_type, penalty=None, us
 		global _igblastcache
 		return _igblastcache.retrieve(variable_arguments, arguments, blastdb_dir, fasta_str)
 	else:
-		return subprocess.check_output(['igblastn'] + variable_arguments + arguments, input=fasta_str,
-			universal_newlines=True)
+		# For some reason, it has become unreliable to let IgBLAST 1.10 write its result
+		# to standard output using "-out -". The data becomes corrupt. This does not occur
+		# when calling igblastn in the shell and using the same syntax, only with
+		# subprocess.check_output. As a workaround, we write the output to a temporary file.
+		with tempfile.TemporaryDirectory() as tmpdir:
+			path = os.path.join(tmpdir, 'igblast.txt')
+			output = subprocess.check_output(['igblastn'] + variable_arguments + arguments
+				+ ['-out', path], input=fasta_str, universal_newlines=True)
+			assert output == ''
+			with open(path) as f:
+				return f.read()
 
 
 def chunked(iterable, chunksize: int):

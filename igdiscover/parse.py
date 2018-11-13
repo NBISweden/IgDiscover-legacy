@@ -621,11 +621,13 @@ class IgBlastParser:
 		"""
 		zipped = zip(self._sequences, split_by_section(self._igblast_lines, ['# IGBLASTN']))
 		for fasta_record, (record_header, record_lines) in zipped:
-			# 'IGBLASTN 2.2.29+': IgBLAST 1.4.0
-			# 'IGBLASTN 2.3.1+': IgBLAST 1.5.0
 			# 'IGBLASTN 2.5.1+': IgBLAST 1.6.1
-			# 'IGBLASTN 2.6.1+': IgBLAST 1.7.0
-			assert record_header in {'# IGBLASTN 2.2.29+', '# IGBLASTN 2.3.1+', '# IGBLASTN 2.6.1+'}
+			assert record_header in {
+				'# IGBLASTN 2.2.29+',  # IgBLAST 1.4.0
+				'# IGBLASTN 2.3.1+',  # IgBLAST 1.5.0
+				'# IGBLASTN 2.6.1+',  # IgBLAST 1.7.0
+				'# IGBLASTN',  # IgBLAST 1.10
+			}
 			yield self._parse_record(record_lines, fasta_record)
 
 	def _parse_record(self, record_lines, fasta_record):
