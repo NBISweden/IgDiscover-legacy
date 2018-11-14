@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 
 from igdiscover.discover import SiblingMerger, SiblingInfo
-from igdiscover.germlinefilter import SequenceMerger, SequenceInfo
+from igdiscover.germlinefilter import CandidateFilter, SequenceInfo
 from igdiscover.utils import UniqueNamer
 from igdiscover.rename import PrefixDict
 
@@ -99,8 +99,8 @@ def SI(sequence, name, clonotypes, whitelisted=False):
 	)
 
 
-def test_sequence_merger_withCDR3():
-	merger = SequenceMerger(cross_mapping_ratio=0, clonotype_ratio=None,
+def test_candidate_filter_withCDR3():
+	merger = CandidateFilter(cross_mapping_ratio=0, clonotype_ratio=None,
 		exact_ratio=None, unique_d_ratio=None, unique_d_threshold=10)
 	infos = [
 		SI('ACGTTA', 'Name1', 15),
@@ -120,8 +120,8 @@ def test_sequence_merger_withCDR3():
 	assert len(merged) == 3 and merged[0:3] == infos[1:4]
 
 
-def test_sequence_merger_prefix():
-	merger = SequenceMerger(cross_mapping_ratio=0, clonotype_ratio=None,
+def test_candidate_filter_prefix():
+	merger = CandidateFilter(cross_mapping_ratio=0, clonotype_ratio=None,
 		exact_ratio=None,
 		unique_d_ratio=None, unique_d_threshold=10)
 	infos = [

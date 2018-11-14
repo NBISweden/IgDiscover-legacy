@@ -84,6 +84,8 @@ def add_arguments(parser):
 			'even if criteria for discarding them would apply (except cross-mapping artifact '
 			'removal, which is always performed).')
 	arg('--fasta', metavar='FILE', help='Write new database in FASTA format to FILE')
+	arg('--annotate', metavar='FILE',
+		help='Write candidates.tab with filter annotations to FILE')
 	arg('tables', metavar='CANDIDATES.TAB',
 		help='Tables (one or more) created by the "discover" command',
 		nargs='+')
@@ -93,19 +95,46 @@ SequenceInfo = namedtuple('_SequenceInfo', ['sequence', 'name', 'clonotypes', 'e
 	'cluster_size', 'whitelisted', 'is_database', 'cluster_size_is_accurate', 'CDR3_start', 'row'])
 
 
-class SequenceMerger(Merger):
+class CandidateFilter:
 	"""
 	Merge sequences that are sufficiently similar into single entries.
 	"""
 	def __init__(self, cross_mapping_ratio, clonotype_ratio, exact_ratio,
 			unique_d_ratio,
 			unique_d_threshold):
-		super().__init__()
+		self._items = []
 		self._cross_mapping_ratio = cross_mapping_ratio
 		self._clonotype_ratio = clonotype_ratio
 		self._exact_ratio = exact_ratio
 		self._unique_d_ratio = unique_d_ratio
 		self._unique_d_threshold = unique_d_threshold
+
+	def add(self, item):
+		# This method could possibly be made simpler if the graph structure
+		# was made explicit.
+
+		items = []
+		for existing_item in self._items:
+			m = self.merged(existing_item, item)
+			if m is None:
+				items.append(existing_item)
+			else:
+				item = m
+		items.append(item)
+		self._items = items
+
+	def extend(self, iterable):
+		for i in iterable:
+			self.add(i)
+
+	def __iter__(self):
+		if self._items and hasattr(self._items, 'name'):
+			yield from sorted(self._items, key=lambda x: x.name)
+		else:
+			yield from self._items
+
+	def __len__(self):
+		return len(self._items)
 
 	def merged(self, s: SequenceInfo, t: SequenceInfo):
 		"""
@@ -269,19 +298,25 @@ def is_chimera(table, whitelist):
 			suffix_row = whitelisted.iloc[suffix_indices[0]]
 			suffix_name = suffix_row['name']
 			suffix_sequence = suffix_row['consensus']
-			logger.info('Removing %s (diffs.: %d) as it appears to be a chimera of '
-				'%s:1..%d and %s:%d..%d', row.name, row.whitelist_diff, prefix_name, prefix_length,
-				suffix_name, len(suffix_sequence) - suffix_length + 1, len(suffix_sequence))
+			# logger.info('Candidate %s (diffs.: %d) appears to be a chimera of '
+			# 	'%s:1..%d and %s:%d..%d', row.name, row.whitelist_diff, prefix_name, prefix_length,
+			# 	suffix_name, len(suffix_sequence) - suffix_length + 1, len(suffix_sequence))
 			result.loc[row.Index] = '{}:1..{}+{}:{}..{}'.format(prefix_name, prefix_length,
 				suffix_name, len(suffix_sequence) - suffix_length + 1, len(suffix_sequence))
 
 	return result
 
 
+def mark_rows(table, condition, reason):
+	table.loc[condition, 'why_filtered'] += reason + ';'
+	table.loc[condition, 'is_filtered'] += 1
+	logger.info('Marked %s candidates as %r', sum(condition), reason)
+
+
 def main(args):
 	if args.unique_D_threshold <= 1:
 		sys.exit('--unique-D-threshold must be at least 1')
-	merger = SequenceMerger(
+	merger = CandidateFilter(
 		cross_mapping_ratio=args.cross_mapping_ratio,
 		clonotype_ratio=args.clonotype_ratio,
 		exact_ratio=args.exact_ratio,
@@ -294,7 +329,7 @@ def main(args):
 	logger.info('%d unique sequences in whitelist', len(whitelist))
 
 	# Read in tables
-	total_unfiltered = 0
+	total = 0
 	overall_table = None
 	for path in args.tables:
 		table = pd.read_csv(path, sep='\t')
@@ -302,27 +337,31 @@ def main(args):
 		# whitelist_diff distinguishes between 0 and !=0 only
 		# at this point. Accurate edit distances are computed later.
 		whitelist_diff = [(0 if s in whitelist else -1) for s in table['consensus']]
+		# TODO rename to is_whitelisted
 		table.insert(i, 'whitelist_diff', pd.Series(whitelist_diff, index=table.index, dtype=int))
 		table.insert(i+1, 'closest_whitelist', pd.Series('', index=table.index))
+		table.insert(3, 'why_filtered', pd.Series('', index=table.index))
+		table.insert(3, 'is_filtered', pd.Series(0, index=table.index))
 
-		unfiltered_length = len(table)
-		table = table[table.database_diff >= args.minimum_db_diff]
+		mark_rows(table, table.database_diff < args.minimum_db_diff, 'dbdiff_low')
+
 		if 'N_bases' in table.columns:
-			table = table[table.N_bases <= args.maximum_N]
-		table = table[table.CDR3s_exact >= args.unique_CDR3]
-		table = table[table.CDR3_shared_ratio <= args.cdr3_shared_ratio]
-		table = table[table.Js_exact >= args.unique_J]
+			mark_rows(table, table.N_bases > args.maximum_N, 'too_many_N_bases')
+		mark_rows(table, table.CDR3s_exact < args.unique_CDR3, 'too_low_CDR3s_exact')
+		mark_rows(table, table.CDR3_shared_ratio > args.cdr3_shared_ratio, 'too_high_CDR3_shared_ratio')
+		mark_rows(table, table.Js_exact < args.unique_J, 'too_low_Js_exact')
 		if not args.allow_stop:
-			table = table[(table.has_stop == 0) | (table.whitelist_diff == 0)]
-		table = table[(table.cluster_size >= args.cluster_size) | (table.whitelist_diff == 0)]
+			mark_rows(table, (table.has_stop != 0) & (table.whitelist_diff != 0), 'has_stop')
+		mark_rows(table, (table.cluster_size < args.cluster_size) & (table.whitelist_diff != 0),
+			'too_low_cluster_size')
 		table['database_changes'].fillna('', inplace=True)
-		table = table.dropna()
+		# table = table.dropna()  TODO why was this in here?
 		logger.info('Table read from %r contains %s candidate V gene sequences. '
-			'%s remain after filtering', path,
-			unfiltered_length, len(table))
+			'%s remain after per-entry filtering', path,
+			len(table), sum(table.is_filtered == 0))
 		if args.whitelist:
 			logger.info('Of those, %d are protected by the whitelist', sum(table.whitelist_diff == 0))
-		total_unfiltered += unfiltered_length
+		total += len(table)
 
 		if overall_table is None:
 			overall_table = table
@@ -331,13 +370,15 @@ def main(args):
 	del table
 	if len(args.tables) > 1:
 		logger.info('Read %s tables with %s entries total. '
-			'After filtering, %s entries remain.', len(args.tables),
-			total_unfiltered, len(overall_table))
+			'After per-entry filtering, %s entries remain.', len(args.tables),
+			len(overall_table), sum(overall_table.is_filtered == 0))
 
 	def cluster_size_is_accurate(row):
 		return bool(set(row.cluster.split(';')) & {'all', 'db'})
 
 	for _, row in overall_table.iterrows():
+		if row['is_filtered'] > 0:
+			continue
 		merger.add(SequenceInfo(
 			sequence=row['consensus'],
 			name=row['name'],
@@ -353,10 +394,11 @@ def main(args):
 		))
 
 	# Discard near-duplicates
-	overall_table['is_duplicate'] = pd.Series(True, index=overall_table.index, dtype=bool)
+	overall_table.loc[overall_table.is_filtered > 0, 'is_duplicate'] = False
+	overall_table.loc[overall_table.is_filtered == 0, 'is_duplicate'] = True
 	for info in merger:
 		overall_table.loc[info.row, 'is_duplicate'] = False
-	overall_table = overall_table[~overall_table.is_duplicate].copy()
+	mark_rows(overall_table, overall_table.is_duplicate, 'is_duplicate')
 	del overall_table['is_duplicate']
 
 	# Name sequences
@@ -367,6 +409,9 @@ def main(args):
 	# all of the filtering has already been done
 	if whitelist:
 		for row in overall_table.itertuples():
+			# TODO skipping this is just a performance optimization
+			if row.is_filtered > 0:
+				continue
 			distance, name = whitelist.closest(overall_table.loc[row[0], 'consensus'])
 			overall_table.loc[row[0], 'closest_whitelist'] = name
 			overall_table.loc[row[0], 'whitelist_diff'] = distance
@@ -374,17 +419,25 @@ def main(args):
 		overall_table.whitelist_diff.replace(-1, '', inplace=True)
 
 	i = list(overall_table.columns).index('database_diff')
+	# TODO
+	# chimeras are computed for the full table, not the filtered one. what should be done?
 	overall_table.insert(i, 'chimera', is_chimera(overall_table, whitelist))
 
 	# Discard chimeric sequences
 	# if not args.allow_chimeras:
 	#   overall_table = overall_table[~is_chimera(overall_table, whitelist)].copy()
 
-	print(overall_table.to_csv(sep='\t', index=False, float_format='%.2f'), end='')
+	filtered_table = overall_table[overall_table.is_filtered == 0]
+	del filtered_table['is_filtered']
+	del filtered_table['why_filtered']
+	print(filtered_table.to_csv(sep='\t', index=False, float_format='%.2f'), end='')
 
+	if args.annotate:
+		with open(args.annotate, 'w') as f:
+			print(overall_table.to_csv(sep='\t', index=False, float_format='%.2f'), end='', file=f)
 	if args.fasta:
 		with open(args.fasta, 'w') as f:
-			for _, row in overall_table.iterrows():
+			for _, row in filtered_table.iterrows():
 				print('>{}\n{}'.format(row['name'], row['consensus']), file=f)
 
-	logger.info('%d sequences in new database', len(overall_table))
+	logger.info('%d sequences in new database', len(filtered_table))

@@ -9,8 +9,13 @@ development version
   re-run with the exact same parameters, and then it only fills up the disk. Delete your cache with
   ``rm -r ~/.cache/igdiscover`` to reclaim the space.
 * Added detection of chimeras to the (pre-)germline filters. Any novel allele that can be explained
-  as a chimera of two unmodified reference alleles is marked in the ``new_V_germline.tab`` file
-  (the candidate is currently not discarded).
+  as a chimera of two unmodified reference alleles is marked in the ``new_V_germline.tab``
+  file. This is a bit sensitive, so the candidate is currently not
+  discarded.
+* Germline filtering now creates files ``annotated_V_germline.tab`` and
+  ``annotated_V_pregermline.tab`` that are copies of the candidate list
+  ``candidates.tab``, but contain a ``why_filtered`` column that tells you
+  why a candidate was dropped from the final germline list.
 
 
 v0.10 (2018-05-11)
