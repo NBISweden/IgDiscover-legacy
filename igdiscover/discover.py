@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 
 
 MINGROUPSIZE = 5
+MINEXPRESSED = 10
 MAXIMUM_SUBSAMPLE_SIZE = 1600
 
 
@@ -306,7 +307,7 @@ class Discoverer:
 			# add it to the list of candidates even if it has not been found as a
 			# cluster.
 			group_in_window = group[group.V_errors == 0]
-			if len(group_in_window) >= MINGROUPSIZE:
+			if len(group_in_window) >= MINEXPRESSED:
 				if not database_sequence_found:
 					logger.info('Database sequence %r seems to be expressed, but is missing from '
 						'candidates. Re-adding it.', gene)
