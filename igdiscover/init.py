@@ -23,6 +23,8 @@ from xopen import xopen
 
 logger = logging.getLogger(__name__)
 
+do_not_show_cpustats = 1
+
 
 def add_arguments(parser):
 	parser.add_argument('--database', '--db', metavar='PATH', default=None,
