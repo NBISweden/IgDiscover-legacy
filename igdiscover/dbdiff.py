@@ -1,5 +1,13 @@
 """
-Compare two germline gene databases given as FASTA files
+Compare two FASTA files based on sequences
+
+The order of records in the two files does not matter.
+
+Exit code:
+    2 if duplicate sequences or duplicate record names were found
+    1 if there are any lost or gained records or sequence differences
+    0 if the records are identical, but allowing for different record names
+
 """
 import sys
 import logging
@@ -7,7 +15,6 @@ import numpy as np
 from scipy.optimize import linear_sum_assignment
 from sqt import FastaReader
 from sqt.align import hamming_distance
-#from .utils import natural_sort_key
 
 logger = logging.getLogger(__name__)
 
@@ -106,7 +113,6 @@ def pair_up(a_records, b_records, max_cost=20):
 
 def print_similar(a, b):
 	l = min(len(a.sequence), len(b.sequence))
-	length_diff = max(len(a.sequence), len(b.sequence)) - l
 	dist_prefixes = hamming_distance(a.sequence[:l], b.sequence[:l])
 	dist_suffixes = hamming_distance(a.sequence[-l:], b.sequence[-l:])
 	if dist_prefixes <= dist_suffixes:
@@ -175,32 +181,39 @@ def main(args):
 				print('-', name, 'is identical to earlier record', name_orig)
 
 	only_a, only_b, identical, similar = pair_up(a_records, b_records)
+	different_name = [(a, b) for a, b in identical if a.name != b.name]
 
-	# One-line summary
-	print('A:', len(a_records), 'records')
-	print('B:', len(b_records), 'records')
-	print('{} lost. {} gained. {} identical. {} similar.'.format(len(only_a), len(only_b), len(identical), len(similar)))
-	print()
-	print('## Only in A')
-	for record in only_a:
-		print('-', record.name)
-	print()
-	print('## Only in B')
-	for record in only_b:
-		print('+', record.name)
-	print()
-	print('## Identical')
-	for a, b in identical:
-		print('=', a.name, '--', b.name)
-	print()
-	print('## Similar')
-	for a, b in similar:
-		print_similar(a, b)
+	# Summary
+	print('{} vs {} records. {} lost, {} gained, {} identical, {} different name, {} similar'.format(
+		len(a_records), len(b_records), len(only_a), len(only_b),
+		len(identical) - len(different_name), len(different_name),
+		len(similar)))
 
+	# Report what has changed
+	if only_a:
+		print()
+		print('## Only in A')
+		for record in only_a:
+			print('-', record.name)
+	if only_b:
+		print()
+		print('## Only in B')
+		for record in only_b:
+			print('+', record.name)
+	if different_name:
+		print()
+		print('## Different name (sequence identical)')
+		for a, b in different_name:
+			print('=', a.name, '--', b.name)
+	if similar:
+		print()
+		print('## Similar')
+		for a, b in similar:
+			print_similar(a, b)
 
 	if has_duplicate_names or has_duplicate_sequences:
 		sys.exit(2)
-	elif only_a or only_b or similar:
+	if only_a or only_b or similar:
 		sys.exit(1)
-	else:
-		sys.exit(0)
+	# different name is fine for success
+	sys.exit(0)
