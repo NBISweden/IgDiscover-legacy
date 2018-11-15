@@ -156,16 +156,20 @@ def main(args):
 	with FastaReader(args.b) as f:
 		b_records = list(f)
 
+	has_duplicate_names = False
 	for records, path in ((a_records, args.a), (b_records, args.b)):
 		dups = list(check_duplicate_names(records))
 		if dups:
+			has_duplicate_names = True
 			print('Duplicate record names found in', path)
 			for name in dups:
 				print('-', name)
 
+	has_duplicate_sequences = False
 	for record, path in ((a_records, args.a), (b_records, args.b)):
 		dups = list(check_exact_duplicate_sequences(records))
 		if dups:
+			has_duplicate_sequences = True
 			print('Duplicate sequences found in', path)
 			for name, name_orig in dups:
 				print('-', name, 'is identical to earlier record', name_orig)
@@ -192,3 +196,11 @@ def main(args):
 	print('## Similar')
 	for a, b in similar:
 		print_similar(a, b)
+
+
+	if has_duplicate_names or has_duplicate_sequences:
+		sys.exit(2)
+	elif only_a or only_b or similar:
+		sys.exit(1)
+	else:
+		sys.exit(0)
