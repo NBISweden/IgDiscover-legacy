@@ -670,7 +670,8 @@ rule igdiscover_germlinefilter:
 	"""Construct a new database out of the discovered sequences"""
 	output:
 		tab='iteration-{nr}/new_V_{pre,(pre|)}germline.tab',
-		fasta='iteration-{nr}/new_V_{pre,(pre|)}germline.fasta'
+		fasta='iteration-{nr}/new_V_{pre,(pre|)}germline.fasta',
+		annotated_tab='iteration-{nr}/annotated_V_{pre,(pre|)}germline.tab',
 	input:
 		tab='iteration-{nr}/candidates.tab',
 		db_whitelist=db_whitelist_or_not,
@@ -681,6 +682,7 @@ rule igdiscover_germlinefilter:
 		'iteration-{nr}/new_V_{pre,(pre|)}germline.log'
 	shell:
 		"igdiscover germlinefilter {params.criteria}"
+		" --annotate={output.annotated_tab}"
 		" --fasta={output.fasta} {input.tab} "
 		" 2> >(tee {log} >&2) "
 		" > {output.tab}"
@@ -742,9 +744,9 @@ rule plot_errorhistograms:
 	input:
 		table='{dir}/filtered.tab.gz'
 	params:
-		ignore_j='--max-j-shm=0' if config.ignore_j else ''
+		ignore_j=' --max-j-shm=0' if config.ignore_j else ''
 	shell:
-		'igdiscover errorplot {params.ignore_j} --multi={output.multi_pdf} --boxplot={output.boxplot_pdf} {input.table}'
+		'igdiscover errorplot{params.ignore_j} --multi={output.multi_pdf} --boxplot={output.boxplot_pdf} {input.table}'
 
 
 rule dendrogram:

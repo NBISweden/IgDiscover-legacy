@@ -394,7 +394,8 @@ def main(args):
 		))
 
 	# Discard near-duplicates
-	overall_table['is_duplicate'] = pd.Series(True, index=overall_table.index, dtype=bool)
+	overall_table.loc[overall_table.is_filtered > 0, 'is_duplicate'] = False
+	overall_table.loc[overall_table.is_filtered == 0, 'is_duplicate'] = True
 	for info in merger:
 		overall_table.loc[info.row, 'is_duplicate'] = False
 	mark_rows(overall_table, overall_table.is_duplicate, 'is_duplicate')
