@@ -343,7 +343,7 @@ def main(args):
 		table.insert(3, 'why_filtered', pd.Series('', index=table.index))
 		table.insert(3, 'is_filtered', pd.Series(0, index=table.index))
 
-		mark_rows(table, table.database_diff < args.minimum_db_diff, 'dbdiff_low')
+		mark_rows(table, table.database_diff < args.minimum_db_diff, 'too_low_dbdiff')
 
 		if 'N_bases' in table.columns:
 			mark_rows(table, table.N_bases > args.maximum_N, 'too_many_N_bases')

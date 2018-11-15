@@ -11,7 +11,13 @@ development version
 * Added detection of chimeras to the (pre-)germline filters. Any novel allele that can be explained
   as a chimera of two unmodified reference alleles is marked in the ``new_V_germline.tab`` file
   (the candidate is currently not discarded).
-
+* Two additional files ``annotated_V_germline.tab`` and
+  ``annotated_V_pregermline.tab`` are created in each
+  iteration during the germline filtering step. These are
+  identical to the ``candidates.tab`` file, except that
+  they contain a ``why_filtered`` column that describes
+  why a sequence was filtered. See the :ref:`documentation
+  for this feature <annotated_v_tab>`.
 
 v0.10 (2018-05-11)
 ------------------

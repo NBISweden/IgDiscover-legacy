@@ -23,7 +23,7 @@ If you do not have a V/D/J database, yet, you may want to read the section about
 To run an analysis, proceed as follows.
 
 .. note::
-  If you are on OS X, it may be necessary to run ``export SHELL=/bin/bash`` before continuing.
+  If you are on macOS, it may be necessary to run ``export SHELL=/bin/bash`` before continuing.
 
 1. Create and initialize the analysis directory.
 
@@ -433,7 +433,7 @@ They also contain the following additional files.
 
 iteration-xx/candidates.tab
     A table with candidate novel V alleles (or genes).
-    This is a list of sequences found through the *windowing strategy* or *linkage cluster analysis*, as discussed in our paper.
+    This is a list of sequences found through the *windowing strategy* or *linkage cluster analysis*, as discussed in our paper. See :ref:`the full description of candidates.tab <candidates_tab>`.
 
 iteration-xx/read_names_map.tab
     For each candidate novel V allele listed in ``candidates.tab``, this file contains one row that
@@ -448,6 +448,9 @@ iteration-xx/new_V_germline.fasta, iteration-xx/new_V_pregermline.fasta
     The file is created from the ``candidates.tab`` file by applying either the germline or pre-germline filter.
     The file resulting from application of the germline filter is used in the last iteration only.
     The file resulting from application of the pre-germline filter is used in earlier iterations.
+
+iteration-xx/annotated_V_germline.tab, iteration-xx/annotated_V_pregermline.tab
+    A version of the ``candidates.tab`` file that is annotated with extra columns that describe why a candidate was filtered out. See :ref:`the description of this file <annotated_v_tab>`.
 
 
 Other files
@@ -570,6 +573,8 @@ Rows fulfilling any of the following criteria are filtered:
 - The J gene coverage is less than 60%
 - The V gene E-value is greater than 10\ :sup:`-3`
 
+
+.. _candidates_tab:
 
 candidates.tab
 --------------
@@ -695,6 +700,43 @@ N_bases
     Number of ``N`` bases in the consensus
 
 
+.. _annotated_v_tab:
+
+annotated_V_*.tab
+-----------------
+
+The two files ``annotated_V_germline.tab`` and ``annotated_V_pregermline.tab`` are copies of the ``candidates.tab`` file with two extra columns that show *why* a candidate was filtered in the germline and pre-germline filtering steps. The two columns are:
+
+  * ``is_filtered`` – This is a number that indicates how many filtering criteria exclude this candidate apply.
+  * ``why_filtered`` – This is a semicolon-separated list of filtering reasons.
+
+The following values can occur in the ``why_filtered`` column:
+
+too_low_dbdiff
+    The number of differences between this candidate and the database is lower than the required number.
+
+too_many_N_bases
+    The candidate contains too many ``N`` nucleotide wildcard characters.
+
+too_low_CDR3s_exact
+    The ``CDR3s_exact`` value for this candidate is lower than required.
+
+too_high_CDR3_shared_ratio
+    The ``CDR3_shared_ratio`` is higher than the configured threshold.
+
+too_low_Js_exact
+    The ``Js_exact`` value is lower than the configured threshold.
+
+has_stop
+    The filter configuration disallows stop codons, but this candidate has one and is not whitelisted.
+
+too_low_cluster_size
+    The ``cluster_size`` of this candidate is lower than the configured threshold, and the candidate is not whitelisted.
+
+is_duplicate
+    A filtering criterion not listed above applies to this candidate. This covers all the filters that need to compare candidates to each other: cross-mapping ratio, clonotype allele ratio, exact ratio, Ds_exact ratio.
+
+
 .. _gene-names:
 
 Names for discovered genes
@@ -810,6 +852,7 @@ germline filter sections of the configuration file, the sequences present in the
 are treated as validated germline sequences and will not be discarded if due to too small cluster
 size as long as they fulfill the remaining criteria (unique_cdr3s, unique_js etc.).
 
+You can see why a candidate was filtered by inspecting the :ref:`annotated_V_*.tab files <annotated_v_tab>`
 
 .. _cross-mapping:
 
