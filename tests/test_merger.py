@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 
 from igdiscover.discover import SiblingMerger, SiblingInfo
-from igdiscover.germlinefilter import CandidateFilter, SequenceInfo
+from igdiscover.germlinefilter import CandidateFilterer, SequenceInfo, TooSimilarSequenceFilter
 from igdiscover.utils import UniqueNamer
 from igdiscover.rename import PrefixDict
 
@@ -99,9 +99,11 @@ def SI(sequence, name, clonotypes, whitelisted=False):
 	)
 
 
-def test_candidate_filter_withCDR3():
-	merger = CandidateFilter(cross_mapping_ratio=0, clonotype_ratio=None,
-		exact_ratio=None, unique_d_ratio=None, unique_d_threshold=10)
+def test_candidate_filter_with_cdr3():
+	filters = [
+		TooSimilarSequenceFilter(),
+	]
+	merger = CandidateFilterer(filters)
 	infos = [
 		SI('ACGTTA', 'Name1', 15),
 		SI('ACGTTAT', 'Name2', 100),  # kept because it is longer
@@ -121,9 +123,8 @@ def test_candidate_filter_withCDR3():
 
 
 def test_candidate_filter_prefix():
-	merger = CandidateFilter(cross_mapping_ratio=0, clonotype_ratio=None,
-		exact_ratio=None,
-		unique_d_ratio=None, unique_d_threshold=10)
+
+	merger = CandidateFilterer([TooSimilarSequenceFilter()])
 	infos = [
 		SI('AAATAA', 'Name1', 117),
 		SI('AAATAAG', 'Name2', 10),

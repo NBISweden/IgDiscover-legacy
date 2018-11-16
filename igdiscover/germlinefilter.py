@@ -95,24 +95,155 @@ SequenceInfo = namedtuple('_SequenceInfo', ['sequence', 'name', 'clonotypes', 'e
 	'cluster_size', 'whitelisted', 'is_database', 'cluster_size_is_accurate', 'CDR3_start', 'row'])
 
 
-class CandidateFilter:
+class CrossMappingFilter:
+	"""
+	Filters a sequence if it is a cross-mapping artifact
+	"""
+	def __init__(self, cross_mapping_ratio: float):
+		"""Check for cross-mapping"""
+		self._ratio = cross_mapping_ratio
+
+	def should_discard(self, a: SequenceInfo, b: SequenceInfo, dist: int, *args):
+		"""
+		Compare two candidates and decide which one should be filtered, if any.
+
+		:param a: First candidate
+		:param b: Second candidate
+		:param dist: Edit distance between candidates
+		:return: None if both candidates should be kept, a pair (x, reason) otherwise, where x is
+		the candidate to be discarded (x is either a or b) and reason is a string describing why.
+		"""
+		if dist > 1:
+			# Cross-mapping is unlikely if the edit distance is larger than 1
+			return None
+		if not a.is_database or not b.is_database:
+			# Cross-mapping can only occur if both sequences are in the database
+			return None
+
+		total_count = (a.cluster_size + b.cluster_size)
+		for u, v in [(a, b), (b, a)]:
+			ratio = u.cluster_size / total_count
+			if u.cluster_size_is_accurate and ratio < self._ratio:
+				# u is probably a cross-mapping artifact of the higher-expressed v
+				return u, f'xmap_of={v.name},xmap_ratio={ratio:.4f}'
+		return None
+
+
+class TooSimilarSequenceFilter:
+	"""
+	Filter out sequences that are too similar to another one
+	"""
+	@staticmethod
+	def should_discard(a: SequenceInfo, b: SequenceInfo, dist: int, *args):
+		if dist > 0:
+			# The sequences are not similar, so keep both
+			return None
+
+		if a.whitelisted and b.whitelisted:
+			# Both are whitelisted, so keep them
+			return None
+
+		if a.whitelisted:
+			return b, f'identical_to={a.name},other_whitelisted'
+		if b.whitelisted:
+			return a, f'identical_to={b.name},other_whitelisted'
+
+		# No sequence is whitelisted
+		if b.clonotypes < a.clonotypes:
+			return b, f'identical_to={a.name},fewer_clonotypes'
+		# FIXME this is missing:
+		# if a.clonotypes < b.clonotypes: ...
+		if len(a.sequence) < len(b.sequence):
+			return a, f'identical_to={b.name},shorter'
+		return b, f'identical_to={a.name}'
+
+
+class SameGeneFilter:
+	def should_discard(self, a: SequenceInfo, b: SequenceInfo, dist: int, same_gene: bool):
+		"""
+		Compare two candidates and decide which one should be filtered, if any.
+
+		:param a: First candidate
+		:param b: Second candidate
+		:param dist: Edit distance between candidates
+		:return: None if both candidates should be kept, a pair (x, reason) otherwise, where x is
+		the candidate to be discarded (x is either a or b) and reason is a string describing why.
+		"""
+		if not same_gene:
+			# This filter applies only when comparing alleles of the same gene
+			return None
+		for u, v in [(a, b), (b, a)]:
+			result = self.decide(a, b)
+			if result is not None:
+				return result
+		return None
+
+	def decide(self, a: SequenceInfo, b: SequenceInfo):
+		raise NotImplementedError
+
+
+class ClonotypeAlleleRatioFilter(SameGeneFilter):
+	"""
+	Clonotype allele ratio filter. Somewhat similar to cross-mapping, but
+	this uses sequence names to decide whether two genes can be
+	alleles of each other and the ratio is between the CDR3_clusters values
+	"""
+	def __init__(self, clonotype_ratio: float):
+		self._ratio = clonotype_ratio
+
+	def decide(self, u: SequenceInfo, v: SequenceInfo):
+		if v.clonotypes == 0:
+			return None
+		ratio = u.clonotypes / v.clonotypes
+		if ratio < self._ratio:
+			# Clonotype allele ratio too low
+			return u, f'clonotype_ratio={ratio:.4f},other={v.name}'
+		return None
+
+
+class ExactRatioFilter(SameGeneFilter):
+	"""Exact V sequence occurrence allele ratio"""
+
+	def __init__(self, exact_ratio: float):
+		self._ratio = exact_ratio
+
+	def decide(self, u: SequenceInfo, v: SequenceInfo):
+		if v.exact == 0:
+			return None
+		ratio = u.exact / v.exact
+		if ratio < self._ratio:
+			# Allele ratio of exact occurrences too low
+			return u, f'ex_occ_ratio={ratio:.1f},other={v.name}'
+		return None
+
+
+class UniqueDRatioFilter(SameGeneFilter):
+	def __init__(self, unique_d_ratio: float, unique_d_threshold: int):
+		self._unique_d_ratio = unique_d_ratio
+		self._unique_d_threshold = unique_d_threshold
+
+	def decide(self, u: SequenceInfo, v: SequenceInfo):
+		if v.cluster_size < u.cluster_size or v.Ds_exact < self._unique_d_threshold:
+			# TODO comment
+			return None
+		ratio = u.Ds_exact / v.Ds_exact
+		if ratio < self._unique_d_ratio:
+			# Ds_exact ratio too low
+			return u, f'Ds_exact_ratio={ratio:.1f},other={v.name}'
+		return None
+
+
+class CandidateFilterer:
 	"""
 	Merge sequences that are sufficiently similar into single entries.
 	"""
-	def __init__(self, cross_mapping_ratio, clonotype_ratio, exact_ratio,
-			unique_d_ratio,
-			unique_d_threshold):
+	def __init__(self, filters):
 		self._items = []
-		self._cross_mapping_ratio = cross_mapping_ratio
-		self._clonotype_ratio = clonotype_ratio
-		self._exact_ratio = exact_ratio
-		self._unique_d_ratio = unique_d_ratio
-		self._unique_d_threshold = unique_d_threshold
+		self._filters = filters
 
 	def add(self, item):
 		# This method could possibly be made simpler if the graph structure
 		# was made explicit.
-
 		items = []
 		for existing_item in self._items:
 			m = self.merged(existing_item, item)
@@ -147,7 +278,6 @@ class CandidateFilter:
 		bases are ignored at either the 5' end or the 3' end, whichever gives the lower
 		edit distance.
 
-
 		If two sequences are similar and
 		Sequences that are whitelisted are not discarded if the only reason for discarding
 		them is their similarity
@@ -169,78 +299,24 @@ class CandidateFilter:
 			t_suffix = t_no_cdr3[-len(s_no_cdr3):]
 			dist_prefix = edit_distance(s_no_cdr3, t_prefix, 1)
 			dist_suffix = edit_distance(s_no_cdr3, t_suffix, 1)
-			dist = min(dist_prefix, dist_suffix)
+			dist_no_cdr3 = min(dist_prefix, dist_suffix)
 		else:
-			dist = edit_distance(s_no_cdr3, t_no_cdr3, 1)
+			dist_no_cdr3 = edit_distance(s_no_cdr3, t_no_cdr3, 1)
 
-		# Check for cross-mapping
-		# We check for dist <= 1 (and not ==1) since there may be
-		# differences in the CDR3 parts of the sequences that we
-		# ignore when computing edit distance.
-		if self._cross_mapping_ratio and dist <= 1 and s.is_database and t.is_database:
-			total_count = (s.cluster_size + t.cluster_size)
-			for u, v in [(s, t), (t, s)]:
-				ratio = u.cluster_size / total_count
-				if u.cluster_size_is_accurate and ratio < self._cross_mapping_ratio:
-					# u is probably a cross-mapping artifact of the higher-expressed v
-					logger.info('%r is a cross-mapping artifact of %r (ratio %.4f)',
-						u.name, v.name, ratio)
-					return v
+		same_gene = is_same_gene(s.name, t.name)
+		for filter_ in self._filters:
+			result = filter_.should_discard(s, t, dist_no_cdr3, same_gene)
+			if result is None:
+				# not filtered
+				continue
+			if result[0] is s:
+				return t
+			else:
+				return s
 
-		# Check criteria based on whether the two sequences are alleles of the same gene
-		if is_same_gene(s.name, t.name):
-			# Check clonotype allele ratio. Somewhat similar to cross-mapping, but
-			# this uses sequence names to decide whether two genes can be
-			# alleles of each other and the ratio is between the
-			# CDR3_clusters values
-			if self._clonotype_ratio:
-				for u, v in [(s, t), (t, s)]:
-					if v.clonotypes == 0:
-						continue
-					ratio = u.clonotypes / v.clonotypes
-					if ratio < self._clonotype_ratio:
-						logger.info('Clonotype allele ratio %.4f too low for %r compared to %r',
-							ratio, u.name, v.name)
-						return v
-
-			# Check exact V sequence occurrence allele ratio
-			if self._exact_ratio:
-				for u, v in [(s, t), (t, s)]:
-					if v.exact == 0:
-						continue
-					ratio = u.exact / v.exact
-					if ratio < self._exact_ratio:
-						logger.info('Allele ratio of exact occurrences %.4f too low for %r compared to %r',
-							ratio, u.name, v.name)
-						return v
-
-			if self._unique_d_ratio:
-				for u, v in [(s, t), (t, s)]:
-					if u.cluster_size >= v.cluster_size and u.Ds_exact >= self._unique_d_threshold:
-						ratio = v.Ds_exact / u.Ds_exact
-						if ratio < self._unique_d_ratio:
-							logger.info('Ds_exact ratio %.4f too low for %r compared to %r',
-								ratio, v.name, u.name)
-							return u
-
-		if dist > 0:
-			return None  # keep both
-
-		# If we get here, then the two candidates are too similar. Unless they are
-		# whitelisted, one needs to be discarded.
-		if s.whitelisted and t.whitelisted:
-			return None  # keep both
-		if s.whitelisted:
-			return s
-		if t.whitelisted:
-			return t
-
-		# No sequence is whitelisted if we arrive here
-		if s.clonotypes >= t.clonotypes:
-			return s
-		if len(s.sequence) < len(t.sequence):
-			return t
-		return t
+		# None of the filters decided to discard one of the sequences,
+		# so keep both
+		return None
 
 
 class Whitelist:
@@ -316,13 +392,17 @@ def mark_rows(table, condition, reason):
 def main(args):
 	if args.unique_D_threshold <= 1:
 		sys.exit('--unique-D-threshold must be at least 1')
-	merger = CandidateFilter(
-		cross_mapping_ratio=args.cross_mapping_ratio,
-		clonotype_ratio=args.clonotype_ratio,
-		exact_ratio=args.exact_ratio,
-		unique_d_ratio=args.unique_D_ratio,
-		unique_d_threshold=args.unique_D_threshold
-	)
+	filters = []
+	if args.cross_mapping_ratio:
+		filters.append(CrossMappingFilter(args.cross_mapping_ratio))
+	if args.clonotype_ratio:
+		filters.append(ClonotypeAlleleRatioFilter(args.clonotype_ratio))
+	if args.exact_ratio:
+		filters.append(ExactRatioFilter(args.exact_ratio))
+	if args.unique_D_ratio or args.unique_D_threshold:
+		filters.append(UniqueDRatioFilter(args.unique_D_ratio, args.unique_D_threshold))
+	filters.append(TooSimilarSequenceFilter())
+	merger = CandidateFilterer(filters)
 	whitelist = Whitelist()
 	for path in args.whitelist:
 		whitelist.add_fasta(path)
@@ -355,7 +435,6 @@ def main(args):
 		mark_rows(table, (table.cluster_size < args.cluster_size) & (table.whitelist_diff != 0),
 			'too_low_cluster_size')
 		table['database_changes'].fillna('', inplace=True)
-		# table = table.dropna()  TODO why was this in here?
 		logger.info('Table read from %r contains %s candidate V gene sequences. '
 			'%s remain after per-entry filtering', path,
 			len(table), sum(table.is_filtered == 0))
