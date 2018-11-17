@@ -499,3 +499,7 @@ class ChimeraFinder:
 				return (split_index, self._prefixes[prefix], self._suffixes[suffix])
 
 		return None
+
+
+def available_cpu_count():
+	return len(os.sched_getaffinity(0))

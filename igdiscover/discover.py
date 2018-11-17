@@ -18,12 +18,11 @@ import numpy as np
 import pandas as pd
 from sqt import SequenceReader
 from sqt.align import edit_distance
-from sqt.utils import available_cpu_count
 
 from .table import read_table
 from .cluster import cluster_sequences, single_linkage
 from .utils import (iterative_consensus, unique_name, downsampled, SerialPool, Merger, has_stop,
-	describe_nt_change)
+	describe_nt_change, available_cpu_count)
 
 logger = logging.getLogger(__name__)
 

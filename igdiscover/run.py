@@ -9,7 +9,8 @@ import resource
 import platform
 import pkg_resources
 from snakemake import snakemake
-from sqt.utils import available_cpu_count
+
+from .utils import available_cpu_count
 from . import __version__
 
 from .config import Config

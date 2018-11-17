@@ -35,10 +35,9 @@ import gzip
 from xopen import xopen
 
 from sqt import SequenceReader
-from sqt.utils import available_cpu_count
 from sqt.dna import nt_to_aa
 
-from .utils import get_cpu_time, SerialPool
+from .utils import get_cpu_time, SerialPool, available_cpu_count
 from .parse import TableWriter, IgBlastParser
 from .species import cdr3_start, cdr3_end
 from .config import GlobalConfig
