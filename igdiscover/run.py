@@ -8,7 +8,6 @@ import logging
 import resource
 import platform
 import pkg_resources
-import argparse
 from snakemake import snakemake
 from sqt.utils import available_cpu_count
 from . import __version__
@@ -27,8 +26,6 @@ def add_arguments(parser):
 		'Default: Use as many cores as available (%(default)s)')
 	arg('--keepgoing', '-k', default=False, action='store_true',
 		help='If one job fails, finish the others.')
-	arg('--print-commands', '-p', default=False, action='store_true',
-		help=argparse.SUPPRESS)
 	arg('targets', nargs='*', default=[],
 		help='File(s) to create. If omitted, the full pipeline is run.')
 
@@ -47,8 +44,6 @@ def main(args):
 			continue
 		print('   ', k, ': ', repr(v), sep='')
 
-	if args.print_commands:
-		logger.warning('The -p (--print-commands) option is ignored (commands are always printed)')
 	# snakemake sets up its own logging and this cannot be easily changed
 	# (setting keep_logger=True crashes), so remove our own log handler
 	# for now
