@@ -6,7 +6,7 @@ from sqt.dna import reverse_complement
 from sqt import FastaReader, SequenceReader
 import igdiscover
 from igdiscover.utils import relative_symlink
-from igdiscover.config import Config
+from igdiscover.config import Config, GlobalConfig
 
 
 try:
@@ -137,22 +137,21 @@ if config.merge_program == 'flash':
 
 
 elif config.merge_program == 'pear':
+
 	rule pear_merge:
 		"""Use pear to merge paired-end reads"""
 		output:
-			unmerged1='reads/2-pear.unassembled.forward.fastq.gz',
-			unmerged2='reads/2-pear.unassembled.reverse.fastq.gz',
-			discarded='reads/2-pear.discarded.fastq.gz',
 			fastq='reads/2-merged.fastq.gz',
 			log='reads/2-pear.log'
-		input: 'reads/1-limited.1.fastq.gz', 'reads/1-limited.2.fastq.gz'
+		input:
+			fastq1='reads/1-limited.1.fastq.gz',
+			fastq2='reads/1-limited.2.fastq.gz'
+		log: 'reads/2-pear.log'
+
 		resources: time=60
-		threads: 16
+		threads: 20
 		shell:
-			"time pear -j {threads} -f {input[0]} -r {input[1]} -o reads/2-pear | tee {output.log}\n"
-			"for n in unassembled.forward unassembled.reverse assembled discarded; do "
-			"{GZIP} -f reads/2-pear.$n.fastq; done\n"
-			"mv reads/2-pear.assembled.fastq.gz {output.fastq}"
+			"igdiscover merge -j {threads} {input.fastq1} {input.fastq2} {output.fastq} | tee {log}"
 
 	rule parse_pear_stats:
 		input: log='reads/2-pear.log'

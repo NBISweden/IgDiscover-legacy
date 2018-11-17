@@ -132,6 +132,8 @@ class GlobalConfig:
 		if os.path.exists(path):
 			with open(path) as f:
 				config = ruamel.yaml.safe_load(f)
+			if config is None:
+				return
 			self.use_cache = config.get('use_cache', False)
 
 

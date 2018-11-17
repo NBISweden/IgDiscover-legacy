@@ -7,7 +7,9 @@ development version
 
 * The IgBLAST cache is now disabled by default. We assume that, in most cases, datasets will not be
   re-run with the exact same parameters, and then it only fills up the disk. Delete your cache with
-  ``rm -r ~/.cache/igdiscover`` to reclaim the space.
+  ``rm -r ~/.cache/igdiscover`` to reclaim the space. To enable the cache, create a file
+  ``~/.config/igdiscover.conf`` with the contents ``use_cache: true``.
+* If you choose to enable the cache, results from the PEAR merging step will also be cached in it.
 * Added detection of chimeras to the (pre-)germline filters. Any novel allele that can be explained
   as a chimera of two unmodified reference alleles is marked in the ``new_V_germline.tab``
   file. This is a bit sensitive, so the candidate is currently not

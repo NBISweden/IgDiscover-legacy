@@ -37,7 +37,7 @@ from xopen import xopen
 from sqt import SequenceReader
 from sqt.dna import nt_to_aa
 
-from .utils import get_cpu_time, SerialPool, available_cpu_count
+from .utils import SerialPool, available_cpu_count
 from .parse import TableWriter, IgBlastParser
 from .species import cdr3_start, cdr3_end
 from .config import GlobalConfig
@@ -355,8 +355,7 @@ def main(args):
 	if use_cache:
 		global _igblastcache
 		_igblastcache = IgBlastCache()
-	else:
-		logger.info('IgBLAST cache disabled')
+		logger.info('IgBLAST cache enabled')
 	database = Database(args.database, args.sequence_type)
 	detected_cdr3s = 0
 	writer = TableWriter(sys.stdout)

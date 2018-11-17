@@ -47,6 +47,7 @@ COMMANDS = [
 	'rename',
 	'union',
 	'dbdiff',
+	'merge',
 	'clonotypes',
 	'clonoquery',
 	'plotalleles',
