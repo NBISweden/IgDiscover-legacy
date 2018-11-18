@@ -77,7 +77,10 @@ def main(args):
 
 	if not os.path.exists(args.directory):
 		os.mkdir(args.directory)
-	table = read_table(args.table)
+	gene_col = args.type + '_gene'
+	seq_col = args.type + '_nt'
+	usecols = ['J_SHM', 'V_gene', gene_col, seq_col]
+	table = read_table(args.table, usecols=usecols)
 
 	# Discard rows with any mutation within J at all
 	logger.info('%s rows read', len(table))
@@ -90,7 +93,7 @@ def main(args):
 	genes = frozenset(args.gene)
 	n = 0
 	too_few = 0
-	for gene, group in table.groupby(args.type + '_gene'):
+	for gene, group in table.groupby(gene_col):
 		if genes and gene not in genes:
 			continue
 		if len(group) < args.minimum_group_size:
@@ -98,7 +101,7 @@ def main(args):
 			continue
 		title = gene if args.title else None
 		path = os.path.join(args.directory, gene.translate(path_sanitizer) + '.png')
-		sequences = list(group[args.type + '_nt'])
+		sequences = list(group[seq_col])
 		n_clusters = plot_clustermap(sequences, title, path, size=args.size, dpi=args.dpi)
 		n += 1
 		logger.info('Plotted %r with %d cluster%s', gene, n_clusters, plural_s(n_clusters))
