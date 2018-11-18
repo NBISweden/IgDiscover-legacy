@@ -35,7 +35,7 @@ import pandas as pd
 from sqt import FastaReader
 from sqt.align import edit_distance
 
-from .utils import UniqueNamer, Merger, is_same_gene, ChimeraFinder
+from .utils import UniqueNamer, is_same_gene, ChimeraFinder
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +91,7 @@ def add_arguments(parser):
 		nargs='+')
 
 
-SequenceInfo = namedtuple('_SequenceInfo', ['sequence', 'name', 'clonotypes', 'exact', 'Ds_exact',
+Candidate = namedtuple('Candidate', ['sequence', 'name', 'clonotypes', 'exact', 'Ds_exact',
 	'cluster_size', 'whitelisted', 'is_database', 'cluster_size_is_accurate', 'CDR3_start', 'row'])
 
 
@@ -103,7 +103,7 @@ class CrossMappingFilter:
 		"""Check for cross-mapping"""
 		self._ratio = cross_mapping_ratio
 
-	def should_discard(self, a: SequenceInfo, b: SequenceInfo, dist: int, *args):
+	def should_discard(self, a: Candidate, b: Candidate, dist: int, *args):
 		"""
 		Compare two candidates and decide which one should be filtered, if any.
 
@@ -134,7 +134,7 @@ class TooSimilarSequenceFilter:
 	Filter out sequences that are too similar to another one
 	"""
 	@staticmethod
-	def should_discard(a: SequenceInfo, b: SequenceInfo, dist: int, *args):
+	def should_discard(a: Candidate, b: Candidate, dist: int, *args):
 		if dist > 0:
 			# The sequences are not similar, so keep both
 			return None
@@ -159,7 +159,7 @@ class TooSimilarSequenceFilter:
 
 
 class SameGeneFilter:
-	def should_discard(self, a: SequenceInfo, b: SequenceInfo, dist: int, same_gene: bool):
+	def should_discard(self, a: Candidate, b: Candidate, dist: int, same_gene: bool):
 		"""
 		Compare two candidates and decide which one should be filtered, if any.
 
@@ -178,7 +178,7 @@ class SameGeneFilter:
 				return result
 		return None
 
-	def decide(self, a: SequenceInfo, b: SequenceInfo):
+	def decide(self, a: Candidate, b: Candidate):
 		raise NotImplementedError
 
 
@@ -191,7 +191,7 @@ class ClonotypeAlleleRatioFilter(SameGeneFilter):
 	def __init__(self, clonotype_ratio: float):
 		self._ratio = clonotype_ratio
 
-	def decide(self, u: SequenceInfo, v: SequenceInfo):
+	def decide(self, u: Candidate, v: Candidate):
 		if v.clonotypes == 0:
 			return None
 		ratio = u.clonotypes / v.clonotypes
@@ -207,7 +207,7 @@ class ExactRatioFilter(SameGeneFilter):
 	def __init__(self, exact_ratio: float):
 		self._ratio = exact_ratio
 
-	def decide(self, u: SequenceInfo, v: SequenceInfo):
+	def decide(self, u: Candidate, v: Candidate):
 		if v.exact == 0:
 			return None
 		ratio = u.exact / v.exact
@@ -222,7 +222,7 @@ class UniqueDRatioFilter(SameGeneFilter):
 		self._unique_d_ratio = unique_d_ratio
 		self._unique_d_threshold = unique_d_threshold
 
-	def decide(self, u: SequenceInfo, v: SequenceInfo):
+	def decide(self, u: Candidate, v: Candidate):
 		if v.cluster_size < u.cluster_size or v.Ds_exact < self._unique_d_threshold:
 			# TODO comment
 			return None
@@ -267,25 +267,12 @@ class CandidateFilterer:
 	def __len__(self):
 		return len(self._items)
 
-	def merged(self, s: SequenceInfo, t: SequenceInfo):
+	def merged(self, s: Candidate, t: Candidate):
 		"""
-		Given two SequenceInfo objects, decide whether to discard one of them and which one.
-		This is used for merging similar candidate sequences.
+		Given two candidates, decide whether to discard one of them and which one.
 
-		Two sequences are Sequences can also be discarded if llele ratio, cross-mapping ratio or unique_d ratio criteria
-
-		If one of the sequences is longer, the 'overhanging'
-		bases are ignored at either the 5' end or the 3' end, whichever gives the lower
-		edit distance.
-
-		If two sequences are similar and
-		Sequences that are whitelisted are not discarded if the only reason for discarding
-		them is their similarity
-		If two sequences are similar and none of them is whitelisted, then the one with the
-		higher number of unique CDR3s is kept.
-
-		Return None if both objects should be kept.
-		Return the object to keep otherwise.
+		Return None if both candidates should be kept.
+		Return the candidate to keep otherwise.
 		"""
 		if len(s.sequence) > len(t.sequence):
 			s, t = t, s  # make s always the shorter sequence
@@ -458,7 +445,7 @@ def main(args):
 	for _, row in overall_table.iterrows():
 		if row['is_filtered'] > 0:
 			continue
-		merger.add(SequenceInfo(
+		merger.add(Candidate(
 			sequence=row['consensus'],
 			name=row['name'],
 			clonotypes=row['clonotypes'],

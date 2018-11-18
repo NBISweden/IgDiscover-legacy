@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 
 from igdiscover.discover import SiblingMerger, SiblingInfo
-from igdiscover.germlinefilter import CandidateFilterer, SequenceInfo, TooSimilarSequenceFilter
+from igdiscover.germlinefilter import CandidateFilterer, Candidate, TooSimilarSequenceFilter
 from igdiscover.utils import UniqueNamer
 from igdiscover.rename import PrefixDict
 
@@ -84,7 +84,7 @@ def test_unique_namer():
 
 
 def SI(sequence, name, clonotypes, whitelisted=False):
-	return SequenceInfo(
+	return Candidate(
 		sequence=sequence,
 		name=name,
 		clonotypes=clonotypes,
