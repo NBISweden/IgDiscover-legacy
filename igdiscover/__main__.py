@@ -11,7 +11,7 @@ IgDiscover computes V/D/J gene usage profiles and discovers novel V genes
 import sys
 import logging
 import importlib
-from sqt import HelpfulArgumentParser
+from argparse import ArgumentParser, RawDescriptionHelpFormatter
 import matplotlib as mpl
 import warnings
 import resource
@@ -55,6 +55,20 @@ COMMANDS = [
 ]
 
 logger = logging.getLogger(__name__)
+
+
+class HelpfulArgumentParser(ArgumentParser):
+	"""An ArgumentParser that prints full help on errors."""
+
+	def __init__(self, *args, **kwargs):
+		if 'formatter_class' not in kwargs:
+			kwargs['formatter_class'] = RawDescriptionHelpFormatter
+		super().__init__(*args, **kwargs)
+
+	def error(self, message):
+		self.print_help(sys.stderr)
+		args = {'prog': self.prog, 'message': message}
+		self.exit(2, '%(prog)s: error: %(message)s\n' % args)
 
 
 def format_duration(seconds):
