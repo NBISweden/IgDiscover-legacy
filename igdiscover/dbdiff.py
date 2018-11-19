@@ -23,6 +23,8 @@ do_not_show_cpustats = 1
 
 def add_arguments(parser):
 	arg = parser.add_argument
+	arg('--color', default='auto', choices=('auto', 'never', 'always'),
+		help='Whether to colorize output')
 	arg('a', help='FASTA file with expected sequences')
 	arg('b', help='FASTA file with actual sequences')
 
@@ -111,7 +113,20 @@ def pair_up(a_records, b_records, max_cost=20):
 	return a_only, b_only, identical, similar
 
 
-def print_similar(a, b):
+def format_indel(a, b, colored: bool):
+	if len(a) > len(b):
+		assert len(b) == 0
+		s = '{-' + a + '}'
+		return red(s) if colored else s
+	elif len(b) > len(a):
+		assert len(a) == 0
+		s = '{+' + b + '}'
+		return green(s) if colored else s
+	else:
+		return ''
+
+
+def print_similar(a, b, colored: bool):
 	l = min(len(a.sequence), len(b.sequence))
 	dist_prefixes = hamming_distance(a.sequence[:l], b.sequence[:l])
 	dist_suffixes = hamming_distance(a.sequence[-l:], b.sequence[-l:])
@@ -130,26 +145,20 @@ def print_similar(a, b):
 		a_suffix = ''
 		b_suffix = ''
 
-	def format_indel(a, b):
-		if len(a) > len(b):
-			assert len(b) == 0
-			return red('{-' + a + '}')
-		elif len(b) > len(a):
-			assert len(a) == 0
-			return green('{+' + b + '}')
-		else:
-			return ''
-
-	s = format_indel(a_prefix, b_prefix)
+	s = format_indel(a_prefix, b_prefix, colored)
 	edits = []
 	for i, (ac, bc) in enumerate(zip(a_common, b_common)):
 		if ac != bc:
-			edits.append('{' + red(ac) + ' → ' + green(bc) + '}')
+			if colored:
+				s = '{' + red(ac) + ' → ' + green(bc) + '}'
+			else:
+				s = '{' + ac + ' → ' + bc + '}'
+			edits.append(s)
 		else:
 			edits.append(ac)
 	s += ''.join(edits)
 
-	s += format_indel(a_suffix, b_suffix)
+	s += format_indel(a_suffix, b_suffix, colored)
 
 	print('~', a.name, '--', b.name)
 	print(s)
@@ -157,6 +166,14 @@ def print_similar(a, b):
 
 
 def main(args):
+	if args.color == 'auto':
+		colored = sys.stdout.isatty()
+	elif args.color == 'never':
+		colored = False
+	else:
+		assert args.color == 'always'
+		colored = True
+
 	with FastaReader(args.a) as f:
 		a_records = list(f)
 	with FastaReader(args.b) as f:
@@ -209,7 +226,7 @@ def main(args):
 		print()
 		print('## Similar')
 		for a, b in similar:
-			print_similar(a, b)
+			print_similar(a, b, colored)
 
 	if has_duplicate_names or has_duplicate_sequences:
 		sys.exit(2)
