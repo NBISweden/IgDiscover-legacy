@@ -97,6 +97,10 @@ Groupinfo = namedtuple('Groupinfo',
 SiblingInfo = namedtuple('SiblingInfo', 'sequence requested name group')
 
 
+def safe_divide(x, y):
+	return x / y if y != 0 else 0
+
+
 class SiblingMerger(Merger):
 	"""
 	Merge very similar consensus sequences into single entries. This could be
@@ -133,10 +137,29 @@ class Discoverer:
 	"""
 	Discover candidates for novel V genes.
 	"""
-	def __init__(self, database, windows, left, right, cluster, cluster_exact,
-			table_output, consensus_threshold, downsample,
-			clonotype_differences, cluster_subsample_size,
-			max_n_bases, exact_copies, d_coverage, d_evalue, seed, cdr3_counts):
+	def __init__(
+		self,
+		database,
+		windows,
+		left,
+		right,
+		cluster,
+		cluster_exact,
+		table_output,
+		consensus_threshold,
+		downsample,
+		clonotype_differences,
+		cluster_subsample_size,
+		max_n_bases,
+		exact_copies,
+		d_coverage,
+		d_evalue,
+		seed,
+		cdr3_counts
+	):
+		"""
+		:param cdr3_counts:
+		"""
 		self.database = database
 		self.windows = windows
 		self.left = left
@@ -322,12 +345,12 @@ class Discoverer:
 		"""
 		Discover new V genes. args is a tuple (gene, group)
 		gene -- name of the gene
-		group -- a pandas DataFrame with the group corresponding to the gene
+		assignments -- a pandas DataFrame with the assignments to the gene
 		"""
-		gene, group = args
+		gene, assignments = args
 		self.set_random_seed(gene)
 		siblings = SiblingMerger()
-		for sibling in self._collect_siblings(gene, group):
+		for sibling in self._collect_siblings(gene, assignments):
 			siblings.add(sibling)
 
 		candidates = []
@@ -338,25 +361,29 @@ class Discoverer:
 				logger.debug('Sibling %s has too many N bases', sibling_info.name)
 				continue
 
-			sibling_no_cdr3 = sibling[:self._guess_cdr3_start(group)]
-			group_exact_v = group[group.V_no_CDR3 == sibling_no_cdr3]
+			# Sequence without the CDR3-covering part
+			sibling_no_cdr3 = sibling[:self._guess_cdr3_start(assignments)]
+			group_exact_v = assignments[assignments.V_no_CDR3 == sibling_no_cdr3]
 			groups = (
 				('window', sibling_info.group),
 				('exact', group_exact_v))
 			del sibling_no_cdr3
 
+			# self.cdr3_counts are CDR3 counts of all CDR3s in the entire table.
+			# We restrict this here to the counts for CDR3s belonging to
+			# clusters other than the current one.
 			other_cdr3_counts = self.cdr3_counts - Counter(s for s in sibling_info.group.CDR3_nt if s)
 			info = dict()
-			for key, g in groups:
-				cdr3_counts = Counter(s for s in g.CDR3_nt if s)
+			for key, group in groups:
+				cdr3_counts = Counter(s for s in group.CDR3_nt if s)
 				unique_cdr3 = len(cdr3_counts)
-				shared_cdr3_ratio = len(other_cdr3_counts & cdr3_counts) / unique_cdr3 if unique_cdr3 > 0 else 0
-				unique_j = len(set(s for s in g.J_gene if s))
-				clonotypes = self.count_clonotypes(g)
-				unique_d = self.count_unique_d(g)
-				unique_barcodes = self.count_unique_barcodes(g)
-				count = len(g.index)
-				read_names = list(g.name)
+				shared_cdr3_ratio = safe_divide(len(other_cdr3_counts & cdr3_counts), unique_cdr3)
+				unique_j = len(set(s for s in group.J_gene if s))
+				clonotypes = self.count_clonotypes(group)
+				unique_d = self.count_unique_d(group)
+				unique_barcodes = self.count_unique_barcodes(group)
+				count = len(group.index)
+				read_names = list(group.name)
 				info[key] = Groupinfo(count=count, unique_D=unique_d, unique_J=unique_j,
 					unique_CDR3=unique_cdr3, shared_CDR3_ratio=shared_cdr3_ratio,
 					clonotypes=clonotypes, read_names=read_names,
@@ -372,10 +399,7 @@ class Discoverer:
 			sequence_id = gene if database_diff == 0 else unique_name(gene, sibling)
 			chain = self._guess_chain(sibling_info.group)
 			cdr3_start = self._guess_cdr3_start(sibling_info.group)
-			try:
-				ratio = info['exact'].count / info['exact'].unique_CDR3
-			except ZeroDivisionError:
-				ratio = 0
+			ratio = safe_divide(info['exact'].count, info['exact'].unique_CDR3)
 
 			# Apply some very light filtering on non-database sequences
 			if database_diff > 0 and info['exact'].count < 2:
@@ -525,13 +549,25 @@ def main(args):
 
 	cdr3_counts = Counter(s for s in table.CDR3_nt if s)
 	logger.info('%s unique CDR3s detected overall', len(cdr3_counts))
-	discoverer = Discoverer(database, windows, args.left, args.right, args.cluster,
-		args.cluster_exact, args.table_output, args.consensus_threshold,
-		MAXIMUM_SUBSAMPLE_SIZE, clonotype_differences=args.clonotype_diff,
+	discoverer = Discoverer(
+		database,
+		windows,
+		args.left,
+		args.right,
+		args.cluster,
+		args.cluster_exact,
+		args.table_output,
+		args.consensus_threshold,
+		MAXIMUM_SUBSAMPLE_SIZE,
+		clonotype_differences=args.clonotype_diff,
 		cluster_subsample_size=args.subsample,
-		max_n_bases=args.max_n_bases, exact_copies=args.exact_copies,
-		d_coverage=args.d_coverage, d_evalue=args.d_evalue,
-		seed=seed, cdr3_counts=cdr3_counts)
+		max_n_bases=args.max_n_bases,
+		exact_copies=args.exact_copies,
+		d_coverage=args.d_coverage,
+		d_evalue=args.d_evalue,
+		seed=seed,
+		cdr3_counts=cdr3_counts
+	)
 
 	Pool = SerialPool if args.threads == 1 else multiprocessing.Pool
 	n_candidates = 0
