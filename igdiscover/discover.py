@@ -420,7 +420,7 @@ class Discoverer:
                 CDR3s_exact=info['exact'].unique_CDR3,
                 clonotypes=info['exact'].clonotypes,
                 CDR3_exact_ratio=ratio,
-                CDR3_shared_ratio=info['exact'].shared_CDR3_ratio,
+                CDR3_shared_ratio=info['window'].shared_CDR3_ratio,
                 N_bases=n_bases,
                 database_diff=database_diff,
                 database_changes=database_changes,
