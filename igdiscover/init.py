@@ -29,6 +29,8 @@ do_not_show_cpustats = 1
 def add_arguments(parser):
 	parser.add_argument('--database', '--db', metavar='PATH', default=None,
 		help='Directory with V.fasta, D.fasta and J.fasta files. If not given, a dialog is shown.')
+	parser.add_argument('--species', '--sp', metavar='SPECIES', default='any',
+		help='Initialize default yaml file with species specific settings. Can be set to "any" or "human".')
 	group = parser.add_mutually_exclusive_group()
 	group.add_argument('--single-reads', default=None, metavar='READS',
 		help='File with single-end reads (.fasta.gz or .fastq.gz)')
@@ -317,10 +319,15 @@ def main(args):
 			sys.exit(1)
 		create_symlink(reads1, args.directory, target)
 
-	# Write the configuration file
 	configuration = pkg_resources.resource_string('igdiscover', Config.DEFAULT_PATH).decode()
-	with open(os.path.join(args.directory, Config.DEFAULT_PATH), 'w') as f:
+	# Write the configuration file
+	local_config_path = os.path.join(args.directory, Config.DEFAULT_PATH)
+	with open(local_config_path, 'w') as f:
 		f.write(configuration)
+
+	# Update defaults that are human specific
+	if args.species.lower() == 'human':
+		Config.update_option(local_config_path, [('preprocessing_filter.v_coverage', '97')])
 
 	# Create database files
 	database_dir = os.path.join(args.directory, 'database')

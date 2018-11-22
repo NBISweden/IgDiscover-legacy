@@ -123,6 +123,22 @@ class Config:
 		with open(cls.DEFAULT_PATH) as f:
 			return Config(file=f)
 
+	@staticmethod
+	def update_option(config_path, options_dict={}):
+		with open(config_path) as f:
+			config = ruamel.yaml.load(f, ruamel.yaml.RoundTripLoader)
+			for k, v in options_dict:
+				v = ruamel.yaml.safe_load(v)
+				item = config
+				# allow nested keys
+				keys = k.split('.')
+				for i in keys[:-1]:
+					item = item[i]
+				item[keys[-1]] = v
+				tmpfile = config_path + '.tmp'
+		with open(tmpfile, 'w') as f:
+			print(ruamel.yaml.dump(config, Dumper=ruamel.yaml.RoundTripDumper), end='', file=f)
+		os.rename(tmpfile, config_path)
 
 class GlobalConfig:
 	def __init__(self):
@@ -144,24 +160,9 @@ def add_arguments(parser):
 	arg('--file', default=Config.DEFAULT_PATH,
 		help='Configuration file to modify. Default: igdiscover.yaml in current directory.')
 
-
 def main(args):
 	if args.set:
-		with open(args.file) as f:
-			config = ruamel.yaml.load(f, ruamel.yaml.RoundTripLoader)
-		for k, v in args.set:
-			v = ruamel.yaml.safe_load(v)
-			# config[k] = v
-			item = config
-			# allow nested keys
-			keys = k.split('.')
-			for i in keys[:-1]:
-				item = item[i]
-			item[keys[-1]] = v
-		tmpfile = args.file + '.tmp'
-		with open(tmpfile, 'w') as f:
-			print(ruamel.yaml.dump(config, Dumper=ruamel.yaml.RoundTripDumper), end='', file=f)
-		os.rename(tmpfile, args.file)
+		Config.update_option(args.file, args.set)
 	else:
 		with open(args.file) as f:
 			config = ruamel.yaml.safe_load(f)
