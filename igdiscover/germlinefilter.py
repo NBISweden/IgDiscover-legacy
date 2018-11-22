@@ -58,6 +58,9 @@ def add_arguments(parser):
 	arg('--minimum-db-diff', '-b', type=int, metavar='N', default=0,
 		help='Sequences must have at least N differences to the database '
 		'sequence. Default: %(default)s')
+	arg('--maximum-db-diff', '-x', type=int, metavar='N', default=0,
+		help='Sequences must have at most N differences to the database '
+		'sequence. Default: %(default)s.')
 	arg('--maximum-N', '-N', type=int, metavar='COUNT', default=0,
 		help='Sequences must have at most COUNT "N" bases. Default: %(default)s')
 	arg('--unique-CDR3', '--CDR3s', type=int, metavar='N', default=1,
@@ -411,6 +414,9 @@ def main(args):
 		table.insert(3, 'is_filtered', pd.Series(0, index=table.index))
 
 		mark_rows(table, table.database_diff < args.minimum_db_diff, 'too_low_dbdiff')
+
+		if args.maximum_db_diff > 0:
+			mark_rows(table, table.database_diff >= args.maximum_db_diff, 'too_high_dbdiff')
 
 		if 'N_bases' in table.columns:
 			mark_rows(table, table.N_bases > args.maximum_N, 'too_many_N_bases')

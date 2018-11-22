@@ -56,7 +56,8 @@ class Config:
 			exact_ratio=0.12,
 			cdr3_shared_ratio=0.8,
 			unique_d_ratio=0.3,
-			unique_d_threshold=10
+			unique_d_threshold=10,
+			maximum_database_difference=0
 		)
 		self.germline_filter = dict(
 			unique_cdr3s=5,
@@ -70,7 +71,8 @@ class Config:
 			exact_ratio=0.12,
 			cdr3_shared_ratio=0.8,
 			unique_d_ratio=0.3,
-			unique_d_threshold=10
+			unique_d_threshold=10,
+			maximum_database_difference=0
 		)
 		self.j_discovery = dict(allele_ratio=0.2, cross_mapping_ratio=0.1, propagate=True)
 		self.cdr3_location = 'detect'

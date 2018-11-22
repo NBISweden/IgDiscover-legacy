@@ -187,7 +187,8 @@ pre_germline_filter:
   cdr3_shared_ratio: 0.8     # Maximum allowed CDR3_shared_ratio
   unique_d_ratio: 0.3        # Minimum Ds_exact ratio between alleles
   unique_d_threshold: 10     # Check Ds_exact ratio only if highest-expressed allele has at least this Ds_exact count
-
+  # Maximum number of allowed differences from database
+  maximum_database_difference: 0
 
 # Filtering criteria applied to candidate sequences in the last iteration.
 # These should be more strict than the pre_germline_filter criteria.
@@ -204,7 +205,8 @@ germline_filter:
   cdr3_shared_ratio: 0.8     # Maximum allowed CDR3_shared_ratio
   unique_d_ratio: 0.3        # Minimum Ds_exact ratio between alleles
   unique_d_threshold: 10     # Check Ds_exact ratio only if highest-expressed allele has at least this Ds_exact count
-
+  # Maximum number of allowed differences from database
+  maximum_database_difference: 0
 
 ## J discovery settings
 
