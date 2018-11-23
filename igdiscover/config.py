@@ -124,10 +124,10 @@ class Config:
 			return Config(file=f)
 
 	@staticmethod
-	def update_option(config_path, options_dict={}):
+	def update_option(config_path, options):
 		with open(config_path) as f:
 			config = ruamel.yaml.load(f, ruamel.yaml.RoundTripLoader)
-			for k, v in options_dict:
+			for k, v in options:
 				v = ruamel.yaml.safe_load(v)
 				item = config
 				# allow nested keys
@@ -159,6 +159,7 @@ def add_arguments(parser):
 		help='Set KEY to VALUE. Use KEY.SUBKEY[.SUBSUBKEY...] for nested keys.')
 	arg('--file', default=Config.DEFAULT_PATH,
 		help='Configuration file to modify. Default: igdiscover.yaml in current directory.')
+
 
 def main(args):
 	if args.set:

@@ -27,10 +27,10 @@ do_not_show_cpustats = 1
 
 
 def add_arguments(parser):
-	parser.add_argument('--database', '--db', metavar='PATH', default=None,
+	parser.add_argument('--database',  metavar='PATH', default=None,
 		help='Directory with V.fasta, D.fasta and J.fasta files. If not given, a dialog is shown.')
-	parser.add_argument('--species', '--sp', metavar='SPECIES', default='any',
-		help='Initialize default yaml file with species specific settings. Can be set to "any" or "human".')
+	parser.add_argument('--species', '--sp', metavar='SPECIES', default='any', choices=('any', 'human'),
+		help='Use configuration settings specific to %(choices)s. Default: %(default)s.')
 	group = parser.add_mutually_exclusive_group()
 	group.add_argument('--single-reads', default=None, metavar='READS',
 		help='File with single-end reads (.fasta.gz or .fastq.gz)')
