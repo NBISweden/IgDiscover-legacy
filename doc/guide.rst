@@ -963,20 +963,34 @@ at the same time (but you lose the colors)::
   igdiscover run |& tee logfile.txt
 
 
-Caching of IgBLAST results
-==========================
+.. _caching:
 
-IgDiscover caches the results of running a set of sequences through IgBLAST. When the same
-dataset is re-analyzed, possibly with different parameters, the cached results are used
-instead of re-running IgBLAST, which saves a lot of time. If the V/D/J database or the
-IgBLAST version has changed, results are not re-used.
+Caching of IgBLAST results and of merged reads
+==============================================
 
-The cache is stored in the user’s home directory under ``~/.cache/igdiscover/``. Or, if
-the variable ``$XDG_CACHE_HOME`` is set, at ``$XDG_CACHE_HOME/igdiscover``.
+Sometimes you may want to re-analyze a dataset multiple times with different filter settings.
+To speed this up, IgDiscover can cache the results of two of the most time-consuming
+steps, read-merging with PEAR and running IgBLAST.
 
-When updating to a newer IgBLAST version, you should delete the cache with
-``rm -r ~/.cache/igdiscover`` to save space. The cache directory will be re-created
-automatically.
+The cache is disabled by default as it uses a lot of disk space. To enable the cache, create
+a file named ``~/.config/igdiscover.conf`` with the following contents::
+
+    use_cache: true
+
+If you do so, a directory named ``~/.cache/igdiscover/`` is created the next time you run
+IgDiscover and all IgBLAST results as well as merged reads from PEAR are stored there. On
+subsequent runs, the existing result is used directly without calling the respective
+program, which speeds up the pipeline considerably.
+
+The cache is only used when we are certain that the results will indeed be the same. For
+example, if the IgBLAST program version or th V/D/J database changes, the cached result
+is not used.
+
+The files in the cache are compressed, but the cache may still get large over time. You can
+delete the cache with ``rm -r ~/.cache/igdiscover`` to free the space.
+
+You should also delete the cache when updating to a newer IgBLAST version as the old results
+will not be used anymore.
 
 
 Terms
