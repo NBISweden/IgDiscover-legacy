@@ -502,4 +502,13 @@ class ChimeraFinder:
 
 
 def available_cpu_count():
+	"""
+	Number of available virtual or physical CPUs on this system
+	"""
+	if sys.platform != 'linux':
+		try:
+			import multiprocessing
+			return multiprocessing.cpu_count()
+		except (ImportError, NotImplementedError):
+			return 1
 	return len(os.sched_getaffinity(0))
