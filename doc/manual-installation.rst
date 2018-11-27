@@ -11,12 +11,15 @@ dependencies manually. Regular Python dependencies are automatically pulled in w
 itself is installed in the last step with the ``pip install`` command. The instructions below are
 written for Linux and require modifications if you want to try this on OS X.
 
+.. note::
+    We recommend the much simpler :ref:`installation via Conda <install-with-conda>`
+    instead of using the instructions in this section.
+
 
 Install non-Python dependencies
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The dependencies are: MUSCLE, FastQC, VSEARCH, IgBLAST, PEAR, and --
-optionally -- flash.
+The dependencies are: MUSCLE, IgBLAST, PEAR, and -- optionally -- flash.
 
 1. Install Python 3.5 or newer. It most likely is already installed on your system, but
    in Debian/Ubuntu, you can get it with ::
@@ -45,18 +48,13 @@ optionally -- flash.
 	wget -O - http://www.drive5.com/muscle/downloads3.8.31/muscle3.8.31_i86linux64.tar.gz | tar xz
 	mv muscle3.8.31_i86linux64 ~/.local/bin/
 
-4. Install VSEARCH::
-
-	wget -O ~/.local/bin/vsearch https://github.com/torognes/vsearch/releases/download/v1.1.0/vsearch-1.1.0-linux-x86_64
-	chmod +x ~/.local/bin/vsearch
-
-5. Install PEAR::
+4. Install PEAR::
 
 	wget http://sco.h-its.org/exelixis/web/software/pear/files/pear-0.9.6-bin-64.tar.gz
 	tar xvf pear-0.9.6-bin-64.tar.gz
 	mv pear-0.9.6-bin-64/pear-0.9.6-bin-64 ~/.local/bin/pear
 
-6. Install IgBLAST::
+5. Install IgBLAST::
 
 	wget ftp://ftp.ncbi.nih.gov/blast/executables/igblast/release/1.4.0/ncbi-igblast-1.4.0-x64-linux.tar.gz
 	tar xvf ncbi-igblast-1.4.0-x64-linux.tar.gz
@@ -78,14 +76,7 @@ optionally -- flash.
 
    Then run ``source ~/.bashrc`` to get the changes.
 
-7. Install FastQC. Under Debian/Ubuntu::
-
-	sudo apt-get install fastqc
-
-   If you install it by hand, make sure you end up with a ``fastqc`` binary in
-   the ``$PATH``.
-
-8. Optionally, install flash::
+7. Optionally, install flash::
 
 	wget -O FLASH-1.2.11.tar.gz http://sourceforge.net/projects/flashpage/files/FLASH-1.2.11.tar.gz/download
 	tar xf FLASH-1.2.11.tar.gz
