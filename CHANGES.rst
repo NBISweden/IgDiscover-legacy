@@ -2,25 +2,36 @@
 Changes
 =======
 
-development version
--------------------
+v0.11 (2018-11-27)
+------------------
 
-* The IgBLAST cache is now disabled by default. We assume that, in most cases, datasets will not be
-  re-run with the exact same parameters, and then it only fills up the disk. Delete your cache with
-  ``rm -r ~/.cache/igdiscover`` to reclaim the space. To enable the cache, create a file
+* The IgBLAST cache is now disabled by default. We assume that, in most cases,
+  datasets will not be re-run with the exact same parameters, and then it only
+  fills up the disk. Delete your cache with ``rm -r ~/.cache/igdiscover`` to
+  reclaim the space. To enable the cache, create a file
   ``~/.config/igdiscover.conf`` with the contents ``use_cache: true``.
-* If you choose to enable the cache, results from the PEAR merging step will also be cached in it.
-* Added detection of chimeras to the (pre-)germline filters. Any novel allele that can be explained
-  as a chimera of two unmodified reference alleles is marked in the ``new_V_germline.tab``
-  file. This is a bit sensitive, so the candidate is currently not
-  discarded.
+* If you choose to enable the cache, results from the PEAR merging step will
+  now also be cached. See also the :ref:`caching documentation <caching>`.
+* Added detection of chimeras to the (pre-)germline filters. Any novel allele
+  that can be explained as a chimera of two unmodified reference alleles is
+  marked in the ``new_V_germline.tab`` file. This is a bit sensitive, so the
+  candidate is currently not discarded.
 * Two additional files ``annotated_V_germline.tab`` and
-  ``annotated_V_pregermline.tab`` are created in each
-  iteration during the germline filtering step. These are
-  identical to the ``candidates.tab`` file, except that
-  they contain a ``why_filtered`` column that describes
-  why a sequence was filtered. See the :ref:`documentation
-  for this feature <annotated_v_tab>`.
+  ``annotated_V_pregermline.tab`` are created in each iteration during the
+  germline filtering step. These are identical to the ``candidates.tab``
+  file, except that they contain a ``why_filtered`` column that describes
+  why a sequence was filtered. See the :ref:`documentation for this feature
+  <annotated_v_tab>`.
+* A more realistic test dataset (v0.5), now based on human instead of rhesus
+  data, was prepared. The :ref:`testing instructions <test>` have been
+  updated accordingly.
+* J discovery has been tuned to give fewer truncated sequences.
+* Statistics are written to ``stats/stats.json``.
+* V SHM distribution plots are created automatically and written written to
+  ``v-shm-distributions.pdf`` in each iteration folder.
+* An ``igdiscover dbdiff`` subcommand was added that can compare two FASTA
+  files.
+
 
 v0.10 (2018-05-11)
 ------------------
