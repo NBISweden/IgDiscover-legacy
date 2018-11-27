@@ -3,8 +3,8 @@ from setuptools import setup
 import versioneer
 
 
-if sys.version_info < (3, 5):
-	sys.stdout.write("At least Python 3.5 is required.\n")
+if sys.version_info < (3, 6):
+	sys.stdout.write("At least Python 3.6 is required.\n")
 	sys.exit(1)
 
 with open('README.rst', encoding='utf-8') as f:
@@ -23,6 +23,7 @@ setup(
 	entry_points = {'console_scripts': ['igdiscover = igdiscover.__main__:main']},
 	packages = ['igdiscover'],
 	package_data = {'igdiscover': ['igdiscover.yaml', 'Snakefile', 'empty.aux']},
+	python_requires = '>=3.6',
 	install_requires = [
 		'sqt>=0.8.0',
 		'pandas>=0.16.2',
