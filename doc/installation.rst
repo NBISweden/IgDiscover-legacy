@@ -6,9 +6,9 @@ IgDiscover is written in Python 3 and is developed on Linux. The tool also
 runs on macOS, but is not as well tested on that platform.
 
 For installation on either system, we recommend that you follow the instructions
-below, which will first explain how to install the `Conda <http://conda.io/docs/>`__
+below, which will first explain how to install the `Conda <http://conda.io/docs/>`_
 package manager. IgDiscover is available as a
-Conda-package from `the bioconda channel <https://bioconda.github.io/bioconda>`__.
+Conda-package from `the bioconda channel <https://bioconda.github.io/bioconda>`_.
 Using Conda will make the installation easy because all dependencies are also
 available as Conda packages and can thus be installed automatically along with
 IgDiscover.
@@ -22,7 +22,7 @@ if you cannot use Conda.
 Installing IgDiscover with Conda
 --------------------------------
 
-1. Install `Conda <https://conda.io/>`__ by following the `conda installation
+1. Install `Conda <https://conda.io/>`_ by following the `conda installation
    instructions <https://conda.io/docs/user-guide/install/>`_
    as appropriate for your system. You will need to choose between a “Miniconda”
    and “Anaconda” installation. We recommend Miniconda as the download is
@@ -42,7 +42,7 @@ Installing IgDiscover with Conda
 
    If you see the conda version number, it worked.
 3. Set up Conda so that it can access the
-   `bioconda channel <https://bioconda.github.io/>`__.
+   `bioconda channel <https://bioconda.github.io/>`_.
    For that, follow `the instructions on the bioconda
    website <https://bioconda.github.io/#set-up-channels>`_
    or simply run these commands::

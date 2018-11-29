@@ -21,8 +21,8 @@ Install non-Python dependencies
 
 The dependencies are: MUSCLE, IgBLAST, PEAR, and -- optionally -- flash.
 
-1. Install Python 3.5 or newer. It most likely is already installed on your system, but
-   in Debian/Ubuntu, you can get it with ::
+1. Install Python 3.6 or newer. It may already be installed on your system. On
+   a sufficiently recent Debian or Ubuntu, you can get it with ::
 
 	sudo apt-get install python3
 
