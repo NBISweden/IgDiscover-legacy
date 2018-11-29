@@ -103,30 +103,31 @@ class CrossMappingFilter:
 		"""Check for cross-mapping"""
 		self._ratio = cross_mapping_ratio
 
-	def should_discard(self, a: Candidate, b: Candidate, dist: int, *args):
+	def should_discard(self, ref: Candidate, candidate: Candidate, dist: int, *args):
 		"""
-		Compare two candidates and decide which one should be filtered, if any.
+		Compare a candidates to a reference candidate and decide whether it should be discarded.
 
-		:param a: First candidate
-		:param b: Second candidate
+		:param ref: The reference candidate. The decision this function makes is not about that one.
+		:param candidate: The candidate on which to decide.
 		:param dist: Edit distance between candidates
-		:return: None if both candidates should be kept, a pair (x, reason) otherwise, where x is
-		the candidate to be discarded (x is either a or b) and reason is a string describing why.
+		:return: False if the candidate should be kept. Otherwise, the candidate shoud be discarded
+		and a non-empty string with a reason describing why is returned.
 		"""
 		if dist > 1:
 			# Cross-mapping is unlikely if the edit distance is larger than 1
 			return None
-		if not a.is_database or not b.is_database:
+		if not ref.is_database or not candidate.is_database:
 			# Cross-mapping can only occur if both sequences are in the database
 			return None
 
-		total_count = (a.cluster_size + b.cluster_size)
-		for u, v in [(a, b), (b, a)]:
-			ratio = u.cluster_size / total_count
-			if u.cluster_size_is_accurate and ratio < self._ratio:
-				# u is probably a cross-mapping artifact of the higher-expressed v
-				return u, f'xmap_of={v.name},xmap_ratio={ratio:.4f}'
-		return None
+		total_count = (ref.cluster_size + candidate.cluster_size)
+		if total_count == 0:
+			return False
+		ratio = candidate.cluster_size / total_count
+		if candidate.cluster_size_is_accurate and ratio < self._ratio:
+			# candidate is probably a cross-mapping artifact of the higher-expressed ref
+			return f'xmap_of={ref.name},xmap_ratio={ratio:.4f}'
+		return False
 
 
 class TooSimilarSequenceFilter:
@@ -134,55 +135,37 @@ class TooSimilarSequenceFilter:
 	Filter out sequences that are too similar to another one
 	"""
 	@staticmethod
-	def should_discard(a: Candidate, b: Candidate, dist: int, *args):
+	def should_discard(ref: Candidate, candidate: Candidate, dist: int, _same_gene: bool):
 		if dist > 0:
 			# The sequences are not similar, so keep both
-			return None
+			return False
 
-		if a.whitelisted and b.whitelisted:
+		if ref.whitelisted and candidate.whitelisted:
 			# Both are whitelisted, so keep them
-			return None
+			return False
 
-		if a.whitelisted:
-			return b, f'identical_to={a.name},other_whitelisted'
-		if b.whitelisted:
-			return a, f'identical_to={b.name},other_whitelisted'
+		# The candidates have dist == 0 (this refers only to the non-CDR3 part!)
+		if ref.whitelisted:
+			return f'identical_to={ref.name},other_whitelisted'
 
 		# No sequence is whitelisted
-		if b.clonotypes < a.clonotypes:
-			return b, f'identical_to={a.name},fewer_clonotypes'
-		# FIXME this is missing:
-		# if a.clonotypes < b.clonotypes: ...
-		if len(a.sequence) < len(b.sequence):
-			return a, f'identical_to={b.name},shorter'
-		return b, f'identical_to={a.name}'
+		if candidate.clonotypes < ref.clonotypes:
+			return f'identical_to={ref.name},fewer_clonotypes'
+
+		# Same number of clonotypes (this should be rare)
+		if len(candidate.sequence) < len(ref.sequence):
+			return f'identical_to={ref.name},shorter'
+
+		if len(candidate.sequence) == len(ref.sequence):
+			# A tie, discard the first one we see
+			return f'identical_to={ref.name}'
+
+		# The next time this is called with the roles of ref and candidate reversed,
+		# one of the inequalities above should apply
+		return False
 
 
-class SameGeneFilter:
-	def should_discard(self, a: Candidate, b: Candidate, dist: int, same_gene: bool):
-		"""
-		Compare two candidates and decide which one should be filtered, if any.
-
-		:param a: First candidate
-		:param b: Second candidate
-		:param dist: Edit distance between candidates
-		:return: None if both candidates should be kept, a pair (x, reason) otherwise, where x is
-		the candidate to be discarded (x is either a or b) and reason is a string describing why.
-		"""
-		if not same_gene:
-			# This filter applies only when comparing alleles of the same gene
-			return None
-		for u, v in [(a, b), (b, a)]:
-			result = self.decide(a, b)
-			if result is not None:
-				return result
-		return None
-
-	def decide(self, a: Candidate, b: Candidate):
-		raise NotImplementedError
-
-
-class ClonotypeAlleleRatioFilter(SameGeneFilter):
+class ClonotypeAlleleRatioFilter:
 	"""
 	Clonotype allele ratio filter. Somewhat similar to cross-mapping, but
 	this uses sequence names to decide whether two genes can be
@@ -191,46 +174,52 @@ class ClonotypeAlleleRatioFilter(SameGeneFilter):
 	def __init__(self, clonotype_ratio: float):
 		self._ratio = clonotype_ratio
 
-	def decide(self, u: Candidate, v: Candidate):
-		if v.clonotypes == 0:
-			return None
-		ratio = u.clonotypes / v.clonotypes
+	def should_discard(self, ref: Candidate, candidate: Candidate, _dist: int, same_gene: bool):
+		if not same_gene:
+			return False
+		if ref.clonotypes == 0:
+			return False
+		ratio = candidate.clonotypes / ref.clonotypes
 		if ratio < self._ratio:
 			# Clonotype allele ratio too low
-			return u, f'clonotype_ratio={ratio:.4f},other={v.name}'
-		return None
+			return f'clonotype_ratio={ratio:.4f},other={ref.name}'
+		return False
 
 
-class ExactRatioFilter(SameGeneFilter):
+class ExactRatioFilter:
 	"""Exact V sequence occurrence allele ratio"""
 
 	def __init__(self, exact_ratio: float):
 		self._ratio = exact_ratio
 
-	def decide(self, u: Candidate, v: Candidate):
-		if v.exact == 0:
-			return None
-		ratio = u.exact / v.exact
+	def should_discard(self, ref: Candidate, candidate: Candidate, _dist: int, same_gene: bool):
+		if not same_gene:
+			return False
+		if ref.exact == 0:
+			return False
+		ratio = candidate.exact / ref.exact
 		if ratio < self._ratio:
 			# Allele ratio of exact occurrences too low
-			return u, f'ex_occ_ratio={ratio:.1f},other={v.name}'
-		return None
+			return f'ex_occ_ratio={ratio:.1f},other={ref.name}'
+		return False
 
 
-class UniqueDRatioFilter(SameGeneFilter):
+class UniqueDRatioFilter:
 	def __init__(self, unique_d_ratio: float, unique_d_threshold: int):
 		self._unique_d_ratio = unique_d_ratio
 		self._unique_d_threshold = unique_d_threshold
 
-	def decide(self, u: Candidate, v: Candidate):
-		if v.cluster_size < u.cluster_size or v.Ds_exact < self._unique_d_threshold:
+	def should_discard(self, ref: Candidate, candidate: Candidate, _dist: int, same_gene: bool):
+		if not same_gene:
+			return False
+		if ref.cluster_size < candidate.cluster_size or ref.Ds_exact < self._unique_d_threshold:
 			# TODO comment
-			return None
-		ratio = u.Ds_exact / v.Ds_exact
+			return False
+		ratio = candidate.Ds_exact / ref.Ds_exact
 		if ratio < self._unique_d_ratio:
 			# Ds_exact ratio too low
-			return u, f'Ds_exact_ratio={ratio:.1f},other={v.name}'
-		return None
+			return f'Ds_exact_ratio={ratio:.1f},other={ref.name}'
+		return False
 
 
 class CandidateFilterer:
@@ -292,14 +281,12 @@ class CandidateFilterer:
 
 		same_gene = is_same_gene(s.name, t.name)
 		for filter_ in self._filters:
-			result = filter_.should_discard(s, t, dist_no_cdr3, same_gene)
-			if result is None:
-				# not filtered
-				continue
-			if result[0] is s:
-				return t
-			else:
-				return s
+			for ref, candidate in [(s, t), (t, s)]:
+				reason = filter_.should_discard(ref, candidate, dist_no_cdr3, same_gene)
+				if reason:
+					# There is a reason for discarding candidate
+					print('reason:', reason, 'while checking', candidate)
+					return ref
 
 		# None of the filters decided to discard one of the sequences,
 		# so keep both
