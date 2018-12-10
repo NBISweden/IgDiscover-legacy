@@ -31,7 +31,7 @@ def add_arguments(parser):
 	arg('--merge', default=None, action='store_true', help='Merge overlapping genes. '
 		'Default: Enabled for D, disabled for J and V.')
 	arg('--no-merge', dest='merge', action='store_false', help='Do not merge overlapping genes')
-	arg('--gene', default='J', choices=('V', 'D', 'J'),
+	arg('--gene', default='J', choices=('V', 'D', 'J'), type=str.upper,
 		help='Which gene category to discover. Default: %(default)s')
 	arg('--j-coverage', type=float, default=None, metavar='PERCENT',
 		help='Require that the sequence covers at least PERCENT of the J gene. '
