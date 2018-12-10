@@ -14,7 +14,7 @@ import pandas as pd
 from sqt import SequenceReader
 from .table import read_table
 from .utils import natural_sort_key
-from .discoverj import filter_by_allele_ratio, compute_expressions
+from .discoverjd import filter_by_allele_ratio, compute_expressions
 
 logger = logging.getLogger(__name__)
 

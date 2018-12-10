@@ -700,7 +700,7 @@ rule igdiscover_discover_j:
 		allele_ratio='--allele-ratio={}'.format(config.j_discovery['allele_ratio']),
 		cross_mapping_ratio=' --cross-mapping-ratio={}'.format(config.j_discovery['cross_mapping_ratio'])
 	shell:
-		"time igdiscover discoverj {params.allele_ratio}{params.cross_mapping_ratio} "
+		"time igdiscover discoverjd {params.allele_ratio}{params.cross_mapping_ratio} "
 		"--database={input.j_reference} "
 		"--fasta={output.fasta} "
 		"{input.tab} > {output.tab}"
