@@ -92,7 +92,7 @@ def add_arguments(parser):
 
 
 Candidate = namedtuple('Candidate', ['sequence', 'name', 'clonotypes', 'exact', 'Ds_exact',
-	'cluster_size', 'whitelisted', 'is_database', 'cluster_size_is_accurate', 'CDR3_start', 'row'])
+	'cluster_size', 'whitelisted', 'is_database', 'cluster_size_is_accurate', 'CDR3_start', 'index'])
 
 
 class CrossMappingFilter:
@@ -126,7 +126,7 @@ class CrossMappingFilter:
 		ratio = candidate.cluster_size / total_count
 		if candidate.cluster_size_is_accurate and ratio < self._ratio:
 			# candidate is probably a cross-mapping artifact of the higher-expressed ref
-			return f'xmap_of={ref.name},xmap_ratio={ratio:.4f}'
+			return f'xmap_ratio={ratio:.4f},other={ref.name}'
 		return False
 
 
@@ -136,32 +136,22 @@ class TooSimilarSequenceFilter:
 	"""
 	@staticmethod
 	def should_discard(ref: Candidate, candidate: Candidate, dist: int, _same_gene: bool):
+		# Note that dist refers only to the non-CDR3 part!
 		if dist > 0:
 			# The sequences are not similar, so keep both
 			return False
 
-		if ref.whitelisted and candidate.whitelisted:
-			# Both are whitelisted, so keep them
+		if candidate.whitelisted:
 			return False
 
-		# The candidates have dist == 0 (this refers only to the non-CDR3 part!)
+		# TODO this is too sensitive
 		if ref.whitelisted:
-			return f'identical_to={ref.name},other_whitelisted'
+			return f'too_similar_to={ref.name},other_whitelisted'
 
 		# No sequence is whitelisted
 		if candidate.clonotypes < ref.clonotypes:
-			return f'identical_to={ref.name},fewer_clonotypes'
+			return f'too_similar_to={ref.name},fewer_clonotypes'
 
-		# Same number of clonotypes (this should be rare)
-		if len(candidate.sequence) < len(ref.sequence):
-			return f'identical_to={ref.name},shorter'
-
-		if len(candidate.sequence) == len(ref.sequence):
-			# A tie, discard the first one we see
-			return f'identical_to={ref.name}'
-
-		# The next time this is called with the roles of ref and candidate reversed,
-		# one of the inequalities above should apply
 		return False
 
 
@@ -223,74 +213,74 @@ class UniqueDRatioFilter:
 
 
 class CandidateFilterer:
-	"""
-	Merge sequences that are sufficiently similar into single entries.
-	"""
+	"""Apply filters that compare candidates to each other to a list of candidates"""
+
 	def __init__(self, filters):
-		self._items = []
 		self._filters = filters
 
-	def add(self, item):
-		# This method could possibly be made simpler if the graph structure
-		# was made explicit.
-		items = []
-		for existing_item in self._items:
-			m = self.merged(existing_item, item)
-			if m is None:
-				items.append(existing_item)
-			else:
-				item = m
-		items.append(item)
-		self._items = items
-
-	def extend(self, iterable):
-		for i in iterable:
-			self.add(i)
-
-	def __iter__(self):
-		if self._items and hasattr(self._items, 'name'):
-			yield from sorted(self._items, key=lambda x: x.name)
-		else:
-			yield from self._items
-
-	def __len__(self):
-		return len(self._items)
-
-	def merged(self, s: Candidate, t: Candidate):
+	def should_discard(self, reference: Candidate, candidate: Candidate):
 		"""
-		Given two candidates, decide whether to discard one of them and which one.
-
-		Return None if both candidates should be kept.
-		Return the candidate to keep otherwise.
+		Given a candidate to keep (reference), decide whether another one should be discarded
 		"""
-		if len(s.sequence) > len(t.sequence):
-			s, t = t, s  # make s always the shorter sequence
-
 		# When computing edit distance between the two sequences, ignore the
 		# bases in the 3' end that correspond to the CDR3
-		s_no_cdr3 = s.sequence[:s.CDR3_start]
-		t_no_cdr3 = t.sequence[:t.CDR3_start]
+		s_no_cdr3 = reference.sequence[:reference.CDR3_start]  # TODO lowercase
+		t_no_cdr3 = candidate.sequence[:candidate.CDR3_start]
 		if len(s_no_cdr3) != len(t_no_cdr3):
 			t_prefix = t_no_cdr3[:len(s_no_cdr3)]
 			t_suffix = t_no_cdr3[-len(s_no_cdr3):]
 			dist_prefix = edit_distance(s_no_cdr3, t_prefix, 1)
-			dist_suffix = edit_distance(s_no_cdr3, t_suffix, 1)
+			dist_suffix = edit_distance(s_no_cdr3, t_suffix, 1)  # TODO prefix and suffix?
 			dist_no_cdr3 = min(dist_prefix, dist_suffix)
 		else:
 			dist_no_cdr3 = edit_distance(s_no_cdr3, t_no_cdr3, 1)
 
-		same_gene = is_same_gene(s.name, t.name)
+		same_gene = is_same_gene(reference.name, candidate.name)
 		for filter_ in self._filters:
-			for ref, candidate in [(s, t), (t, s)]:
-				reason = filter_.should_discard(ref, candidate, dist_no_cdr3, same_gene)
-				if reason:
-					# There is a reason for discarding candidate
-					print('reason:', reason, 'while checking', candidate)
-					return ref
+			reason = filter_.should_discard(reference, candidate, dist_no_cdr3, same_gene)
+			if reason:
+				return reason
 
-		# None of the filters decided to discard one of the sequences,
-		# so keep both
-		return None
+		# None of the filters decided to discard the candidate, so keep it
+		return False
+
+	@staticmethod
+	def cluster_size_is_accurate(row):
+		return bool(set(row.cluster.split(';')) & {'all', 'db'})
+
+	@classmethod
+	def row_to_candidate(cls, row):
+		return Candidate(
+			sequence=row['consensus'],
+			name=row['name'],
+			clonotypes=row['clonotypes'],
+			exact=row['exact'],
+			Ds_exact=row['Ds_exact'],
+			cluster_size=row['cluster_size'],
+			whitelisted=row['whitelist_diff'] == 0,
+			is_database=row['database_diff'] == 0,
+			cluster_size_is_accurate=cls.cluster_size_is_accurate(row),
+			CDR3_start=row.get('CDR3_start', 10000),  # TODO backwards compatibility
+			index=row.name,
+		)
+
+	def apply(self, table):
+		"""
+		Run the filters and update the why_filtered and is_filtered columns appropriately for
+		the filtered candidates in the given table (in place). No rows are removed.
+		"""
+		candidates = [self.row_to_candidate(row) for _, row in table.iterrows()]
+		for reference in candidates:
+			if table.loc[reference.index, 'is_filtered'] > 0:
+				continue
+			for candidate in candidates:
+				if reference is candidate:
+					# Don’t compare a candidate to itself
+					continue
+				reason = self.should_discard(reference, candidate)
+				if reason:
+					table.loc[candidate.index, 'why_filtered'] += reason + ';'
+					table.loc[candidate.index, 'is_filtered'] += 1
 
 
 class Whitelist:
@@ -376,7 +366,6 @@ def main(args):
 	if args.unique_D_ratio or args.unique_D_threshold:
 		filters.append(UniqueDRatioFilter(args.unique_D_ratio, args.unique_D_threshold))
 	filters.append(TooSimilarSequenceFilter())
-	merger = CandidateFilterer(filters)
 	whitelist = Whitelist()
 	for path in args.whitelist:
 		whitelist.add_fasta(path)
@@ -426,33 +415,8 @@ def main(args):
 			'After per-entry filtering, %s entries remain.', len(args.tables),
 			len(overall_table), sum(overall_table.is_filtered == 0))
 
-	def cluster_size_is_accurate(row):
-		return bool(set(row.cluster.split(';')) & {'all', 'db'})
-
-	for _, row in overall_table.iterrows():
-		if row['is_filtered'] > 0:
-			continue
-		merger.add(Candidate(
-			sequence=row['consensus'],
-			name=row['name'],
-			clonotypes=row['clonotypes'],
-			exact=row['exact'],
-			Ds_exact=row['Ds_exact'],
-			cluster_size=row['cluster_size'],
-			whitelisted=row['whitelist_diff'] == 0,
-			is_database=row['database_diff'] == 0,
-			cluster_size_is_accurate=cluster_size_is_accurate(row),
-			CDR3_start=row.get('CDR3_start', 10000),  # TODO backwards compatibility
-			row=row.name,  # row.name is the index of the row. It is not row['name'].
-		))
-
-	# Discard near-duplicates
-	overall_table.loc[overall_table.is_filtered > 0, 'is_duplicate'] = False
-	overall_table.loc[overall_table.is_filtered == 0, 'is_duplicate'] = True
-	for info in merger:
-		overall_table.loc[info.row, 'is_duplicate'] = False
-	mark_rows(overall_table, overall_table.is_duplicate, 'is_duplicate')
-	del overall_table['is_duplicate']
+	filterer = CandidateFilterer(filters)
+	filterer.apply(overall_table)
 
 	# Name sequences
 	overall_table['name'] = overall_table['name'].apply(UniqueNamer())
