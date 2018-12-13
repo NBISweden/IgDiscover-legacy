@@ -707,8 +707,8 @@ annotated_V_*.tab
 
 The two files ``annotated_V_germline.tab`` and ``annotated_V_pregermline.tab`` are copies of the ``candidates.tab`` file with two extra columns that show *why* a candidate was filtered in the germline and pre-germline filtering steps. The two columns are:
 
-  * ``is_filtered`` – This is a number that indicates how many filtering criteria exclude this candidate apply.
-  * ``why_filtered`` – This is a semicolon-separated list of filtering reasons.
+  * ``is_filtered`` – A number describing how many filtering criteria exclude this candidate.
+  * ``why_filtered`` – A semicolon-separated list of filtering reasons.
 
 The following values can occur in the ``why_filtered`` column:
 
@@ -716,10 +716,10 @@ too_low_dbdiff
     The number of differences between this candidate and the database is lower than the required number.
 
 too_many_N_bases
-    The candidate contains too many ``N`` nucleotide wildcard characters.
+    The candidate contains too many ``N`` wildcard characters.
 
 too_low_CDR3s_exact
-    The ``CDR3s_exact`` value for this candidate is lower than required.
+    The ``CDR3s_exact`` value for this candidate is lower than the configured threshold.
 
 too_high_CDR3_shared_ratio
     The ``CDR3_shared_ratio`` is higher than the configured threshold.
@@ -733,8 +733,31 @@ has_stop
 too_low_cluster_size
     The ``cluster_size`` of this candidate is lower than the configured threshold, and the candidate is not whitelisted.
 
-is_duplicate
-    A filtering criterion not listed above applies to this candidate. This covers all the filters that need to compare candidates to each other: cross-mapping ratio, clonotype allele ratio, exact ratio, Ds_exact ratio.
+xmap_ratio
+    The :ref:`cross-mapping ratio <cross-mapping>` between this candidate and another one is too
+    high. This is written as ``xmap_ratio=0.01,other=VH1-1``, where 0.01 is the cross-mapping ratio
+    and “VH1-1” is the sequence to which the comparison was made.
+
+clonotype_ratio
+    The :ref:`clonotype ratio <allele-ratio>` between two alleles of the same gene is too low.
+    This is written as ``clonotype_ratio=0.03,other=VH1-1``, where 0.03 is the clonotype ratio
+    and “VH1-1” is the name of the sequence to which the comparison was made.
+
+ex_occ_ratio
+    The :ref:`exact occurrence ratio <allele-ratio>` between two alleles of the same gene is too
+    low. This is written as ``ex_occ_ratio=0.03,other=VH1-1``, where 0.03 is the exact occurrence
+    ratio and “VH1-1” is the name of the sequence to which the comparison was made.
+
+Ds_exact_ratio
+    The ratio of Ds_exact_ratio between two alleles of the same gene is too low. This is written as
+    ``Ds_exact_ratio=0.03,other=VH1-1``, where 0.03 is the ratio and VH1-1 is the name of the
+    sequence to which the comparison was made.
+
+too_similar_to
+    The candidate is too similar to another one. This is written as ``too_similar_to=VH1-1``, where
+    “VH1-1” is the name of the other sequence. This is followed by a comma and ``fewer_clonotypes``
+    if the candidate was filtered because it had fewer clonotypes, or by a comma and
+    ``other_whitelisted`` if the candidate was filtered because the other candidate was whitelisted.
 
 
 .. _gene-names:

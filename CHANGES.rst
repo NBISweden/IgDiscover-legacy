@@ -7,7 +7,9 @@ development version
 
 * The ``discoverj`` command was renamed to ``discoverjd`` to reflect that it
   also supports D gene discovery.
-
+* Previously, the ``why_filtered`` column would show a generic ``is_duplicate``
+  reason for filters that compare candidates to each other. Now each filter
+  criterion can be distinguised.
 
 v0.11 (2018-11-27)
 ------------------
