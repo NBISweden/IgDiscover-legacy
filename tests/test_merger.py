@@ -5,7 +5,6 @@ import pandas as pd
 import pytest
 
 from igdiscover.discover import SiblingMerger, SiblingInfo
-from igdiscover.germlinefilter import CandidateFilterer, Candidate, TooSimilarSequenceFilter
 from igdiscover.utils import UniqueNamer
 from igdiscover.rename import PrefixDict
 
@@ -81,59 +80,6 @@ def test_unique_namer():
 	assert namer('YetAnotherName') == 'YetAnotherName'
 	assert namer('Name') == 'NameC'
 	assert namer('NameC') == 'NameCA'
-
-
-def SI(sequence, name, clonotypes, whitelisted=False):
-	return Candidate(
-		sequence=sequence,
-		name=name,
-		clonotypes=clonotypes,
-		exact=100,
-		Ds_exact=10,
-		cluster_size=100,
-		whitelisted=whitelisted,
-		is_database=False,
-		cluster_size_is_accurate=True,
-		CDR3_start=len(sequence),
-		row=None
-	)
-
-
-def test_candidate_filter_with_cdr3():
-	filters = [
-		TooSimilarSequenceFilter(),
-	]
-	merger = CandidateFilterer(filters)
-	infos = [
-		SI('ACGTTA', 'Name1', 15),
-		SI('ACGTTAT', 'Name2', 100),  # kept because it is longer
-		SI('ACGCCAT', 'Name3', 15),   # kept because edit distance > 1
-		SI('ACGGTAT', 'Name5', 120),  # kept because it has more clonotypes
-	]
-	merger.add(infos[0]); merged = list(merger)
-	assert len(merged) == 1 and merged[0] == infos[0]
-	merger.add(infos[0]); merged = list(merger)
-	assert len(merged) == 1 and merged[0] == infos[0]
-	merger.add(infos[1]); merged = list(merger)
-	assert len(merged) == 1 and merged[0] == infos[1]
-	merger.add(infos[2]); merged = list(merger)
-	assert len(merged) == 2 and merged[0] == infos[1] and merged[1] == infos[2]
-	merger.add(infos[3]); merged = list(merger)
-	assert len(merged) == 3 and merged[0:3] == infos[1:4]
-
-
-def test_candidate_filter_prefix():
-
-	merger = CandidateFilterer([TooSimilarSequenceFilter()])
-	infos = [
-		SI('AAATAA', 'Name1', 117),
-		SI('AAATAAG', 'Name2', 10),
-	]
-	merger.add(infos[0])
-	merger.add(infos[1])
-	merged = list(merger)
-	assert len(merged) == 1
-	assert merged[0] == infos[0], (merged, infos)
 
 
 class TestPrefixDict:
