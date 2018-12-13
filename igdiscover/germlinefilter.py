@@ -60,7 +60,7 @@ def add_arguments(parser):
 		'sequence. Default: %(default)s')
 	arg('--maximum-N', '-N', type=int, metavar='COUNT', default=0,
 		help='Sequences must have at most COUNT "N" bases. Default: %(default)s')
-	arg('--unique-CDR3', '--CDR3s', type=int, metavar='N', default=1,
+	arg('--unique-cdr3s', '--unique-CDR3', '--cdr3s', type=int, metavar='N', default=1,
 		help='Sequences must have at least N unique CDR3s within exact sequence matches. '
 		'Default: %(default)s')
 	# The default for unique-J is 0 because we might work on data without
@@ -92,7 +92,7 @@ def add_arguments(parser):
 
 
 Candidate = namedtuple('Candidate', ['sequence', 'name', 'clonotypes', 'exact', 'Ds_exact',
-	'cluster_size', 'whitelisted', 'is_database', 'cluster_size_is_accurate', 'CDR3_start', 'index'])
+	'cluster_size', 'whitelisted', 'is_database', 'cluster_size_is_accurate', 'cdr3_start', 'index'])
 
 
 class CrossMappingFilter:
@@ -224,8 +224,8 @@ class CandidateFilterer:
 		"""
 		# When computing edit distance between the two sequences, ignore the
 		# bases in the 3' end that correspond to the CDR3
-		s_no_cdr3 = reference.sequence[:reference.CDR3_start]  # TODO lowercase
-		t_no_cdr3 = candidate.sequence[:candidate.CDR3_start]
+		s_no_cdr3 = reference.sequence[:reference.cdr3_start]
+		t_no_cdr3 = candidate.sequence[:candidate.cdr3_start]
 		if len(s_no_cdr3) != len(t_no_cdr3):
 			t_prefix = t_no_cdr3[:len(s_no_cdr3)]
 			t_suffix = t_no_cdr3[-len(s_no_cdr3):]
@@ -260,7 +260,7 @@ class CandidateFilterer:
 			whitelisted=row['whitelist_diff'] == 0,
 			is_database=row['database_diff'] == 0,
 			cluster_size_is_accurate=cls.cluster_size_is_accurate(row),
-			CDR3_start=row.get('CDR3_start', 10000),  # TODO backwards compatibility
+			cdr3_start=row.get('CDR3_start', 10000),  # TODO backwards compatibility
 			index=row.name,
 		)
 
@@ -390,7 +390,7 @@ def main(args):
 
 		if 'N_bases' in table.columns:
 			mark_rows(table, table.N_bases > args.maximum_N, 'too_many_N_bases')
-		mark_rows(table, table.CDR3s_exact < args.unique_CDR3, 'too_low_CDR3s_exact')
+		mark_rows(table, table.CDR3s_exact < args.unique_cdr3s, 'too_low_CDR3s_exact')
 		mark_rows(table, table.CDR3_shared_ratio > args.cdr3_shared_ratio, 'too_high_CDR3_shared_ratio')
 		mark_rows(table, table.Js_exact < args.unique_J, 'too_low_Js_exact')
 		if not args.allow_stop:
