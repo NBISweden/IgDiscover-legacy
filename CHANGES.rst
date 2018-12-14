@@ -10,6 +10,10 @@ development version
 * Previously, the ``why_filtered`` column would show a generic ``is_duplicate``
   reason for filters that compare candidates to each other. Now each filter
   criterion can be distinguised.
+* The somewhat vague “too similar sequence” germline filter criterion
+  incorrectly removed some candidates that have a mutation close to the 5' end.
+  This was replaced with a simpler filter that only ensures that there are no
+  two candidates with the same sequence.
 
 v0.11 (2018-11-27)
 ------------------

@@ -753,12 +753,10 @@ Ds_exact_ratio
     ``Ds_exact_ratio=0.03,other=VH1-1``, where 0.03 is the ratio and VH1-1 is the name of the
     sequence to which the comparison was made.
 
-too_similar_to
-    The candidate is too similar to another one. This is written as ``too_similar_to=VH1-1``, where
-    “VH1-1” is the name of the other sequence. This is followed by a comma and ``fewer_clonotypes``
-    if the candidate was filtered because it had fewer clonotypes, or by a comma and
-    ``other_whitelisted`` if the candidate was filtered because the other candidate was whitelisted.
-
+identical_to
+    The candidate is identical to another one (a duplicate) or a truncated version of another one.
+    This is written as ``identical_to=VH1-1,truncated``, where “VH1-1” is the name of the other
+    sequence. If the ``truncated`` part is missing, then the sequences were exactly identical.
 
 .. _gene-names:
 
@@ -856,7 +854,7 @@ following filtering and processing steps:
 * Discard sequences identical to one of the database sequences (if DB given)
 * Discard sequences that do not match a set of known good motifs
 * Discard sequences that contain a stop codon (has_stop column)
-* Discard near-duplicate sequences
+* Discard duplicate sequences
 * Discard cross-mapping artifacts
 * Discard sequences whose “allele ratio” is too low.
 
@@ -865,7 +863,7 @@ candidates that appear on it
 
 * are not checked for the cluster size criterion,
 * do not need to match a set of known good motifs,
-* are never considered near-duplicates (but they are checked for
+* are never considered duplicates (but they are checked for
   cross-mapping and for the allele ratio),
 * are allowed to contain a stop codon.
 

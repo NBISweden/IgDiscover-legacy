@@ -16,7 +16,7 @@ separately:
 
 The following criteria involve comparison of candidates against each other:
 
-* Discard sequences that are too similar to another (unless whitelisted)
+* Discard sequences that are identical (unless whitelisted)
 * Discard sequences that are cross-mapping artifacts
 * Discard sequences that have a too low allele ratio
 * Discard sequences with too few unique Ds relative to other alleles (Ds_exact column)
@@ -95,9 +95,26 @@ Candidate = namedtuple('Candidate', ['sequence', 'name', 'clonotypes', 'exact', 
 	'cluster_size', 'whitelisted', 'is_database', 'cluster_size_is_accurate', 'cdr3_start', 'index'])
 
 
+class IdenticalSequenceFilter:
+	"""
+	Filter a candidate if it is identical to another one or if it is a truncated version
+	of another one
+	"""
+	@staticmethod
+	def should_discard(ref: Candidate, candidate: Candidate, _dist: int, _same_gene: bool):
+		if candidate.whitelisted:
+			return False
+		if ref.sequence == candidate.sequence:
+			return f'identical_to={ref.name}'
+		if ref.sequence.startswith(candidate.sequence):
+			return f'identical_to={ref.name},truncated'
+
+		return False
+
+
 class CrossMappingFilter:
 	"""
-	Filters a sequence if it is a cross-mapping artifact
+	Filter a candidate if it is a cross-mapping artifact
 	"""
 	def __init__(self, cross_mapping_ratio: float):
 		"""Check for cross-mapping"""
@@ -105,7 +122,7 @@ class CrossMappingFilter:
 
 	def should_discard(self, ref: Candidate, candidate: Candidate, dist: int, *args):
 		"""
-		Compare a candidates to a reference candidate and decide whether it should be discarded.
+		Compare a candidate to a reference candidate and decide whether it should be discarded.
 
 		:param ref: The reference candidate. The decision this function makes is not about that one.
 		:param candidate: The candidate on which to decide.
@@ -127,31 +144,6 @@ class CrossMappingFilter:
 		if candidate.cluster_size_is_accurate and ratio < self._ratio:
 			# candidate is probably a cross-mapping artifact of the higher-expressed ref
 			return f'xmap_ratio={ratio:.4f},other={ref.name}'
-		return False
-
-
-class TooSimilarSequenceFilter:
-	"""
-	Filter out sequences that are too similar to another one
-	"""
-	@staticmethod
-	def should_discard(ref: Candidate, candidate: Candidate, dist: int, _same_gene: bool):
-		# Note that dist refers only to the non-CDR3 part!
-		if dist > 0:
-			# The sequences are not similar, so keep both
-			return False
-
-		if candidate.whitelisted:
-			return False
-
-		# TODO this is too sensitive
-		if ref.whitelisted:
-			return f'too_similar_to={ref.name},other_whitelisted'
-
-		# No sequence is whitelisted
-		if candidate.clonotypes < ref.clonotypes:
-			return f'too_similar_to={ref.name},fewer_clonotypes'
-
 		return False
 
 
@@ -356,7 +348,7 @@ def mark_rows(table, condition, reason):
 def main(args):
 	if args.unique_D_threshold <= 1:
 		sys.exit('--unique-D-threshold must be at least 1')
-	filters = []
+	filters = [IdenticalSequenceFilter()]
 	if args.cross_mapping_ratio:
 		filters.append(CrossMappingFilter(args.cross_mapping_ratio))
 	if args.clonotype_ratio:
@@ -365,7 +357,6 @@ def main(args):
 		filters.append(ExactRatioFilter(args.exact_ratio))
 	if args.unique_D_ratio or args.unique_D_threshold:
 		filters.append(UniqueDRatioFilter(args.unique_D_ratio, args.unique_D_threshold))
-	filters.append(TooSimilarSequenceFilter())
 	whitelist = Whitelist()
 	for path in args.whitelist:
 		whitelist.add_fasta(path)
