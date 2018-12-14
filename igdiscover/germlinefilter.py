@@ -101,7 +101,7 @@ class IdenticalSequenceFilter:
 	of another one
 	"""
 	@staticmethod
-	def should_discard(ref: Candidate, candidate: Candidate, _dist: int, _same_gene: bool):
+	def should_discard(ref: Candidate, candidate: Candidate, _same_gene: bool):
 		if candidate.whitelisted:
 			return False
 		if ref.sequence == candidate.sequence:
@@ -120,30 +120,43 @@ class CrossMappingFilter:
 		"""Check for cross-mapping"""
 		self._ratio = cross_mapping_ratio
 
-	def should_discard(self, ref: Candidate, candidate: Candidate, dist: int, *args):
+	def should_discard(self, reference: Candidate, candidate: Candidate, _same_gene: bool):
 		"""
 		Compare a candidate to a reference candidate and decide whether it should be discarded.
 
-		:param ref: The reference candidate. The decision this function makes is not about that one.
+		:param reference: The reference candidate. The decision this function makes is not about that one.
 		:param candidate: The candidate on which to decide.
 		:param dist: Edit distance between candidates
 		:return: False if the candidate should be kept. Otherwise, the candidate shoud be discarded
 		and a non-empty string with a reason describing why is returned.
 		"""
-		if dist > 1:
+		# When computing edit distance between the two sequences, ignore the
+		# bases in the 3' end that correspond to the CDR3
+		s_no_cdr3 = reference.sequence[:reference.cdr3_start]
+		t_no_cdr3 = candidate.sequence[:candidate.cdr3_start]
+		if len(s_no_cdr3) != len(t_no_cdr3):
+			t_prefix = t_no_cdr3[:len(s_no_cdr3)]
+			t_suffix = t_no_cdr3[-len(s_no_cdr3):]
+			dist_prefix = edit_distance(s_no_cdr3, t_prefix, 1)
+			dist_suffix = edit_distance(s_no_cdr3, t_suffix, 1)  # TODO prefix and suffix?
+			dist_no_cdr3 = min(dist_prefix, dist_suffix)
+		else:
+			dist_no_cdr3 = edit_distance(s_no_cdr3, t_no_cdr3, 1)
+
+		if dist_no_cdr3 > 1:
 			# Cross-mapping is unlikely if the edit distance is larger than 1
 			return None
-		if not ref.is_database or not candidate.is_database:
+		if not reference.is_database or not candidate.is_database:
 			# Cross-mapping can only occur if both sequences are in the database
 			return None
 
-		total_count = (ref.cluster_size + candidate.cluster_size)
+		total_count = (reference.cluster_size + candidate.cluster_size)
 		if total_count == 0:
 			return False
 		ratio = candidate.cluster_size / total_count
 		if candidate.cluster_size_is_accurate and ratio < self._ratio:
 			# candidate is probably a cross-mapping artifact of the higher-expressed ref
-			return f'xmap_ratio={ratio:.4f},other={ref.name}'
+			return f'xmap_ratio={ratio:.4f},other={reference.name}'
 		return False
 
 
@@ -156,7 +169,7 @@ class ClonotypeAlleleRatioFilter:
 	def __init__(self, clonotype_ratio: float):
 		self._ratio = clonotype_ratio
 
-	def should_discard(self, ref: Candidate, candidate: Candidate, _dist: int, same_gene: bool):
+	def should_discard(self, ref: Candidate, candidate: Candidate, same_gene: bool):
 		if not same_gene:
 			return False
 		if ref.clonotypes == 0:
@@ -174,7 +187,7 @@ class ExactRatioFilter:
 	def __init__(self, exact_ratio: float):
 		self._ratio = exact_ratio
 
-	def should_discard(self, ref: Candidate, candidate: Candidate, _dist: int, same_gene: bool):
+	def should_discard(self, ref: Candidate, candidate: Candidate, same_gene: bool):
 		if not same_gene:
 			return False
 		if ref.exact == 0:
@@ -191,7 +204,7 @@ class UniqueDRatioFilter:
 		self._unique_d_ratio = unique_d_ratio
 		self._unique_d_threshold = unique_d_threshold
 
-	def should_discard(self, ref: Candidate, candidate: Candidate, _dist: int, same_gene: bool):
+	def should_discard(self, ref: Candidate, candidate: Candidate, same_gene: bool):
 		if not same_gene:
 			return False
 		if ref.cluster_size < candidate.cluster_size or ref.Ds_exact < self._unique_d_threshold:
@@ -214,22 +227,9 @@ class CandidateFilterer:
 		"""
 		Given a candidate to keep (reference), decide whether another one should be discarded
 		"""
-		# When computing edit distance between the two sequences, ignore the
-		# bases in the 3' end that correspond to the CDR3
-		s_no_cdr3 = reference.sequence[:reference.cdr3_start]
-		t_no_cdr3 = candidate.sequence[:candidate.cdr3_start]
-		if len(s_no_cdr3) != len(t_no_cdr3):
-			t_prefix = t_no_cdr3[:len(s_no_cdr3)]
-			t_suffix = t_no_cdr3[-len(s_no_cdr3):]
-			dist_prefix = edit_distance(s_no_cdr3, t_prefix, 1)
-			dist_suffix = edit_distance(s_no_cdr3, t_suffix, 1)  # TODO prefix and suffix?
-			dist_no_cdr3 = min(dist_prefix, dist_suffix)
-		else:
-			dist_no_cdr3 = edit_distance(s_no_cdr3, t_no_cdr3, 1)
-
 		same_gene = is_same_gene(reference.name, candidate.name)
 		for filter_ in self._filters:
-			reason = filter_.should_discard(reference, candidate, dist_no_cdr3, same_gene)
+			reason = filter_.should_discard(reference, candidate, same_gene)
 			if reason:
 				return reason
 
