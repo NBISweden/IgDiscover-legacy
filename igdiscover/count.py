@@ -55,7 +55,9 @@ def plot_counts(counts, gene_type):
 	import matplotlib
 	import seaborn as sns
 	import numpy as np
-	sns.set()
+	sns.set_style('white')
+	sns.set_style({'patch.force_edgecolor': False})
+
 	fig = Figure(figsize=((50 + len(counts) * 5) / 25.4, 210/25.4))
 	matplotlib.rcParams.update({'font.size': 14})
 	FigureCanvas(fig)
@@ -63,10 +65,10 @@ def plot_counts(counts, gene_type):
 	ax.set_title('{} gene usage'.format(gene_type))
 	ax.set_xlabel('{} gene'.format(gene_type))
 	ax.set_ylabel('Count')
-	ax.set_xticks(np.arange(len(counts)) + 0.5)
+	ax.set_xticks(np.arange(len(counts)))
 	ax.set_xticklabels(counts.index, rotation='vertical')
-	ax.grid(axis='x')
-	ax.set_xlim((-0.25, len(counts)))
+	ax.grid(axis='y')
+	ax.set_xlim(-1, len(counts))
 	ax.bar(np.arange(len(counts)), counts['count'])
 	fig.set_tight_layout(True)
 	return fig
