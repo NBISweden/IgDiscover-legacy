@@ -1,6 +1,5 @@
 import sys
 from setuptools import setup
-import versioneer
 
 if sys.version_info < (3, 6):
     sys.stdout.write("At least Python 3.6 is required.\n")
@@ -11,8 +10,8 @@ with open("README.rst", encoding="utf-8") as f:
 
 setup(
     name="igdiscover",
-    version=versioneer.get_version(),
-    cmdclass=versioneer.get_cmdclass(),
+    setup_requires=["setuptools_scm"],  # Support pip versions that don't know about pyproject.toml
+    use_scm_version=True,
     author="Marcel Martin",
     author_email="marcel.martin@scilifelab.se",
     url="https://igdiscover.se/",
