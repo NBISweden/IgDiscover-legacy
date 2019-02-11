@@ -15,7 +15,7 @@ def add_arguments(parser):
 
 
 def main(args):
-	table = pd.read_table(args.table, sep='\t', usecols=(args.field, 'V_gene'))
+	table = pd.read_csv(args.table, sep='\t', usecols=(args.field, 'V_gene'), sep='\t')
 	df = pd.DataFrame(index=range(table.groupby('V_gene').size().max()))
 	for gene, group in table.groupby('V_gene'):
 		df[gene] = group[args.field].reset_index(drop=True)

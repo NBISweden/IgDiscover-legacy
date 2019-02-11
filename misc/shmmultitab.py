@@ -36,7 +36,7 @@ def read_one_file(path, field_name):
 			assert query.startswith('# Query: '), query
 			query_name = query.split('\t')[0].partition('# Query: ')[2]
 			query_names.append(query_name)
-		table = pd.read_table(sio, header=None, names=column_names, usecols=(field_name,))
+		table = pd.read_csv(sio, header=None, names=column_names, usecols=(field_name,), sep='\t')
 		# print('Read a table with {} entries'.format(len(table)), file=sys.stderr)
 		for query_name in query_names:
 			queries[query_name] = table[field_name]
