@@ -12,7 +12,7 @@ from itertools import groupby
 from typing import List, Tuple
 
 import numpy as np
-from sqt.align import edit_distance, multialign, consensus, globalalign
+from sqt.align import edit_distance, multialign, globalalign
 from sqt.dna import GENETIC_CODE, nt_to_aa as _nt_to_aa
 from sqt import SequenceReader
 from cutadapt.align import Aligner
