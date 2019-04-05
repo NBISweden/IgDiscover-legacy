@@ -52,10 +52,12 @@ def split_by_section(iterable, section_starts):
                 break
         else:
             if header is None:
-                raise ParseError("Expected a line starting with one of {}".format(', '.join(section_starts)))
+                raise ParseError("Expected a line starting with one of {}".format(
+                    ', '.join(section_starts)))
             lines.append(line)
     if header is not None:
         yield (header, lines)
+
 
 # Each alignment summary describes a region in the V region (FR1, CDR1, etc. up to CDR3)
 AlignmentSummary = namedtuple('AlignmentSummary', 'start stop length matches mismatches gaps percent_identity')
@@ -185,10 +187,11 @@ class IgBlastRecord:
     def region_sequence(self, region):
         """
         Return the nucleotide sequence of a named region. Allowed names are:
-        CDR1, CDR2, CDR3, FR1, FR2, FR3. For all regions except CDR3, sequences
-        are extracted from the full read using begin and end coordinates from
-        IgBLAST’s "alignment summary" table.
+        CDR1, CDR2, CDR3, FR1, FR2, FR3. Sequences are extracted from the full read
+        using begin and end coordinates from IgBLAST’s "alignment summary" table.
         """
+        if region not in ("CDR1", "CDR2", "CDR3", "FR1", "FR2", "FR3"):
+            raise KeyError(f"Region {region!r} not allowed")
         alignment = self.alignments.get(region, None)
         if alignment is None:
             return None
@@ -202,14 +205,56 @@ class IgBlastRecord:
                 **vars(self))
 
 
+class Region:
+    """A CDR or FR region in a V(D)J rearranged sequence (FR1, CDR1, FR2, CDR2, FR3, CDR3, FR4)"""
+
+    def __init__(self, nt_sequence, nt_reference, aa_reference, percent_identity=None):
+        self.nt_sequence = nt_sequence
+        self.aa_sequence = nt_to_aa(nt_sequence) if nt_sequence else None
+        self.nt_reference = nt_reference
+        self.aa_reference = aa_reference
+        self.aa_mutations = self._compute_aa_mutations()
+        self.percent_identity = percent_identity
+
+    def _compute_aa_mutations(self):
+        # Earlier versions of this code used edit distance to compute the number of mutations,
+        # but some FR1 alignments are reported with a frameshift by IgBLAST. By requiring that
+        # reference and query lengths are identical, we can filter out these cases (and use
+        # Hamming distance to get some speedup)
+        if (
+            self.aa_reference is None
+            or self.aa_sequence is None
+            or len(self.nt_sequence) != len(self.nt_reference)
+        ):
+            return None
+        dist = hamming_distance(self.aa_reference, self.aa_sequence)
+
+        # If the mutation rate is still obviously too high, assume something went
+        # wrong and ignore the computed value
+        if dist / len(self.aa_reference) >= 0.8:
+            return None
+        return dist
+
+    def aa_mutation_rate(self):
+        if self.aa_mutations is None or self.aa_reference is None:
+            return None
+        return 100. * self.aa_mutations / len(self.aa_reference)
+
+    def nt_mutation_rate(self):
+        """Return nucleotide-level mutation rate in percent"""
+        if self.percent_identity is not None:
+            return 100. - self.percent_identity
+        return None
+
+
 class ExtendedIgBlastRecord(IgBlastRecord):
     """
     This extended record does a few extra things:
-    - The CDR3 is detected by using a regular expression
+    - The CDR3 is detected
     - The leader is detected within the sequence before the found V gene (by
     searching for the start codon).
-    - If the V sequence hit starts at base 2 in the reference, it is extended
-      one to the left.
+    - If the V sequence hit starts not at base 1 in the reference, it is extended
+    to the left.
     """
     # TODO move computation of cdr3_sequence, vdj_sequence into constructor
     # TODO maybe make all coordinates relative to full sequence
@@ -284,8 +329,22 @@ class ExtendedIgBlastRecord(IgBlastRecord):
         self.utr, self.leader = self._utr_leader()
         self.alignments['CDR3'] = self._find_cdr3()
 
-    @property
-    def vdj_sequence(self):
+        self.regions = {
+            name: self._make_region(name) for name in
+            ('FR1', 'FR2', 'FR3', 'CDR1', 'CDR2', 'CDR3')}
+        self.vdj_sequence = self._make_vdj_sequence()
+
+    def _make_region(self, name: str):
+        nt_sequence = self.region_sequence(name)
+        nt_reference = self._database.v_regions_nt[self.v_gene].get(name)
+        aa_reference = self._database.v_regions_aa[self.v_gene].get(name)
+        if self.alignments.get(name, None) is not None:
+            percent_identity = self.alignments[name].percent_identity
+        else:
+            percent_identity = None
+        return Region(nt_sequence, nt_reference, aa_reference, percent_identity)
+
+    def _make_vdj_sequence(self):
         if 'V' not in self.hits or 'J' not in self.hits:
             return None
         hit_v = self.hits['V']
@@ -399,96 +458,57 @@ class ExtendedIgBlastRecord(IgBlastRecord):
             d['subject_alignment'] = preceding_base + d['subject_alignment']
         return Hit(**d)
 
+    def fr4_aa_mutation_rate(self):
+        if 'J' not in self.hits:
+            return None
+        j_subject_id = self.hits['J'].subject_id
+        if self.chain not in self.CHAINS:
+            return None
+        cdr3_ref_end = self._database.j_cdr3_end(j_subject_id, self.CHAINS[self.chain])
+        if cdr3_ref_end is None:
+            return None
+        cdr3_query_end = self.hits['J'].query_position(reference_position=cdr3_ref_end)
+        if cdr3_query_end is None:
+            return None
+
+        query = self.full_sequence[cdr3_query_end:self.hits['J'].query_end]
+        try:
+            query_aa = nt_to_aa(query)
+        except ValueError:
+            return None
+        ref = self._database.j[j_subject_id][cdr3_ref_end:self.hits['J'].subject_end]
+        try:
+            ref_aa = nt_to_aa(ref)
+        except ValueError:
+            return None
+        if not ref_aa:
+            return None
+        return 100. * edit_distance(ref_aa, query_aa) / len(ref_aa)
+
+    def v_aa_mutation_rate(self):
+        """
+        TODO This returns actually the total mutation rate of the FR1, CDR1, FR2, CDR2, FR3 regions
+        (The CDR3 part of V is excluded.)
+        """
+        mutations = 0
+        length = 0
+        for name in ('FR1', 'CDR1', 'FR2', 'CDR2', 'FR3'):
+            region = self.regions.get(name)
+            if region is None:
+                return None
+            if region.aa_reference is None or region.aa_mutations is None:
+                return None
+            mutations += region.aa_mutations
+            length += len(region.aa_reference)
+
+        return 100. * mutations / length
+
     def asdict(self):
         """
         Return a flattened representation of this record as a dictionary.
         The dictionary can then be used with e.g. a csv.DictWriter or
         pandas.DataFrame.from_items.
         """
-        nt_regions = dict()
-        aa_regions = dict()
-        for region in ('FR1', 'CDR1', 'FR2', 'CDR2', 'FR3', 'CDR3'):
-            nt_seq = self.region_sequence(region)
-            nt_regions[region] = nt_seq
-            aa_regions[region] = nt_to_aa(nt_seq) if nt_seq else None
-
-        vdj_nt = self.vdj_sequence
-        vdj_aa = nt_to_aa(vdj_nt) if vdj_nt else None
-
-        def nt_mutation_rate(region):
-            """Nucleotide-level mutation rate in percent"""
-            if region in self.alignments:
-                rar = self.alignments[region]
-                if rar is None or rar.percent_identity is None:
-                    return None
-                return 100. - rar.percent_identity
-            else:
-                return None
-
-        def j_aa_mutation_rate():
-            if 'J' not in self.hits:
-                return None
-            j_subject_id = self.hits['J'].subject_id
-            if self.chain not in self.CHAINS:
-                return None
-            cdr3_ref_end = self._database.j_cdr3_end(j_subject_id, self.CHAINS[self.chain])
-            if cdr3_ref_end is None:
-                return None
-            cdr3_query_end = self.hits['J'].query_position(reference_position=cdr3_ref_end)
-            if cdr3_query_end is None:
-                return None
-
-            query = self.full_sequence[cdr3_query_end:self.hits['J'].query_end]
-            try:
-                query_aa = nt_to_aa(query)
-            except ValueError:
-                return None
-            ref = self._database.j[j_subject_id][cdr3_ref_end:self.hits['J'].subject_end]
-            try:
-                ref_aa = nt_to_aa(ref)
-            except ValueError:
-                return None
-            if not ref_aa:
-                return None
-            return 100. * edit_distance(ref_aa, query_aa) / len(ref_aa)
-
-        def aa_mutation_rates():
-            """Amino-acid level mutation rates for all regions and V in percent"""
-            rates = dict()
-            rates['J'] = j_aa_mutation_rate()
-            v_aa_mutations = 0
-            v_aa_length = 0
-            for region in ('FR1', 'CDR1', 'FR2', 'CDR2', 'FR3'):
-                if not aa_regions[region]:
-                    break
-                try:
-                    reference_sequence = self._database.v_regions_aa[self.v_gene][region]
-                except KeyError:
-                    break
-                aa_sequence = aa_regions[region]
-
-                # We previously computed edit distance, but some FR1 alignments are reported
-                # with a frameshift by IgBLAST. By requiring that reference and query FR1
-                # lengths are identical, we can filter out these cases (and use Hamming distance
-                # to get a bit of a speedup)
-                if len(nt_regions[region]) != len(self._database.v_regions_nt[self.v_gene][region]):
-                    break
-                mutations = hamming_distance(reference_sequence, aa_sequence)
-                length = len(reference_sequence)
-                # If the mutation rate is still obviously too high, assume something went
-                # wrong and skip mutation rate assignment
-                if region == 'FR1' and mutations / length >= 0.8:
-                    break
-                rates[region] = 100. * mutations / length
-                v_aa_mutations += mutations
-                v_aa_length += length
-            else:
-                rates['V'] = 100. * v_aa_mutations / v_aa_length
-                return rates
-            return dict(FR1=None, CDR1=None, FR2=None, CDR2=None, FR3=None, V=None, J=None)
-
-        aa_rates = aa_mutation_rates()
-
         if 'V' in self.hits:
             v_nt = self.hits['V'].query_sequence
             v_aa = nt_to_aa(v_nt)
@@ -541,31 +561,35 @@ class ExtendedIgBlastRecord(IgBlastRecord):
             V_evalue=v_evalue,
             D_evalue=d_evalue,
             J_evalue=j_evalue,
-            FR1_SHM=nt_mutation_rate('FR1'),
-            CDR1_SHM=nt_mutation_rate('CDR1'),
-            FR2_SHM=nt_mutation_rate('FR2'),
-            CDR2_SHM=nt_mutation_rate('CDR2'),
-            FR3_SHM=nt_mutation_rate('FR3'),
+            FR1_SHM=self.regions['FR1'].nt_mutation_rate(),
+            CDR1_SHM=self.regions['CDR1'].nt_mutation_rate(),
+            FR2_SHM=self.regions['FR2'].nt_mutation_rate(),
+            CDR2_SHM=self.regions['CDR2'].nt_mutation_rate(),
+            FR3_SHM=self.regions['FR3'].nt_mutation_rate(),
+            # CDR3_SHM=,  TODO
+            # FR4_SHM=,  # TODO
             V_SHM=v_shm,
             J_SHM=j_shm,
-            V_aa_mut=aa_rates['V'],
-            J_aa_mut=aa_rates['J'],
-            FR1_aa_mut=aa_rates['FR1'],
-            CDR1_aa_mut=aa_rates['CDR1'],
-            FR2_aa_mut=aa_rates['FR2'],
-            CDR2_aa_mut=aa_rates['CDR2'],
-            FR3_aa_mut=aa_rates['FR3'],
+            V_aa_mut=self.v_aa_mutation_rate(),
+            J_aa_mut=self.fr4_aa_mutation_rate(),  # TODO
+            FR1_aa_mut=self.regions['FR1'].aa_mutation_rate(),
+            CDR1_aa_mut=self.regions['CDR1'].aa_mutation_rate(),
+            FR2_aa_mut=self.regions['FR2'].aa_mutation_rate(),
+            CDR2_aa_mut=self.regions['CDR2'].aa_mutation_rate(),
+            FR3_aa_mut=self.regions['FR3'].aa_mutation_rate(),
+            # CDR3_aa_mut=  # TODO
+            # FR4_aa_mut=aa_rates['FR4'],  # TODO
             V_errors=v_errors,
             D_errors=d_errors,
             J_errors=j_errors,
             UTR=self.utr,
             leader=self.leader,
-            CDR1_nt=nt_regions['CDR1'],
-            CDR1_aa=aa_regions['CDR1'],
-            CDR2_nt=nt_regions['CDR2'],
-            CDR2_aa=aa_regions['CDR2'],
-            CDR3_nt=nt_regions['CDR3'],
-            CDR3_aa=aa_regions['CDR3'],
+            CDR1_nt=self.regions['CDR1'].nt_sequence,
+            CDR1_aa=self.regions['CDR1'].aa_sequence,
+            CDR2_nt=self.regions['CDR2'].nt_sequence,
+            CDR2_aa=self.regions['CDR2'].aa_sequence,
+            CDR3_nt=self.regions['CDR3'].nt_sequence,
+            CDR3_aa=self.regions['CDR3'].aa_sequence,
             V_nt=v_nt,
             V_aa=v_aa,
             V_end=v_end,
@@ -574,8 +598,8 @@ class ExtendedIgBlastRecord(IgBlastRecord):
             D_region=d_region,
             DJ_junction=dj_junction,
             J_nt=j_nt,
-            VDJ_nt=vdj_nt,
-            VDJ_aa=vdj_aa,
+            VDJ_nt=self.vdj_sequence,
+            VDJ_aa=nt_to_aa(self.vdj_sequence) if self.vdj_sequence else None,
             name=self.query_name,
             barcode=self.barcode,
             genomic_sequence=self.genomic_sequence,
@@ -728,6 +752,8 @@ class IgBlastParser:
     def _parse_alignment_summary(self, fields):
         start, stop, length, matches, mismatches, gaps = (int(v) for v in fields[:6])
         percent_identity = float(fields[6])
+        assert abs(percent_identity - 100. * matches / length) < 0.1
+        # Note length is not necessarily equal to stop - start. Not sure why.
         return AlignmentSummary(
             start=start - 1,
             stop=stop,
