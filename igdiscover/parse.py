@@ -59,10 +59,28 @@ def split_by_section(iterable, section_starts):
         yield (header, lines)
 
 
-# Each alignment summary describes a region in the V region (FR1, CDR1, etc. up to CDR3)
-AlignmentSummary = namedtuple('AlignmentSummary', 'start stop length matches mismatches gaps percent_identity')
+
 JunctionVDJ = namedtuple('JunctionVDJ', 'v_end vd_junction d_region dj_junction j_start')
 JunctionVJ = namedtuple('JunctionVJ', 'v_end vj_junction j_start')
+
+
+class AlignmentSummary:
+    """An alignment summary describes a framework region or complementarity-determining region
+    (FR1/2/3, CDR1/2/3)"""
+
+    def __init__(self, start, stop, length, matches, mismatches, gaps, percent_identity):
+        self.start = start
+        self.stop = stop
+        self.length = length
+        self.matches = matches
+        self.mismatches = mismatches
+        self.gaps = gaps
+        if matches is not None:
+            assert matches + mismatches + gaps == length
+        if percent_identity is not None:
+            assert matches is not None and length is not None
+            assert abs(100. * matches / length - percent_identity) < 0.1
+        self.percent_identity = percent_identity
 
 
 _Hit = namedtuple('_Hit', [
