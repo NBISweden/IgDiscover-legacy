@@ -262,10 +262,12 @@ class IgBlastRecord:
 class Region:
     """A CDR or FR region in a V(D)J rearranged sequence (FR1, CDR1, FR2, CDR2, FR3, CDR3, FR4)"""
 
-    def __init__(self, nt_sequence, nt_reference, aa_reference, percent_identity=None):
+    def __init__(self, nt_sequence, nt_reference, aa_reference=None, percent_identity=None):
         self.nt_sequence = nt_sequence
         self.aa_sequence = nt_to_aa(nt_sequence) if nt_sequence else None
         self.nt_reference = nt_reference
+        if aa_reference is None and nt_reference is not None:
+            aa_reference = nt_to_aa(nt_reference)
         self.aa_reference = aa_reference
         self.aa_mutations = self._compute_aa_mutations()
         self.percent_identity = percent_identity
@@ -387,6 +389,7 @@ class ExtendedIgBlastRecord(IgBlastRecord):
         self.regions = {
             name: self._make_region(name) for name in
             ('FR1', 'FR2', 'FR3', 'CDR1', 'CDR2', 'CDR3')}
+        self.regions['FR4'] = self._make_fr4_region()
         self.vdj_sequence = self._make_vdj_sequence()
 
     def _make_region(self, name: str):
@@ -398,6 +401,24 @@ class ExtendedIgBlastRecord(IgBlastRecord):
         else:
             percent_identity = None
         return Region(nt_sequence, nt_reference, aa_reference, percent_identity)
+
+    def _make_fr4_region(self):
+        if 'J' not in self.hits:
+            return None
+        j_subject_id = self.hits['J'].subject_id
+        if self.chain not in self.CHAINS:
+            return None
+        cdr3_ref_end = self._database.j_cdr3_end(j_subject_id, self.CHAINS[self.chain])
+        if cdr3_ref_end is None:
+            return None
+        cdr3_query_end = self.hits['J'].query_position(reference_position=cdr3_ref_end)
+        if cdr3_query_end is None:
+            return None
+
+        query = self.full_sequence[cdr3_query_end:self.hits['J'].query_end]
+        ref = self._database.j[j_subject_id][cdr3_ref_end:self.hits['J'].subject_end]
+
+        return Region(query, ref)
 
     def _make_vdj_sequence(self):
         if 'V' not in self.hits or 'J' not in self.hits:
@@ -575,11 +596,11 @@ class ExtendedIgBlastRecord(IgBlastRecord):
             CDR2_SHM=self.regions['CDR2'].nt_mutation_rate(),
             FR3_SHM=self.regions['FR3'].nt_mutation_rate(),
             # CDR3_SHM=,  TODO
-            # FR4_SHM=,  # TODO
+            # FR4_SHM=self.regions['FR4'].nt_mutation_rate(),
             V_SHM=v_shm,
             J_SHM=j_shm,
             V_aa_mut=self.v_aa_mutation_rate(),
-            J_aa_mut=self.fr4_aa_mutation_rate(),  # TODO
+            J_aa_mut=self.regions['FR4'].aa_mutation_rate(),  # TODO J vs FR4
             FR1_aa_mut=self.regions['FR1'].aa_mutation_rate(),
             CDR1_aa_mut=self.regions['CDR1'].aa_mutation_rate(),
             FR2_aa_mut=self.regions['FR2'].aa_mutation_rate(),
