@@ -52,5 +52,5 @@ def test_clusterplot(tmpdir):
 
 
 def test_igblast(run):
-    args = ['igblast', datapath('database/'), datapath('igblast.fasta')]
+    args = ['igblast', '--threads=1', datapath('database/'), datapath('igblast.fasta')]
     run(args, resultpath('assigned.tab'))
