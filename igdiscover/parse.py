@@ -269,10 +269,19 @@ class Region:
         if aa_reference is None and nt_reference is not None:
             aa_reference = nt_to_aa(nt_reference)
         self.aa_reference = aa_reference
-        self.aa_mutations = self._compute_aa_mutations()
+        self.aa_mutations = self._aa_mutations()
         self.percent_identity = percent_identity
+        if percent_identity is None:
+            self.percent_identity = self._percent_identity()
 
-    def _compute_aa_mutations(self):
+    def _percent_identity(self):
+        # FIXME This is not quite how IgBLAST computes percent identity
+        if self.nt_reference is None or self.nt_sequence is None:
+            return None
+        dist = edit_distance(self.nt_reference, self.nt_sequence)
+        return 100. - 100. * dist / len(self.nt_reference)
+
+    def _aa_mutations(self):
         # Earlier versions of this code used edit distance to compute the number of mutations,
         # but some FR1 alignments are reported with a frameshift by IgBLAST. By requiring that
         # reference and query lengths are identical, we can filter out these cases (and use
@@ -334,6 +343,7 @@ class ExtendedIgBlastRecord(IgBlastRecord):
         'FR2_SHM',
         'CDR2_SHM',
         'FR3_SHM',
+        'FR4_SHM',
         'V_SHM',
         'J_SHM',
         'V_aa_mut',
@@ -596,7 +606,7 @@ class ExtendedIgBlastRecord(IgBlastRecord):
             CDR2_SHM=self.regions['CDR2'].nt_mutation_rate(),
             FR3_SHM=self.regions['FR3'].nt_mutation_rate(),
             # CDR3_SHM=,  TODO
-            # FR4_SHM=self.regions['FR4'].nt_mutation_rate(),
+            FR4_SHM=self.regions['FR4'].nt_mutation_rate(),
             V_SHM=v_shm,
             J_SHM=j_shm,
             V_aa_mut=self.v_aa_mutation_rate(),
@@ -833,7 +843,7 @@ class TableWriter:
         d = d.copy()
         d['stop'] = self.yesno(d['stop'])
         for name in ('V_covered', 'D_covered', 'J_covered',
-                'FR1_SHM', 'CDR1_SHM', 'FR2_SHM', 'CDR2_SHM', 'FR3_SHM',
+                'FR1_SHM', 'CDR1_SHM', 'FR2_SHM', 'CDR2_SHM', 'FR3_SHM', 'FR4_SHM',
                 'V_SHM', 'J_SHM', 'V_aa_mut', 'J_aa_mut',
                 'FR1_aa_mut', 'CDR1_aa_mut', 'FR2_aa_mut', 'CDR2_aa_mut', 'FR3_aa_mut'):
             if d[name] is not None:
