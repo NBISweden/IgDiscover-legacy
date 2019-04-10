@@ -395,7 +395,7 @@ class ExtendedIgBlastRecord(IgBlastRecord):
         # Search for the start codon
         for offset in (0, 1, 2):
             for i in range(66, 42, -3):
-                if before_v[-i + offset : -i + 3 + offset] == 'ATG':
+                if before_v[-i + offset:-i + 3 + offset] == 'ATG':
                     return before_v[:-i + offset], before_v[-i + offset:]
         return None, None
 
@@ -429,8 +429,8 @@ class ExtendedIgBlastRecord(IgBlastRecord):
         if cdr3_query_end is None:
             return None
 
-        return AlignmentSummary(start=cdr3_query_start, stop=cdr3_query_end, length=None, matches=None,
-            mismatches=None, gaps=None, percent_identity=None)
+        return AlignmentSummary(start=cdr3_query_start, stop=cdr3_query_end, length=None,
+            matches=None, mismatches=None, gaps=None, percent_identity=None)
 
     def _fix_v_hit(self):
         """
