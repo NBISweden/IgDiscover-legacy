@@ -105,15 +105,11 @@ class Hit:
         self.evalue = evalue
 
         # Derived attributes
-        self.errors = self._errors()
+        self.errors = self._errors(self.subject_alignment, self.query_alignment)
         self.query_sequence = self.query_alignment.replace('-', '')
         self.subject_sequence = self.subject_alignment.replace('-', '')
 
-        # TODO How is percent identity computed by IgBLAST?
-        # Either: 100 - errors / alignment_length and then rounded to two decimal digits
-        # Or: 100 * number of matches divided by length of aligned part of reference
-
-        # assert abs(100. - self.percent_identity - 100. * self.errors / len(self.subject_sequence)) < 0.01
+        assert abs(self.percent_identity - self._percent_identity()) < 0.01
 
     def extend_left_ungapped(self, query_sequence, subject_sequence):
         """
@@ -133,8 +129,6 @@ class Hit:
             else:
                 subject_base = 'N'
             subject_bases.append(subject_base)
-            if query_base != subject_base:
-                self.errors += 1
 
         query_bases = ''.join(query_bases[::-1])
         subject_bases = ''.join(subject_bases[::-1])
@@ -142,8 +136,13 @@ class Hit:
         self.subject_alignment = subject_bases + self.subject_alignment
         self.query_sequence = query_bases + self.query_sequence
         self.subject_sequence = subject_bases + self.subject_sequence
-        # TODO
-        # recompute percent_identity
+        self.errors += self._errors(query_bases, subject_bases)
+        self.percent_identity = self._percent_identity()
+
+    def _percent_identity(self):
+        """This is how IgBLAST computes percent identity"""
+        matches = len(self.subject_alignment) - self.errors
+        return 100. * matches / len(self.subject_alignment)
 
     def covered(self):
         """
@@ -160,8 +159,9 @@ class Hit:
     def subject_end(self):
         return self.subject_start + len(self.subject_sequence)
 
-    def _errors(self):
-        return sum(a != b for a, b in zip(self.subject_alignment, self.query_alignment))
+    @staticmethod
+    def _errors(alignment1, alignment2):
+        return sum(a != b for a, b in zip(alignment1, alignment2))
 
     def query_position(self, reference_position):
         """
