@@ -59,7 +59,6 @@ def split_by_section(iterable, section_starts):
         yield (header, lines)
 
 
-
 JunctionVDJ = namedtuple('JunctionVDJ', 'v_end vd_junction d_region dj_junction j_start')
 JunctionVJ = namedtuple('JunctionVJ', 'v_end vj_junction j_start')
 
@@ -395,34 +394,6 @@ class ExtendedIgBlastRecord(IgBlastRecord):
                 if before_v[-i + offset : -i + 3 + offset] == 'ATG':
                     return before_v[:-i + offset], before_v[-i + offset:]
         return None, None
-
-    # TODO this is unused
-    def _fixed_cdr3_alignment_by_regex(self):
-        """
-        Return a repaired AlignmentSummary object for the CDR3 region which
-        does not use IgBLAST’s coordinates. IgBLAST does not determine the end
-        of the CDR3 correctly, at least when a custom database is used,
-
-        Return (start, end) of CDR3 relative to query. The CDR3 is detected
-        using a regular expression. Return None if no CDR3 detected.
-        """
-        if 'V' not in self.hits or 'J' not in self.hits:
-            return None
-        # Search in a window around the V(D)J junction for the CDR3
-        if 'CDR3' in self.alignments:
-            window_start = self.alignments['CDR3'].start - CDR3_SEARCH_START
-        else:
-            window_start = max(0, self.hits['V'].query_end - CDR3_SEARCH_START)
-        window_end = self.hits['J'].query_end
-        window = self.full_sequence[window_start:window_end]
-        match = find_cdr3(window, self.chain)
-        if not match:
-            return None
-        start = match[0] + window_start
-        end = match[1] + window_start
-        assert start < end
-        return AlignmentSummary(start=start, stop=end, length=None, matches=None,
-            mismatches=None, gaps=None, percent_identity=None)
 
     def _find_cdr3(self):
         """
