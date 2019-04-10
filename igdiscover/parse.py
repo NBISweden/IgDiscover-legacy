@@ -82,22 +82,26 @@ class AlignmentSummary:
         self.percent_identity = percent_identity
 
 
-_Hit = namedtuple('_Hit', [
-    'subject_id',  # name of database record, such as "VH4.11"
-    'query_start',
-    'query_alignment',  # aligned part of the query, with '-' for deletions
-    'subject_start',
-    'subject_alignment',  # aligned reference, with '-' for insertions
-    'subject_length',  # total length of reference, depends only on subject_id
-    'percent_identity',
-    'evalue',
-])
-
-
-class Hit(_Hit):
-    # This avoids having a __dict__ attribute, which is necessary for namedtuple
-    # subclasses that need _asdict() to work (http://bugs.python.org/issue24931)
-    __slots__ = ()
+class Hit:
+    def __init__(
+        self,
+        subject_id: str,
+        query_start: int,
+        query_alignment: str,
+        subject_start: int,
+        subject_alignment: str,
+        subject_length: int,
+        percent_identity: float,
+        evalue: float,
+    ):
+        self.subject_id = subject_id  # name of database record, such as "VH4.11"
+        self.query_start = query_start
+        self.query_alignment = query_alignment  # aligned part of the query, with '-' for deletions
+        self.subject_start = subject_start
+        self.subject_alignment = subject_alignment  # aligned reference, with '-' for insertions
+        self.subject_length = subject_length  # total length of reference, depends only on subject_id
+        self.percent_identity = percent_identity
+        self.evalue = evalue
 
     def covered(self):
         """
@@ -342,7 +346,7 @@ class ExtendedIgBlastRecord(IgBlastRecord):
         self.genomic_sequence = self.full_sequence
         self._database = database
         if 'V' in self.hits:
-            self.hits['V'] = self._fixed_v_hit()
+            self._fix_v_hit()
         self.utr, self.leader = self._utr_leader()
         self.alignments['CDR3'] = self._find_cdr3()
 
@@ -428,24 +432,22 @@ class ExtendedIgBlastRecord(IgBlastRecord):
         return AlignmentSummary(start=cdr3_query_start, stop=cdr3_query_end, length=None, matches=None,
             mismatches=None, gaps=None, percent_identity=None)
 
-    def _fixed_v_hit(self):
+    def _fix_v_hit(self):
         """
         Extend the V hit to the left if it does not start at the first nucleotide of the V gene.
         """
         hit = self.hits['V']
-        d = hit._asdict()
-        while d['subject_start'] > 0 and d['query_start'] > 0:
-            d['query_start'] -= 1
-            d['subject_start'] -= 1
-            preceding_query_base = self.full_sequence[d['query_start']]
-            d['query_alignment'] = preceding_query_base + d['query_alignment']
+        while hit.subject_start > 0 and hit.query_start > 0:
+            hit.query_start -= 1
+            hit.subject_start -= 1
+            preceding_query_base = self.full_sequence[hit.query_start]
+            hit.query_alignment = preceding_query_base + hit.query_alignment
             if self._database.v:
                 reference = self._database.v[hit.subject_id]
-                preceding_base = reference[d['subject_start']]
+                preceding_base = reference[hit.subject_start]
             else:
                 preceding_base = 'N'
-            d['subject_alignment'] = preceding_base + d['subject_alignment']
-        return Hit(**d)
+            hit.subject_alignment = preceding_base + hit.subject_alignment
 
     def fr4_aa_mutation_rate(self):
         if 'J' not in self.hits:
