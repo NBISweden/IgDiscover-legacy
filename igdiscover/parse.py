@@ -85,23 +85,65 @@ class AlignmentSummary:
 class Hit:
     def __init__(
         self,
-        subject_id: str,
+        subject_id: str,  # name of database record, such as "VH4.11"
         query_start: int,
-        query_alignment: str,
+        query_alignment: str,  # aligned part of the query, with '-' for deletions
         subject_start: int,
-        subject_alignment: str,
-        subject_length: int,
+        subject_alignment: str,  # aligned part of reference, with '-' for insertions
+        subject_length: int,  # total length of reference, depends only on subject_id
         percent_identity: float,
         evalue: float,
     ):
-        self.subject_id = subject_id  # name of database record, such as "VH4.11"
+        assert len(subject_alignment) == len(query_alignment)
+        self.subject_id = subject_id
         self.query_start = query_start
-        self.query_alignment = query_alignment  # aligned part of the query, with '-' for deletions
+        self.query_alignment = query_alignment
         self.subject_start = subject_start
-        self.subject_alignment = subject_alignment  # aligned reference, with '-' for insertions
-        self.subject_length = subject_length  # total length of reference, depends only on subject_id
+        self.subject_alignment = subject_alignment
+        self.subject_length = subject_length
         self.percent_identity = percent_identity
         self.evalue = evalue
+
+        # Derived attributes
+        self.errors = self._errors()
+        self.query_sequence = self.query_alignment.replace('-', '')
+        self.subject_sequence = self.subject_alignment.replace('-', '')
+
+        # TODO How is percent identity computed by IgBLAST?
+        # Either: 100 - errors / alignment_length and then rounded to two decimal digits
+        # Or: 100 * number of matches divided by length of aligned part of reference
+
+        # assert abs(100. - self.percent_identity - 100. * self.errors / len(self.subject_sequence)) < 0.01
+
+    def extend_left_ungapped(self, query_sequence, subject_sequence):
+        """
+        Extend this hit to the left until it reaches the first nucleotide of the subject sequence.
+        Used for extending V hits to the 5' end.
+        """
+        query_bases = []
+        subject_bases = []
+
+        while self.subject_start > 0 and self.query_start > 0:
+            self.query_start -= 1
+            self.subject_start -= 1
+            query_base = query_sequence[self.query_start]
+            query_bases.append(query_base)
+            if subject_sequence is not None:
+                subject_base = subject_sequence[self.subject_start]
+            else:
+                subject_base = 'N'
+            subject_bases.append(subject_base)
+            if query_base != subject_base:
+                self.errors += 1
+
+        query_bases = ''.join(query_bases[::-1])
+        subject_bases = ''.join(subject_bases[::-1])
+        self.query_alignment = query_bases + self.query_alignment
+        self.subject_alignment = subject_bases + self.subject_alignment
+        self.query_sequence = query_bases + self.query_sequence
+        self.subject_sequence = subject_bases + self.subject_sequence
+        # TODO
+        # recompute percent_identity
 
     def covered(self):
         """
@@ -118,16 +160,7 @@ class Hit:
     def subject_end(self):
         return self.subject_start + len(self.subject_sequence)
 
-    @property
-    def query_sequence(self):
-        return self.query_alignment.replace('-', '')
-
-    @property
-    def subject_sequence(self):
-        return self.subject_alignment.replace('-', '')
-
-    @property
-    def errors(self):
+    def _errors(self):
         return sum(a != b for a, b in zip(self.subject_alignment, self.query_alignment))
 
     def query_position(self, reference_position):
@@ -346,7 +379,8 @@ class ExtendedIgBlastRecord(IgBlastRecord):
         self.genomic_sequence = self.full_sequence
         self._database = database
         if 'V' in self.hits:
-            self._fix_v_hit()
+            subject_sequence = self._database.v[self.hits['V'].subject_id]
+            self.hits['V'].extend_left_ungapped(self.full_sequence, subject_sequence)
         self.utr, self.leader = self._utr_leader()
         self.alignments['CDR3'] = self._find_cdr3()
 
@@ -431,23 +465,6 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 
         return AlignmentSummary(start=cdr3_query_start, stop=cdr3_query_end, length=None,
             matches=None, mismatches=None, gaps=None, percent_identity=None)
-
-    def _fix_v_hit(self):
-        """
-        Extend the V hit to the left if it does not start at the first nucleotide of the V gene.
-        """
-        hit = self.hits['V']
-        while hit.subject_start > 0 and hit.query_start > 0:
-            hit.query_start -= 1
-            hit.subject_start -= 1
-            preceding_query_base = self.full_sequence[hit.query_start]
-            hit.query_alignment = preceding_query_base + hit.query_alignment
-            if self._database.v:
-                reference = self._database.v[hit.subject_id]
-                preceding_base = reference[hit.subject_start]
-            else:
-                preceding_base = 'N'
-            hit.subject_alignment = preceding_base + hit.subject_alignment
 
     def fr4_aa_mutation_rate(self):
         if 'J' not in self.hits:
@@ -765,8 +782,6 @@ class IgBlastParser:
         query_start = int(query_start) - 1
         subject_start = int(subject_start) - 1
         subject_length = int(subject_length)  # Length of original subject sequence
-        # Percent identity is calculated by IgBLAST as
-        # 100 - errors / alignment_length and then rounded to two decimal digits
         percent_identity = float(percent_identity)
         evalue = float(evalue)
         hit = Hit(subject_id, query_start, query_alignment, subject_start,
