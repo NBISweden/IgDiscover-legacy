@@ -12,7 +12,7 @@ import subprocess
 import hashlib
 import shutil
 
-from .config import GlobalConfig
+from ..config import GlobalConfig
 
 logger = logging.getLogger(__name__)
 

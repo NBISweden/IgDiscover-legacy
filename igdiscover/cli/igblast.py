@@ -40,7 +40,7 @@ from sqt.dna import nt_to_aa
 from ..utils import SerialPool, available_cpu_count
 from ..parse import TableWriter, IgBlastParser
 from ..species import cdr3_start, cdr3_end
-from .config import GlobalConfig
+from ..config import GlobalConfig
 
 
 logger = logging.getLogger(__name__)

@@ -10,7 +10,7 @@ import sys
 import subprocess
 import pkg_resources
 from sqt import SequenceReader
-from .config import Config
+from ..config import Config
 
 try:
     import tkinter as tk
