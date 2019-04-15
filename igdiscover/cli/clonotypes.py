@@ -136,7 +136,7 @@ def group_by_clonotype(table, mismatches, sort, cdr3_core, cdr3_column):
     prev_v = None
     groups = []
     for (v_gene, j_gene, cdr3_length), vj_group in table.groupby(
-            ('V_gene', 'J_gene', 'CDR3_length')):
+            ['V_gene', 'J_gene', 'CDR3_length']):
         if prev_v != v_gene:
             logger.info('Processing %s', v_gene)
         prev_v = v_gene
