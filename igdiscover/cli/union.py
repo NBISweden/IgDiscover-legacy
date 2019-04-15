@@ -5,7 +5,7 @@ import logging
 from collections import namedtuple
 from sqt import FastaReader
 
-from .utils import Merger
+from ..utils import Merger
 
 logger = logging.getLogger(__name__)
 

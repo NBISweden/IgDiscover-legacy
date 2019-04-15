@@ -4,9 +4,9 @@ Test the SiblingMerger class
 import pandas as pd
 import pytest
 
-from igdiscover.discover import SiblingMerger, SiblingInfo
+from igdiscover.cli.discover import SiblingMerger, SiblingInfo
 from igdiscover.utils import UniqueNamer
-from igdiscover.rename import PrefixDict
+from igdiscover.cli.rename import PrefixDict
 
 
 def test_0():

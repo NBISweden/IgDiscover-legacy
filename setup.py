@@ -19,7 +19,7 @@ setup(
     long_description=long_description,
     license="MIT",
     entry_points={"console_scripts": ["igdiscover = igdiscover.__main__:main"]},
-    packages=["igdiscover"],
+    packages=["igdiscover", "igdiscover.cli"],
     package_data={"igdiscover": ["igdiscover.yaml", "Snakefile", "empty.aux"]},
     python_requires=">=3.6",
     install_requires=[

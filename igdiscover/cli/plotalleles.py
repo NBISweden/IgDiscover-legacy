@@ -5,7 +5,7 @@ import sys
 import logging
 import pandas as pd
 from sqt import SequenceReader
-from .table import read_table
+from ..table import read_table
 
 logger = logging.getLogger(__name__)
 

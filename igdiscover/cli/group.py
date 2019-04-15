@@ -56,9 +56,9 @@ import json
 from sqt.align import consensus
 from sqt import SequenceReader
 from xopen import xopen
-from .species import find_cdr3
-from .cluster import Graph
-from .utils import slice_arg
+from ..species import find_cdr3
+from ..cluster import Graph
+from ..utils import slice_arg
 
 # minimum number of sequences needed for attempting to compute a consensus
 MIN_CONSENSUS_SEQUENCES = 3

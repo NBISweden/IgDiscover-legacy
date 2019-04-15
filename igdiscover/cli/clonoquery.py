@@ -19,8 +19,8 @@ from contextlib import ExitStack
 import pandas as pd
 from xopen import xopen
 
-from .table import read_table
-from .utils import slice_arg
+from ..table import read_table
+from ..utils import slice_arg
 from .clonotypes import is_similar_with_junction, CLONOTYPE_COLUMNS
 
 logger = logging.getLogger(__name__)

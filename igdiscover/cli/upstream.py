@@ -10,8 +10,8 @@ Output a FASTA file that contains one consensus sequence for each gene.
 import logging
 from collections import Counter
 
-from .table import read_table
-from .utils import iterative_consensus
+from ..table import read_table
+from ..utils import iterative_consensus
 
 logger = logging.getLogger(__name__)
 

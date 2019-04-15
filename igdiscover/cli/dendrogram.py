@@ -7,7 +7,7 @@ import matplotlib
 from scipy.spatial import distance
 from scipy.cluster import hierarchy
 from sqt import FastaReader
-from igdiscover.utils import distances
+from ..utils import distances
 
 
 logger = logging.getLogger(__name__)

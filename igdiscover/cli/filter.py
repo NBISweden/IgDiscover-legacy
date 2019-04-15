@@ -14,7 +14,7 @@ import logging
 import json
 import pandas as pd
 
-from .table import fix_columns
+from ..table import fix_columns
 
 logger = logging.getLogger(__name__)
 

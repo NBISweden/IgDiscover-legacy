@@ -27,9 +27,9 @@ import pandas as pd
 from xopen import xopen
 from sqt.align import hamming_distance
 
-from .table import read_table
-from .cluster import hamming_single_linkage
-from .utils import slice_arg
+from ..table import read_table
+from ..cluster import hamming_single_linkage
+from ..utils import slice_arg
 
 
 CLONOTYPE_COLUMNS = ['name', 'count', 'V_gene', 'D_gene', 'J_gene', 'CDR3_nt', 'CDR3_aa',

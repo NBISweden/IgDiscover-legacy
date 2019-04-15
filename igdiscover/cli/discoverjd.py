@@ -15,8 +15,8 @@ from typing import List
 
 from sqt import FastaReader
 from sqt.align import edit_distance
-from .utils import Merger, merge_overlapping, unique_name, is_same_gene, slice_arg
-from .table import read_table, fix_columns
+from ..utils import Merger, merge_overlapping, unique_name, is_same_gene, slice_arg
+from ..table import read_table, fix_columns
 
 
 logger = logging.getLogger(__name__)

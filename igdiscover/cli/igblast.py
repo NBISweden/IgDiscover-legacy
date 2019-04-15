@@ -37,9 +37,9 @@ from xopen import xopen
 from sqt import SequenceReader
 from sqt.dna import nt_to_aa
 
-from .utils import SerialPool, available_cpu_count
-from .parse import TableWriter, IgBlastParser
-from .species import cdr3_start, cdr3_end
+from ..utils import SerialPool, available_cpu_count
+from ..parse import TableWriter, IgBlastParser
+from ..species import cdr3_start, cdr3_end
 from .config import GlobalConfig
 
 

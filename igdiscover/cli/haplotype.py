@@ -8,7 +8,7 @@ from itertools import product
 import pandas as pd
 from argparse import ArgumentParser
 from sqt import SequenceReader
-from .table import read_table
+from ..table import read_table
 
 logger = logging.getLogger(__name__)
 

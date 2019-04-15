@@ -35,7 +35,7 @@ import pandas as pd
 from sqt import FastaReader
 from sqt.align import edit_distance
 
-from .utils import UniqueNamer, is_same_gene, ChimeraFinder
+from ..utils import UniqueNamer, is_same_gene, ChimeraFinder
 
 logger = logging.getLogger(__name__)
 

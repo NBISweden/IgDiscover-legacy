@@ -5,7 +5,7 @@ from sqt.dna import reverse_complement
 from sqt import FastaReader, SequenceReader
 import igdiscover
 from igdiscover.utils import relative_symlink
-from igdiscover.config import Config, GlobalConfig
+from igdiscover.cli.config import Config, GlobalConfig
 
 
 try:

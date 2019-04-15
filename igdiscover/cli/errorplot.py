@@ -11,7 +11,7 @@ import seaborn as sns
 from matplotlib.backends.backend_pdf import FigureCanvasPdf, PdfPages
 from matplotlib.figure import Figure
 
-from .table import read_table
+from ..table import read_table
 
 logger = logging.getLogger(__name__)
 

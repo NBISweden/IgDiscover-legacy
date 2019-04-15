@@ -36,7 +36,7 @@ COMMANDS = [
     'count',
     'group',
     'dereplicate',
-    #'multidiscover',
+    # 'multidiscover',
     'germlinefilter',
     'discover',
     'discoverjd',
@@ -89,7 +89,7 @@ def main(arguments=None):
     show_cpustats = dict()
     subparsers = parser.add_subparsers()
     for command_name in COMMANDS:
-        module = importlib.import_module('.' + command_name, 'igdiscover')
+        module = importlib.import_module('.cli.' + command_name, 'igdiscover')
         subparser = subparsers.add_parser(command_name,
             help=module.__doc__.split('\n')[1], description=module.__doc__)
         subparser.set_defaults(func=module.main)

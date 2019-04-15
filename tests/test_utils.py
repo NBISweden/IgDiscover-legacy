@@ -4,7 +4,7 @@ import pytest
 
 from igdiscover.utils import (has_stop, validate_fasta, FastaValidationError, find_overlap,
     merge_overlapping, consensus)
-from igdiscover.config import Config
+from igdiscover.cli.config import Config
 
 
 def test_has_stop():

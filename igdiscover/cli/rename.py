@@ -15,7 +15,7 @@ to disable sorting entirely.
 import sys
 import logging
 from sqt import FastaReader
-from .utils import natural_sort_key
+from ..utils import natural_sort_key
 
 logger = logging.getLogger(__name__)
 
