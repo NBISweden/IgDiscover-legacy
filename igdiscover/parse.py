@@ -307,9 +307,9 @@ class Region:
 
     def nt_mutation_rate(self):
         """Return nucleotide-level mutation rate in percent"""
-        if self.percent_identity is not None:
-            return 100. - self.percent_identity
-        return None
+        if self.percent_identity is None:
+            return None
+        return 100. - self.percent_identity
 
 
 class ExtendedIgBlastRecord(IgBlastRecord):
@@ -414,16 +414,16 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 
     def _make_fr4_region(self):
         if 'J' not in self.hits:
-            return None
+            return Region(None, None)
         j_subject_id = self.hits['J'].subject_id
         if self.chain not in self.CHAINS:
-            return None
+            return Region(None, None)
         cdr3_ref_end = self._database.j_cdr3_end(j_subject_id, self.CHAINS[self.chain])
         if cdr3_ref_end is None:
-            return None
+            return Region(None, None)
         cdr3_query_end = self.hits['J'].query_position(reference_position=cdr3_ref_end)
         if cdr3_query_end is None:
-            return None
+            return Region(None, None)
 
         query = self.full_sequence[cdr3_query_end:self.hits['J'].query_end]
         ref = self._database.j[j_subject_id][cdr3_ref_end:self.hits['J'].subject_end]
@@ -605,7 +605,6 @@ class ExtendedIgBlastRecord(IgBlastRecord):
             FR2_SHM=self.regions['FR2'].nt_mutation_rate(),
             CDR2_SHM=self.regions['CDR2'].nt_mutation_rate(),
             FR3_SHM=self.regions['FR3'].nt_mutation_rate(),
-            # CDR3_SHM=,  TODO
             FR4_SHM=self.regions['FR4'].nt_mutation_rate(),
             V_SHM=v_shm,
             J_SHM=j_shm,
@@ -616,7 +615,6 @@ class ExtendedIgBlastRecord(IgBlastRecord):
             FR2_aa_mut=self.regions['FR2'].aa_mutation_rate(),
             CDR2_aa_mut=self.regions['CDR2'].aa_mutation_rate(),
             FR3_aa_mut=self.regions['FR3'].aa_mutation_rate(),
-            # CDR3_aa_mut=  # TODO
             # FR4_aa_mut=aa_rates['FR4'],  # TODO
             V_errors=v_errors,
             D_errors=d_errors,
