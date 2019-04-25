@@ -69,11 +69,11 @@ def fix_columns(df):
         df.rename(columns={'CDR3_clusters': 'clonotypes'}, inplace=True)
 
 
-def read_table(path, usecols=None, log=False):
+def read_table(path, usecols=None, log=False, nrows=None):
     """
     Read in the table created by the parse subcommand (typically named *.tab)
     """
-    d = pd.read_csv(path, usecols=usecols, sep='\t')
+    d = pd.read_csv(path, usecols=usecols, sep='\t', nrows=nrows)
     fix_columns(d)
     if log:
         logger.info('%s rows in input table', len(d))
