@@ -29,7 +29,7 @@ setup(
         "matplotlib>=3.0",
         "seaborn>=0.9",
         "snakemake>=4.5",
-        "cutadapt",
+        "cutadapt>=2.3",
         "scipy>=1.1",
         "xopen>=0.3.5",
         "ruamel.yaml",

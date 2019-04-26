@@ -330,8 +330,7 @@ def find_overlap(s, t, min_overlap=1):
     >>> find_overlap('ABC', 'X') is None
     True
     """
-    aligner = Aligner(s, max_error_rate=0)
-    aligner.min_overlap = min_overlap
+    aligner = Aligner(s, max_error_rate=0, min_overlap=min_overlap)
     result = aligner.locate(t)
     if result is None:
         return None
