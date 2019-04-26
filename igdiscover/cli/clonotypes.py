@@ -25,7 +25,7 @@ from collections import Counter
 
 import pandas as pd
 from xopen import xopen
-from sqt.align import hamming_distance
+from sqt.align import hamming_distance, edit_distance
 
 from ..table import read_table
 from ..cluster import hamming_single_linkage
@@ -33,7 +33,7 @@ from ..utils import slice_arg
 
 
 CLONOTYPE_COLUMNS = ['name', 'count', 'V_gene', 'D_gene', 'J_gene', 'CDR3_nt', 'CDR3_aa',
-    'FR1_SHM', 'CDR1_SHM', 'FR2_SHM', 'CDR2_SHM', 'FR3_SHM',
+    'FR1_SHM', 'CDR1_SHM', 'FR2_SHM', 'CDR2_SHM', 'FR3_SHM', 'FR4_SHM',
     'FR1_aa_mut', 'CDR1_aa_mut', 'FR2_aa_mut', 'CDR2_aa_mut', 'FR3_aa_mut', 'V_aa_mut', 'J_aa_mut',
     'V_errors', 'J_errors', 'V_SHM', 'J_SHM', 'barcode', 'VDJ_nt', 'VDJ_aa']
 
@@ -47,6 +47,7 @@ def add_arguments(parser):
         help='Sort by group size (largest first). Default: Sort by V/D/J gene names')
     arg('--limit', metavar='N', type=int, default=None,
         help='Print out only the first N groups')
+    arg('--v-shm-threshold', default=5, type=float, help='V SHM threshold for _mindiffrate computations')
     arg('--cdr3-core', default=None,
         type=slice_arg, metavar='START:END',
         help='START:END defines the non-junction region of CDR3 '
@@ -109,6 +110,7 @@ def group_by_cdr3(table, mismatches, cdr3_core, cdr3_column):
 
     # Assign cluster id to each row
     table['cluster_id'] = table[cdr3_column].apply(lambda cdr3: cluster_ids[cdr3])
+
     for index, group in table.groupby('cluster_id'):
         yield group.drop('cluster_id', axis=1)
 
@@ -155,6 +157,32 @@ def group_by_clonotype(table, mismatches, sort, cdr3_core, cdr3_column):
         yield from groups
 
 
+def augment_group(table, v_shm_threshold=5, suffix='_mindiffrate'):
+    """
+    Add columns to the given table that contain percentage difference of VDJ_nt, VDJ_aa, CDR3_nt,
+    CDR3_aa to the least mutated (in terms of V_SHM) sequence in this group.
+    """
+    columns = ['CDR3_nt', 'CDR3_aa', 'VDJ_nt', 'VDJ_aa']
+    i = table.columns.get_loc('barcode')  # insert before this column
+    for column in columns[::-1]:
+        table.insert(i, column + suffix, None)
+
+    # Find row whose V is least mutated
+    root = table.loc[table['V_SHM'].idxmin()]
+    import ipdb; ipdb.set_trace()
+    if root['V_SHM'] > v_shm_threshold:
+        return table
+
+    for column in columns:
+        root_seq = root[column]
+        table[column + suffix] = [
+            round(edit_distance(root_seq, s, maxdiff=int(0.2 * len(root_seq))) / len(root_seq) * 100., 1)
+            for s in table[column]
+        ]
+
+    return table
+
+
 def main(args):
     logger.info('Reading input table ...')
     usecols = CLONOTYPE_COLUMNS
@@ -186,6 +214,7 @@ def main(args):
         cdr3_column = 'CDR3_aa' if args.aa else 'CDR3_nt'
         grouped = group_by_clonotype(table, args.mismatches, args.sort, args.cdr3_core, cdr3_column)
         for group in islice(grouped, 0, args.limit):
+            group = augment_group(group, v_shm_threshold=args.v_shm_threshold)
             if members_file:
                 # We get an intentional empty line between groups since
                 # to_csv() already includes a line break

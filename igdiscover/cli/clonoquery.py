@@ -21,7 +21,7 @@ from xopen import xopen
 
 from ..table import read_table
 from ..utils import slice_arg
-from .clonotypes import is_similar_with_junction, CLONOTYPE_COLUMNS
+from .clonotypes import is_similar_with_junction, CLONOTYPE_COLUMNS, augment_group
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +30,7 @@ def add_arguments(parser):
     arg = parser.add_argument
     arg('--minimum-count', '-c', metavar='N', default=1, type=int,
         help='Discard all rows with count less than N. Default: %(default)s')
+    arg('--v-shm-threshold', default=5, type=float, help='V SHM threshold for _mindiffrate computations')
     arg('--cdr3-core', default=None,
         type=slice_arg, metavar='START:END',
         help='START:END defines the non-junction region of CDR3 '
@@ -142,6 +143,7 @@ def main(args):
         # Do the actual work
         for query_rows, result_table in collect(querytable, reftable, args.mismatches,
                 args.cdr3_core, cdr3_column):
+            result_table = augment_group(result_table, v_shm_threshold=args.v_shm_threshold)
             assert len(query_rows) >= 1
             if summary_file:
                 for query_row in query_rows:
