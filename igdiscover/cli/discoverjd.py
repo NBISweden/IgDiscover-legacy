@@ -12,8 +12,8 @@ import logging
 import pandas as pd
 from collections import defaultdict
 from typing import List
+import dnaio
 
-from sqt import FastaReader
 from sqt.align import edit_distance
 from ..utils import Merger, merge_overlapping, unique_name, is_same_gene, slice_arg
 from ..table import read_table, fix_columns
@@ -327,7 +327,7 @@ def print_table(candidates, other_gene, missing):
 
 def main(args):
     if args.database:
-        with FastaReader(args.database) as fr:
+        with dnaio.open(args.database) as fr:
             database = list(fr)
         logger.info('Read %d sequences from %r', len(database), args.database)
     else:

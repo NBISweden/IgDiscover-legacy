@@ -53,8 +53,8 @@ from contextlib import ExitStack
 from itertools import islice
 import json
 
+import dnaio
 from sqt.align import consensus
-from sqt import SequenceReader
 from xopen import xopen
 from ..species import find_cdr3
 from ..cluster import Graph
@@ -177,7 +177,7 @@ def collect_barcode_groups(
     n = 0
     too_short = 0
     regex_fail = 0
-    with SequenceReader(fastx) as f:
+    with dnaio.open(fastx) as f:
         for record in islice(f, 0, limit):
             if len(record) < minimum_length:
                 too_short += 1
