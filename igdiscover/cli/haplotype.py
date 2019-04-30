@@ -5,9 +5,9 @@ import sys
 import logging
 from typing import List, Tuple, Iterator
 from itertools import product
-from argparse import ArgumentParser
 import pandas as pd
-import dnaio
+from argparse import ArgumentParser
+from sqt import SequenceReader
 from ..table import read_table
 
 logger = logging.getLogger(__name__)
@@ -319,7 +319,7 @@ def read_and_filter(path: str, d_evalue: float, d_coverage: float):
 
 def main(args):
     if args.order is not None:
-        with dnaio.open(args.order) as sr:
+        with SequenceReader(args.order) as sr:
             gene_order = [r.name for r in sr]
     else:
         gene_order = None
@@ -327,7 +327,7 @@ def main(args):
     table = read_and_filter(args.table, args.d_evalue, args.d_coverage)
 
     if args.restrict is not None:
-        with dnaio.open(args.restrict) as sr:
+        with SequenceReader(args.restrict) as sr:
             restrict_names = set(r.name for r in sr)
         table = table[table['V_gene'].map(lambda name: name in restrict_names)]
         logger.info('After restricting to V genes named in %r, %d rows remain', args.restrict,

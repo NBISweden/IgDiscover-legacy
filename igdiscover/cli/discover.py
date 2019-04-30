@@ -14,9 +14,9 @@ import multiprocessing
 from contextlib import ExitStack
 from collections import namedtuple, Counter
 
-import dnaio
 import numpy as np
 import pandas as pd
+from sqt import SequenceReader
 from sqt.align import edit_distance
 
 from ..table import read_table
@@ -495,7 +495,7 @@ def count_prefixes(sequences):
 
 def main(args):
     if args.database:
-        with dnaio.open(args.database) as sr:
+        with SequenceReader(args.database) as sr:
             database = {record.name: record.sequence.upper() for record in sr}
     else:
         database = dict()

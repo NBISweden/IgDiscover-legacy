@@ -14,7 +14,7 @@ from typing import List, Tuple
 import numpy as np
 from sqt.align import edit_distance, multialign, globalalign
 from sqt.dna import GENETIC_CODE, nt_to_aa as _nt_to_aa
-import dnaio
+from sqt import SequenceReader
 from cutadapt.align import Aligner
 
 
@@ -294,7 +294,7 @@ def validate_fasta(path):
     - a record name occurs more than once
     - a sequence occurs more than once
     """
-    with dnaio.open(path) as sr:
+    with SequenceReader(path) as sr:
         records = list(sr)
 
     names = set()

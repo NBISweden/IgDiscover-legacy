@@ -4,8 +4,7 @@ Plot allele usage
 import sys
 import logging
 import pandas as pd
-import dnaio
-
+from sqt import SequenceReader
 from ..table import read_table
 
 logger = logging.getLogger(__name__)
@@ -78,7 +77,7 @@ def main(args):
     matrix = matrix.loc[:, alleles]
 
     if args.database:
-        with dnaio.open(args.database) as f:
+        with SequenceReader(args.database) as f:
             x_names = [record.name for record in f if record.name in matrix.index]
         if not x_names:
             logger.error('None of the sequence names in %r were found in the input table',
@@ -87,7 +86,7 @@ def main(args):
         matrix = matrix.loc[x_names, :]
 
     if args.order:
-        with dnaio.open(args.order) as f:
+        with SequenceReader(args.order) as f:
             ordered_names = [r.name.partition('*')[0] for r in f]
         gene_order = {name: index for index, name in enumerate(ordered_names)}
 

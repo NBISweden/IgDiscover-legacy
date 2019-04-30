@@ -33,7 +33,6 @@ setup(
         "scipy>=1.1",
         "xopen>=0.3.5",
         "ruamel.yaml",
-        "dnaio",
     ],
     classifiers=[
         "Development Status :: 4 - Beta",

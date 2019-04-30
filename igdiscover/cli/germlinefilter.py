@@ -31,8 +31,8 @@ The filtered table is written to standard output.
 import sys
 import logging
 from collections import namedtuple
-import dnaio
 import pandas as pd
+from sqt import FastaReader
 from sqt.align import edit_distance
 
 from ..utils import UniqueNamer, is_same_gene, ChimeraFinder
@@ -280,7 +280,7 @@ class Whitelist:
         self._sequences = dict()
 
     def add_fasta(self, path):
-        with dnaio.open(path) as fr:
+        with FastaReader(path) as fr:
             for record in fr:
                 self._sequences[record.sequence.upper()] = record.name
 

@@ -3,7 +3,7 @@ Compute union of sequences in multiple FASTA files
 """
 import logging
 from collections import namedtuple
-import dnaio
+from sqt import FastaReader
 
 from ..utils import Merger
 
@@ -51,7 +51,7 @@ def main(args):
     n_read = 0
     for path in args.fasta:
         n = 0
-        for record in dnaio.open(path):
+        for record in FastaReader(path):
             merger.add(SequenceInfo(record.sequence.upper(), record.name))
             n += 1
         n_read += n

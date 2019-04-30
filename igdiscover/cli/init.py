@@ -9,7 +9,7 @@ import os.path
 import sys
 import subprocess
 import pkg_resources
-import dnaio
+from sqt import SequenceReader
 from ..config import Config
 
 try:
@@ -182,7 +182,7 @@ def read_and_repair_fasta(path):
     - If a record name occurs more than once, the second record name gets a suffix
     - If a sequence occurs more than once, occurrences after the first are skipped
     """
-    with dnaio.open(path) as sr:
+    with SequenceReader(path) as sr:
         records = list(sr)
 
     names = set()

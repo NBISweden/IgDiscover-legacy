@@ -1,5 +1,5 @@
 # dependencies:
-# python=3.6 seaborn sqt snakemake-minimal cutadapt muscle pear flash igblast=1.7 ruamel.yaml nomkl pigz dnaio
+# python=3.6 seaborn sqt snakemake-minimal cutadapt muscle pear flash igblast=1.7 ruamel.yaml nomkl pigz
 name: igdiscover
 channels:
   - conda-forge

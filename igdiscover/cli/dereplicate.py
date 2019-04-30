@@ -15,7 +15,9 @@ import logging
 from collections import defaultdict
 from itertools import islice
 import json
-import dnaio
+
+from sqt import SequenceReader
+
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +43,7 @@ def main(args):
     too_short = 0
     n = 0
     sequences = defaultdict(list)  # maps sequences to a list of Sequence objects containing them
-    with dnaio.open(args.fastx) as f:
+    with SequenceReader(args.fastx) as f:
         for record in islice(f, 0, args.limit):
             n += 1
             if len(record) < args.minimum_length:

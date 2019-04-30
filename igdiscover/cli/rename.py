@@ -14,8 +14,7 @@ to disable sorting entirely.
 """
 import sys
 import logging
-import dnaio
-
+from sqt import FastaReader
 from ..utils import natural_sort_key
 
 logger = logging.getLogger(__name__)
@@ -104,7 +103,7 @@ def sorted_by_gene(records, gene_order):
 
 def main(args):
     if args.rename_from:
-        with dnaio.open(args.rename_from) as fr:
+        with FastaReader(args.rename_from) as fr:
             template = PrefixDict([])
             for record in fr:
                 try:
@@ -117,12 +116,12 @@ def main(args):
         template = None
 
     if args.order_by:
-        with dnaio.open(args.order_by) as fr:
+        with FastaReader(args.order_by) as fr:
             gene_order = [gene_name(r) for r in fr]
     else:
         gene_order = None
 
-    with dnaio.open(args.target) as fr:
+    with FastaReader(args.target) as fr:
         sequences = list(fr)
 
     # Rename

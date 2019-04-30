@@ -32,8 +32,9 @@ import tempfile
 import json
 import gzip
 
-import dnaio
 from xopen import xopen
+
+from sqt import SequenceReader
 from sqt.dna import nt_to_aa
 
 from ..utils import SerialPool, available_cpu_count
@@ -230,7 +231,7 @@ class Runner:
 
 
 def makeblastdb(fasta, database_name):
-    with dnaio.open(fasta) as fr:
+    with SequenceReader(fasta) as fr:
         sequences = list(fr)
     if not sequences:
         raise ValueError("FASTA file {} is empty".format(fasta))
@@ -248,10 +249,10 @@ class Database:
         """path -- path to database directory with V.fasta, D.fasta, J.fasta"""
         self.path = path
         self.sequence_type = sequence_type
-        with dnaio.open(os.path.join(path, 'V.fasta')) as sr:
+        with SequenceReader(os.path.join(path, 'V.fasta')) as sr:
             self._v_records = list(sr)
         self.v = self._records_to_dict(self._v_records)
-        with dnaio.open(os.path.join(path, 'J.fasta')) as sr:
+        with SequenceReader(os.path.join(path, 'J.fasta')) as sr:
             self._j_records = list(sr)
         self.j = self._records_to_dict(self._j_records)
         self._cdr3_starts = dict()
@@ -365,7 +366,7 @@ def main(args):
             raw_output = stack.enter_context(xopen(args.raw, 'w'))
         else:
             raw_output = None
-        sequences = stack.enter_context(dnaio.open(args.fasta))
+        sequences = stack.enter_context(SequenceReader(args.fasta))
         sequences = islice(sequences, 0, args.limit)
 
         n = 0  # number of records processed so far
