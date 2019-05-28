@@ -192,7 +192,7 @@ def read_and_repair_fasta(path):
         if len(r.sequence) == 0:
             logger.info("Record %r is empty, skipping it.", r.name)
             continue
-        name = r.name
+        name = r.name.split()[0]
         i = 0
         while name in names:
             i += 1
