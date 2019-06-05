@@ -10,11 +10,15 @@ IgDiscover computes V/D/J gene usage profiles and discovers novel V genes
 """
 import sys
 import logging
+import pkgutil
 import importlib
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 import matplotlib as mpl
 import warnings
 import resource
+
+import igdiscover.cli as cli_package
+
 from . import __version__
 
 __author__ = "Marcel Martin"
@@ -22,37 +26,6 @@ __author__ = "Marcel Martin"
 mpl.use('Agg')
 warnings.filterwarnings('ignore', 'axes.color_cycle is deprecated and replaced with axes.prop_cycle')
 warnings.filterwarnings('ignore', 'The `IPython.html` package')
-
-# List of all subcommands. A module of the given name must exist and define
-# add_arguments() and main() functions. Documentation is taken from the first
-# line of the module’s docstring.
-COMMANDS = [
-    'init',
-    'run',
-    'config',
-    'commonv',
-    'igblast',
-    'filter',
-    'count',
-    'group',
-    'dereplicate',
-    # 'multidiscover',
-    'germlinefilter',
-    'discover',
-    'discoverjd',
-    'clusterplot',
-    'errorplot',
-    'upstream',
-    'dendrogram',
-    'rename',
-    'union',
-    'dbdiff',
-    'merge',
-    'clonotypes',
-    'clonoquery',
-    'plotalleles',
-    'haplotype',
-]
 
 logger = logging.getLogger(__name__)
 
@@ -88,9 +61,14 @@ def main(arguments=None):
 
     show_cpustats = dict()
     subparsers = parser.add_subparsers()
-    for command_name in COMMANDS:
-        module = importlib.import_module('.cli.' + command_name, 'igdiscover')
-        subparser = subparsers.add_parser(command_name,
+
+    # Import each module that implements a subcommand and add a subparser for it.
+    # Each subcommand is implemented as a module in the cli subpackage.
+    # It needs to implement an add_arguments() and a main() function.
+    modules = pkgutil.iter_modules(cli_package.__path__)
+    for _, module_name, _ in modules:
+        module = importlib.import_module("." + module_name, cli_package.__name__)
+        subparser = subparsers.add_parser(module_name,
             help=module.__doc__.split('\n')[1], description=module.__doc__)
         subparser.set_defaults(func=module.main)
         module.add_arguments(subparser)
