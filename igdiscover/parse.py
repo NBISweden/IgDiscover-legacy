@@ -404,8 +404,14 @@ class ExtendedIgBlastRecord(IgBlastRecord):
 
     def _make_region(self, name: str):
         nt_sequence = self.region_sequence(name)
-        nt_reference = self._database.v_regions_nt[self.v_gene].get(name)
-        aa_reference = self._database.v_regions_aa[self.v_gene].get(name)
+        if self.v_gene in self._database.v_regions_nt:
+            nt_reference = self._database.v_regions_nt[self.v_gene].get(name)
+        else:
+            nt_reference = None
+        if self.v_gene in self._database.v_regions_aa:
+            aa_reference = self._database.v_regions_aa[self.v_gene].get(name)
+        else:
+            aa_reference = None
         if self.alignments.get(name, None) is not None:
             percent_identity = self.alignments[name].percent_identity
         else:
