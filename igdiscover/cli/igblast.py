@@ -48,8 +48,8 @@ logger = logging.getLogger(__name__)
 
 def add_arguments(parser):
     arg = parser.add_argument
-    arg('--threads', '-t', '-j', type=int, default=available_cpu_count(),
-        help='Number of threads. Default: no. of available CPUs (%(default)s)')
+    arg('--threads', '-t', '-j', type=int, default=1,
+        help='Number of threads. Default: 1. Use 0 for no. of available CPUs.')
     arg('--cache', action='store_true', default=None, help='Use the cache')
     arg('--no-cache', action='store_false', dest='cache', default=None, help='Do not use the cache')
     arg('--penalty', type=int, choices=(-1, -2, -3, -4), default=None,
@@ -312,7 +312,7 @@ class Database:
         return v_regions_nt, v_regions_aa
 
 
-def igblast(database, sequences, sequence_type, species=None, threads=None, penalty=None,
+def igblast(database, sequences, sequence_type, species=None, threads=1, penalty=None,
         raw_output=None, use_cache=False):
     """
     Run IgBLAST, parse results and yield (Extended-)IgBlastRecord objects.
@@ -321,11 +321,9 @@ def igblast(database, sequences, sequence_type, species=None, threads=None, pena
         If it is a path, then only IgBlastRecord objects are returned.
     sequences -- an iterable of Sequence objects
     sequence_type -- 'Ig' or 'TCR'
-    threads -- number of threads. If None, then available_cpu_count() is used.
+    threads -- number of threads.
     raw_output -- If not None, raw IgBLAST output is written to this file
     """
-    if threads is None:
-        threads = available_cpu_count()
     if isinstance(database, str):
         database_dir = database
         database = None
@@ -356,6 +354,8 @@ def main(args):
         global _igblastcache
         _igblastcache = IgBlastCache()
         logger.info('IgBLAST cache enabled')
+    if args.threads == 0:
+        args.threads = available_cpu_count()
     database = Database(args.database, args.sequence_type)
     detected_cdr3s = 0
     writer = TableWriter(sys.stdout)
