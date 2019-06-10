@@ -276,7 +276,7 @@ class Region:
 
     def _percent_identity(self):
         # FIXME This is not quite how IgBLAST computes percent identity
-        if self.nt_reference is None or self.nt_sequence is None:
+        if not self.nt_reference or not self.nt_sequence:
             return None
         dist = edit_distance(self.nt_reference, self.nt_sequence)
         return 100. - 100. * dist / len(self.nt_reference)
@@ -287,8 +287,8 @@ class Region:
         # reference and query lengths are identical, we can filter out these cases (and use
         # Hamming distance to get some speedup)
         if (
-            self.aa_reference is None
-            or self.aa_sequence is None
+            not self.aa_reference
+            or not self.aa_sequence
             or len(self.nt_sequence) != len(self.nt_reference)
         ):
             return None
@@ -301,7 +301,7 @@ class Region:
         return dist
 
     def aa_mutation_rate(self):
-        if self.aa_mutations is None or self.aa_reference is None:
+        if self.aa_mutations is None or not self.aa_reference:
             return None
         return 100. * self.aa_mutations / len(self.aa_reference)
 
