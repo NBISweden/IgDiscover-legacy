@@ -197,7 +197,7 @@ def read_and_repair_fasta(path):
         while name in names:
             i += 1
             name = r.name + '_{}'.format(i)
-        if name != r.name:
+        if name != r.name.split()[0]:
             logger.info('Record name %r replaced with %r because it occurs more than once', r.name, name)
         if r.sequence in sequences:
             logger.info('Skipping %r because it contains the same sequence as %r',

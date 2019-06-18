@@ -29,6 +29,14 @@ def none_if_na(s):
     return None if s == 'N/A' else s
 
 
+def gene_without_prefix(s):
+    if s == "N/A":
+        return None
+    else:
+        assert s.startswith("%")
+        return s[1:]
+
+
 def split_by_section(iterable, section_starts):
     """
     Parse a stream of lines into chunks of sections. When one of the lines
@@ -718,9 +726,9 @@ class IgBlastParser:
                     d_gene = None
                 else:
                     v_gene, d_gene, j_gene, chain, has_stop, in_frame, is_productive, strand = fields
-                v_gene = none_if_na(v_gene)
-                d_gene = none_if_na(d_gene)
-                j_gene = none_if_na(j_gene)
+                v_gene = gene_without_prefix(v_gene)
+                d_gene = gene_without_prefix(d_gene)
+                j_gene = gene_without_prefix(j_gene)
                 chain = none_if_na(chain)
                 has_stop = self.BOOL[has_stop]
                 in_frame = self.FRAME[in_frame]
@@ -814,6 +822,12 @@ class IgBlastParser:
         """
         (gene, subject_id, query_start, query_alignment, subject_start, subject_alignment,
             percent_identity, subject_length, evalue) = line.split('\t')
+        # Names have been mangled by adding a '%' to the beginning. Otherwise, IgBLAST
+        # may recognize sequence ids such as AB123456 as being an accession and mangle
+        # them to conform to BLAST’s naming scheme.
+        # Undo this here.
+        assert subject_id.startswith('%')
+        subject_id = subject_id[1:]
         query_start = int(query_start) - 1
         subject_start = int(subject_start) - 1
         subject_length = int(subject_length)  # Length of original subject sequence

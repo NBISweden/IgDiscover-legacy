@@ -230,16 +230,24 @@ class Runner:
         return igblast_result, records
 
 
-def makeblastdb(fasta, database_name):
-    with SequenceReader(fasta) as fr:
-        sequences = list(fr)
-    if not sequences:
+def makeblastdb(fasta, database_name, prefix=''):
+    """
+    prefix -- prefix to add to sequence ids
+    """
+    n = 0
+    with SequenceReader(fasta) as fr, open(database_name + ".fasta", "w") as db:
+        for record in fr:
+            name = prefix + record.name.split(maxsplit=1)[0]
+            db.write(">{}\n{}\n".format(name, record.sequence))
+            n += 1
+    if n == 0:
         raise ValueError("FASTA file {} is empty".format(fasta))
+
     process_output = subprocess.check_output(
-        ['makeblastdb', '-parse_seqids', '-dbtype', 'nucl', '-in', fasta, '-out', database_name],
+        ['makeblastdb', '-parse_seqids', '-dbtype', 'nucl', '-in', database_name + ".fasta", '-out',
+            database_name],
         stderr=subprocess.STDOUT
     )
-    shutil.copy(fasta, database_name + '.fasta')
     if b'Error: ' in process_output:
         raise subprocess.SubprocessError()
 
@@ -249,11 +257,9 @@ class Database:
         """path -- path to database directory with V.fasta, D.fasta, J.fasta"""
         self.path = path
         self.sequence_type = sequence_type
-        with SequenceReader(os.path.join(path, 'V.fasta')) as sr:
-            self._v_records = list(sr)
+        self._v_records = self._read_fasta(os.path.join(path, 'V.fasta'))
         self.v = self._records_to_dict(self._v_records)
-        with SequenceReader(os.path.join(path, 'J.fasta')) as sr:
-            self._j_records = list(sr)
+        self._j_records = self._read_fasta(os.path.join(path, 'J.fasta'))
         self.j = self._records_to_dict(self._j_records)
         self._cdr3_starts = dict()
         self._cdr3_ends = dict()
@@ -261,6 +267,15 @@ class Database:
             self._cdr3_starts[chain] = {name: cdr3_start(s, chain) for name, s in self.v.items()}
             self._cdr3_ends[chain] = {name: cdr3_end(s, chain) for name, s in self.j.items()}
         self.v_regions_nt, self.v_regions_aa = self._find_v_regions()
+
+    @staticmethod
+    def _read_fasta(path):
+        records = []
+        with SequenceReader(path) as sr:
+            for record in sr:
+                record.name = record.name.split(maxsplit=1)[0]
+                records.append(record)
+        return records
 
     @staticmethod
     def _records_to_dict(records):
@@ -333,7 +348,11 @@ def igblast(database, sequences, sequence_type, species=None, threads=1, penalty
         # Create the three BLAST databases in a temporary directory
         blastdb_dir = stack.enter_context(tempfile.TemporaryDirectory())
         for gene in ['V', 'D', 'J']:
-            makeblastdb(os.path.join(database_dir, gene + '.fasta'), os.path.join(blastdb_dir, gene))
+            makeblastdb(
+                os.path.join(database_dir, gene + '.fasta'),
+                os.path.join(blastdb_dir, gene),
+                prefix='%',
+            )
 
         chunks = chunked(sequences, chunksize=1000)
         runner = Runner(blastdb_dir, species=species, sequence_type=sequence_type, penalty=penalty,
