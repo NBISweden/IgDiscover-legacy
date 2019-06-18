@@ -356,7 +356,9 @@ def main(args):
         logger.info('IgBLAST cache enabled')
     if args.threads == 0:
         args.threads = available_cpu_count()
+    logger.info("Running IgBLAST on database sequences to find CDR/FR region locations")
     database = Database(args.database, args.sequence_type)
+    logger.info("Running IgBLAST on input reads")
     detected_cdr3s = 0
     writer = TableWriter(sys.stdout)
     start_time = time.time()
