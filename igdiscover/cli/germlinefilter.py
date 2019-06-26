@@ -33,7 +33,7 @@ import logging
 from collections import namedtuple
 import dnaio
 import pandas as pd
-from sqt.align import edit_distance
+from alignlib import edit_distance
 
 from ..utils import UniqueNamer, is_same_gene, ChimeraFinder
 

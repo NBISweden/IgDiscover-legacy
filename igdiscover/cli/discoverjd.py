@@ -14,7 +14,7 @@ from collections import defaultdict
 from typing import List
 import dnaio
 
-from sqt.align import edit_distance
+from alignlib import edit_distance
 from ..utils import Merger, merge_overlapping, unique_name, is_same_gene, slice_arg
 from ..table import read_table, fix_columns
 

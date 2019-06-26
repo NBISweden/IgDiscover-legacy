@@ -25,7 +25,7 @@ from collections import Counter
 
 import pandas as pd
 from xopen import xopen
-from sqt.align import hamming_distance, edit_distance
+from alignlib import hamming_distance, edit_distance
 
 from ..table import read_table
 from ..cluster import hamming_single_linkage

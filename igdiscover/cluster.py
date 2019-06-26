@@ -2,7 +2,7 @@ from collections import OrderedDict, defaultdict
 import pandas as pd
 from scipy.spatial import distance
 from scipy.cluster import hierarchy
-from sqt.align import hamming_distance
+from alignlib import hamming_distance
 from .utils import distances
 from .trie import Trie
 
