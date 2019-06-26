@@ -1,5 +1,5 @@
 """
-Group sequences that share a barcode (molecular identifier, MID)
+Group sequences that share a unique molecular identifier (UMI, barcode)
 
 Since the same barcode can sometimes be used by different sequences, the CDR3
 sequence can further be used to distinguish sequences. You can choose between
@@ -52,9 +52,10 @@ from collections import Counter, defaultdict
 from contextlib import ExitStack
 from itertools import islice
 import json
+from typing import List, Iterable
 
+import dnaio
 from sqt.align import consensus
-from sqt import SequenceReader
 from xopen import xopen
 from ..species import find_cdr3
 from ..cluster import Graph
@@ -93,7 +94,7 @@ def add_arguments(parser):
         help='FASTA or FASTQ file (can be gzip-compressed) with sequences')
 
 
-def hamming_neighbors(s):
+def hamming_neighbors(s: str) -> Iterable[str]:
     """Return sequences that are at hamming distance 1 and return also s itself"""
     for i in range(len(s)):
         for c in 'ACGT':
@@ -102,82 +103,109 @@ def hamming_neighbors(s):
     yield s
 
 
-def cluster_sequences(records):
+def cluster_by_cdr3(records, pseudo_cdr3: slice, real_cdr3: bool) -> List[List]:
     """
-    Single-linkage clustering. Two sequences are linked if
-    - their (pseudo-) CDR3 sequences have a hamming distance of at most 1
-    - and their lengths differs by at most 2.
-    """
-    if len(records) == 1:  # TODO check if this helps
-        return [records]
+    Single-linkage clustering of sequences based on sequence length and CDR3 similarity.
 
-    # Cluster unique CDR3s first
-    cdr3s = set(r.cdr3 for r in records)
-    sorted_cdr3s = sorted(cdr3s)  # For reproducibility
+    Two sequences are linked if
+    - their (pseudo-) CDR3 sequences have a hamming distance of at most 1
+    - and their full lengths (not the CDR3 length) differs by at most 2.
+
+    Sequences for which no CDR3 could be detected are filtered out.
+    """
+    assert pseudo_cdr3 or real_cdr3
+
+    records_cdr3s = []
+    for record in records:
+        if real_cdr3:
+            match = find_cdr3(record.sequence, chain='VH')
+            if match:
+                cdr3 = record.sequence[match[0]:match[1]]
+            else:
+                continue
+        else:
+            assert pseudo_cdr3
+            cdr3 = record.sequence[pseudo_cdr3]
+        records_cdr3s.append((record, cdr3))
+    del records
+
+    # logger.info('%s times (%.2f%%), the CDR3 regex matched', n, n / (n + regex_fail) * 100)
+
+    if len(records_cdr3s) == 1:  # TODO check if this helps
+        return [records_cdr3s]
+
+    cdr3s = [rc[1] for rc in records_cdr3s]
+
+    # Cluster by CDR3 sequences
+    unique_cdr3s = set(cdr3s)
+    sorted_cdr3s = sorted(unique_cdr3s)  # For reproducibility
     graph = Graph(sorted_cdr3s)
     for cdr3 in sorted_cdr3s:
         for neighbor in hamming_neighbors(cdr3):
-            if neighbor in cdr3s:
+            if neighbor in unique_cdr3s:
                 graph.add_edge(cdr3, neighbor)
-    cdr3_components = graph.connected_components()
+    cdr3_clusters = graph.connected_components()
 
-    # Maps CDR3 sequence to list of records of sequence that have that CDR3
+    # Map each CDR3 sequence to a list of records with that CDR3
     cdr3_records = defaultdict(list)
-    for r in records:
-        cdr3_records[r.cdr3].append(r)
+    for record, cdr3 in records_cdr3s:
+        cdr3_records[cdr3].append(record)
 
-    components = []
-    for cdr3_component in cdr3_components:
-        component_records = []
-        for cdr3 in cdr3_component:
-            component_records.extend(cdr3_records[cdr3])
+    # To compute the final clusters that also take length into account,
+    # split the CDR3 clusters where necessary
+    clusters = []
+    for cdr3_cluster in cdr3_clusters:
+        # Gather all records in this CDR3 cluster
+        cluster_records = []
+        for cdr3 in cdr3_cluster:
+            for record in cdr3_records[cdr3]:
+                cluster_records.append((record, cdr3))
 
-        component_records.sort(key=lambda r: len(r.sequence))
-        component = []
+        # For "clustering" by sequence length, sort by sequence length
+        # and look at adjacent records: If their length differs too much,
+        # the cluster needs to be split
+        cluster_records.sort(key=lambda rc: len(rc[0].sequence))
+        cluster = []
         prev_length = None
-        for r in component_records:
-            l = len(r.sequence)
+        for record, cdr3 in cluster_records:
+            l = len(record.sequence)
             if prev_length is not None and l > prev_length + 2:
                 # Start a new component
-                components.append(component)
-                component = []
-            component.append(r)
+                clusters.append(cluster)
+                cluster = []
+            cluster.append((record, cdr3))
             prev_length = l
-        if component:
-            components.append(component)
+        if cluster:
+            clusters.append(cluster)
 
-    assert sum(len(component) for component in components) == len(records)
-    assert all(components)  # Components must be non-empty
-    return components
+    assert sum(len(component) for component in clusters) == len(records_cdr3s)
+    assert all(clusters)  # Components must be non-empty
+    return clusters
 
 
 GROUPS_HEADER = ['barcode', 'cdr3', 'name', 'sequence']
 
 
-def write_group(csvfile, barcode, sequences, with_cdr3):
-    for sequence in sequences:
+def write_group(csvfile, barcode, sequences, write_cdr3: bool):
+    for sequence, cdr3 in sequences:
         row = [barcode, sequence.name.split(maxsplit=1)[0], sequence.sequence]
-        if with_cdr3:
-            row[1:1] = [sequence.cdr3]
+        if write_cdr3:
+            row[1:1] = [cdr3]
         csvfile.writerow(row)
     csvfile.writerow([])
 
 
-def collect_barcode_groups(
-        fastx, barcode_length, trim_g, limit, minimum_length, pseudo_cdr3, real_cdr3):
+def collect_barcode_groups(fastx, barcode_length, trim_g, limit, minimum_length):
     """
     fastx -- path to FASTA or FASTQ input
 
     """
-    group_by_cdr3 = pseudo_cdr3 or real_cdr3
-    if group_by_cdr3:
-        cdr3s = set()
+    cdr3s = set()
     # Map barcodes to lists of sequences
     barcodes = defaultdict(list)
     n = 0
     too_short = 0
-    regex_fail = 0
-    with SequenceReader(fastx) as f:
+    with dnaio.open(fastx) as f:
         for record in islice(f, 0, limit):
             if len(record) < minimum_length:
                 too_short += 1
@@ -196,30 +224,11 @@ def collect_barcode_groups(
                 if unbarcoded.qualities:
                     unbarcoded.qualities = unbarcoded.qualities[-len(unbarcoded.sequence):]
 
-            if real_cdr3:
-                match = find_cdr3(unbarcoded.sequence, chain='VH')
-                if match:
-                    cdr3 = unbarcoded.sequence[match[0]:match[1]]
-                else:
-                    regex_fail += 1
-                    continue
-            elif pseudo_cdr3:
-                cdr3 = unbarcoded.sequence[pseudo_cdr3]
-            if group_by_cdr3:
-                unbarcoded.cdr3 = cdr3  # TODO slight abuse of Sequence objects
-                cdr3s.add(cdr3)
             barcodes[barcode].append(unbarcoded)
             n += 1
 
-    logger.info('%s sequences in input', n + too_short + regex_fail)
-    logger.info('%s sequences long enough', n + regex_fail)
-    if real_cdr3:
-        logger.info('Using the real CDR3')
-        logger.info('%s times (%.2f%%), the CDR3 regex matched', n, n / (n + regex_fail) * 100)
-    elif pseudo_cdr3:
-        logger.info('Using the pseudo CDR3')
-    if group_by_cdr3:
-        logger.info('%s unique CDR3s', len(cdr3s))
+    logger.info('%s sequences in input', n + too_short)
+    logger.info('%s sequences long enough', n)
 
     return barcodes
 
@@ -250,13 +259,14 @@ def main(args):
     if args.barcode_length == 0:
         sys.exit("Barcode length must be non-zero")
 
-    group_by_cdr3 = args.pseudo_cdr3 or args.real_cdr3
     barcodes = collect_barcode_groups(args.fastx, args.barcode_length, args.trim_g,
-        args.limit, args.minimum_length, args.pseudo_cdr3, args.real_cdr3)
+        args.limit, args.minimum_length)
 
     logger.info('%s unique barcodes', len(barcodes))
     barcode_singletons = sum(1 for seqs in barcodes.values() if len(seqs) == 1)
     logger.info('%s barcodes used by only a single sequence (singletons)', barcode_singletons)
+
+    group_by_cdr3 = args.pseudo_cdr3 or args.real_cdr3
 
     with ExitStack() as stack:
         if args.groups_output:
@@ -273,42 +283,41 @@ def main(args):
         sizes = []
         for barcode in sorted(barcodes):
             sequences = barcodes[barcode]
-            if len(sequences) != len(set(s.name for s in sequences)):
+            if len(sequences) != len(set(sequence.name for sequence in sequences)):
                 logger.error('Duplicate sequence records detected')
                 sys.exit(1)
             if group_by_cdr3:
-                clusters = cluster_sequences(sequences)  # it’s a list of lists
+                clusters = cluster_by_cdr3(sequences, args.pseudo_cdr3, args.real_cdr3)
             else:
-                # TODO it would be useful to do the clustering by length that cluster_sequences() does
-                clusters = [sequences]
+                # TODO it would be useful to do the length clustering that cluster_by_cdr3() does
+                clusters = [[(record, None) for record in sequences]]
             n_clusters += len(clusters)
             for cluster in clusters:
+
                 sizes.append(len(cluster))
                 if group_out:
-                    write_group(group_out, barcode, cluster, with_cdr3=group_by_cdr3)
+                    write_group(group_out, barcode, cluster, write_cdr3=group_by_cdr3)
                 if len(cluster) == 1:
                     n_singletons += 1
                 if len(cluster) < MIN_CONSENSUS_SEQUENCES:
+
+                    sequence = cluster[0][0].sequence
+                    name = cluster[0][0].name
+                    cdr3 = cluster[0][1]
                     too_few += 1
-                    sequence = cluster[0].sequence
-                    name = cluster[0].name
-                    if group_by_cdr3:
-                        cdr3 = cluster[0].cdr3
                 else:
-                    cons = consensus({s.name: s.sequence for s in cluster}, threshold=0.501)
+                    cons = consensus({record.name: record.sequence for record, cdr3 in cluster}, threshold=0.501)
                     if 'N' in cons:
                         # Pick the first sequence as the output sequence
-                        sequence = cluster[0].sequence
-                        name = cluster[0].name
-                        if group_by_cdr3:
-                            cdr3 = cluster[0].cdr3
+                        sequence = cluster[0][0].sequence
+                        name = cluster[0][0].name
+                        cdr3 = cluster[0][1]
                         n_ambiguous += 1
                     else:
                         sequence = cons
                         n_consensus += 1
-                        if group_by_cdr3:
-                            cdr3 = Counter(cl.cdr3 for cl in cluster).most_common(1)[0][0]
                         name = 'consensus{}'.format(n_consensus)
+                        cdr3 = Counter(cdr3 for record, cdr3 in cluster).most_common(1)[0][0]
 
                 name = name.split(maxsplit=1)[0]
                 if name.endswith(';'):
@@ -327,7 +336,6 @@ def main(args):
     if args.groups_output:
         logger.info('Groups written to %r', args.groups_output)
 
-    assert sum(sizes) == sum(len(v) for v in barcodes.values())
     if args.json:
         sizes_counter = Counter(sizes)
         stats = {

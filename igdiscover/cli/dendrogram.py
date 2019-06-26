@@ -4,9 +4,9 @@ Draw a dendrogram of sequences in a FASTA file.
 import logging
 import numpy as np
 import matplotlib
+import dnaio
 from scipy.spatial import distance
 from scipy.cluster import hierarchy
-from sqt import FastaReader
 from ..utils import distances
 
 
@@ -39,11 +39,11 @@ class PrefixComparer:
 
 
 def main(args):
-    with FastaReader(args.fasta) as fr:
+    with dnaio.open(args.fasta) as fr:
         sequences = list(fr)
     logger.info('Plotting dendrogram of %s sequences', len(sequences))
     if args.mark:
-        with FastaReader(args.mark) as fr:
+        with dnaio.open(args.mark) as fr:
             mark = PrefixComparer(record.sequence for record in fr)
         labels = []
         n_new = 0

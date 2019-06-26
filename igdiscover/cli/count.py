@@ -10,8 +10,7 @@ name. Use --database to change this.
 """
 import sys
 import logging
-import pandas as pd
-from sqt import SequenceReader
+import dnaio
 from ..table import read_table
 from ..utils import natural_sort_key
 from .discoverjd import filter_by_allele_ratio, compute_expressions
@@ -76,7 +75,7 @@ def plot_counts(counts, gene_type):
 
 def main(args):
     if args.database:
-        with SequenceReader(args.database) as fr:
+        with dnaio.open(args.database) as fr:
             gene_names = [record.name for record in fr]
         gene_names.sort(key=natural_sort_key)
     else:

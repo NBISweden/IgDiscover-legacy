@@ -13,7 +13,7 @@ import sys
 import logging
 import numpy as np
 from scipy.optimize import linear_sum_assignment
-from sqt import FastaReader
+import dnaio
 from sqt.align import hamming_distance
 
 logger = logging.getLogger(__name__)
@@ -174,9 +174,9 @@ def main(args):
         assert args.color == 'always'
         colored = True
 
-    with FastaReader(args.a) as f:
+    with dnaio.open(args.a) as f:
         a_records = list(f)
-    with FastaReader(args.b) as f:
+    with dnaio.open(args.b) as f:
         b_records = list(f)
 
     has_duplicate_names = False

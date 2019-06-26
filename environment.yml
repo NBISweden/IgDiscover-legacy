@@ -1,5 +1,5 @@
 # dependencies:
-# python=3.6 seaborn sqt snakemake-minimal cutadapt muscle pear flash igblast=1.10 ruamel.yaml nomkl pigz
+# python=3.6 seaborn sqt snakemake-minimal cutadapt muscle pear flash igblast=1.10 ruamel.yaml nomkl pigz dnaio
 
 channels:
   - defaults

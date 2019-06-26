@@ -32,9 +32,8 @@ import tempfile
 import json
 import gzip
 
+import dnaio
 from xopen import xopen
-
-from sqt import SequenceReader
 from sqt.dna import nt_to_aa
 
 from ..utils import SerialPool, available_cpu_count
@@ -235,7 +234,7 @@ def makeblastdb(fasta, database_name, prefix=''):
     prefix -- prefix to add to sequence ids
     """
     n = 0
-    with SequenceReader(fasta) as fr, open(database_name + ".fasta", "w") as db:
+    with dnaio.open(fasta) as fr, open(database_name + ".fasta", "w") as db:
         for record in fr:
             name = prefix + record.name.split(maxsplit=1)[0]
             db.write(">{}\n{}\n".format(name, record.sequence))
@@ -271,7 +270,7 @@ class Database:
     @staticmethod
     def _read_fasta(path):
         records = []
-        with SequenceReader(path) as sr:
+        with dnaio.open(path) as sr:
             for record in sr:
                 record.name = record.name.split(maxsplit=1)[0]
                 records.append(record)
@@ -387,7 +386,7 @@ def main(args):
             raw_output = stack.enter_context(xopen(args.raw, 'w'))
         else:
             raw_output = None
-        sequences = stack.enter_context(SequenceReader(args.fasta))
+        sequences = stack.enter_context(dnaio.open(args.fasta))
         sequences = islice(sequences, 0, args.limit)
 
         n = 0  # number of records processed so far
