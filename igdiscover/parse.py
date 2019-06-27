@@ -15,11 +15,11 @@ import logging
 from collections import namedtuple
 import functools
 
-from sqt.dna import reverse_complement
 from alignlib import edit_distance, hamming_distance
 
 from .utils import nt_to_aa
-from .species import find_cdr3, CDR3_SEARCH_START
+from .dna import reverse_complement
+
 
 logger = logging.getLogger(__name__)
 

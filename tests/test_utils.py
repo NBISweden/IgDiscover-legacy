@@ -3,7 +3,7 @@ import pkg_resources
 import pytest
 
 from igdiscover.utils import (has_stop, validate_fasta, FastaValidationError, find_overlap,
-    merge_overlapping, consensus)
+    merge_overlapping)
 from igdiscover.cli.config import Config
 
 
@@ -78,16 +78,3 @@ def test_merge_overlapping():
     assert merge_overlapping('LOWORLD', 'HELLOW') == 'HELLOWORLD'
     assert merge_overlapping('HELLOWORLD', 'LOWO') == 'HELLOWORLD'
     assert merge_overlapping('LOWO', 'HELLOWORLD') == 'HELLOWORLD'
-
-
-def test_consensus():
-    assert consensus((
-        'TATTACTGTGCGAG---',
-        'TATTACTGTGCGAGAGA',
-        'TATTACTGTGCGAGAGA',
-        'TATTACTGTGCGAGAG-',
-        'TATTACTGTGCGAGAG-',
-        'TATTACTGTGCGAG---',
-        'TATTACTGTGCGAGA--',
-    )) == \
-        'TATTACTGTGCGAGAGA'

@@ -7,16 +7,18 @@ import re
 import random
 import hashlib
 import resource
-from collections import OrderedDict, Counter, defaultdict
+from collections import defaultdict
 from itertools import groupby
 from typing import List, Tuple
 
+import dnaio
 import numpy as np
 from alignlib import edit_distance
-from sqt.align import multialign, globalalign
-from sqt.dna import GENETIC_CODE, nt_to_aa as _nt_to_aa
-import dnaio
+from sqt.align import globalalign
+from sqt.dna import nt_to_aa as _nt_to_aa
 from cutadapt.align import Aligner
+
+from .dna import GENETIC_CODE
 
 
 def downsampled(population, size):
@@ -59,65 +61,6 @@ def distances(sequences, band=0.2):
                 d = 0 if s == t else unique_distances[(s, t)]
                 m[j, i] = m[i, j] = d
     return m
-
-
-# copied from sqt and modified
-def consensus(aligned, threshold=0.7, ambiguous='N', keep_gaps=False):
-    """
-    Compute a consensus from multialign() output, allowing degraded sequences
-    in the 3' end.
-
-    aligned -- a dict mapping names to sequences or a list of sequences
-    keep_gaps -- whether the returned sequence contains gaps (-)
-    """
-    n = len(aligned)
-    result = []
-    if hasattr(aligned, 'values'):
-        sequences = aligned.values()
-    else:
-        sequences = aligned
-
-    active = int(len(aligned) * 0.05)
-    for i, chars in enumerate(reversed(list(zip(*sequences)))):
-        counter = Counter(chars)
-        active = max(n - counter['-'], active)
-        assert counter['-'] >= n - active
-        counter['-'] -= n - active
-        char, freq = counter.most_common(1)[0]
-        if i >= 10:  # TODO hard-coded
-            active = n
-        if freq / active >= threshold:
-            if keep_gaps or char != '-':
-                result.append(char)
-        else:
-            result.append(ambiguous)
-    return ''.join(result[::-1])
-
-
-def iterative_consensus(sequences, program='muscle-medium', threshold=0.6,
-        subsample_size=200, maximum_subsample_size=1600):
-    """
-    Compute a consensus sequence of the given sequences, but do not use all
-    sequences if there are many: First, try to compute the consensus from a
-    small subsample. If there are 'N' bases, increase the subsample size and
-    repeat until either there are no more 'N' bases, all available sequences
-    have been used or maximum_subsample_size is reached.
-    """
-    while True:
-        sample = downsampled(sequences, subsample_size)
-        aligned = multialign(OrderedDict(enumerate(sample)), program=program)
-
-        cons = consensus(aligned, threshold=threshold).strip('N')
-        if 'N' not in cons:
-            # This consensus is good enough
-            break
-        if len(sequences) <= subsample_size:
-            # We have already used all the sequences that are available
-            break
-        subsample_size *= 2
-        if subsample_size > maximum_subsample_size:
-            break
-    return cons
 
 
 def sequence_hash(s, digits=4):

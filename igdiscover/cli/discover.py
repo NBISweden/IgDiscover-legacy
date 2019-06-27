@@ -21,8 +21,9 @@ from alignlib import edit_distance
 
 from ..table import read_table
 from ..cluster import cluster_sequences, single_linkage
-from ..utils import (iterative_consensus, unique_name, downsampled, SerialPool, Merger, has_stop,
+from ..utils import (unique_name, downsampled, SerialPool, Merger, has_stop,
     describe_nt_change, available_cpu_count)
+from ..align import iterative_consensus
 
 logger = logging.getLogger(__name__)
 

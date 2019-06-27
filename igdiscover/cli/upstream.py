@@ -11,7 +11,7 @@ import logging
 from collections import Counter
 
 from ..table import read_table
-from ..utils import iterative_consensus
+from ..align import iterative_consensus
 
 logger = logging.getLogger(__name__)
 

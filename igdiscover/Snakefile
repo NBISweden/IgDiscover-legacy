@@ -1,9 +1,9 @@
 import shutil
 import textwrap
 import json
-from sqt.dna import reverse_complement
 import dnaio
 import igdiscover
+from igdiscover.dna import reverse_complement
 from igdiscover.utils import relative_symlink
 from igdiscover.config import Config, GlobalConfig
 

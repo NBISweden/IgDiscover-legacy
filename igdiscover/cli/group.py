@@ -55,8 +55,9 @@ import json
 from typing import List, Iterable
 
 import dnaio
-from sqt.align import consensus
 from xopen import xopen
+
+from ..align import consensus
 from ..species import find_cdr3
 from ..cluster import Graph
 from ..utils import slice_arg
