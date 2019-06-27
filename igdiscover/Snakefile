@@ -2,7 +2,7 @@ import shutil
 import textwrap
 import json
 from sqt.dna import reverse_complement
-from sqt import FastaReader, SequenceReader
+import dnaio
 import igdiscover
 from igdiscover.utils import relative_symlink
 from igdiscover.config import Config, GlobalConfig
@@ -440,7 +440,7 @@ rule vj_database_iteration_1:
 
 
 def ensure_fasta_not_empty(path, gene):
-    with FastaReader(path) as fr:
+    with dnaio.open(path) as fr:
         for _ in fr:
             has_records = True
             break
@@ -765,13 +765,13 @@ rule version:
 
 
 def get_sequences(path):
-    with SequenceReader(path) as fr:
-        sequences = [ record.sequence.upper() for record in fr ]
+    with dnaio.open(path) as fr:
+        sequences = [record.sequence.upper() for record in fr]
     return sequences
 
 
 def count_sequences(path):
-    with SequenceReader(path) as fr:
+    with dnaio.open(path) as fr:
         n = 0
         for _ in fr:
             n += 1
