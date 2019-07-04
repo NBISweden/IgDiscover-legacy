@@ -26,6 +26,8 @@ __author__ = "Marcel Martin"
 mpl.use('Agg')
 warnings.filterwarnings('ignore', 'axes.color_cycle is deprecated and replaced with axes.prop_cycle')
 warnings.filterwarnings('ignore', 'The `IPython.html` package')
+warnings.filterwarnings('ignore', 'Widget registration using a string name has been deprecated')
+warnings.filterwarnings('ignore', 'Traits should be given as instances, not types')
 
 logger = logging.getLogger(__name__)
 
