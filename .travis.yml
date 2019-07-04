@@ -18,7 +18,7 @@ before_install:
   - tar xvf igdiscover-testdata-0.6.tar.gz
 
 install:
-  - conda env create -n testenv -f environment.yml
+  - conda env create -n testenv -f environment.lock.yml
   - conda install -n testenv pytest
   - source activate testenv
   - pip install .
