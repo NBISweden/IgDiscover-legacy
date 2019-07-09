@@ -726,8 +726,8 @@ class IgBlastParser:
                     d_gene = None
                 else:
                     v_gene, d_gene, j_gene, chain, has_stop, in_frame, is_productive, strand = fields
+                    d_gene = gene_without_prefix(d_gene)
                 v_gene = gene_without_prefix(v_gene)
-                d_gene = gene_without_prefix(d_gene)
                 j_gene = gene_without_prefix(j_gene)
                 chain = none_if_na(chain)
                 has_stop = self.BOOL[has_stop]
