@@ -114,8 +114,8 @@ if config.merge_program == 'flash':
         output:
             json='stats/reads.json'
         run:
-            total_ex = re.compile(r'\[FLASH\]\s*Total reads:\s*([0-9]+)')
-            merged_ex = re.compile(r'\[FLASH\]\s*Combined reads:\s*([0-9]+)')
+            total_ex = re.compile(r'\[FLASH\]\s*Total pairs:\s*([0-9]+)')
+            merged_ex = re.compile(r'\[FLASH\]\s*Combined pairs:\s*([0-9]+)')
             with open(input.log) as f:
                 for line in f:
                     match = total_ex.search(line)

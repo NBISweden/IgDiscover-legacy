@@ -20,6 +20,13 @@ igdiscover config \
 igdiscover run -n stats/reads.json
 popd
 
+# Test using FLASH and parsing its log output
+igdiscover init --db=testdata/database --reads=testdata/reads.1.fastq.gz testrun/flash
+pushd testrun/flash
+igdiscover config --set merge_program flash
+igdiscover run stats/reads.json
+popd
+
 
 igdiscover init --db=testdata/database --reads=testdata/reads.1.fastq.gz testrun/paired
 pushd testrun/paired
