@@ -6,6 +6,7 @@ import dnaio
 import igdiscover
 from igdiscover.dna import reverse_complement
 from igdiscover.utils import relative_symlink
+from igdiscover.readlenhistogram import read_length_histogram
 from igdiscover.config import Config, GlobalConfig
 
 
@@ -253,8 +254,8 @@ rule merged_read_length_histogram:
         pdf="stats/merged.readlengths.pdf"
     input:
         fastq='reads/2-merged.fastq.gz'
-    shell:
-        """sqt readlenhisto --bins 100 --left {config.minimum_merged_read_length} --title "Lengths of merged reads" --plot {output.pdf} {input}  > {output.txt}"""
+    run:
+        read_length_histogram(input.fastq, tsv_path=output.txt, plot_path=output.pdf, bins=100, left=config.minimum_merged_read_length, title="Lengths of merged reads")
 
 
 rule read_length_histogram:
@@ -263,8 +264,8 @@ rule read_length_histogram:
         pdf="stats/readlengths.pdf"
     input:
         fastq=PREPROCESSED_READS
-    shell:
-        """sqt readlenhisto --bins 100 --left {config.minimum_merged_read_length} --title "Lengths of pre-processed reads" --plot {output.pdf} {input}  > {output.txt}"""
+    run:
+        read_length_histogram(input.fastq, tsv_path=output.txt, plot_path=output.pdf, bins=100, left=config.minimum_merged_read_length, title="Lengths of pre-processed reads")
 
 
 rule reads_stats_fasta:
