@@ -50,7 +50,7 @@ cp -p testrun/paired/igdiscover.yaml testrun/singlefastq/
 ( cd testrun/singlefastq && igdiscover run stats/reads.json )
 
 # Test FASTA input
-sqt fastxmod -w 0 --fasta testrun/paired/reads/2-merged.fastq.gz > testrun/reads.fasta
+cutadapt --quiet -o testrun/reads.fasta testrun/paired/reads/2-merged.fastq.gz
 igdiscover init --db=testdata/database --single-reads=testrun/reads.fasta testrun/singlefasta
 cp -p testrun/paired/igdiscover.yaml testrun/singlefastq/
 ( cd testrun/singlefasta && igdiscover run stats/reads.json )
