@@ -175,7 +175,7 @@ class Alignment:
         self.errors = errors
 
 
-def align_global(ref: str, query: str, match=1, mismatch=-2, insertion=-2, deletion=-2):
+def align_global_core(ref: str, query: str, match=1, mismatch=-2, insertion=-2, deletion=-2):
     """
     Compute an optimal global alignment between strings *ref* and *query*.
     An alignment is optimal if it has maximal score.
@@ -328,3 +328,34 @@ def align_global(ref: str, query: str, match=1, mismatch=-2, insertion=-2, delet
     p2 = "".join(p2[::-1])
 
     return Alignment(p1, p2, start1, best_i, start2, best_j, best_score, errors)
+
+
+def align_global(ref, query):
+    m = len(ref)
+    n = len(query)
+    start = 0
+    while start < m and start < n and ref[start] == query[start]:
+        start += 1
+
+    stop_ref = m
+    stop_query = n
+    while stop_ref > start and stop_query > start and ref[stop_ref-1] == query[stop_query-1]:
+        stop_ref -= 1
+        stop_query -= 1
+
+    assert 0 <= start <= stop_ref <= m
+    assert 0 <= start <= stop_query <= n
+
+    alignment = align_global_core(ref[start:stop_ref], query[start:stop_query])
+
+    alignment.ref_row = ref[:start] + alignment.ref_row + ref[stop_ref:]
+    assert alignment.ref_start == 0
+    assert alignment.ref_stop == stop_ref - start
+    alignment.ref_stop = m
+    alignment.query_row = query[:start] + alignment.query_row + query[stop_query:]
+    assert alignment.query_start == 0
+    assert alignment.query_stop == stop_query - start
+    alignment.query_stop = n
+    alignment.score += start + m - stop_ref
+
+    return alignment
