@@ -1,6 +1,7 @@
 import shutil
 import textwrap
 import json
+from itertools import islice
 import dnaio
 import igdiscover
 from igdiscover.dna import reverse_complement
@@ -59,18 +60,25 @@ rule nofinal:
         TARGETS
 
 
+def fasta_head(input_path, output_path, n):
+    with dnaio.open(input_path) as infile:
+        with dnaio.open(output_path, mode="w") as outfile:
+            for record in islice(infile, n):
+                outfile.write(record)
+
+
 if config.limit:
     rule limit_reads_gz:
         output: 'reads/1-limited.{nr,([12]\\.|)}{ext,(fasta|fastq)}.gz'
         input: 'reads.{nr}{ext}.gz'
-        shell:
-            'sqt fastxmod -w 0 --limit {config.limit} {input} | {GZIP} > {output}'
+        run:
+            fasta_head(input[0], output[0], config.limit)
 
     rule limit_reads:
         output: 'reads/1-limited.{nr,([12]\\.|)}{ext,(fasta|fastq)}.gz'
         input: 'reads.{nr}{ext}'
-        shell:
-            'sqt fastxmod -w 0 --limit {config.limit} {input} | {GZIP} > {output}'
+        run:
+            fasta_head(input[0], output[0], config.limit)
 
 else:
     rule symlink_limited:
