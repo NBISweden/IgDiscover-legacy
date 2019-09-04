@@ -1,7 +1,7 @@
 import random
 from igdiscover.trie import Trie
 from igdiscover.cli.group import hamming_neighbors
-from sqt.align import hamming_distance
+from alignlib import hamming_distance
 
 
 def random_nt(length):
