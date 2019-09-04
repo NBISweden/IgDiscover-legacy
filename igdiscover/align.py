@@ -1,5 +1,6 @@
 import subprocess
 from collections import Counter, OrderedDict
+from itertools import groupby
 from io import BytesIO
 
 import dnaio
@@ -108,3 +109,222 @@ def iterative_consensus(sequences, program='muscle-medium', threshold=0.6,
         if subsample_size > maximum_subsample_size:
             break
     return cons
+
+
+def describe_nt_change(s: str, t: str):
+    """
+    Describe changes between two nucleotide sequences
+
+    >>> describe_nt_change('AAA', 'AGA')
+    '2A>G'
+    >>> describe_nt_change('AAGG', 'AATTGG')
+    '2_3insTT'
+    >>> describe_nt_change('AATTGG', 'AAGG')
+    '3_4delTT'
+    >>> describe_nt_change('AATTGGCG', 'AAGGTG')
+    '3_4delTT; 7C>T'
+    """
+    alignment = align_global(s, t)
+    row1 = alignment.ref_row.replace('\0', '-')
+    row2 = alignment.query_row.replace('\0', '-')
+    changes = []
+
+    def grouper(c):
+        c1, c2 = c
+        if c1 == c2:
+            return 'MATCH'
+        elif c1 == '-':
+            return 'INS'
+        elif c2 == '-':
+            return 'DEL'
+        else:
+            return 'SUBST'
+
+    index = 1
+    for event, group in groupby(zip(row1, row2), grouper):
+        if event == 'MATCH':
+            index += len(list(group))
+        elif event == 'SUBST':
+            # ungroup
+            for c1, c2 in group:
+                change = '{}{}>{}'.format(index, c1, c2)
+                changes.append(change)
+                index += 1
+        elif event == 'INS':
+            inserted = ''.join(c[1] for c in group)
+            change = '{}_{}ins{}'.format(index-1, index, inserted)
+            changes.append(change)
+        elif event == 'DEL':
+            deleted = ''.join(c[0] for c in group)
+            change = '{}_{}del{}'.format(index, index + len(deleted) - 1, deleted)
+            changes.append(change)
+            index += len(deleted)
+    return '; '.join(changes)
+
+
+class Alignment:
+    def __init__(self, ref_row, query_row, ref_start, ref_stop, query_start, query_stop, score, errors):
+        assert len(ref_row) == len(query_row)
+        self.ref_row = ref_row
+        self.ref_start = ref_start
+        self.ref_stop = ref_stop
+        self.query_row = query_row
+        self.query_start = query_start
+        self.query_stop = query_stop
+        self.score = score
+        self.errors = errors
+
+
+def align_global(ref: str, query: str, match=1, mismatch=-2, insertion=-2, deletion=-2):
+    """
+    Compute an optimal global alignment between strings *ref* and *query*.
+    An alignment is optimal if it has maximal score.
+
+    Return an Alignment object.
+    """
+    m = len(ref)
+    n = len(query)
+    # DP Matrix:
+    #            query (j)
+    #          ----------> n
+    #         |
+    # ref (i) |
+    #         |
+    #         V
+    #         m
+
+    # the DP matrix is stored column-major
+    scores = [[0] * (n + 1) for _ in range(m+1)]
+    backtrace = [[0] * (n + 1) for _ in range(m+1)]
+
+    start_in_ref = False
+    start_in_query = False
+    stop_in_ref = False
+    stop_in_query = False
+
+    UP = 0
+    LEFT = 1
+    DIAG = 2
+    GAPCHAR = '\0'
+
+    # initialize first column
+    for i in range(m + 1):
+        scores[i][0] = 0 if start_in_ref else i * deletion
+        backtrace[i][0] = UP
+
+    # initialize first row
+    for j in range(n + 1):
+        scores[0][j] = 0 if start_in_query else j * insertion
+        backtrace[0][j] = LEFT
+
+    # fill the entire DP matrix
+    # outer loop goes over columns
+    for j in range(1, n + 1):
+        for i in range(1, m + 1):
+            bt = DIAG
+            score = scores[i-1][j-1] + (match if (ref[i-1] == query[j-1]) else mismatch)
+            tmp = scores[i-1][j] + insertion
+            if tmp > score:
+                bt = UP
+                score = tmp
+            tmp = scores[i][j-1] + deletion
+            if tmp > score:
+                bt = LEFT
+                score = tmp
+            scores[i][j] = score
+            backtrace[i][j] = bt
+
+    # initialize best score and its position to the bottomright cell
+    best_i = m
+    best_j = n
+    best_score = scores[m][n]
+
+    if stop_in_query:
+        # search also in last row
+        for j in range(n + 1):
+            if scores[m][j] >= best_score:
+                best_score = scores[m][j]
+                best_i = m
+                best_j = j
+
+    if stop_in_ref:
+        # search also in last column
+        for i in range(m + 1):
+            if scores[i][n] >= best_score:
+                best_i = i
+                best_j = n
+                best_score = scores[i][n]
+
+    # trace back
+    p1 = []
+    p2 = []
+    i = m
+    j = n
+
+    # first, walk from the lower right corner to the
+    # position where we found the maximum score
+
+    errors = 0
+
+    # if gaps are currently errors, this is 1, otherwise it's 0
+    gaps_are_errors = 0 if stop_in_query else 1
+    if i == best_i:  # we are in the last row
+        while j > best_j:
+            p1.append(GAPCHAR)
+            j -= 1
+            p2.append(query[j])
+            errors += gaps_are_errors
+    else:  # we are in the last column
+        gaps_are_errors = 0 if stop_in_ref else 1
+        while i > best_i:
+            i -= 1
+            p1.append(ref[i])
+            p2.append(GAPCHAR)
+            errors += gaps_are_errors
+
+    assert i == best_i and j == best_j
+
+    # the actual backtracing
+    # The alignments are constructed in reverse
+    # and this is undone afterwards.
+    while i > 0 and j > 0:
+        direction = backtrace[i][j]
+        if direction == DIAG:
+            i -= 1
+            j -= 1
+            if ref[i] != query[j]:
+                errors += 1
+            p1.append(ref[i])
+            p2.append(query[j])
+        elif direction == LEFT:
+            errors += 1
+            p1.append(GAPCHAR)
+            j -= 1
+            p2.append(query[j])
+        elif direction == UP:
+            i -= 1
+            p1.append(ref[i])
+            p2.append(GAPCHAR)
+            errors += 1
+        else:
+            assert False, "DP table corrupt"
+
+    start1 = i if start_in_ref else 0
+    start2 = j if start_in_query else 0
+
+    errors += (i - start1) + (j - start2)
+
+    while j > 0:
+        p1.append(GAPCHAR)
+        j -= 1
+        p2.append(query[j])
+    while i > 0:
+        i -= 1
+        p1.append(ref[i])
+        p2.append(GAPCHAR)
+    assert i == 0 and j == 0
+
+    p1 = "".join(p1[::-1])
+    p2 = "".join(p2[::-1])
+
+    return Alignment(p1, p2, start1, best_i, start2, best_j, best_score, errors)

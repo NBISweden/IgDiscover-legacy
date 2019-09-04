@@ -8,13 +8,11 @@ import random
 import hashlib
 import resource
 from collections import defaultdict
-from itertools import groupby
-from typing import List, Tuple
+from typing import List
 
 import dnaio
 import numpy as np
 from alignlib import edit_distance
-from sqt.align import globalalign
 from sqt.dna import nt_to_aa as _nt_to_aa
 from cutadapt.align import Aligner
 
@@ -338,58 +336,6 @@ def is_same_gene(name1: str, name2: str):
     Both names must have a '*' in them
     """
     return '*' in name1 and '*' in name2 and name1.split('*')[0] == name2.split('*')[0]
-
-
-def describe_nt_change(s: str, t: str):
-    """
-    Describe changes between two nucleotide sequences
-
-    >>> describe_nt_change('AAA', 'AGA')
-    '2A>G'
-    >>> describe_nt_change('AAGG', 'AATTGG')
-    '2_3insTT'
-    >>> describe_nt_change('AATTGG', 'AAGG')
-    '3_4delTT'
-    >>> describe_nt_change('AATTGGCG', 'AAGGTG')
-    '3_4delTT; 7C>T'
-    """
-    row1, row2, start1, stop1, start2, stop2, errors = \
-        globalalign(s.encode('ascii'), t.encode('ascii'), flags=0, match=0)
-    row1 = row1.decode('ascii').replace('\0', '-')
-    row2 = row2.decode('ascii').replace('\0', '-')
-    changes = []
-
-    def grouper(c):
-        c1, c2 = c
-        if c1 == c2:
-            return 'MATCH'
-        elif c1 == '-':
-            return 'INS'
-        elif c2 == '-':
-            return 'DEL'
-        else:
-            return 'SUBST'
-
-    index = 1
-    for event, group in groupby(zip(row1, row2), grouper):
-        if event == 'MATCH':
-            index += len(list(group))
-        elif event == 'SUBST':
-            # ungroup
-            for c1, c2 in group:
-                change = '{}{}>{}'.format(index, c1, c2)
-                changes.append(change)
-                index += 1
-        elif event == 'INS':
-            inserted = ''.join(c[1] for c in group)
-            change = '{}_{}ins{}'.format(index-1, index, inserted)
-            changes.append(change)
-        elif event == 'DEL':
-            deleted = ''.join(c[0] for c in group)
-            change = '{}_{}del{}'.format(index, index + len(deleted) - 1, deleted)
-            changes.append(change)
-            index += len(deleted)
-    return '; '.join(changes)
 
 
 class ChimeraFinder:
