@@ -1,14 +1,13 @@
 channels:
-  - defaults
-  - bioconda
   - conda-forge
+  - bioconda
+  - defaults
 dependencies:
   - nomkl
   - python=3.6
   - seaborn=0.9.*
-  - sqt
   - snakemake-minimal
-  - cutadapt>=2.3
+  - cutadapt>=2.5
   - muscle
   - pear
   - flash
@@ -16,7 +15,7 @@ dependencies:
   - ruamel.yaml
   - pigz>=2.4
   - dnaio
-  - xopen>=0.7.3
+  - xopen>=0.8.2
   - pip
   - pip:
     - alignlib~=0.1.0

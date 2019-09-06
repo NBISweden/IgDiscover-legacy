@@ -23,7 +23,6 @@ setup(
     package_data={"igdiscover": ["igdiscover.yaml", "Snakefile", "empty.aux"]},
     python_requires=">=3.6",
     install_requires=[
-        "sqt>=0.8.0",
         "pandas>=0.23",
         "numpy",
         "matplotlib>=3.0",
