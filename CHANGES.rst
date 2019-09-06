@@ -15,6 +15,9 @@ development version
   This was replaced with a simpler filter that only ensures that there are no
   two candidates with the same sequence.
 * Use IgBLAST 1.10
+* Get rid of some unnecessary dependencies by no longer requiring the
+  unmaintained ``sqt`` library. Installation with Conda is now faster and
+  requires half the disk space.
 
 v0.11 (2018-11-27)
 ------------------
