@@ -13,7 +13,6 @@ from typing import List
 import dnaio
 import numpy as np
 from alignlib import edit_distance
-from sqt.dna import nt_to_aa as _nt_to_aa
 from cutadapt.align import Aligner
 
 from .dna import GENETIC_CODE
@@ -193,14 +192,9 @@ def relative_symlink(src, dst, force=False):
     os.symlink(target, dst)
 
 
-def nt_to_aa(s):
+def nt_to_aa(s, _get=GENETIC_CODE.get):
     """Translate a nucleotide sequence to an amino acid sequence"""
-    try:
-        # try fast version first
-        return _nt_to_aa(s)
-    except ValueError:
-        # failure because there was an unknown nucleotide
-        return ''.join(GENETIC_CODE.get(s[i:i+3], '*') for i in range(0, len(s), 3))
+    return ''.join(_get(s[i:i+3], '*') for i in range(0, len(s), 3))
 
 
 def has_stop(sequence):

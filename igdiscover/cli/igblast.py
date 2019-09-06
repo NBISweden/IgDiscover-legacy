@@ -34,9 +34,8 @@ import gzip
 
 import dnaio
 from xopen import xopen
-from sqt.dna import nt_to_aa
 
-from ..utils import SerialPool, available_cpu_count
+from ..utils import SerialPool, available_cpu_count, nt_to_aa
 from ..parse import TableWriter, IgBlastParser
 from ..species import cdr3_start, cdr3_end
 from ..config import GlobalConfig
