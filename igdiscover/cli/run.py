@@ -44,13 +44,15 @@ def main(args):
         if k.startswith('_'):
             continue
         print('   ', k, ': ', repr(v), sep='')
+    sys.stdout.flush()
 
     # snakemake sets up its own logging and this cannot be easily changed
     # (setting keep_logger=True crashes), so remove our own log handler
     # for now
     logger.root.handlers = []
     snakefile_path = pkg_resources.resource_filename('igdiscover', 'Snakefile')
-    success = snakemake(snakefile_path,
+    success = snakemake(
+        snakefile_path,
         snakemakepath='snakemake',  # Needed in snakemake 3.9.0
         dryrun=args.dryrun,
         cores=args.cores,
