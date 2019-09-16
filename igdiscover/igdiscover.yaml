@@ -196,7 +196,7 @@ germline_filter:
   unique_cdr3s: 5            # Minimum number of unique CDR3s (within exact matches)
   unique_js: 3               # Minimum number of unique J genes (within exact matches)
   whitelist: true            # Add database sequences to the whitelist
-  cluster_size: 100          # Minimum number of sequences assigned to cluster
+  cluster_size: 50           # Minimum number of sequences assigned to cluster
   allow_stop: false          # Whether to allow non-productive sequences containing stop codons
   cross_mapping_ratio: 0.02  # Threshold for removal of cross-mapping artifacts (set to 0 to disable)
   clonotype_ratio: 0.12      # Required minimum ratio of clonotype counts between alleles of the same gene

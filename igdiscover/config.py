@@ -52,7 +52,7 @@ class Config:
             unique_cdr3s=5,
             unique_js=3,
             whitelist=True,
-            cluster_size=100,
+            cluster_size=50,
             allow_stop=False,
             # allow_chimeras=False,
             cross_mapping_ratio=0.02,
