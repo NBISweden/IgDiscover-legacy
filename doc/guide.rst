@@ -647,12 +647,17 @@ exact
     The number of exact occurrences of the consensus sequence among all sequences assigned to the
     source gene, ignoring the 3' junction region.
 
-    To clarify: While the consensus sequence is computed only from a subset of sequences assigned
-    to a source gene, *all* sequences assigned to the source gene are searched for exact occurrences
+    While the consensus sequence is computed only from a subset of sequences assigned to a source
+    gene, *all* sequences assigned to the source gene are searched for exact occurrences
     of that consensus sequence.
 
     When comparing sequences, they are first truncated at the 3' end by removing those (typically
     8) bases that correspond to the CDR3 region.
+
+full_exact
+    The number of full, exact occurrences of the consensus among all sequences assigned to the
+    source gene. This is the same as the *exact* column, but without removing the 3' junction
+    region.
 
 barcodes_exact
     How many unique barcode sequences were used by the sequences in the set of exact sequences

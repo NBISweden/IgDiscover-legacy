@@ -365,9 +365,12 @@ class Discoverer:
             # Sequence without the CDR3-covering part
             sibling_no_cdr3 = sibling[:self._guess_cdr3_start(assignments)]
             group_exact_v = assignments[assignments.V_no_CDR3 == sibling_no_cdr3]
+            group_full_exact_v = assignments[assignments['VDJ_nt'].str.startswith(sibling, na=False)]
             groups = (
                 ('window', sibling_info.group),
-                ('exact', group_exact_v))
+                ('exact', group_exact_v),
+                ('full_exact', group_full_exact_v),
+            )
             del sibling_no_cdr3
 
             # self.cdr3_counts are CDR3 counts of all CDR3s in the entire table.
@@ -415,6 +418,7 @@ class Discoverer:
                 Js=info['window'].unique_J,
                 CDR3s=info['window'].unique_CDR3,
                 exact=info['exact'].count,
+                full_exact=info['full_exact'].count,
                 barcodes_exact=info['exact'].unique_barcodes,
                 Ds_exact=info['exact'].unique_D,
                 Js_exact=info['exact'].unique_J,
@@ -443,6 +447,7 @@ class Candidate(namedtuple('_Candidate', [
     'Js',
     'CDR3s',
     'exact',
+    'full_exact',
     'barcodes_exact',
     'Ds_exact',
     'Js_exact',
@@ -509,7 +514,7 @@ def main(args):
 
     table = read_table(args.table, usecols=('name', 'chain', 'V_gene', 'D_gene', 'J_gene', 'V_nt',
         'CDR3_nt', 'barcode', 'V_CDR3_start', 'V_SHM', 'J_SHM', 'D_covered', 'D_evalue', 'V_errors',
-        'D_errors', 'J_errors'))
+        'D_errors', 'J_errors', 'VDJ_nt'))
     table['V_no_CDR3'] = [s[:start] if start != 0 else s for s, start in
         zip(table.V_nt, table.V_CDR3_start)]
 
