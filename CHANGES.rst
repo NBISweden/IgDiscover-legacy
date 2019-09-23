@@ -18,6 +18,8 @@ development version
 * Get rid of some unnecessary dependencies by no longer requiring the
   unmaintained ``sqt`` library. Installation with Conda is now faster and
   requires half the disk space.
+* Add a *full_exact* column to ``candidates.tab``
+
 
 v0.11 (2018-11-27)
 ------------------
