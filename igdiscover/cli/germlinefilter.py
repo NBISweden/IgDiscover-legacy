@@ -115,6 +115,8 @@ class IdenticalSequenceFilter:
     def should_discard(ref: Candidate, candidate: Candidate, _same_gene: bool):
         if candidate.whitelisted:
             return False
+        if ref.cluster_size < candidate.cluster_size:
+            return False
         if ref.sequence == candidate.sequence:
             return f'identical_to={ref.name}'
         if ref.sequence.startswith(candidate.sequence):
