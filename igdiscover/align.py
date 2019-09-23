@@ -123,8 +123,10 @@ def describe_nt_change(s: str, t: str):
     '3_4delTT'
     >>> describe_nt_change('AATTGGCG', 'AAGGTG')
     '3_4delTT; 7C>T'
+    >>> describe_nt_change('AAGCTAA', 'AACTGAA')
+    '3G>C; 4C>T; 5T>G'
     """
-    alignment = align_global(s, t)
+    alignment = align_global(s, t, insertion=-4, deletion=-4)
     row1 = alignment.ref_row.replace('\0', '-')
     row2 = alignment.query_row.replace('\0', '-')
     changes = []
@@ -330,7 +332,7 @@ def align_global_core(ref: str, query: str, match=1, mismatch=-2, insertion=-2, 
     return Alignment(p1, p2, start1, best_i, start2, best_j, best_score, errors)
 
 
-def align_global(ref, query):
+def align_global(ref: str, query: str, match=1, mismatch=-2, insertion=-2, deletion=-2):
     m = len(ref)
     n = len(query)
     start = 0
@@ -346,7 +348,8 @@ def align_global(ref, query):
     assert 0 <= start <= stop_ref <= m
     assert 0 <= start <= stop_query <= n
 
-    alignment = align_global_core(ref[start:stop_ref], query[start:stop_query])
+    alignment = align_global_core(
+        ref[start:stop_ref], query[start:stop_query], match, mismatch, insertion, deletion)
 
     alignment.ref_row = ref[:start] + alignment.ref_row + ref[stop_ref:]
     assert alignment.ref_start == 0
