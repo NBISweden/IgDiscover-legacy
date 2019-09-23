@@ -30,7 +30,8 @@ The filtered table is written to standard output.
 """
 import sys
 import logging
-from collections import namedtuple
+from typing import NamedTuple
+
 import dnaio
 import pandas as pd
 from alignlib import edit_distance
@@ -91,8 +92,18 @@ def add_arguments(parser):
         nargs='+')
 
 
-Candidate = namedtuple('Candidate', ['sequence', 'name', 'clonotypes', 'exact', 'Ds_exact',
-    'cluster_size', 'whitelisted', 'is_database', 'cluster_size_is_accurate', 'cdr3_start', 'index'])
+class Candidate(NamedTuple):
+    sequence: str
+    name: str
+    clonotypes: int
+    exact: int
+    Ds_exact: int
+    cluster_size: int
+    whitelisted: bool
+    is_database: bool
+    cluster_size_is_accurate: bool
+    cdr3_start: int
+    index: int
 
 
 class IdenticalSequenceFilter:
