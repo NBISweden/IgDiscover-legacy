@@ -2,6 +2,7 @@ language: python
 cache:
   directories:
     - $HOME/.cache/pip
+    - $HOME/.cache/igdiscover
 
 python:
   - "3.6"
@@ -16,6 +17,7 @@ before_install:
   - conda info -a
   - wget https://bitbucket.org/igdiscover/testdata/downloads/igdiscover-testdata-0.6.tar.gz
   - tar xvf igdiscover-testdata-0.6.tar.gz
+  - "echo 'use_cache: true' > $HOME/.config/igdiscover.conf"
 
 install:
   - conda env create -n testenv -f environment.lock.yml
