@@ -1,5 +1,5 @@
 import sys
-from setuptools import setup
+from setuptools import setup, find_packages
 
 if sys.version_info < (3, 6):
     sys.stdout.write("At least Python 3.6 is required.\n")
@@ -19,7 +19,8 @@ setup(
     long_description=long_description,
     license="MIT",
     entry_points={"console_scripts": ["igdiscover = igdiscover.__main__:main"]},
-    packages=["igdiscover", "igdiscover.cli"],
+    package_dir={'': 'src'},
+    packages=find_packages('src'),
     package_data={"igdiscover": ["igdiscover.yaml", "Snakefile", "empty.aux"]},
     python_requires=">=3.6",
     install_requires=[
