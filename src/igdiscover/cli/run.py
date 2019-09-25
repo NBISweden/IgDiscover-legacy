@@ -56,11 +56,12 @@ def run_snakemake(
         print('   ', k, ': ', repr(v), sep='')
     sys.stdout.flush()
 
-    # snakemake sets up its own logging and this cannot be easily changed
-    # (setting keep_logger=True crashes), so remove our own log handler
-    # for now
     old_root_handlers = logger.root.handlers
-    logger.root.handlers = []
+    root = logging.getLogger()
+    root.handlers = []
+    file_handler = logging.FileHandler("log.txt")
+    root.addHandler(file_handler)
+
     snakefile_path = pkg_resources.resource_filename('igdiscover', 'Snakefile')
     success = snakemake(
         snakefile_path,
