@@ -17,7 +17,7 @@ from collections import namedtuple, Counter
 import dnaio
 import numpy as np
 import pandas as pd
-from alignlib import edit_distance
+from tinyalign import edit_distance
 
 from ..table import read_table
 from ..cluster import cluster_sequences, single_linkage

@@ -16,6 +16,4 @@ dependencies:
   - pigz>=2.4
   - dnaio
   - xopen>=0.8.2
-  - pip
-  - pip:
-    - alignlib~=0.1.0
+  - tinyalign~=0.2

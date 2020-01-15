@@ -15,7 +15,7 @@ import logging
 from collections import namedtuple
 import functools
 
-from alignlib import edit_distance, hamming_distance
+from tinyalign import edit_distance, hamming_distance
 
 from .utils import nt_to_aa
 from .dna import reverse_complement

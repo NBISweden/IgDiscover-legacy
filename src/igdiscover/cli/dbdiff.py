@@ -14,7 +14,7 @@ import logging
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 import dnaio
-from alignlib import hamming_distance
+from tinyalign import hamming_distance
 
 logger = logging.getLogger(__name__)
 

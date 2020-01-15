@@ -34,7 +34,7 @@ from typing import NamedTuple
 
 import dnaio
 import pandas as pd
-from alignlib import edit_distance
+from tinyalign import edit_distance
 
 from ..utils import UniqueNamer, is_same_gene, ChimeraFinder
 

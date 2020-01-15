@@ -34,7 +34,7 @@ setup(
         "xopen>=0.8.2",
         "ruamel.yaml",
         "dnaio",
-        "alignlib",
+        "tinyalign>=0.2",
     ],
     classifiers=[
         "Development Status :: 4 - Beta",

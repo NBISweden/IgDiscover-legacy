@@ -12,7 +12,7 @@ from typing import List
 
 import dnaio
 import numpy as np
-from alignlib import edit_distance
+from tinyalign import edit_distance
 from cutadapt.align import Aligner
 
 from .dna import GENETIC_CODE
