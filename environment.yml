@@ -4,7 +4,7 @@ channels:
   - defaults
 dependencies:
   - nomkl
-  - python=3.6
+  - python=3.7
   - seaborn=0.9.*
   - snakemake-minimal
   - cutadapt>=2.5
