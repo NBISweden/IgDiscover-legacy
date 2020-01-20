@@ -2,8 +2,8 @@
 Changes
 =======
 
-development version
--------------------
+v0.12 (2020-01-20)
+------------------
 
 * The ``discoverj`` command was renamed to ``discoverjd`` to reflect that it
   also supports D gene discovery.
