@@ -26,22 +26,35 @@ def add_arguments(parser):
 
 def main(args):
     if args.set:
-        with open(args.file) as f:
-            config = ruamel.yaml.load(f, ruamel.yaml.RoundTripLoader)
-        for k, v in args.set:
-            v = ruamel.yaml.safe_load(v)
-            # config[k] = v
-            item = config
-            # allow nested keys
-            keys = k.split('.')
-            for i in keys[:-1]:
-                item = item[i]
-            item[keys[-1]] = v
-        tmpfile = args.file + '.tmp'
-        with open(tmpfile, 'w') as f:
-            print(ruamel.yaml.dump(config, Dumper=ruamel.yaml.RoundTripDumper), end='', file=f)
-        os.rename(tmpfile, args.file)
+        modify_configuration(args.set, args.file)
     else:
-        with open(args.file) as f:
-            config = ruamel.yaml.safe_load(f)
-        print(ruamel.yaml.dump(config), end='')
+        print_configuration(args.file)
+
+
+def modify_configuration(
+    settings,
+    path=Config.DEFAULT_PATH,
+):
+    with open(path) as f:
+        config = ruamel.yaml.load(f, ruamel.yaml.RoundTripLoader)
+    for k, v in settings:
+        if not isinstance(k, str) or not isinstance(v, str):
+            raise ValueError("key and value must both be strings")
+        v = ruamel.yaml.safe_load(v)
+        # config[k] = v
+        item = config
+        # allow nested keys
+        keys = k.split('.')
+        for i in keys[:-1]:
+            item = item[i]
+        item[keys[-1]] = v
+    tmpfile = path + '.tmp'
+    with open(tmpfile, 'w') as f:
+        print(ruamel.yaml.dump(config, Dumper=ruamel.yaml.RoundTripDumper), end='', file=f)
+    os.rename(tmpfile, path)
+
+
+def print_configuration(path=Config.DEFAULT_PATH):
+    with open(path) as f:
+        config = ruamel.yaml.safe_load(f)
+    print(ruamel.yaml.dump(config), end='')

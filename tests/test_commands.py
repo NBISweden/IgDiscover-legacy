@@ -4,6 +4,7 @@ import pytest
 from igdiscover.__main__ import main
 from .utils import datapath, resultpath, files_equal
 from igdiscover.cli.init import run_init
+from igdiscover.cli.config import print_configuration, modify_configuration
 
 
 @pytest.fixture
@@ -23,6 +24,18 @@ def run(tmpdir):
         assert files_equal(expected, outpath)
 
     return _run
+
+
+@pytest.fixture
+def pipeline_dir(tmp_path):
+    """An initialized pipeline directory"""
+    pipelinedir = tmp_path / "testdir"
+    run_init(
+        database="testdata/database",
+        reads1="testdata/reads.1.fastq.gz",
+        directory=str(pipelinedir),
+    )
+    return pipelinedir
 
 
 def test_main():
@@ -56,12 +69,22 @@ def test_igblast(run):
     run(args, resultpath('assigned.tab'))
 
 
-def test_run_init(tmp_path):
-    pipelinedir = tmp_path / "testdir"
-    run_init(
-        database="testdata/database",
-        reads1="testdata/reads.1.fastq.gz",
-        directory=str(pipelinedir),
+def test_run_init(pipeline_dir):
+    assert pipeline_dir.is_dir()
+    assert (pipeline_dir / "igdiscover.yaml").exists()
+
+
+def test_print_configuration(pipeline_dir):
+    print_configuration(path=pipeline_dir / "igdiscover.yaml")
+
+
+def test_modify_configuration(pipeline_dir):
+    modify_configuration(
+        settings=[("d_coverage", "12"), ("j_discovery.allele_ratio", "0.37")],
+        path=str(pipeline_dir / "igdiscover.yaml"),
     )
-    assert pipelinedir.is_dir()
-    assert (pipelinedir / "igdiscover.yaml").exists()
+    import ruamel.yaml
+    with open(pipeline_dir / "igdiscover.yaml") as f:
+        config = ruamel.yaml.safe_load(f)
+    assert config["d_coverage"] == 12
+    assert config["j_discovery"]["allele_ratio"] == 0.37
