@@ -169,7 +169,6 @@ def augment_group(table, v_shm_threshold=5, suffix='_mindiffrate'):
 
     # Find row whose V is least mutated
     root = table.loc[table['V_SHM'].idxmin()]
-    import ipdb; ipdb.set_trace()
     if root['V_SHM'] > v_shm_threshold:
         return table
 
