@@ -10,10 +10,11 @@ import platform
 import pkg_resources
 from snakemake import snakemake
 
+from .config import Config
+from . import CommandLineError
 from ..utils import available_cpu_count
 from .. import __version__
 
-from .config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,15 @@ def add_arguments(parser):
 
 
 def main(args):
+    run_snakemake(**vars(args))
+
+
+def run_snakemake(
+    dryrun=False,
+    cores=available_cpu_count(),
+    keepgoing=False,
+    targets=None,
+):
     try:
         config = Config.from_default_path()
     except FileNotFoundError as e:
@@ -49,23 +59,26 @@ def main(args):
     # snakemake sets up its own logging and this cannot be easily changed
     # (setting keep_logger=True crashes), so remove our own log handler
     # for now
+    old_root_handlers = logger.root.handlers
     logger.root.handlers = []
     snakefile_path = pkg_resources.resource_filename('igdiscover', 'Snakefile')
     success = snakemake(
         snakefile_path,
         snakemakepath='snakemake',  # Needed in snakemake 3.9.0
-        dryrun=args.dryrun,
-        cores=args.cores,
-        keepgoing=args.keepgoing,
+        dryrun=dryrun,
+        cores=cores,
+        keepgoing=keepgoing,
         printshellcmds=True,
-        targets=args.targets if args.targets else None,
+        targets=targets,
     )
+    logger.root.handlers = old_root_handlers
 
-    if sys.platform == 'linux' and not args.dryrun:
+    if sys.platform == 'linux' and not dryrun:
         cputime = resource.getrusage(resource.RUSAGE_SELF).ru_utime
         cputime += resource.getrusage(resource.RUSAGE_CHILDREN).ru_utime
         h = int(cputime // 3600)
         m = (cputime - h * 3600) / 60
         print('Total CPU time: {}h {:.2f}m'.format(h, m))
 
-    sys.exit(0 if success else 1)
+    if not success:
+        raise CommandLineError()
