@@ -210,16 +210,25 @@ def read_and_repair_fasta(path):
 
 
 def main(args):
-    if ' ' in args.directory:
+    run_init(**vars(args))
+
+
+def run_init(
+    directory,
+    reads1,
+    database: str,
+    single_reads=None,
+):
+    if ' ' in directory:
         logger.error('The name of the analysis directory must not contain spaces')
         sys.exit(1)
 
-    if os.path.exists(args.directory):
-        logger.error('The target directory {!r} already exists.'.format(args.directory))
+    if os.path.exists(directory):
+        logger.error('The target directory {!r} already exists.'.format(directory))
         sys.exit(1)
 
     # If reads files or database were not given, initialize the GUI
-    if (args.reads1 is None and args.single_reads is None) or args.database is None:
+    if (reads1 is None and single_reads is None) or database is None:
         try:
             gui = TkinterGui()
         except ImportError:  # TODO tk.TclError cannot be caught when import of tk fails
@@ -230,8 +239,8 @@ def main(args):
         gui = None
 
     # Find out whether data is paired or single
-    assert not (args.reads1 and args.single_reads)
-    if args.reads1 is None and args.single_reads is None:
+    assert not (reads1 and single_reads)
+    if reads1 is None and single_reads is None:
         paired = gui.yesno('Paired end or single-end reads',
             'Are your reads paired and need to be merged?\n\n'
             'If you answer "Yes", next select the FASTQ files '
@@ -242,12 +251,11 @@ def main(args):
             logger.error('Cancelled')
             sys.exit(2)
     else:
-        paired = bool(args.reads1)
+        paired = bool(reads1)
 
     # Assign reads1 and (if paired) also reads2
     if paired:
-        if args.reads1 is not None:
-            reads1 = args.reads1
+        if reads1 is not None:
             try_open(reads1)
         else:
             reads1 = gui.reads1_path()
@@ -259,8 +267,8 @@ def main(args):
             logger.error('Could not determine second file of paired-end reads')
             sys.exit(1)
     else:
-        if args.single_reads is not None:
-            reads1 = args.single_reads
+        if single_reads is not None:
+            reads1 = single_reads
             try_open(reads1)
         else:
             reads1 = gui.single_reads_path()
@@ -268,8 +276,8 @@ def main(args):
                 logger.error('Cancelled')
                 sys.exit(2)
 
-    if args.database is not None:
-        dbpath = args.database
+    if database is not None:
+        dbpath = database
     else:
         # TODO as soon as we distribute our own database files, we can use this:
         # database_path = pkg_resources.resource_filename('igdiscover', 'databases')
@@ -293,7 +301,7 @@ def main(args):
 
     # Create the directory
     try:
-        os.mkdir(args.directory)
+        os.mkdir(directory)
     except OSError as e:
         logger.error(e)
         sys.exit(1)
@@ -307,23 +315,23 @@ def main(args):
         os.symlink(src, os.path.join(dirname, target + gz))
 
     if paired:
-        create_symlink(reads1, args.directory, 'reads.1.fastq')
-        create_symlink(reads2, args.directory, 'reads.2.fastq')
+        create_symlink(reads1, directory, 'reads.1.fastq')
+        create_symlink(reads2, directory, 'reads.2.fastq')
     else:
         try:
             target = 'reads.' + file_type(reads1)
         except UnknownFileFormatError:
             logger.error('Cannot determine whether reads file is FASTA or FASTQ')
             sys.exit(1)
-        create_symlink(reads1, args.directory, target)
+        create_symlink(reads1, directory, target)
 
     # Write the configuration file
     configuration = pkg_resources.resource_string('igdiscover', Config.DEFAULT_PATH).decode()
-    with open(os.path.join(args.directory, Config.DEFAULT_PATH), 'w') as f:
+    with open(os.path.join(directory, Config.DEFAULT_PATH), 'w') as f:
         f.write(configuration)
 
     # Create database files
-    database_dir = os.path.join(args.directory, 'database')
+    database_dir = os.path.join(directory, 'database')
     os.mkdir(database_dir)
     for gene in ['V', 'D', 'J']:
         with open(os.path.join(database_dir, gene + '.fasta'), 'w') as db_file:
@@ -334,6 +342,7 @@ def main(args):
         # Only suggest to edit the config file if at least one GUI dialog has been shown
         if gui.yesno('Directory initialized',
                 'Do you want to edit the configuration file now?'):
-            launch(os.path.join(args.directory, Config.DEFAULT_PATH))
-    logger.info('Directory %s initialized.', args.directory)
-    logger.info('Edit %s/%s, then run "cd %s && igdiscover run" to start the analysis', args.directory, Config.DEFAULT_PATH, args.directory)
+            launch(os.path.join(directory, Config.DEFAULT_PATH))
+    logger.info('Directory %s initialized.', directory)
+    logger.info('Edit %s/%s, then run "cd %s && igdiscover run" to start the analysis',
+        directory, Config.DEFAULT_PATH, directory)

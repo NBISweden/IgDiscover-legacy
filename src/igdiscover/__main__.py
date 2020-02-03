@@ -78,15 +78,19 @@ def main(arguments=None):
             show_cpustats[module.main] = False
 
     args = parser.parse_args(arguments)
-    if not hasattr(args, 'func'):
+    do_profiling = args.profile
+    del args.profile
+    subcommand = getattr(args, 'func', None)
+    del args.func
+    if not subcommand:
         parser.error('Please provide the name of a subcommand to run')
-    elif args.profile:
+    elif do_profiling:
         import cProfile as profile
-        profile.runctx('args.func(args)', globals(), locals(), filename='igdiscover.prof')
+        profile.runctx('subcommand(args)', globals(), locals(), filename='igdiscover.prof')
         logger.info('Wrote profiling data to igdiscover.prof')
     else:
-        args.func(args)
-    if sys.platform == 'linux' and show_cpustats.get(args.func, True):
+        subcommand(args)
+    if sys.platform == 'linux' and show_cpustats.get(subcommand, True):
         rself = resource.getrusage(resource.RUSAGE_SELF)
         rchildren = resource.getrusage(resource.RUSAGE_CHILDREN)
         memory_kb = rself.ru_maxrss + rchildren.ru_maxrss
