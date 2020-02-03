@@ -22,7 +22,7 @@ if you cannot use Conda.
 Installing IgDiscover with Conda
 --------------------------------
 
-1. Install `Conda <https://conda.io/>`_ by following the `conda installation
+1. Install `Conda`_ by following the `conda installation
    instructions <https://conda.io/docs/user-guide/install/>`_
    as appropriate for your system. You will need to choose between a “Miniconda”
    and “Anaconda” installation. We recommend Miniconda as the download is

@@ -41,7 +41,7 @@ To run an analysis, proceed as follows.
    Next, choose the directory with your database.
    The directory must contain the three files ``V.fasta``, ``D.fasta``, ``J.fasta``.
    These files contain the V, D, J gene sequences, respectively.
-   Even if have have only light chains in your data, a ``D.fasta`` file needs to be provided,
+   Even if you have only light chains in your data, a ``D.fasta`` file needs to be provided;
    just use one with the heavy chain D gene sequences.
 
    If you do not want a graphical user interface, use the two command-line
@@ -57,9 +57,7 @@ To run an analysis, proceed as follows.
 2. Adjust the configuration file
 
    The previous step created a configuration file named ``myexperiment/igdiscover.yaml``, which
-   you may :ref:`need to adjust <configuration>`. In particular, the number of discovery rounds
-   is set to 3 by default, which takes a long time. Reducing this to 2 or even 1 often works just
-   as well.
+   you may :ref:`need to adjust <configuration>`.
 
 3. Run the analysis
 
@@ -67,9 +65,9 @@ To run an analysis, proceed as follows.
 
        igdiscover run
 
-   Depending on the size of your library, your computer, and the number of iterations, this will
-   now take from a few hours to a day. See the :ref:`running IgDiscover <running>` section for
-   more fine-grained control over what to run and how to resume the process if something failed.
+   Depending on the size of your library, this will usually take a couple of hours. See the
+   :ref:`running IgDiscover <running>` section for more fine-grained control over what to run and
+   how to resume the process if something failed.
 
 
 .. _obtaining-database:
@@ -84,13 +82,13 @@ For discovering new VH genes, for example, you need to get the IGHV, IGHD and IG
 As IgDiscover uses this only as a starting point, using a similar species will also work.
 
 When using an IMGT database, it is very important to change the long IMGT sequence headers to
-short headers as IgBLAST does not accept the long headers. We recommend using the program
+short headers as IgBLAST does not accept the long headers. You can use the program
 ``edit_imgt_file.pl``. If you installed IgDiscover from Conda, the script is already installed and
 you can run it by typing the name. It is also
 `available on the IgBlast FTP site <ftp://ftp.ncbi.nih.gov/blast/executables/igblast/release/>`_.
 
-Run it for all three downloaded files, and then rename files appropritely to make sure that they
-named ``V.fasta``, ``D.fasta`` and ``J.fasta``.
+Run it for all three downloaded files, and then rename files appropriately to make sure that they
+are named ``V.fasta``, ``D.fasta`` and ``J.fasta``.
 
 You always need a file with D genes even if you analyze light chains.
 
@@ -131,16 +129,15 @@ that could not be merged are discarded. Single-end reads and merged paired-end r
 to follow this structure (from 5' to 3'):
 
 * The forward primer sequence. This is optional.
-* A random barcode (molecular identifier). This is optional. Set the
-  configuration option ``barcode_length_5p`` to 0 if you don’t have random barcodes
-  or if you don’t want the program to use them.
+* A UMI (random barcode). This is optional. Set the configuration option ``barcode_length_5p`` to 0
+  if you don’t have random barcodes or if you don’t want the program to use them.
 * Optionally, a run of G nucleotides. This is an artifact of the RACE protocol (Rapid
   amplification of cDNA ends). If you have this, set ``race_g`` to ``true`` in the configuration file.
 * 5' UTR
 * Leader
 * Re-arranged V, D and J gene sequences for heavy chains; only V and J for light chains
-* An optional random barcode. Set the configuration option ``barcode_length_3p`` to the length of
-  this barcode. You can currently not have both a 5' and a 3' barcode.
+* An optional UMI (random barcode). Set the configuration option ``barcode_length_3p`` to the
+  length of this UMI. You can currently not have both a 5' and a 3' UMI.
 * The reverse primer. This is optional.
 
 We use IgBLAST to detect the location of the V, D, J genes through the
@@ -180,19 +177,27 @@ A few rules that may be good to know are the following ones:
 
 To find out what the configuration options achieve, see the explanations in the configuration file itself.
 
-The main parameters parameters that may require adjusting are the following.
+The main parameters that may require adjusting are the following.
 
 The ``iterations`` option sets the number of rounds of V gene discovery
-that will be performed. By default, three iterations are run. Even with a very restricted
-starting V database (for example with only a single V gene sequence),
-this is usually sufficient to identify most novel germline sequences.
+that will be performed. By default, one iteration is run. In each
+iteration, all the sequences will be mapped with IgBLAST, which is the
+most time-consuming part of running the pipeline. Thus, when you go from 1 to 2
+iterations, you almost double the runtime requirements.
 
-When the starting database is more complete, for example, when analyzing
-a human IgM library with the current IMGT heavy chain database, a single
-iteration may be sufficient to produce an individualized database.
+In previous IgDiscover versions, more iterations than one were necessary,
+but we have improved sensitivity since then, so you should not need to increase
+this.
 
-If you do not want to discover any new genes and only want to produce an
-expression profile, for example, then use ``iterations: 0``.
+Especially for nearly complete starting databases, for example when
+analyzing a human IgM library with the current IMGT heavy chain database,
+a single iteration is totally sufficient to produce an individualized database.
+
+If you start with a very small V database (for example with only a single
+V gene sequence), you may get better results when you increase this to 2.
+
+If you do not want to discover any new genes, then use ``iterations: 0``.
+This may be useful to only produce an expression profile, for example.
 
 The ``ignore_j`` option should be set to ``true`` when producing a V gene
 database for a species where J sequences are unknown::
@@ -208,12 +213,27 @@ if you do not specify any primer sequences.
 Pregermline and germline filter criteria
 ----------------------------------------
 
-This provides IgDiscover with stringency requirements for V gene discovery
-that enable the program to filter out false positives. Usually the ”pregermline
-filter” can be used in the default mode since all these sequences will be
-subsequently passed to the higher stringency ”germline filter” where the
-criteria are set to maximize stringency. Here is how it looks in the configuration
-file::
+IgDiscover V gene discovery works in two stages: The program first generates
+a list of *candidate* V gene sequences. This list includes many false
+positives. In the subsequent *germline filtering* step, the list is
+therefore trimmed rigorously in order to produce the final list of germline
+sequences.
+
+The stringency requirements for the germline filter can be set in the
+configuration file in the `germline_filter` and `pregermline_filter`
+sections.
+
+The `pregermline_filter` section is used in all but the last iteration.
+That is, it is ignored if you use the default of running only a single
+iteration.
+
+The idea behind the pregermline filter is to initially use less stringent
+riteria, which allows to grow the starting database more quickly, but at
+the risk of adding some false positives. The last iteration, in which the
+more stringent `germline_filter` settings are used, will then remove those
+remaining false positives.
+
+Here is how it looks in the configuration file::
 
    pre_germline_filter:
      unique_cdr3s: 2      # Minimum number of unique CDR3s (within exact matches)
@@ -253,6 +273,18 @@ about the :ref:`germline filters <germline-filters>`.
 
 .. versionchanged::
    The ``differences`` configuration setting was removed.
+
+
+.. _jdiscovery:
+
+IgDiscover will also try to discover which J genes are used in the input sample. J discovery
+is configured in the ``j_discovery`` section in the configuration file. It looks like this::
+
+    j_discovery:
+      allele_ratio: 0.2         # Required minimum ratio between alleles of a single gene
+      cross_mapping_ratio: 0.1  # Threshold for removal of cross-mapping artifacts.
+      propagate: true           # Use J genes discovered in iteration 1 in subsequent ones
+
 
 
 .. _running:
@@ -376,8 +408,7 @@ Final results are found in the ``final/`` subdirectory of the analysis directory
 
 final/database/(V,D,J).fasta
     These three files represent the final, individualized V/D/J database found by IgDiscover.
-    The D and J files are copies of the original starting database;
-    they are not updated by IgDiscover.
+    The D file is a copy of the original starting database; it is not updated by IgDiscover.
 
 final/dendrogram_(V,D,J).pdf
     These three PDF files contain dendrograms of the V, D and J sequences in the individualized
@@ -440,6 +471,9 @@ iteration-xx/new_V_germline.fasta, iteration-xx/new_V_pregermline.fasta
 
 iteration-xx/annotated_V_germline.tab, iteration-xx/annotated_V_pregermline.tab
     A version of the ``candidates.tab`` file that is annotated with extra columns that describe why a candidate was filtered out. See :ref:`the description of this file <annotated_v_tab>`.
+
+iteration-xx/new_J.tab, iteration-xx/new_J.fasta
+    The discovered list of J genes for this iteration.
 
 
 Other files
