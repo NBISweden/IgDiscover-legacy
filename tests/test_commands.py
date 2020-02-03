@@ -1,10 +1,13 @@
+import os
 import sys
 import pytest
+import contextlib
 
 from igdiscover.__main__ import main
 from .utils import datapath, resultpath, files_equal
 from igdiscover.cli.init import run_init
 from igdiscover.cli.config import print_configuration, modify_configuration
+from igdiscover.cli.run import run_snakemake
 
 
 @pytest.fixture
@@ -36,6 +39,14 @@ def pipeline_dir(tmp_path):
         directory=str(pipelinedir),
     )
     return pipelinedir
+
+
+@contextlib.contextmanager
+def chdir(path):
+    previous_path = os.getcwd()
+    os.chdir(path)
+    yield
+    os.chdir(previous_path)
 
 
 def test_main():
@@ -88,3 +99,30 @@ def test_modify_configuration(pipeline_dir):
         config = ruamel.yaml.safe_load(f)
     assert config["d_coverage"] == 12
     assert config["j_discovery"]["allele_ratio"] == 0.37
+
+
+def test_dryrun(pipeline_dir):
+    with chdir(pipeline_dir):
+        run_snakemake(dryrun=True)
+
+
+def test_primers(pipeline_dir):
+    # Test whether specifying primer sequences leads to a SyntaxError
+    with chdir(pipeline_dir):
+        modify_configuration(
+            settings=[
+                ("forward_primers", "['CGTGA']"),
+                ("reverse_primers", "['TTCAC']"),
+            ],
+        )
+        # Do not actually run, the primers aren’t correct
+        run_snakemake(dryrun=True)
+
+
+def test_flash(pipeline_dir):
+    # Test using FLASH and parsing its log output
+    with chdir(pipeline_dir):
+        modify_configuration(settings=[("merge_program", "flash")])
+        run_snakemake(targets=["stats/reads.json"])
+        # Ensure FLASH was actually run
+        assert (pipeline_dir / "reads/2-flash.log").exists()

@@ -4,29 +4,13 @@ set -euo pipefail
 set -x
 unset DISPLAY
 
-pytest
 
 rm -rf testrun
 mkdir testrun
 [[ -L testdata ]] || ln -s igdiscover-testdata testdata
 
-
-# Test whether specifying primer sequences leads to a SyntaxError
-igdiscover init --db=testdata/database --reads=testdata/reads.1.fastq.gz testrun/primers
-pushd testrun/primers
-igdiscover config \
-	--set forward_primers "['CGTGA']" \
-	--set reverse_primers "['TTCAC']"
-igdiscover run -n stats/reads.json
-popd
-
-# Test using FLASH and parsing its log output
-igdiscover init --db=testdata/database --reads=testdata/reads.1.fastq.gz testrun/flash
-pushd testrun/flash
-igdiscover config --set merge_program flash
-igdiscover run stats/reads.json
-popd
-
+# The pytest tests expect the testdata/ directory to exist
+pytest
 
 igdiscover init --db=testdata/database --reads=testdata/reads.1.fastq.gz testrun/paired
 pushd testrun/paired
