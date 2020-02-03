@@ -1,4 +1,5 @@
 # IgDiscover documentation build configuration file
+import time
 import sys
 import os
 
@@ -40,22 +41,14 @@ copyright = u'2015-2017, ' + authors
 # built documents.
 #
 
-# When generating the documentation, we currently do not require the
-# dependencies to be installed. We therefore cannot 'import' anything from
-# igdiscover since that may fail. The versioneer module can only be imported
-# from the project root (it has extra checks such that even changing sys.path
-# will not work), so the following is what we need to do.
-import subprocess
-version = subprocess.check_output(
-	[sys.executable, '-c', 'import versioneer; print(versioneer.get_version())'],
-	cwd='..').decode().strip()
-
-# Read The Docs modifies the conf.py script and we therefore get 'dirty'
-# version numbers like 0.12+0.g27d0d31.dirty from versioneer.
-if version.endswith('.dirty') and os.environ.get('READTHEDOCS') == 'True':
-	version, _, rest = version.partition('+')
-	if not rest.startswith('0.'):
-		version = version + '+' + rest[:-6]
+from pkg_resources import get_distribution
+release = get_distribution('igdiscover').version
+# Read The Docs modifies the conf.py script and we therefore get
+# version numbers like 0.12+0.g27d0d31
+if os.environ.get('READTHEDOCS') == 'True':
+    version = '.'.join(release.split('.')[:2])
+else:
+    version = release
 
 # The full version, including alpha/beta/rc tags.
 release = version
