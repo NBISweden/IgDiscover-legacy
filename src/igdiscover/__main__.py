@@ -18,6 +18,7 @@ import warnings
 import resource
 
 import igdiscover.cli as cli_package
+from igdiscover.cli import CommandLineError
 
 from . import __version__
 
@@ -86,10 +87,15 @@ def main(arguments=None):
         parser.error('Please provide the name of a subcommand to run')
     elif do_profiling:
         import cProfile as profile
-        profile.runctx('subcommand(args)', globals(), locals(), filename='igdiscover.prof')
+        to_run = lambda: profile.runctx('subcommand(args)', globals(), locals(), filename='igdiscover.prof')
         logger.info('Wrote profiling data to igdiscover.prof')
     else:
-        subcommand(args)
+        to_run = lambda: subcommand(args)
+    try:
+        to_run()
+    except CommandLineError as e:
+        logger.error(e)
+        sys.exit(1)
     if sys.platform == 'linux' and show_cpustats.get(subcommand, True):
         rself = resource.getrusage(resource.RUSAGE_SELF)
         rchildren = resource.getrusage(resource.RUSAGE_CHILDREN)

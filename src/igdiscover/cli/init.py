@@ -10,6 +10,9 @@ import sys
 import subprocess
 import pkg_resources
 import dnaio
+from xopen import xopen
+
+from . import CommandLineError
 from ..config import Config
 
 try:
@@ -19,11 +22,14 @@ try:
 except ImportError:
     tk = None
 
-from xopen import xopen
 
 logger = logging.getLogger(__name__)
 
 do_not_show_cpustats = 1
+
+
+class GuiCancelledError(CommandLineError):
+    pass
 
 
 def add_arguments(parser):
@@ -169,8 +175,7 @@ def try_open(path):
         with open(path) as f:
             pass
     except OSError as e:
-        logger.error('Could not open %r: %s', path, e)
-        sys.exit(1)
+        raise CommandLineError(f'Could not open {path!r}: {e}')
 
 
 def read_and_repair_fasta(path):
@@ -220,21 +225,18 @@ def run_init(
     single_reads=None,
 ):
     if ' ' in directory:
-        logger.error('The name of the analysis directory must not contain spaces')
-        sys.exit(1)
+        raise CommandLineError('The name of the analysis directory must not contain spaces')
 
     if os.path.exists(directory):
-        logger.error('The target directory {!r} already exists.'.format(directory))
-        sys.exit(1)
+        raise CommandLineError(f'The target directory {directory!r} already exists.')
 
     # If reads files or database were not given, initialize the GUI
     if (reads1 is None and single_reads is None) or database is None:
         try:
             gui = TkinterGui()
         except ImportError:  # TODO tk.TclError cannot be caught when import of tk fails
-            logger.error('GUI cannot be started. Please provide reads1 file '
+            raise CommandLineError('GUI cannot be started. Please provide reads1 file '
                 'and database directory on command line.')
-            sys.exit(1)
     else:
         gui = None
 
@@ -248,8 +250,7 @@ def run_init(
             'If you answer "No", next select the FASTA or FASTQ '
             'file with single-end reads.')
         if paired is None:
-            logger.error('Cancelled')
-            sys.exit(2)
+            raise GuiCancelledError()
     else:
         paired = bool(reads1)
 
@@ -260,12 +261,10 @@ def run_init(
         else:
             reads1 = gui.reads1_path()
             if not reads1:
-                logger.error('Cancelled')
-                sys.exit(2)
+                raise GuiCancelledError()
         reads2 = guess_paired_path(reads1)
         if reads2 is None:
-            logger.error('Could not determine second file of paired-end reads')
-            sys.exit(1)
+            raise CommandLineError('Could not determine second file of paired-end reads')
     else:
         if single_reads is not None:
             reads1 = single_reads
@@ -273,8 +272,7 @@ def run_init(
         else:
             reads1 = gui.single_reads_path()
             if not reads1:
-                logger.error('Cancelled')
-                sys.exit(2)
+                raise GuiCancelledError()
 
     if database is not None:
         dbpath = database
@@ -284,27 +282,24 @@ def run_init(
         databases_path = None
         dbpath = gui.database_path(databases_path)
         if not dbpath:
-            logger.error('Cancelled')
-            sys.exit(2)
+            raise GuiCancelledError()
 
     database = dict()
     for g in ['V', 'D', 'J']:
         path = os.path.join(dbpath, g + '.fasta')
         if not os.path.exists(path):
-            logger.error(
-                'The database directory %r must contain the three files '
-                'V.fasta, D.fasta and J.fasta', dbpath)
-            logger.error(
-                'A dummy D.fasta is necessary even if analyzing light chains (see manual)')
-            sys.exit(2)
+            raise CommandLineError(
+                f'The database directory {dbpath!r} must contain the three files '
+                'V.fasta, D.fasta and J.fasta. A dummy D.fasta is necessary even '
+                'if analyzing light chains (see manual)'
+            )
         database[g] = list(read_and_repair_fasta(path))
 
     # Create the directory
     try:
         os.mkdir(directory)
     except OSError as e:
-        logger.error(e)
-        sys.exit(1)
+        raise CommandLineError(e)
 
     def create_symlink(readspath, dirname, target):
         gz = '.gz' if readspath.endswith('.gz') else ''
@@ -321,8 +316,7 @@ def run_init(
         try:
             target = 'reads.' + file_type(reads1)
         except UnknownFileFormatError:
-            logger.error('Cannot determine whether reads file is FASTA or FASTQ')
-            sys.exit(1)
+            raise CommandLineError('Cannot determine whether reads file is FASTA or FASTQ')
         create_symlink(reads1, directory, target)
 
     # Write the configuration file

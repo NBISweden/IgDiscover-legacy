@@ -1,1 +1,2 @@
-# This module contains all subcommands
+class CommandLineError(Exception):
+    pass
