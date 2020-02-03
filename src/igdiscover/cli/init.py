@@ -220,8 +220,8 @@ def main(args):
 
 def run_init(
     directory,
-    reads1,
     database: str,
+    reads1=None,
     single_reads=None,
 ):
     if ' ' in directory:

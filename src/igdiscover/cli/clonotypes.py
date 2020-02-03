@@ -183,13 +183,26 @@ def augment_group(table, v_shm_threshold=5, suffix='_mindiffrate'):
 
 
 def main(args):
+    run_clonotypes(**vars(args))
+
+
+def run_clonotypes(
+    table,
+    sort=False,
+    limit=None,
+    v_shm_threshold=5,
+    aa=False,
+    mismatches=1,
+    members=None,
+    cdr3_core=None,
+):
     logger.info('Reading input table ...')
     usecols = CLONOTYPE_COLUMNS
     # TODO backwards compatibility
-    if 'FR1_aa_mut' not in pd.read_csv(args.table, nrows=0, sep='\t').columns:
+    if 'FR1_aa_mut' not in pd.read_csv(table, nrows=0, sep='\t').columns:
         usecols = [col for col in usecols if not col.endswith('_aa_mut')]
 
-    table = read_table(args.table, usecols=usecols)
+    table = read_table(table, usecols=usecols)
     table = table[usecols]
     logger.info('Read table with %s rows', len(table))
     table.insert(5, 'CDR3_length', table['CDR3_nt'].apply(len))
@@ -197,8 +210,8 @@ def main(args):
     table = table[table['CDR3_aa'].map(lambda s: '*' not in s)]
     logger.info('After discarding rows with unusable CDR3, %s remain', len(table))
     with ExitStack() as stack:
-        if args.members:
-            members_file = stack.enter_context(xopen(args.members, 'w'))
+        if members:
+            members_file = stack.enter_context(xopen(members, 'w'))
         else:
             members_file = None
 
@@ -210,10 +223,10 @@ def main(args):
         print(*columns, sep='\t')
         print_header = True
         n = 0
-        cdr3_column = 'CDR3_aa' if args.aa else 'CDR3_nt'
-        grouped = group_by_clonotype(table, args.mismatches, args.sort, args.cdr3_core, cdr3_column)
-        for group in islice(grouped, 0, args.limit):
-            group = augment_group(group, v_shm_threshold=args.v_shm_threshold)
+        cdr3_column = 'CDR3_aa' if aa else 'CDR3_nt'
+        grouped = group_by_clonotype(table, mismatches, sort, cdr3_core, cdr3_column)
+        for group in islice(grouped, 0, limit):
+            group = augment_group(group, v_shm_threshold=v_shm_threshold)
             if members_file:
                 # We get an intentional empty line between groups since
                 # to_csv() already includes a line break

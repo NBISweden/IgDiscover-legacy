@@ -24,4 +24,4 @@ install:
   - source activate testenv
   - pip install .
 
-script: tests/run.sh
+script: pytest

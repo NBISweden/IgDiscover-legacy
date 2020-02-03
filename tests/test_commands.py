@@ -2,12 +2,15 @@ import os
 import sys
 import pytest
 import contextlib
+import shutil
+
 
 from igdiscover.__main__ import main
 from .utils import datapath, resultpath, files_equal
 from igdiscover.cli.init import run_init
 from igdiscover.cli.config import print_configuration, modify_configuration
 from igdiscover.cli.run import run_snakemake
+from igdiscover.cli.clonotypes import run_clonotypes
 
 
 @pytest.fixture
@@ -32,13 +35,19 @@ def run(tmpdir):
 @pytest.fixture
 def pipeline_dir(tmp_path):
     """An initialized pipeline directory"""
-    pipelinedir = tmp_path / "testdir"
+    pipeline_path = tmp_path / "initializedpipeline"
+    init_testdata(pipeline_path)
+    return pipeline_path
+
+
+def init_testdata(directory):
     run_init(
         database="testdata/database",
         reads1="testdata/reads.1.fastq.gz",
-        directory=str(pipelinedir),
+        directory=str(directory),
     )
-    return pipelinedir
+    with chdir(directory):
+        modify_configuration([("barcode_length_3prime", "21")])
 
 
 @contextlib.contextmanager
@@ -47,6 +56,33 @@ def chdir(path):
     os.chdir(path)
     yield
     os.chdir(previous_path)
+
+
+@pytest.fixture(scope="session")
+def filtered_tab_session(tmp_path_factory):
+    """Generate iteration-01/filtered.tab.gz"""
+
+    pipeline_dir = tmp_path_factory.mktemp("pipedir") / "pipedir"
+    init_testdata(pipeline_dir)
+    with chdir(pipeline_dir):
+        run_snakemake(targets=["iteration-01/filtered.tab.gz"])
+    return pipeline_dir
+
+
+@pytest.fixture
+def has_filtered_tab(filtered_tab_session, tmp_path):
+    """
+    Give a fresh copy of a pipeline dir in which iteration-01/filtered.tab.gz
+    is guaranteed to exist
+    """
+    pipeline_dir = tmp_path / "has_filtered_tab"
+    shutil.copytree(
+        filtered_tab_session,
+        pipeline_dir,
+        symlinks=True,
+        ignore=shutil.ignore_patterns((".snakemake")),
+    )
+    return pipeline_dir
 
 
 def test_main():
@@ -115,7 +151,6 @@ def test_primers(pipeline_dir):
                 ("reverse_primers", "['TTCAC']"),
             ],
         )
-        # Do not actually run, the primers aren’t correct
         run_snakemake(dryrun=True)
 
 
@@ -126,3 +161,68 @@ def test_flash(pipeline_dir):
         run_snakemake(targets=["stats/reads.json"])
         # Ensure FLASH was actually run
         assert (pipeline_dir / "reads/2-flash.log").exists()
+
+
+def test_snakemake_assigned_tab(has_filtered_tab):
+    assert (has_filtered_tab / "iteration-01/filtered.tab.gz").exists()
+    assert not (has_filtered_tab / "iteration-01/new_V_germline.tab").exists()
+
+
+def test_snakemake_exact_tab(has_filtered_tab):
+    with chdir(has_filtered_tab):
+        run_snakemake(targets=["iteration-01/exact.tab"])
+    assert (has_filtered_tab / "iteration-01/exact.tab").exists()
+
+
+def test_snakemake_final(has_filtered_tab):
+    with chdir(has_filtered_tab):
+        run_snakemake(targets=["nofinal"])
+    assert (has_filtered_tab / "iteration-01/new_V_germline.tab").exists()
+    assert not (has_filtered_tab / "final/assigned.tab.gz").exists()
+
+    with chdir(has_filtered_tab):
+        run_snakemake()
+    assert (has_filtered_tab / "final/assigned.tab.gz").exists()
+
+
+def test_clonotypes(has_filtered_tab):
+    run_clonotypes(has_filtered_tab / "iteration-01/assigned.tab.gz", limit=5)
+
+
+def test_fastq_input(has_filtered_tab, tmp_path):
+    # Use merged reads from already-run pipeline as input for a new run
+    single_reads = has_filtered_tab / "reads" / "2-merged.fastq.gz"
+    directory = tmp_path / "singleend-fastq"
+    run_init(
+        database="testdata/database",
+        single_reads=str(single_reads),
+        directory=str(directory),
+    )
+    with chdir(directory):
+        modify_configuration([("barcode_length_3prime", "21")])
+        run_snakemake(targets=["stats/reads.json"])
+
+
+def test_fasta_input(has_filtered_tab, tmp_path):
+    fasta_path = tmp_path / "justfasta.fasta"
+    convert_fastq_to_fasta(
+        has_filtered_tab / "reads" / "2-merged.fastq.gz",
+        fasta_path,
+    )
+    directory = tmp_path / "singleend-fasta"
+    run_init(
+        database="testdata/database",
+        single_reads=str(fasta_path),
+        directory=str(directory),
+    )
+    with chdir(directory):
+        modify_configuration([("barcode_length_3prime", "21")])
+        run_snakemake(targets=["stats/reads.json"])
+
+
+def convert_fastq_to_fasta(fastq, fasta):
+    import dnaio
+    with dnaio.open(fastq) as inf:
+        with dnaio.open(fasta, mode="w") as outf:
+            for record in inf:
+                outf.write(record)
