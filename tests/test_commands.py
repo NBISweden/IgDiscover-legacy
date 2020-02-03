@@ -1,9 +1,9 @@
-import os
 import sys
 import pytest
 
 from igdiscover.__main__ import main
 from .utils import datapath, resultpath, files_equal
+from igdiscover.cli.init import run_init
 
 
 @pytest.fixture
@@ -54,3 +54,14 @@ def test_clusterplot(tmpdir):
 def test_igblast(run):
     args = ['igblast', '--threads=1', datapath('database/'), datapath('igblast.fasta')]
     run(args, resultpath('assigned.tab'))
+
+
+def test_run_init(tmp_path):
+    pipelinedir = tmp_path / "testdir"
+    run_init(
+        database="testdata/database",
+        reads1="testdata/reads.1.fastq.gz",
+        directory=str(pipelinedir),
+    )
+    assert pipelinedir.is_dir()
+    assert (pipelinedir / "igdiscover.yaml").exists()
