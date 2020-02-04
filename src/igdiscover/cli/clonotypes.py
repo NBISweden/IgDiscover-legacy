@@ -47,7 +47,8 @@ def add_arguments(parser):
         help='Sort by group size (largest first). Default: Sort by V/D/J gene names')
     arg('--limit', metavar='N', type=int, default=None,
         help='Print out only the first N groups')
-    arg('--v-shm-threshold', default=5, type=float, help='V SHM threshold for _mindiffrate computations')
+    arg('--v-shm-threshold', default=5, type=float,
+        help='V SHM threshold for _mindiffrate computations')
     arg('--cdr3-core', default=None,
         type=slice_arg, metavar='START:END',
         help='START:END defines the non-junction region of CDR3 '
@@ -66,120 +67,6 @@ def add_arguments(parser):
     arg('--members', metavar='FILE',
         help='Write member table to FILE')
     arg('table', help='Table with parsed and filtered IgBLAST results')
-
-
-def is_similar_with_junction(s, t, mismatches, cdr3_core):
-    """
-    Return whether strings s and t have at most the given number of mismatches
-    *and* have at least one identical junction.
-    """
-    # TODO see issue #81
-    if len(s) != len(t):
-        return False
-    if 0 < mismatches < 1:
-        delta = cdr3_core.start if cdr3_core is not None else 0
-        distance_ok = hamming_distance(s, t) <= (len(s) - delta) * mismatches
-    else:
-        distance_ok = hamming_distance(s, t) <= mismatches
-    if cdr3_core is None:
-        return distance_ok
-    return distance_ok and (
-            (s[:cdr3_core.start] == t[:cdr3_core.start]) or
-            (s[cdr3_core.stop:] == t[cdr3_core.stop:]))
-
-
-def group_by_cdr3(table, mismatches, cdr3_core, cdr3_column):
-    """
-    Cluster the rows of the table by Hamming distance between
-    their CDR3 sequences. Yield (index, group) tuples similar 
-    to .groupby().
-    """
-    # Cluster all unique CDR3s by Hamming distance
-    sequences = list(set(table[cdr3_column]))
-
-    def linked(s, t):
-        return is_similar_with_junction(s, t, mismatches, cdr3_core)
-
-    clusters = hamming_single_linkage(sequences, mismatches, linked=linked)
-
-    # Create dict that maps CDR3 sequences to a numeric cluster id
-    cluster_ids = dict()
-    for cluster_id, cdr3s in enumerate(clusters):
-        for cdr3 in cdr3s:
-            cluster_ids[cdr3] = cluster_id
-
-    # Assign cluster id to each row
-    table['cluster_id'] = table[cdr3_column].apply(lambda cdr3: cluster_ids[cdr3])
-
-    for index, group in table.groupby('cluster_id'):
-        yield group.drop('cluster_id', axis=1)
-
-
-def representative(table):
-    """
-    Given a table with members of the same clonotype, return a representative
-    as a dict.
-    """
-    c = Counter()
-    for row in table.itertuples():
-        c[row.VDJ_nt] += row.count
-    most_common_vdj_nt = c.most_common(1)[0][0]
-    result = table[table['VDJ_nt'] == most_common_vdj_nt].iloc[0]
-    result.at['count'] = table['count'].sum()
-    return result
-
-
-def group_by_clonotype(table, mismatches, sort, cdr3_core, cdr3_column):
-    """
-    Yield clonotype groups. Each item is a DataFrame with all the members of the
-    clonotype.
-    """
-    logger.info('Computing clonotypes ...')
-    prev_v = None
-    groups = []
-    for (v_gene, j_gene, cdr3_length), vj_group in table.groupby(
-            ['V_gene', 'J_gene', 'CDR3_length']):
-        if prev_v != v_gene:
-            logger.info('Processing %s', v_gene)
-        prev_v = v_gene
-        cdr3_groups = group_by_cdr3(vj_group.copy(), mismatches=mismatches, cdr3_core=cdr3_core,
-            cdr3_column=cdr3_column)
-        if sort:
-            # When sorting by group size is requested, we need to buffer
-            # results
-            groups.extend(cdr3_groups)
-        else:
-            yield from cdr3_groups
-
-    if sort:
-        logger.info('Sorting by group size ...')
-        groups.sort(key=len, reverse=True)
-        yield from groups
-
-
-def augment_group(table, v_shm_threshold=5, suffix='_mindiffrate'):
-    """
-    Add columns to the given table that contain percentage difference of VDJ_nt, VDJ_aa, CDR3_nt,
-    CDR3_aa to the least mutated (in terms of V_SHM) sequence in this group.
-    """
-    columns = ['CDR3_nt', 'CDR3_aa', 'VDJ_nt', 'VDJ_aa']
-    i = table.columns.get_loc('barcode')  # insert before this column
-    for column in columns[::-1]:
-        table.insert(i, column + suffix, None)
-
-    # Find row whose V is least mutated
-    root = table.loc[table['V_SHM'].idxmin()]
-    if root['V_SHM'] > v_shm_threshold:
-        return table
-
-    for column in columns:
-        root_seq = root[column]
-        table[column + suffix] = [
-            round(edit_distance(root_seq, s, maxdiff=int(0.2 * len(root_seq))) / len(root_seq) * 100., 1)
-            for s in table[column]
-        ]
-
-    return table
 
 
 def main(args):
@@ -236,3 +123,117 @@ def run_clonotypes(
             print(*[rep[col] for col in columns], sep='\t')
             n += 1
     logger.info('%d clonotypes written', n)
+
+
+def group_by_clonotype(table, mismatches, sort, cdr3_core, cdr3_column):
+    """
+    Yield clonotype groups. Each item is a DataFrame with all the members of the
+    clonotype.
+    """
+    logger.info('Computing clonotypes ...')
+    prev_v = None
+    groups = []
+    for (v_gene, j_gene, cdr3_length), vj_group in table.groupby(
+            ['V_gene', 'J_gene', 'CDR3_length']):
+        if prev_v != v_gene:
+            logger.info('Processing %s', v_gene)
+        prev_v = v_gene
+        cdr3_groups = group_by_cdr3(vj_group.copy(), mismatches=mismatches, cdr3_core=cdr3_core,
+            cdr3_column=cdr3_column)
+        if sort:
+            # When sorting by group size is requested, we need to buffer
+            # results
+            groups.extend(cdr3_groups)
+        else:
+            yield from cdr3_groups
+
+    if sort:
+        logger.info('Sorting by group size ...')
+        groups.sort(key=len, reverse=True)
+        yield from groups
+
+
+def group_by_cdr3(table, mismatches, cdr3_core, cdr3_column):
+    """
+    Cluster the rows of the table by Hamming distance between
+    their CDR3 sequences. Yield (index, group) tuples similar 
+    to .groupby().
+    """
+    # Cluster all unique CDR3s by Hamming distance
+    sequences = list(set(table[cdr3_column]))
+
+    def linked(s, t):
+        return is_similar_with_junction(s, t, mismatches, cdr3_core)
+
+    clusters = hamming_single_linkage(sequences, mismatches, linked=linked)
+
+    # Create dict that maps CDR3 sequences to a numeric cluster id
+    cluster_ids = dict()
+    for cluster_id, cdr3s in enumerate(clusters):
+        for cdr3 in cdr3s:
+            cluster_ids[cdr3] = cluster_id
+
+    # Assign cluster id to each row
+    table['cluster_id'] = table[cdr3_column].apply(lambda cdr3: cluster_ids[cdr3])
+
+    for index, group in table.groupby('cluster_id'):
+        yield group.drop('cluster_id', axis=1)
+
+
+def is_similar_with_junction(s, t, mismatches, cdr3_core):
+    """
+    Return whether strings s and t have at most the given number of mismatches
+    *and* have at least one identical junction.
+    """
+    # TODO see issue #81
+    if len(s) != len(t):
+        return False
+    if 0 < mismatches < 1:
+        delta = cdr3_core.start if cdr3_core is not None else 0
+        distance_ok = hamming_distance(s, t) <= (len(s) - delta) * mismatches
+    else:
+        distance_ok = hamming_distance(s, t) <= mismatches
+    if cdr3_core is None:
+        return distance_ok
+    return distance_ok and (
+            (s[:cdr3_core.start] == t[:cdr3_core.start]) or
+            (s[cdr3_core.stop:] == t[cdr3_core.stop:]))
+
+
+def representative(table):
+    """
+    Given a table with members of the same clonotype, return a representative
+    as a dict.
+    """
+    c = Counter()
+    for row in table.itertuples():
+        c[row.VDJ_nt] += row.count
+    most_common_vdj_nt = c.most_common(1)[0][0]
+    result = table[table['VDJ_nt'] == most_common_vdj_nt].iloc[0]
+    result.at['count'] = table['count'].sum()
+    return result
+
+
+def augment_group(table, v_shm_threshold=5, suffix='_mindiffrate'):
+    """
+    Add columns to the given table that contain percentage difference of VDJ_nt, VDJ_aa, CDR3_nt,
+    CDR3_aa to the least mutated (in terms of V_SHM) sequence in this group.
+    """
+    columns = ['CDR3_nt', 'CDR3_aa', 'VDJ_nt', 'VDJ_aa']
+    i = table.columns.get_loc('barcode')  # insert before this column
+    for column in columns[::-1]:
+        table.insert(i, column + suffix, None)
+
+    # Find row whose V is least mutated
+    root = table.loc[table['V_SHM'].idxmin()]
+    if root['V_SHM'] > v_shm_threshold:
+        return table
+
+    for column in columns:
+        root_seq = root[column]
+        table[column + suffix] = [
+            round(edit_distance(root_seq, s, maxdiff=int(0.2 * len(root_seq))) / len(root_seq) * 100., 1)
+            for s in table[column]
+        ]
+
+    return table
