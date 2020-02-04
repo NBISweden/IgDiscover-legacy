@@ -834,6 +834,9 @@ rename
 union
     Compute union of sequences in multiple FASTA files
 
+:ref:`clonotypes <clonotypes>`
+    List the clonotypes (unique V, J, CDR3 combinations) present in a sample
+
 
 The following subcommands are used internally, and listed here for completeness.
 
@@ -858,6 +861,60 @@ clusterplot
 
 errorplot
     Plot histograms of differences to reference V gene
+
+
+.. _clonotypes:
+
+``igdiscover clonotypes``
+-------------------------
+
+The ``igdiscover clonotypes`` command lists the clonotypes present in a sample.
+The only required parameter is the name of a file with assigned sequences.
+Normally, this will be a ``filtered.tab.gz`` file.
+
+Two sequences are considered to be of the same clonotype if
+
+- their V and J assignments are the same
+- the length of their CDR3 is identical
+- their CDR3 sequences are similar (see below for what this means)
+
+That is, clonotypes are found by clustering the input sequences by V gene,
+J gene and CDR3 similarity (using single-linkage clustering).
+
+For each cluster, a representative row (assignment) is chosen and
+considered to be the clonotype. The output is a table with one row
+per clonotype. It is written to standard output.
+
+By default, the output table is sorted by V/D/J gene names.
+Use ``--sort`` to sort by group size (largest first).
+
+Similarity
+~~~~~~~~~~
+
+To determine whether two CDR3s are similar, the Hamming distance
+between the CDR3 nucleotide sequences (``CDR3_nt`` column) must be
+at most 1. To allow more differences, use ``--mismatches``. To
+compare amino acid sequences (``CDR3_aa``) instead, use ``--aa``.
+
+The members file
+~~~~~~~~~~~~~~~~
+
+If desired, the constituents (“members”) of each cluster can be
+output to a file using ``--members=outputfilename.tab``.
+Clusters are separated by empty lines and order the same as
+in the clonotypes table.
+
+In the members table, additional fields are added that are intended
+to describe “mutation rates”. These fields are named
+``XXX_mindiffrate``, where ``XXX`` is ``CDR3_nt``, ``CDR3_aa``, ``VDJ_nt``, and ``VDJ_aa``.
+
+Within each cluster, the row with the lowest ``V_SHM`` value
+(the least mutated V) is chosen as reference. If the ``V_SHM``
+is higher than ``--v-shm-threshold``, the ``_mindiffrate`` fields are not computed.
+
+To compute a field such as ``CDR3_nt_mindiffrate`` for a row, the edit distance between
+``CDR3_nt`` of this row and of the reference row are computed and divided by
+the length of ``CDR3_nt`` of the reference row (and multiplied by 100 to give a percentage).
 
 
 .. _germline-filters:
