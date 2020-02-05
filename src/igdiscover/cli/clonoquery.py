@@ -61,6 +61,7 @@ def collect(querytable, reftable, mismatches, cdr3_core_slice, cdr3_column):
     with all the rows that have the same result. similar_rows is a DataFrame
     whose rows are the ones matching the query.
     """
+
     # The vjlentype is a "clonotype without CDR3 sequence" (only V, J, CDR3 length)
     # Determine set of vjlentypes to query
     query_vjlentypes = defaultdict(list)
@@ -89,7 +90,7 @@ def collect(querytable, reftable, mismatches, cdr3_core_slice, cdr3_column):
         for indices, query_rows in results.items():
             if not indices:
                 for query_row in query_rows:
-                    yield ([query_row], [])
+                    yield ([query_row], reftable.head(0))
                 continue
 
             similar_group = vjlen_group.iloc[list(indices), :]
@@ -98,7 +99,7 @@ def collect(querytable, reftable, mismatches, cdr3_core_slice, cdr3_column):
     # Yield result tuples for all the queries that have not been found
     for queries in query_vjlentypes.values():
         for query_row in queries:
-            yield ([query_row], [])
+            yield ([query_row], reftable.head(0))
 
 
 def main(args):

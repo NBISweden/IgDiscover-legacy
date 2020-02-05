@@ -224,6 +224,9 @@ def augment_group(table, v_shm_threshold=5, suffix='_mindiffrate'):
     for column in columns[::-1]:
         table.insert(i, column + suffix, None)
 
+    if table.empty:
+        return table
+
     # Find row whose V is least mutated
     root = table.loc[table['V_SHM'].idxmin()]
     if root['V_SHM'] > v_shm_threshold:
