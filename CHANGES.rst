@@ -11,7 +11,7 @@ v0.12 (2020-01-20)
   reason for filters that compare candidates to each other. Now each filter
   criterion can be distinguised.
 * The somewhat vague “too similar sequence” germline filter criterion
-  incorrectly removed some candidates that have a mutation close to the 5' end.
+  incorrectly removed some candidates that have a mutation close to the 3’ end.
   This was replaced with a simpler filter that only ensures that there are no
   two candidates with the same sequence.
 * Use IgBLAST 1.10
