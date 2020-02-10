@@ -7,7 +7,7 @@ import igdiscover
 from igdiscover.dna import reverse_complement
 from igdiscover.utils import relative_symlink
 from igdiscover.readlenhistogram import read_length_histogram
-from igdiscover.config import Config, GlobalConfig
+from igdiscover.config import Config
 
 
 try:
