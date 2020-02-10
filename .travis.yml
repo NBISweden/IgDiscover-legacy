@@ -1,10 +1,10 @@
 language: python
+
+os: linux
+
 cache:
   directories:
     - $HOME/.cache/igdiscover
-
-python:
-  - "3.7"
 
 before_install:
   - wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
@@ -26,3 +26,22 @@ install:
   - pip install .
 
 script: pytest
+
+env:
+  global:
+    - TWINE_USERNAME=__token__
+
+jobs:
+  include:
+    - python: "3.7"
+
+    - stage: deploy
+      python: "3.7"
+      install: python3 -m pip install twine
+      if: tag IS present
+      script:
+        - |
+          python3 setup.py sdist
+          python3 -m pip wheel -w dist/ .
+          ls -l dist/
+          python3 -m twine upload dist/igdiscover-*
