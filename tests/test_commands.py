@@ -1,9 +1,11 @@
 import os
 import sys
-import pytest
 import contextlib
 import shutil
+from pathlib import Path
 
+from xopen import xopen
+import pytest
 
 from igdiscover.__main__ import main
 from .utils import datapath, resultpath, files_equal, convert_fastq_to_fasta
@@ -152,6 +154,27 @@ def test_primers(pipeline_dir):
             ],
         )
         run_snakemake(dryrun=True)
+
+
+# TODO slow
+def test_only_forward_primer(pipeline_dir):
+    # issue #107 (broken symlink)
+    with chdir(pipeline_dir):
+        modify_configuration(settings=[("forward_primers", "['CGTGA']")])
+        # Create some dummy files so we don’t need to run irrelevant steps of the pipeline
+        r = Path("reads")
+        r.mkdir()
+        with xopen(r / "2-merged.fastq.gz", "w") as f:
+            pass
+        s = Path("stats")
+        s.mkdir()
+        with open(s / "merging-successful", "w") as f:
+            pass
+        with open(s / "reads.json", "w") as f:
+            f.write('{"total": 0}')
+        with open(s / "trimmed.json", "w") as f:
+            f.write('{"trimmed": 0}')
+        run_snakemake(targets=["reads/sequences.fasta.gz"])
 
 
 def test_flash(pipeline_dir):

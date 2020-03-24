@@ -330,7 +330,12 @@ else:
         input: fastaq='reads/3-forward-primer-trimmed.{ext}.gz'
         resources: time=1
         run:
-            relative_symlink(input.fastaq, output.fastaq, force=True)
+            if config.forward_primers:
+                # The target is marked as temp().
+                # To avoid a dangling symlink, use a hardlink.
+                os.link(input.fastaq, output.fastaq)
+            else:
+                relative_symlink(input.fastaq, output.fastaq, force=True)
 
 
 rule trimmed_fasta_stats:
