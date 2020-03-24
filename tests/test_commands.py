@@ -6,7 +6,7 @@ import shutil
 
 
 from igdiscover.__main__ import main
-from .utils import datapath, resultpath, files_equal
+from .utils import datapath, resultpath, files_equal, convert_fastq_to_fasta
 from igdiscover.cli.init import run_init
 from igdiscover.cli.config import print_configuration, modify_configuration
 from igdiscover.cli.run import run_snakemake
@@ -218,11 +218,3 @@ def test_fasta_input(has_filtered_tab, tmp_path):
     with chdir(directory):
         modify_configuration([("barcode_length_3prime", "21")])
         run_snakemake(targets=["stats/reads.json"])
-
-
-def convert_fastq_to_fasta(fastq, fasta):
-    import dnaio
-    with dnaio.open(fastq) as inf:
-        with dnaio.open(fasta, mode="w") as outf:
-            for record in inf:
-                outf.write(record)

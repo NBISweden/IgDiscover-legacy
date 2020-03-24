@@ -4,6 +4,8 @@ import subprocess
 from contextlib import contextmanager
 from io import StringIO
 
+import dnaio
+
 
 @contextmanager
 def capture_stdout():
@@ -25,3 +27,9 @@ def resultpath(path):
 def files_equal(path1, path2):
     return subprocess.call(['diff', '-u', path1, path2]) == 0
 
+
+def convert_fastq_to_fasta(fastq, fasta):
+    with dnaio.open(fastq) as inf:
+        with dnaio.open(fasta, mode="w") as outf:
+            for record in inf:
+                outf.write(record)
