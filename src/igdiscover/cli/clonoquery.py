@@ -30,7 +30,6 @@ def add_arguments(parser):
     arg = parser.add_argument
     arg('--minimum-count', '-c', metavar='N', default=1, type=int,
         help='Discard all rows with count less than N. Default: %(default)s')
-    arg('--v-shm-threshold', default=5, type=float, help='V SHM threshold for _mindiffrate computations')
     arg('--cdr3-core', default=None,
         type=slice_arg, metavar='START:END',
         help='START:END defines the non-junction region of CDR3 '
@@ -138,13 +137,11 @@ def main(args):
         else:
             summary_file = None
 
-        # Print header
+        # Header
         print(*reftable.columns, sep='\t')
 
-        # Do the actual work
         for query_rows, result_table in collect(querytable, reftable, args.mismatches,
                 args.cdr3_core, cdr3_column):
-            result_table = augment_group(result_table, v_shm_threshold=args.v_shm_threshold)
             assert len(query_rows) >= 1
             if summary_file:
                 for query_row in query_rows:
