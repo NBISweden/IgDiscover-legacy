@@ -93,7 +93,7 @@ def collect(querytable, reftable, mismatches, cdr3_core_slice, cdr3_column):
                     yield ([query_row], reftable.head(0))
                 continue
 
-            similar_group = vjlen_group.iloc[list(indices), :]
+            similar_group = vjlen_group.iloc[list(indices), :].copy()
             yield (query_rows, similar_group)
 
     # Yield result tuples for all the queries that have not been found
