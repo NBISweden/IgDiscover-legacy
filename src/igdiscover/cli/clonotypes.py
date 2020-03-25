@@ -234,9 +234,8 @@ def augment_group(table, v_shm_threshold=5, suffix='_mindiffrate'):
 
     for column in columns:
         root_seq = root[column]
-        table[column + suffix] = [
+        table[column + suffix] = table[column].apply(lambda s:
             round(edit_distance(root_seq, s, maxdiff=int(0.2 * len(root_seq))) / len(root_seq) * 100., 1)
-            for s in table[column]
-        ]
+        )
 
     return table
