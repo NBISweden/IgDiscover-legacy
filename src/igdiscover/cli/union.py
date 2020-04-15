@@ -9,6 +9,8 @@ from ..utils import Merger
 
 logger = logging.getLogger(__name__)
 
+do_not_show_cpustats = 1
+
 
 def add_arguments(parser):
     arg = parser.add_argument
