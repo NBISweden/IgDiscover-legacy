@@ -29,6 +29,7 @@ warnings.filterwarnings('ignore', 'axes.color_cycle is deprecated and replaced w
 warnings.filterwarnings('ignore', 'The `IPython.html` package')
 warnings.filterwarnings('ignore', 'Widget registration using a string name has been deprecated')
 warnings.filterwarnings('ignore', 'Traits should be given as instances, not types')
+warnings.filterwarnings('ignore', 'pandas.util.testing is deprecated.')
 
 logger = logging.getLogger(__name__)
 
