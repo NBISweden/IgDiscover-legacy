@@ -819,9 +819,12 @@ rule json_stats_nofinal:
 
         prev_sequences = set(get_sequences(input.original_db))
         size = len(prev_sequences)
-        iterations = [{'database': {'size': size}}]
-        for i, (pre_germline_path, germline_path, filtered_json_path) in enumerate(
-                zip(input.v_pre_germline, input.v_germline, input.filtered_stats)):
+        iterations = [{'database': {
+            'iteration': 0,
+            'size': size,
+        }}]
+        for iteration, (pre_germline_path, germline_path, filtered_json_path) in enumerate(
+                zip(input.v_pre_germline, input.v_germline, input.filtered_stats), 1):
 
             pre_germline_sequences = set(get_sequences(pre_germline_path))
             germline_sequences = set(get_sequences(germline_path))
@@ -834,7 +837,7 @@ rule json_stats_nofinal:
             iteration_info = OrderedDict()
             with open(filtered_json_path) as f:
                 iteration_info['assignment_filtering'] = json.load(f)
-            db_info = OrderedDict()
+            db_info = {'iteration': iteration}
             db_info['size'] = len(germline_sequences)
             db_info['gained'] = gained
             db_info['lost'] = lost
