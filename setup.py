@@ -31,7 +31,7 @@ setup(
         "snakemake>=4.5",
         "cutadapt>=2.5",
         "scipy>=1.1",
-        "xopen>=0.8.2",
+        "xopen~=0.8.4",  # TODO pin required for cutadapt
         "ruamel.yaml",
         "dnaio",
         "tinyalign>=0.2",
