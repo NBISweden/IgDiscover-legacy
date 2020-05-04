@@ -217,7 +217,7 @@ IgDiscover V gene discovery works in two stages: The program first generates
 a list of *candidate* V gene sequences. This list includes many false
 positives. In the subsequent *germline filtering* step, the list is
 therefore trimmed rigorously in order to produce the final list of germline
-sequences.
+sequences. See also the `germline filtering <germline-filters>`:ref: section.
 
 The stringency requirements for the germline filter can be set in the
 configuration file in the `germline_filter` and `pregermline_filter`
@@ -453,7 +453,8 @@ They also contain the following additional files.
 
 iteration-xx/candidates.tab
     A table with candidate novel V alleles (or genes).
-    This is a list of sequences found through the *windowing strategy* or *linkage cluster analysis*, as discussed in our paper. See :ref:`the full description of candidates.tab <candidates_tab>`.
+    This is a list of sequences found through the *windowing strategy* or *linkage cluster analysis*,
+    as discussed in our paper. See :ref:`the full description of candidates.tab <candidates_tab>`.
 
 iteration-xx/read_names_map.tab
     For each candidate novel V allele listed in ``candidates.tab``, this file contains one row that
@@ -470,7 +471,8 @@ iteration-xx/new_V_germline.fasta, iteration-xx/new_V_pregermline.fasta
     The file resulting from application of the pre-germline filter is used in earlier iterations.
 
 iteration-xx/annotated_V_germline.tab, iteration-xx/annotated_V_pregermline.tab
-    A version of the ``candidates.tab`` file that is annotated with extra columns that describe why a candidate was filtered out. See :ref:`the description of this file <annotated_v_tab>`.
+    A version of the ``candidates.tab`` file that is annotated with extra columns that describe why
+    a candidate was filtered out. See :ref:`the description of this file <annotated_v_tab>`.
 
 iteration-xx/new_J.tab, iteration-xx/new_J.fasta
     The discovered list of J genes for this iteration.
@@ -733,7 +735,9 @@ N_bases
 annotated_V_*.tab
 -----------------
 
-The two files ``annotated_V_germline.tab`` and ``annotated_V_pregermline.tab`` are copies of the ``candidates.tab`` file with two extra columns that show *why* a candidate was filtered in the germline and pre-germline filtering steps. The two columns are:
+The two files ``annotated_V_germline.tab`` and ``annotated_V_pregermline.tab`` are copies of the
+``candidates.tab`` file with two extra columns that show *why* a candidate was filtered in the
+germline and pre-germline filtering steps. The two columns are:
 
   * ``is_filtered`` – A number describing how many filtering criteria exclude this candidate.
   * ``why_filtered`` – A semicolon-separated list of filtering reasons.
@@ -786,6 +790,95 @@ identical_to
     This is written as ``identical_to=VH1-1,truncated``, where “VH1-1” is the name of the other
     sequence. If the ``truncated`` part is missing, then the sequences were exactly identical.
 
+
+.. _stats-json:
+
+stats/stats.json
+----------------
+
+The ``stats/stats.json`` is a JSON file that contains various statistics about a discovery run.
+In particular, below the ``"iterations"`` and then the ``"database"`` key, you will see information
+about the number of found V alleles found or lost in each iteration.
+
+Note that both the germline filter and pregermline filter are run in each iteration, resulting
+in two databases, and therefore the ``stats.json`` file contains information about both. This
+allows one to compare the two filters. That is, the germline-filtering numbers
+tell you what the size of the database would be *if this was the last iteration*, but if there
+are more iterations, then the numbers for the pregermline-filtered database are the relevant ones.
+
+Here is a shortened example::
+
+    "iterations": [
+      {
+        "database": {
+          "iteration": 0,
+          "size": 44
+        }
+      },
+      {
+        "assignment_filtering": {
+          (omitted)
+        },
+        "database": {
+          "iteration": 1,
+          "size": 12,
+          "gained": 7,
+          "lost": 39,
+          "size_pre": 20,
+          "gained_pre": 15,
+          "lost_pre": 39
+        }
+      }
+    ]
+
+iteration
+    The iteration number. The first entry is iteration zero and is not an actual iteration, but
+    gives information about the size of the starting database.
+
+size
+    The number of V alleles in the germline-filtered database that was discovered in this iteration.
+    For iteration zero, this gives the number of V alleles in the starting database.
+
+size_pre
+    Same as ``size``, but for the pregermline-filtered version of the database.
+
+gained
+    Number of novel V alleles in the germline-filtered database that was discovered in this
+    iteration, compared to the pregermline-filtered database of the previous iteration.
+
+gained_pre
+    Same as ``gained``, but the comparison is made between the current and previous
+    pregermline-filtered databases.
+
+lost
+    The number of alleles that existed in the pregermline-filtered database of the previous
+    iteration, but are not present in the current germline-filtered database.
+
+lost_pre
+    Same as ``lost_pre``, but the comparison is made between the current and previous
+    pregermline-filtered databases.
+
+Let us look at the above example.
+
+* ``size``=12: If this were the last iteration, IgDiscover would give a
+  final database with 12 V alleles.
+* ``gained``=7: 7 of those 12 alleles are novel compared to the database
+  of the previous iteration (the starting database in this case).
+* ``lost``=39: Of the 44 alleles that were in the database of the previous iteration, 39 could
+  not be found in this iteration (using the germline filter), that is, 5 alleles are common.
+* ``size_pre``=20: If this is not the final iteration, IgDiscover starts the next iteration
+  with an intermediate input database containing 20 alleles.
+* ``gained_pre``=15: Of those 20 alleles, 15 are new compared to the previous iteration.
+
+Other notes:
+
+* The most important values are ``size`` and ``gained``.
+* All four “gained” and “lost” values show comparisons to the pregermline-filtered database of the
+  previous iteration.
+* In iteration 1, when there is no previous iteration, the comparison is made to the
+  starting database.
+
+
 .. _gene-names:
 
 Names for discovered genes
@@ -793,7 +886,7 @@ Names for discovered genes
 
 Each gene discovered by IgDiscover gets a unique name such as “VH4.11_S1234”.
 The “VH4.11” is the name of the database gene to which the novel
-V gene was initially assigned. The number *1234* is derived from the nucleotide
+V gene was initially assigned. The number *1234* (hash) is derived from the nucleotide
 sequence of the novel gene. That is, if you discover the same sequence in two
 different runs of the IgDiscover, or just in different iterations, the number will
 be the same. This may help when manually inspecting results.
@@ -925,7 +1018,7 @@ Germline and pre-germline filtering
 V gene sequences found by the clustering step of the program (the ``discover`` subcommand) are
 stored in the ``candidates.tab`` file. The entries are “candidates” because many of these will be
 PCR or other artifacts and therefore do not represent true novel V genes. The germline and
-pre-germline filters take care of removing artifacts. They germline filter is the “real” filter and
+pre-germline filters take care of removing artifacts. The germline filter is the “real” filter and
 used only in the last iteration in order to obtain the final gene database. The pre-germline filter
 is less strict and used in all the earlier iterations.
 
@@ -955,10 +1048,12 @@ candidates that appear on it
 Whitelisting allows IgDiscover to identify known germline sequences that are expressed at low
 levels in a library. If enabled with ``whitelist: true`` (the default) in the pregermline and
 germline filter sections of the configuration file, the sequences present in the starting database
-are treated as validated germline sequences and will not be discarded if due to too small cluster
+are treated as validated germline sequences and will not be discarded due to too small cluster
 size as long as they fulfill the remaining criteria (unique_cdr3s, unique_js etc.).
 
-You can see why a candidate was filtered by inspecting the :ref:`annotated_V_*.tab files <annotated_v_tab>`
+You can see why a candidate was filtered by inspecting the
+:ref:`annotated_V_*.tab files <annotated_v_tab>`
+
 
 .. _cross-mapping:
 
@@ -1103,9 +1198,9 @@ Terms
 =====
 
 Analysis directory
-    The directory that was created with ``igdiscover init``. Separate ones are created for
-    each experiment. When you used ``igdiscover init myexperiment``, the analysis directory
-    would be ``myexperiment/``.
+    The directory that was created with ``igdiscover init``. Thus, when you use
+    ``igdiscover init myexperiment``, the analysis directory is ``myexperiment/``.
+    Separate analysis directories need to be created for each sample.
 
 Starting database
     The initial list of V/D/J genes. These are expected to be in FASTA format and are copied into
