@@ -855,7 +855,7 @@ lost
     iteration, but are not present in the current germline-filtered database.
 
 lost_pre
-    Same as ``lost_pre``, but the comparison is made between the current and previous
+    Same as ``lost``, but the comparison is made between the current and previous
     pregermline-filtered databases.
 
 Let us look at the above example.
