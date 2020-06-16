@@ -29,9 +29,9 @@ setup(
         "matplotlib>=3.0",
         "seaborn>=0.9",
         "snakemake>=4.5",
-        "cutadapt>=2.5",
+        "cutadapt>=2.10",
         "scipy>=1.1",
-        "xopen~=0.8.4",  # TODO pin required for cutadapt
+        "xopen~=0.9.0",
         "ruamel.yaml",
         "dnaio",
         "tinyalign>=0.2",

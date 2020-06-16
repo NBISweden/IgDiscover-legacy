@@ -15,5 +15,5 @@ dependencies:
   - ruamel.yaml
   - pigz>=2.4
   - dnaio
-  - xopen>=0.8.2
+  - xopen>=0.9.0
   - tinyalign~=0.2
