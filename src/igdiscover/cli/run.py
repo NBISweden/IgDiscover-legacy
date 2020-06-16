@@ -8,6 +8,7 @@ import logging
 import resource
 import platform
 import pkg_resources
+from contextlib import closing
 from snakemake import snakemake
 
 from .config import Config
@@ -59,20 +60,20 @@ def run_snakemake(
     old_root_handlers = logger.root.handlers
     root = logging.getLogger()
     root.handlers = []
-    file_handler = logging.FileHandler("log.txt")
-    root.addHandler(file_handler)
+    with closing(logging.FileHandler("log.txt")) as file_handler:
+        root.addHandler(file_handler)
 
-    snakefile_path = pkg_resources.resource_filename('igdiscover', 'Snakefile')
-    success = snakemake(
-        snakefile_path,
-        snakemakepath='snakemake',  # Needed in snakemake 3.9.0
-        dryrun=dryrun,
-        cores=cores,
-        keepgoing=keepgoing,
-        printshellcmds=True,
-        targets=targets,
-    )
-    logger.root.handlers = old_root_handlers
+        snakefile_path = pkg_resources.resource_filename('igdiscover', 'Snakefile')
+        success = snakemake(
+            snakefile_path,
+            snakemakepath='snakemake',  # Needed in snakemake 3.9.0
+            dryrun=dryrun,
+            cores=cores,
+            keepgoing=keepgoing,
+            printshellcmds=True,
+            targets=targets,
+        )
+        logger.root.handlers = old_root_handlers
 
     if sys.platform == 'linux' and not dryrun:
         cputime = resource.getrusage(resource.RUSAGE_SELF).ru_utime
