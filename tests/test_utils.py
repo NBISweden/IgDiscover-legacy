@@ -32,7 +32,8 @@ def assert_dicts_equal(expected, actual):
 
 def test_config():
     empty_config = Config(file=StringIO('{}'))
-    packaged_config = Config(file=pkg_resources.resource_stream('igdiscover', Config.DEFAULT_PATH))
+    with pkg_resources.resource_stream('igdiscover', Config.DEFAULT_PATH) as file:
+        packaged_config = Config(file=file)
     # force library name to be equal since it is dynamically determined
     empty_config.library_name = packaged_config.library_name = 'nolib'
     e = empty_config.__dict__
