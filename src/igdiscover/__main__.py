@@ -82,14 +82,15 @@ def main(arguments=None):
     args = parser.parse_args(arguments)
     do_profiling = args.profile
     del args.profile
-    subcommand = getattr(args, 'func', None)
-    del args.func
-    if not subcommand:
+    if hasattr(args, 'func'):
+        subcommand = args.func
+        del args.func
+    else:
         parser.error('Please provide the name of a subcommand to run')
-    elif do_profiling:
+    if do_profiling:
         import cProfile as profile
         to_run = lambda: profile.runctx('subcommand(args)', globals(), locals(), filename='igdiscover.prof')
-        logger.info('Wrote profiling data to igdiscover.prof')
+        logger.info('Writing profiling data to igdiscover.prof')
     else:
         to_run = lambda: subcommand(args)
     try:
