@@ -31,7 +31,7 @@ setup(
         "snakemake>=4.5",
         "cutadapt>=2.10",
         "scipy>=1.1",
-        "xopen~=0.9.0",
+        "xopen",
         "ruamel.yaml",
         "dnaio",
         "tinyalign>=0.2",
