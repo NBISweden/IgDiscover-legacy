@@ -20,7 +20,7 @@ by the group size (number of members of a clonotype).
 """
 import itertools
 import logging
-from itertools import islice
+import time
 from contextlib import ExitStack
 from collections import Counter
 
@@ -113,10 +113,13 @@ def run_clonotypes(
         columns.insert(columns.index('CDR3_nt'), 'CDR3_length')
         print(*columns, sep='\t')
         print_header = True
-        n = 0
         cdr3_column = 'CDR3_aa' if aa else 'CDR3_nt'
         grouped = group_by_clonotype(table, mismatches, sort, cdr3_core, cdr3_column)
-        for group in islice(grouped, 0, limit):
+        logger.info('Writing clonotypes')
+        started = time.time()
+        n = k = 0
+        progress_updated = 0
+        for group in itertools.islice(grouped, 0, limit):
             if mindiffrate:
                 group = augment_group(group, v_shm_threshold=v_shm_threshold)
             if members_file:
@@ -127,6 +130,18 @@ def run_clonotypes(
             rep = representative(group)
             print(*[rep[col] for col in columns], sep='\t')
             n += 1
+            k += len(group)
+            if n % 1000 == 0:
+                elapsed = time.time() - started
+                if elapsed >= progress_updated + 60:
+                    hours = int(elapsed / 3600)
+                    minutes = int(elapsed) % 3600 // 60
+                    seconds = int(elapsed % 60)
+                    logger.info(
+                        f"{hours:3d}:{minutes:02d}:{seconds:02d} h:"
+                        f" {n} clonotypes and {k} sequences written"
+                    )
+                    progress_updated = elapsed
     logger.info('%d clonotypes written', n)
 
 
