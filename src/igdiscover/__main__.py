@@ -89,7 +89,7 @@ def main(arguments=None):
         parser.error('Please provide the name of a subcommand to run')
     if do_profiling:
         import cProfile as profile
-        to_run = lambda: profile.runctx('subcommand(args)', globals(), locals(), filename='igdiscover.prof')
+        to_run = lambda: profile.runctx('subcommand(args)', globals(), dict(subcommand=subcommand, args=args), filename='igdiscover.prof')
         logger.info('Writing profiling data to igdiscover.prof')
     else:
         to_run = lambda: subcommand(args)
