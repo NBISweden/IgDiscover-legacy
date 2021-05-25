@@ -1,7 +1,7 @@
-.. image:: https://img.shields.io/pypi/v/igdiscover.svg?branch=master
+.. image:: https://img.shields.io/pypi/v/igdiscover.svg?branch=main
     :target: https://pypi.python.org/pypi/igdiscover
 
-.. image:: https://travis-ci.org/NBISweden/IgDiscover.svg?branch=master
+.. image:: https://travis-ci.org/NBISweden/IgDiscover.svg?branch=main
     :target: https://travis-ci.org/NBISweden/IgDiscover
 
 .. image:: https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg
@@ -41,7 +41,7 @@ Links
 
 |
 
-.. figure:: https://raw.githubusercontent.com/NBISweden/IgDiscover/master/doc/clusterplot.jpeg
+.. figure:: https://raw.githubusercontent.com/NBISweden/IgDiscover/main/doc/clusterplot.jpeg
 
 |
 
