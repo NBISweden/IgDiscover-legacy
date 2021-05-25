@@ -1,5 +1,5 @@
 import os
-import ruamel.yaml
+from ruamel.yaml import YAML
 
 
 class ConfigurationError(Exception):
@@ -69,7 +69,7 @@ class Config:
 
     def read_from(self, file):
         content = file.read()
-        new_config = self.make_compatible(ruamel.yaml.safe_load(content))
+        new_config = self.make_compatible(YAML().load(content))
         for key in ('preprocessing_filter', 'pre_germline_filter', 'germline_filter', 'j_discovery'):
             if key in new_config:
                 self.__dict__[key].update(new_config[key])
@@ -121,7 +121,7 @@ class GlobalConfig:
         path = os.path.join(path, 'igdiscover.conf')
         if os.path.exists(path):
             with open(path) as f:
-                config = ruamel.yaml.safe_load(f)
+                config = YAML().load(f)
             if config is None:
                 return
             self.use_cache = config.get('use_cache', False)

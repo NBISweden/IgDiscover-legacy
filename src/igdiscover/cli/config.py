@@ -8,7 +8,9 @@ If no --set option is given, print the current configuration.
 """
 import os
 import logging
-import ruamel.yaml
+import sys
+
+from ruamel.yaml import YAML
 
 from igdiscover.config import Config
 
@@ -35,12 +37,13 @@ def modify_configuration(
     settings,
     path=Config.DEFAULT_PATH,
 ):
+    yaml = YAML()
     with open(path) as f:
-        config = ruamel.yaml.load(f, ruamel.yaml.RoundTripLoader)
+        config = yaml.load(f)
     for k, v in settings:
         if not isinstance(k, str) or not isinstance(v, str):
             raise ValueError("key and value must both be strings")
-        v = ruamel.yaml.safe_load(v)
+        v = yaml.load(v)
         # config[k] = v
         item = config
         # allow nested keys
@@ -50,11 +53,12 @@ def modify_configuration(
         item[keys[-1]] = v
     tmpfile = path + '.tmp'
     with open(tmpfile, 'w') as f:
-        print(ruamel.yaml.dump(config, Dumper=ruamel.yaml.RoundTripDumper), end='', file=f)
+        yaml.dump(config, f)
     os.rename(tmpfile, path)
 
 
 def print_configuration(path=Config.DEFAULT_PATH):
+    yaml = YAML()
     with open(path) as f:
-        config = ruamel.yaml.safe_load(f)
-    print(ruamel.yaml.dump(config), end='')
+        config = yaml.load(f)
+    yaml.dump(config, sys.stdout)
