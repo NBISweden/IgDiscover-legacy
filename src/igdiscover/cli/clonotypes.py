@@ -64,6 +64,8 @@ def add_arguments(parser):
             'Default: %(default)s')
     arg('--aa', default=False, action='store_true',
         help='Count CDR3 mismatches on amino-acid level. Default: Compare nucleotides.')
+    arg('--no-mindiffrate', dest='mindiffrate', action='store_false', default=True,
+        help='Do not add _mindiffrate columns')
     arg('--members', metavar='FILE',
         help='Write member table to FILE')
     arg('table', help='Table with parsed and filtered IgBLAST results')
@@ -82,6 +84,7 @@ def run_clonotypes(
     mismatches=1,
     members=None,
     cdr3_core=None,
+    mindiffrate=True,
 ):
     logger.info('Reading input table ...')
     usecols = CLONOTYPE_COLUMNS
@@ -113,7 +116,8 @@ def run_clonotypes(
         cdr3_column = 'CDR3_aa' if aa else 'CDR3_nt'
         grouped = group_by_clonotype(table, mismatches, sort, cdr3_core, cdr3_column)
         for group in islice(grouped, 0, limit):
-            group = augment_group(group, v_shm_threshold=v_shm_threshold)
+            if mindiffrate:
+                group = augment_group(group, v_shm_threshold=v_shm_threshold)
             if members_file:
                 # We get an intentional empty line between groups since
                 # to_csv() already includes a line break
