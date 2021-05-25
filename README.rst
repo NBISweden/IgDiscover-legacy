@@ -1,8 +1,8 @@
-.. image:: https://img.shields.io/pypi/v/igdiscover.svg?branch=main
+.. image:: https://img.shields.io/pypi/v/igdiscover.svg
     :target: https://pypi.python.org/pypi/igdiscover
 
-.. image:: https://travis-ci.org/NBISweden/IgDiscover.svg?branch=main
-    :target: https://travis-ci.org/NBISweden/IgDiscover
+.. image:: https://github.com/NBISweden/IgDiscover/actions/workflows/ci.yml/badge.svg
+    :target: https://github.com/NBISweden/IgDiscover/actions/workflows/ci.yml
 
 .. image:: https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg
     :target: http://bioconda.github.io/recipes/igdiscover/README.html
