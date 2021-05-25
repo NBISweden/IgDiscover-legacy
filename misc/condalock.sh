@@ -1,5 +1,4 @@
 #!/bin/bash
 set -xeuo pipefail
-conda env create -n igdlock -f environment.yml
-conda env export -n igdlock | grep -Ev '^(name|prefix):' > environment.lock.yml
-conda env remove -n igdlock
+echo "generating conda-linux-64.lock from environment.yml"
+conda-lock -p linux-64
