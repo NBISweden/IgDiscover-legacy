@@ -24,17 +24,7 @@ setup(
     package_data={"igdiscover": ["igdiscover.yaml", "Snakefile", "empty.aux"]},
     python_requires=">=3.6",
     install_requires=[
-        "pandas>=0.23",
-        "numpy",
-        "matplotlib>=3.0",
-        "seaborn>=0.9",
-        "snakemake>=4.5",
-        "cutadapt>=2.8",
-        "scipy>=1.1",
-        "xopen",
-        "ruamel.yaml",
-        "dnaio",
-        "tinyalign>=0.2",
+        # see environment.yml
     ],
     classifiers=[
         "Development Status :: 4 - Beta",
