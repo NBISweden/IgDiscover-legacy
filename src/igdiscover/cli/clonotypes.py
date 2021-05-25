@@ -209,11 +209,17 @@ def representative(table):
     Given a table with members of the same clonotype, return a representative
     as a dict.
     """
-    c = Counter()
-    for row in table.itertuples():
-        c[row.VDJ_nt] += row.count
-    most_common_vdj_nt = c.most_common(1)[0][0]
-    result = table[table['VDJ_nt'] == most_common_vdj_nt].iloc[0]
+    n = len(table)
+    if n == 1:
+        return table.iloc[0]
+    elif n == 2:
+        result = table.iloc[0]
+    else:
+        c = Counter()
+        for row in table.itertuples():
+            c[row.VDJ_nt] += row.count
+        most_common_vdj_nt = c.most_common(1)[0][0]
+        result = table[table['VDJ_nt'] == most_common_vdj_nt].iloc[0]
     result.at['count'] = table['count'].sum()
     return result
 
