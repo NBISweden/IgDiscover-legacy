@@ -18,6 +18,7 @@ that have the same clonotype.
 The tables are by default sorted by clonotype, but can instead be sorted
 by the group size (number of members of a clonotype).
 """
+import itertools
 import logging
 from itertools import islice
 from contextlib import ExitStack
@@ -147,14 +148,14 @@ def group_by_clonotype(table, mismatches, sort, cdr3_core, cdr3_column):
         if sort:
             # When sorting by group size is requested, we need to buffer
             # results
-            groups.extend(cdr3_groups)
+            groups.append(cdr3_groups)
         else:
             yield from cdr3_groups
-
     if sort:
-        logger.info('Sorting by group size ...')
-        groups.sort(key=len, reverse=True)
-        yield from groups
+        logger.info("Sorting by size ...")
+        flattened = list(itertools.chain(*groups))
+        flattened.sort(key=len, reverse=True)
+        yield from flattened
 
 
 def group_by_cdr3(table, mismatches, cdr3_core, cdr3_column):
