@@ -1,0 +1,34 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.7]
+    defaults:
+      run:
+        shell: bash -l {0}  # a login shell is required for conda activation
+    steps:
+      - uses: actions/checkout@v2
+      - name: Create Conda environment
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          environment-file: conda-linux-64.lock
+          use-only-tar-bz2: true
+      - name: Install test dependencies
+        run: conda install pytest pip
+      - name: Install IgDiscover
+        run: pip install --no-deps .
+      - name: Configure cache
+        run: "echo 'use_cache: true' > $HOME/.config/igdiscover.conf"
+      - name: Download test data
+        run: |
+          wget -nv https://bitbucket.org/igdiscover/testdata/downloads/igdiscover-testdata-0.6.tar.gz
+          tar xvf igdiscover-testdata-0.6.tar.gz
+          ln -s igdiscover-testdata testdata
+      - name: Run tests
+        run: pytest
