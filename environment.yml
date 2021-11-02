@@ -15,7 +15,7 @@ dependencies:
   - muscle
   - pear
   - flash
-  - igblast=1.10
+  - igblast=1.17
   - ruamel.yaml>=0.15
   - pigz>=2.4
   - dnaio
