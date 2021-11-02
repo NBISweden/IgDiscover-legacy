@@ -17,7 +17,6 @@ Postprocessing includes:
 """
 import sys
 import os
-import shutil
 import time
 import multiprocessing
 import subprocess
