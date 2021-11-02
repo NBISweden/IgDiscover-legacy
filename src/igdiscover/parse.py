@@ -720,6 +720,9 @@ class IgBlastParser:
                 query_name = section.split(': ')[1]
             elif section.startswith('# V-(D)-J rearrangement summary'):
                 fields = lines[0].split('\t')
+                if "V-J frame" in section:
+                    # IgBLAST 1.17+ has an extra column
+                    fields = fields[:-1]
                 if len(fields) == 7:
                     # No D assignment
                     v_gene, j_gene, chain, has_stop, in_frame, is_productive, strand = fields
