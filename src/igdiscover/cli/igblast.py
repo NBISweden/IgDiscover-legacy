@@ -17,6 +17,7 @@ Postprocessing includes:
 """
 import sys
 import os
+import shlex
 import time
 import multiprocessing
 import subprocess
@@ -68,6 +69,10 @@ def add_arguments(parser):
 
     arg('database', help='Database directory with V.fasta, D.fasta, J.fasta.')
     arg('fasta', help='File with original reads')
+
+
+def escape_shell_command(command):
+    return " ".join(shlex.quote(arg) for arg in command)
 
 
 class IgBlastCache:
@@ -174,8 +179,9 @@ def run_igblast(sequences, blastdb_dir, species, sequence_type, penalty=None, us
         # subprocess.check_output. As a workaround, we write the output to a temporary file.
         with tempfile.TemporaryDirectory() as tmpdir:
             path = os.path.join(tmpdir, 'igblast.txt')
-            output = subprocess.check_output(['igblastn'] + variable_arguments + arguments
-                + ['-out', path], input=fasta_str, universal_newlines=True)
+            command = ['igblastn'] + variable_arguments + arguments + ['-out', path]
+            logger.debug("Running %s", escape_shell_command(command))
+            output = subprocess.check_output(command, input=fasta_str, universal_newlines=True)
             assert output == ''
             with open(path) as f:
                 return f.read()
@@ -240,11 +246,12 @@ def makeblastdb(fasta, database_name, prefix=''):
     if n == 0:
         raise ValueError("FASTA file {} is empty".format(fasta))
 
-    process_output = subprocess.check_output(
-        ['makeblastdb', '-parse_seqids', '-dbtype', 'nucl', '-in', database_name + ".fasta", '-out',
-            database_name],
-        stderr=subprocess.STDOUT
-    )
+    command = [
+        'makeblastdb', '-parse_seqids', '-dbtype', 'nucl', '-in', database_name + ".fasta", '-out',
+        database_name
+    ]
+    logger.debug("Running %s", escape_shell_command(command))
+    process_output = subprocess.check_output(command, stderr=subprocess.STDOUT)
     if b'Error: ' in process_output:
         raise subprocess.SubprocessError()
 
