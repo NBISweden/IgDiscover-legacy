@@ -62,6 +62,7 @@ def main(arguments=None):
     parser.add_argument('--profile', default=False, action='store_true',
         help='Save profiling information to igdiscover.prof')
     parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
+    parser.add_argument('--debug', action='store_true', default=False, help='Print debug messages')
 
     show_cpustats = dict()
     subparsers = parser.add_subparsers()
@@ -80,6 +81,9 @@ def main(arguments=None):
             show_cpustats[module.main] = False
 
     args = parser.parse_args(arguments)
+    if args.debug:
+        logging.getLogger().setLevel(logging.DEBUG)
+
     do_profiling = args.profile
     del args.profile
     if hasattr(args, 'func'):
