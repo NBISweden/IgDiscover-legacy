@@ -20,7 +20,7 @@ jobs:
           environment-file: conda-linux-64.lock
           use-only-tar-bz2: true
       - name: Install test dependencies
-        run: conda install pytest pip
+        run: conda install -c conda-forge pytest pip
       - name: Install IgDiscover
         run: pip install --no-deps .
       - name: Configure cache
