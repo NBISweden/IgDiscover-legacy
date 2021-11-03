@@ -131,7 +131,7 @@ class IgBlastCache:
         return data
 
 
-def run_igblast(sequences, blastdb_dir, species, sequence_type, penalty=None, use_cache=True) -> str:
+def run_igblast(sequences, blastdb_dir, species, sequence_type, penalty=None, use_cache=True, airr: bool = False) -> str:
     """
     Run the igblastn command-line program.
 
@@ -151,6 +151,7 @@ def run_igblast(sequences, blastdb_dir, species, sequence_type, penalty=None, us
     # An empty .aux suppresses a warning from IgBLAST. /dev/null does not work.
     empty_aux_path = pkg_resources.resource_filename('igdiscover', 'empty.aux')
     variable_arguments += ['-auxiliary_data', empty_aux_path]
+    outfmt = '19' if airr else '7 sseqid qstart qseq sstart sseq pident slen evalue'
     arguments = []
     if penalty is not None:
         arguments += ['-penalty', str(penalty)]
@@ -164,7 +165,7 @@ def run_igblast(sequences, blastdb_dir, species, sequence_type, penalty=None, us
         '-num_alignments_V', '1',
         '-num_alignments_D', '1',
         '-num_alignments_J', '1',
-        '-outfmt', '7 sseqid qstart qseq sstart sseq pident slen evalue',
+        '-outfmt', outfmt,
         '-query', '-',
     ]
     fasta_str = ''.join(">{}\n{}\n".format(r.name, r.sequence) for r in sequences)
