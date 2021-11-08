@@ -15,6 +15,7 @@ from ruamel.yaml import YAML
 from igdiscover.config import Config
 
 logger = logging.getLogger(__name__)
+do_not_show_cpustats = 1
 
 
 def add_arguments(parser):
