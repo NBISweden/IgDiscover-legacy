@@ -132,9 +132,10 @@ def test_modify_configuration(pipeline_dir):
         settings=[("d_coverage", "12"), ("j_discovery.allele_ratio", "0.37")],
         path=str(pipeline_dir / "igdiscover.yaml"),
     )
-    import ruamel.yaml
+    from ruamel.yaml import YAML
+    yaml = YAML(typ="safe", pure=True)
     with open(pipeline_dir / "igdiscover.yaml") as f:
-        config = ruamel.yaml.safe_load(f)
+        config = yaml.load(f)
     assert config["d_coverage"] == 12
     assert config["j_discovery"]["allele_ratio"] == 0.37
 

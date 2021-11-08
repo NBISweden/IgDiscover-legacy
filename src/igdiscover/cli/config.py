@@ -58,7 +58,8 @@ def modify_configuration(
 
 
 def print_configuration(path=Config.DEFAULT_PATH):
-    yaml = YAML()
+    yaml = YAML(typ="safe", pure=True)
+    yaml.default_flow_style = False
     with open(path) as f:
         config = yaml.load(f)
     yaml.dump(config, sys.stdout)
