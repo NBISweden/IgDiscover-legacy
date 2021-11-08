@@ -83,6 +83,7 @@ def main(arguments=None):
     args = parser.parse_args(arguments)
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)
+    del args.debug
 
     do_profiling = args.profile
     del args.profile
