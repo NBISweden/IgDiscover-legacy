@@ -57,8 +57,8 @@ def main(args):
             table = table[table.D_errors == 0]
             logger.info('%s rows remain after requiring D errors = 0', len(table))
 
-    gene1 = args.x + '_gene'
-    gene2 = args.gene + '_gene'
+    gene1 = args.x.lower() + '_call'
+    gene2 = args.gene.lower() + '_call'
     expression_counts = table.groupby((gene1, gene2)).size().to_frame().reset_index()
     matrix = pd.DataFrame(
         expression_counts.pivot(index=gene1, columns=gene2, values=0).fillna(0), dtype=int)

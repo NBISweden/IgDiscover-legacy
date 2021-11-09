@@ -262,7 +262,7 @@ def count_unique_cdr3(table):
 
 
 def count_unique_gene(table, gene_type):
-    return len(set(s for s in table[gene_type + '_gene'] if s))
+    return len(set(s for s in table[gene_type.lower() + '_call'] if s))
 
 
 def compute_expressions(table, gene_type):
@@ -272,7 +272,7 @@ def compute_expressions(table, gene_type):
     for gt in 'V', 'D', 'J':
         if gene_type != gt:
             columns += ('unique_' + gt,)
-    gene_column = gene_type + '_gene'
+    gene_column = gene_type.lower() + '_call'
     rows = []
     for gene, group in table.groupby(gene_column):
         if gene == '':
@@ -334,7 +334,7 @@ def main(args):
         database = None
     column = {'V': 'V_nt', 'J': 'J_nt', 'D': 'D_region'}[args.gene]
     other = 'V' if args.gene in ('D', 'J') else 'J'
-    other_gene = other + '_gene'
+    other_gene = other.lower() + '_call'
     other_errors = other + '_errors'
     table = read_table(args.table,
         usecols=['count', 'v_call', 'd_call', 'j_call', 'V_errors', 'J_errors', 'J_covered', column, 'CDR3_nt'])
