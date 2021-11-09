@@ -10,6 +10,8 @@ name. Use --database to change this.
 """
 import sys
 import logging
+from typing import Optional
+
 import dnaio
 from ..table import read_table
 from ..utils import natural_sort_key
@@ -74,8 +76,25 @@ def plot_counts(counts, gene_type):
 
 
 def main(args):
-    if args.database:
-        with dnaio.open(args.database) as fr:
+    run_count(**vars(args))
+
+
+def run_count(
+    database: Optional[str],
+    table: str,
+    plot: Optional[str],
+    gene: str,
+    d_evalue: Optional[float],
+    d_coverage: Optional[float],
+    d_errors: Optional[int],
+    allele_ratio: Optional[float],
+):
+    if database and allele_ratio:
+        logger.error('--database and --allele-ratio cannot be used at the same time.')
+        sys.exit(1)
+
+    if database:
+        with dnaio.open(database) as fr:
             gene_names = [record.name for record in fr]
         gene_names.sort(key=natural_sort_key)
     else:
@@ -83,42 +102,38 @@ def main(args):
 
     usecols = ['v_call', 'd_call', 'j_call', 'V_errors', 'D_errors', 'J_errors', 'D_covered',
         'D_evalue', 'CDR3_nt']
-    table = read_table(args.table, usecols=usecols)
+    table = read_table(table, usecols=usecols)
     logger.info('Table with %s rows read', len(table))
 
     # Set default filters depending on gene
-    if args.gene == 'D':
-        if args.d_evalue is None:
-            args.d_evalue = 1E-4
-        if args.d_coverage is None:
-            args.d_coverage = 70
-    if args.d_evalue is not None:
-        table = table[table.D_evalue <= args.d_evalue]
-        logger.info('%s rows remain after requiring D E-value <= %s', len(table), args.d_evalue)
+    if gene == 'd':
+        if d_evalue is None:
+            d_evalue = 1E-4
+        if d_coverage is None:
+            d_coverage = 70
+    if d_evalue is not None:
+        table = table[table.D_evalue <= d_evalue]
+        logger.info('%s rows remain after requiring D E-value <= %s', len(table), d_evalue)
 
-    if args.d_coverage is not None:
-        table = table[table.D_covered >= args.d_coverage]
-        logger.info('%s rows remain after requiring D coverage >= %s', len(table), args.d_coverage)
+    if d_coverage is not None:
+        table = table[table.D_covered >= d_coverage]
+        logger.info('%s rows remain after requiring D coverage >= %s', len(table), d_coverage)
 
-    if args.d_errors is not None:
-        table = table[table.D_errors <= args.d_errors]
-        logger.info('%s rows remain after requiring D errors <= %s', len(table), args.d_errors)
+    if d_errors is not None:
+        table = table[table.D_errors <= d_errors]
+        logger.info('%s rows remain after requiring D errors <= %s', len(table), d_errors)
 
-    logger.info('Computing expression counts for %s genes', args.gene)
-    counts = compute_expressions(table, args.gene)
+    logger.info('Computing expression counts for %s genes', gene)
+    counts = compute_expressions(table, gene)
 
     # Make sure that always all gene names are listed even if no sequences
     # were assigned.
     if gene_names:
         counts = counts.reindex(gene_names, fill_value=0)
 
-    if args.database and args.allele_ratio:
-        logger.error('--database and --allele-ratio cannot be used at the same time.')
-        sys.exit(1)
-
     logger.info('Computed expressions for %d genes', len(counts))
-    if args.allele_ratio is not None:
-        counts = filter_by_allele_ratio(counts, args.allele_ratio)
+    if allele_ratio is not None:
+        counts = filter_by_allele_ratio(counts, allele_ratio)
         logger.info(
             'After filtering by allele ratio, %d genes remain',
             len(counts))
@@ -127,6 +142,6 @@ def main(args):
     counts.to_csv(sys.stdout, sep='\t')
     logger.info('Wrote expression count table')
 
-    if args.plot:
-        plot_counts(counts, args.gene).savefig(args.plot)
-        logger.info("Wrote %s", args.plot)
+    if plot:
+        plot_counts(counts, gene.upper()).savefig(plot)
+        logger.info("Wrote %s", plot)
