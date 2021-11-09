@@ -431,11 +431,11 @@ def main(args):
 
     logger.info('Counting occurrences ...')
     if args.gene == 'D':
-        search_columns = ['VD_junction', 'D_region', 'DJ_junction']
+        search_columns = ['np1', 'D_region', 'np2']
     elif args.gene == 'J':
-        search_columns = ['DJ_junction', 'J_nt']
+        search_columns = ['np2', 'J_nt']
     else:
-        search_columns = ['genomic_sequence']
+        search_columns = ['sequence']
     candidates = count_occurrences(candidates, args.table, search_columns, other_gene, other_errors,
         args.merge, args.perfect_matches)
 

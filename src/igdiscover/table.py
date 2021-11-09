@@ -28,25 +28,35 @@ _STRING_COLUMNS = [
     'V_nt',
     'V_aa',
     'V_end',
-    'VD_junction',
+    'np1',
     'D_region',
-    'DJ_junction',
+    'np2',
     'J_nt',
     'VDJ_nt',
     'VDJ_aa',
     'name',
     'barcode',
     'race_G',
-    'genomic_sequence',
+    'sequence',
 ]
 
 _INTEGER_COLUMNS = ('V_errors', 'D_errors', 'J_errors', 'V_CDR3_start')
+
+_RENAME = {
+    "CDR3_clusters": "clonotypes",
+    "genomic_sequence": "sequence",
+    "VD_junction": "np1",
+    "DJ_junction": "np2",
+}
 
 
 def fix_columns(df):
     """
     Changes DataFrame in-place
     """
+    # Rename legacy columns
+    df.rename(columns=_RENAME, inplace=True)
+
     # Convert all string columns to str to avoid a PerformanceWarning
     for col in _STRING_COLUMNS:
         if col not in df:
@@ -63,10 +73,6 @@ def fix_columns(df):
             continue
         if all(df[col].notnull()):
             df[col] = df[col].astype(int)
-
-    # TODO backwards compatibility
-    if 'CDR3_clusters' in df.columns:
-        df.rename(columns={'CDR3_clusters': 'clonotypes'}, inplace=True)
 
 
 def read_table(path, usecols=None, log=False, nrows=None):

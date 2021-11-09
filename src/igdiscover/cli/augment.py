@@ -234,7 +234,6 @@ def augment_table(table, database):
 
     # Copy these over
     # TODO instead, use the source columns directly in subsequent scripts
-    table["genomic_sequence"] = table["sequence"]
     table["V_gene"] = table["v_call"]
     table["D_gene"] = table["d_call"]
     table["J_gene"] = table["j_call"]
@@ -247,9 +246,6 @@ def augment_table(table, database):
     table["CDR1_aa"] = table["cdr1_aa"]
     table["CDR2_nt"] = table["cdr2"]
     table["CDR2_aa"] = table["cdr2_aa"]
-
-    table["VD_junction"] = table["np1"]
-    table["DJ_junction"] = table["np2"]
 
     # Minor transformation needed
     table["V_nt"] = table["v_sequence_alignment"].str.replace("-", "")
