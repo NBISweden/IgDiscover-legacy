@@ -525,8 +525,7 @@ else:
 
 rule igdiscover_igblast:
     output:
-        tabgz="{dir}/assigned.tab.gz",
-        json="{dir}/stats/assigned.json"
+        tabgz="{dir}/assigned.airr.tsv.gz",
     input:
         fastagz=PREPROCESSED_READS,
         db_v="{dir}/database/V.fasta",
@@ -537,11 +536,30 @@ rule igdiscover_igblast:
         database='{dir}/database',
         species=' --species={}'.format(config.species) if config.species else '',
         sequence_type=' --sequence-type={}'.format(config.sequence_type),
-        rename=' --rename {path!r}_'.format(path=os.path.basename(os.getcwd())) if config.rename else ''
     threads: 16
     shell:
-        "time igdiscover igblast{params.sequence_type}{params.penalty}{params.rename} --threads={threads}"
-        "{params.species} --stats={output.json} {params.database} {input.fastagz} | "
+        "time igdiscover igblastwrap{params.sequence_type}{params.penalty} --threads={threads}"
+        "{params.species} {params.database} {input.fastagz} | "
+        "{GZIP} > {output.tabgz}"
+
+
+rule igdiscover_augment:
+    output:
+        tabgz="{dir}/assigned.tab.gz",
+        json="{dir}/stats/assigned.json"
+    input:
+        airr_tsv="{dir}/assigned.airr.tsv.gz",
+        db_v="{dir}/database/V.fasta",
+        db_d="{dir}/database/D.fasta",
+        db_j="{dir}/database/J.fasta"
+    params:
+        database='{dir}/database',
+        sequence_type=' --sequence-type={}'.format(config.sequence_type),
+        rename=' --rename {path!r}_'.format(path=os.path.basename(os.getcwd())) if config.rename else ''
+    shell:
+        "time igdiscover augment{params.sequence_type}{params.rename}"
+        " --stats={output.json} {params.database} {input.airr_tsv}"
+        " | "
         "{GZIP} > {output.tabgz}"
 
 
