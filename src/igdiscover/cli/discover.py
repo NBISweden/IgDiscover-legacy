@@ -214,7 +214,7 @@ class Discoverer:
         g = table[(table.D_errors == 0) &
             (table.D_covered >= self.d_coverage) &
             (table.D_evalue <= self.d_evalue)]
-        return len(set(s for s in g.D_gene if s))
+        return len(set(s for s in g.d_call if s))
 
     @staticmethod
     def count_unique_barcodes(group):
@@ -233,7 +233,7 @@ class Discoverer:
             return edit_distance(s, t, distance) <= distance
 
         total = 0
-        for j_gene, group in table.groupby('J_gene'):
+        for j_gene, group in table.groupby('j_call'):
             sequences = list(set(s for s in group.CDR3_nt if s))
             components = single_linkage(sequences, linked)
             total += len(components)
@@ -382,7 +382,7 @@ class Discoverer:
                 cdr3_counts = Counter(s for s in group.CDR3_nt if s)
                 unique_cdr3 = len(cdr3_counts)
                 shared_cdr3_ratio = safe_divide(len(other_cdr3_counts & cdr3_counts), unique_cdr3)
-                unique_j = len(set(s for s in group.J_gene if s))
+                unique_j = len(set(s for s in group.j_call if s))
                 clonotypes = self.count_clonotypes(group)
                 unique_d = self.count_unique_d(group)
                 unique_barcodes = self.count_unique_barcodes(group)
@@ -512,7 +512,7 @@ def main(args):
         seed = random.randrange(10**6)
         logger.info('Use --seed=%d to reproduce this run', seed)
 
-    table = read_table(args.table, usecols=('name', 'chain', 'V_gene', 'D_gene', 'J_gene', 'V_nt',
+    table = read_table(args.table, usecols=('name', 'chain', 'v_call', 'd_call', 'j_call', 'V_nt',
         'CDR3_nt', 'barcode', 'V_CDR3_start', 'V_SHM', 'J_SHM', 'D_covered', 'D_evalue', 'V_errors',
         'D_errors', 'J_errors', 'VDJ_nt'))
     table['V_no_CDR3'] = [s[:start] if start != 0 else s for s, start in
@@ -546,7 +546,7 @@ def main(args):
         windows = []
 
     groups = []
-    for gene, group in table.groupby('V_gene'):
+    for gene, group in table.groupby('v_call'):
         if genes and gene not in genes:
             continue
         if len(group) < MINGROUPSIZE:

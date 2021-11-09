@@ -11,9 +11,9 @@ logger = logging.getLogger(__name__)
 # convert them to str to avoid a PerformanceWarning
 # TODO some of these are actually categorical or bool
 _STRING_COLUMNS = [
-    'V_gene',  # categorical
-    'D_gene',  # categorical
-    'J_gene',  # categorical
+    'v_call',  # categorical
+    'd_call',  # categorical
+    'j_call',  # categorical
     'chain',  # categorical
     'stop',  # bool
     'productive',  # bool
@@ -47,6 +47,9 @@ _RENAME = {
     "genomic_sequence": "sequence",
     "VD_junction": "np1",
     "DJ_junction": "np2",
+    "V_gene": "v_call",
+    "D_gene": "d_call",
+    "J_gene": "j_call",
 }
 
 

@@ -29,7 +29,7 @@ def main(args):
     tables = []
     for path in args.table:
         table = read_table(path)
-        table = table.loc[:,['V_gene', 'V_SHM', 'V_nt', 'name']]
+        table = table.loc[:,['v_call', 'V_SHM', 'V_nt', 'name']]
         tables.append(table)
 
     # Count V sequence occurrences
@@ -51,6 +51,6 @@ def main(args):
             names.extend(matching_rows.name)
             if gene is None:
                 row = matching_rows.iloc[0]
-                gene = row['V_gene']
+                gene = row['v_call']
                 shm = row['V_SHM']
         print(frequency, gene, shm, sequence, *names, sep='\t')

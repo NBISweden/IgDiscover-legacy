@@ -78,10 +78,10 @@ def filtered_table(table,
     stats = FilteringStatistics()
     stats.total = len(table)
     # Both V and J must be assigned
-    # (Note V_gene and J_gene columns use empty strings instead of NA)
-    filtered = table[(table['V_gene'] != '') & (table['J_gene'] != '')][:]
+    # (Note v_call and j_call columns use empty strings instead of NA)
+    filtered = table[(table['v_call'] != '') & (table['j_call'] != '')][:]
     stats.has_vj_assignment = len(filtered)
-    filtered['V_gene'] = pd.Categorical(filtered['V_gene'])
+    filtered['v_call'] = pd.Categorical(filtered['v_call'])
 
     # Filter out sequences that have a stop codon
     filtered = filtered[filtered.stop == 'no']

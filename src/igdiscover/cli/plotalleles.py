@@ -32,7 +32,7 @@ def add_arguments(parser):
 
 
 def main(args):
-    usecols = ['V_gene', 'D_gene', 'J_gene', 'V_errors', 'D_errors', 'J_errors', 'D_covered',
+    usecols = ['v_call', 'd_call', 'j_call', 'V_errors', 'D_errors', 'J_errors', 'D_covered',
         'D_evalue']
 
     # Support reading a table without D_errors
@@ -101,9 +101,9 @@ def main(args):
                     name, args.order)
                 index = 1000000
             return index * 1000 + allele
-        matrix['V_gene_tmp'] = pd.Series(matrix.index, index=matrix.index).apply(orderfunc)
-        matrix.sort_values('V_gene_tmp', inplace=True)
-        del matrix['V_gene_tmp']
+        matrix['v_call_tmp'] = pd.Series(matrix.index, index=matrix.index).apply(orderfunc)
+        matrix.sort_values('v_call_tmp', inplace=True)
+        del matrix['v_call_tmp']
 
     print('#\n# Allele-specific expression\n#')
     print(matrix)

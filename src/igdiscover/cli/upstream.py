@@ -49,7 +49,7 @@ def main(args):
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)
     table = read_table(args.table)
-    n_genes = len(set(table['V_gene']))
+    n_genes = len(set(table['v_call']))
     logger.info('%s rows read with %d unique gene names', len(table), n_genes)
     for name, column_name, arg in (
             ('V%SHM', 'V_SHM', args.max_v_errors),
@@ -65,7 +65,7 @@ def main(args):
 
     n_written = 0
     n_consensus_with_n = 0
-    for name, group in table.groupby('V_gene'):
+    for name, group in table.groupby('v_call'):
         assert len(group) != 0
         if len(group) < args.min_consensus_size:
             logger.info('Gene %s has too few assignments (%s), skipping.', name, len(group))

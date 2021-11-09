@@ -337,7 +337,7 @@ def main(args):
     other_gene = other + '_gene'
     other_errors = other + '_errors'
     table = read_table(args.table,
-        usecols=['count', 'V_gene', 'D_gene', 'J_gene', 'V_errors', 'J_errors', 'J_covered', column, 'CDR3_nt'])
+        usecols=['count', 'v_call', 'd_call', 'j_call', 'V_errors', 'J_errors', 'J_covered', column, 'CDR3_nt'])
     logger.info('Table with %s rows read', len(table))
 
     if args.j_coverage is None and args.gene == 'J':

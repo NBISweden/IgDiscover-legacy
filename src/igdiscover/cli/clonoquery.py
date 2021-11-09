@@ -65,10 +65,10 @@ def collect(querytable, reftable, mismatches, cdr3_core_slice, cdr3_column):
     # Determine set of vjlentypes to query
     query_vjlentypes = defaultdict(list)
     for row in querytable.itertuples():
-        vjlentype = (row.V_gene, row.J_gene, len(row.CDR3_nt))
+        vjlentype = (row.v_call, row.j_call, len(row.CDR3_nt))
         query_vjlentypes[vjlentype].append(row)
 
-    groupby = ['V_gene', 'J_gene', 'CDR3_length']
+    groupby = ['v_call', 'j_call', 'CDR3_length']
     for vjlentype, vjlen_group in reftable.groupby(groupby):
         # (v_gene, j_gene, cdr3_length) = vjlentype
         if vjlentype not in query_vjlentypes:
@@ -110,7 +110,7 @@ def main(args):
     querytable = read_table(args.querytable, usecols=usecols)
     querytable = querytable[usecols]  # reorder columns
     # Filter empty rows (happens sometimes)
-    querytable = querytable[querytable.V_gene != '']
+    querytable = querytable[querytable.v_call != '']
     logger.info('Read query table with %s rows', len(querytable))
     reftable = read_table(args.reftable, usecols=usecols)
     reftable = reftable[usecols]

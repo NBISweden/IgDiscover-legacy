@@ -293,7 +293,7 @@ def plot_haplotypes(blocks: List[HaplotypePair], show_unknown: bool=False, binar
 
 
 def read_and_filter(path: str, d_evalue: float, d_coverage: float):
-    usecols = ['V_gene', 'D_gene', 'J_gene', 'V_errors', 'D_errors', 'J_errors', 'D_covered',
+    usecols = ['v_call', 'd_call', 'j_call', 'V_errors', 'D_errors', 'J_errors', 'D_covered',
         'D_evalue']
     # Support reading a table without D_errors
     try:
@@ -329,7 +329,7 @@ def main(args):
     if args.restrict is not None:
         with dnaio.open(args.restrict) as sr:
             restrict_names = set(r.name for r in sr)
-        table = table[table['V_gene'].map(lambda name: name in restrict_names)]
+        table = table[table['v_call'].map(lambda name: name in restrict_names)]
         logger.info('After restricting to V genes named in %r, %d rows remain', args.restrict,
             len(table))
         if len(table) == 0:

@@ -81,7 +81,7 @@ def main(args):
     else:
         gene_names = None
 
-    usecols = ['V_gene', 'D_gene', 'J_gene', 'V_errors', 'D_errors', 'J_errors', 'D_covered',
+    usecols = ['v_call', 'd_call', 'j_call', 'V_errors', 'D_errors', 'J_errors', 'D_covered',
         'D_evalue', 'CDR3_nt']
     table = read_table(args.table, usecols=usecols)
     logger.info('Table with %s rows read', len(table))

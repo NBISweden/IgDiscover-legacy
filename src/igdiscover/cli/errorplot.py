@@ -36,7 +36,7 @@ def plot_difference_histogram(group, gene_name, bins=np.arange(20.1)):
     """
     exact_matches = group[group.V_SHM == 0]
     cdr3s_exact = len(set(s for s in exact_matches.CDR3_nt if s))
-    js_exact = len(set(exact_matches.J_gene))
+    js_exact = len(set(exact_matches.j_call))
 
     fig = Figure(figsize=(100/25.4, 60/25.4))
     ax = fig.gca()
@@ -57,7 +57,7 @@ def plot_difference_histogram(group, gene_name, bins=np.arange(20.1)):
 
 
 def main(args):
-    table = read_table(args.table, usecols=['V_gene', 'J_gene', 'V_SHM', 'J_SHM', 'CDR3_nt'])
+    table = read_table(args.table, usecols=['v_call', 'j_call', 'V_SHM', 'J_SHM', 'CDR3_nt'])
     if not args.multi and not args.boxplot:
         print('Don’t know what to do', file=sys.stderr)
         sys.exit(2)
@@ -78,14 +78,14 @@ def main(args):
         minimum_group_size = args.minimum_group_size
 
     # Genes with high enough assignment count
-    all_genes = table['V_gene'].unique()
-    genes = sorted(table['V_gene'].value_counts().loc[lambda x: x >= minimum_group_size].index)
+    all_genes = table['v_call'].unique()
+    genes = sorted(table['v_call'].value_counts().loc[lambda x: x >= minimum_group_size].index)
     gene_set = set(genes)
 
     logger.info('%s out of %s genes have enough assignments', len(genes), len(all_genes))
     if args.multi:
         with PdfPages(args.multi) as pages:
-            for gene, group in table.groupby('V_gene'):
+            for gene, group in table.groupby('v_call'):
                 if gene not in gene_set:
                     continue
                 fig = plot_difference_histogram(group, gene)
@@ -95,7 +95,7 @@ def main(args):
 
     if args.boxplot:
         aspect = 1 + len(genes) / 32
-        g = sns.catplot(x='V_gene', y='V_SHM', kind='boxen', order=genes, data=table,
+        g = sns.catplot(x='v_call', y='V_SHM', kind='boxen', order=genes, data=table,
             height=2 * 2.54, aspect=aspect, color='g')
         # g.set(ylim=(-.1, None))
         g.set(ylabel='% V SHM (nt)')

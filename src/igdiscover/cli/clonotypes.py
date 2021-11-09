@@ -33,7 +33,7 @@ from ..cluster import hamming_single_linkage
 from ..utils import slice_arg
 
 
-CLONOTYPE_COLUMNS = ['name', 'count', 'V_gene', 'D_gene', 'J_gene', 'CDR3_nt', 'CDR3_aa',
+CLONOTYPE_COLUMNS = ['name', 'count', 'v_call', 'd_call', 'j_call', 'CDR3_nt', 'CDR3_aa',
     'FR1_SHM', 'CDR1_SHM', 'FR2_SHM', 'CDR2_SHM', 'FR3_SHM', 'FR4_SHM',
     'FR1_aa_mut', 'CDR1_aa_mut', 'FR2_aa_mut', 'CDR2_aa_mut', 'FR3_aa_mut', 'V_aa_mut', 'J_aa_mut',
     'V_errors', 'J_errors', 'V_SHM', 'J_SHM', 'barcode', 'VDJ_nt', 'VDJ_aa']
@@ -154,7 +154,7 @@ def group_by_clonotype(table, mismatches, sort, cdr3_core, cdr3_column):
     prev_v = None
     groups = []
     for (v_gene, j_gene, cdr3_length), vj_group in table.groupby(
-            ['V_gene', 'J_gene', 'CDR3_length']):
+            ['v_call', 'j_call', 'CDR3_length']):
         if prev_v != v_gene:
             logger.info('Processing %s', v_gene)
         prev_v = v_gene

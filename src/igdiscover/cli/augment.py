@@ -234,10 +234,6 @@ def augment_table(table, database):
 
     # Copy these over
     # TODO instead, use the source columns directly in subsequent scripts
-    table["V_gene"] = table["v_call"]
-    table["D_gene"] = table["d_call"]
-    table["J_gene"] = table["j_call"]
-
     table["V_evalue"] = table["v_support"]
     table["D_evalue"] = table["d_support"]
     table["J_evalue"] = table["j_support"]
