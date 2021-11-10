@@ -393,9 +393,9 @@ def main(args):
             merger.add(candidate)
         logger.info('After merging overlapping %s sequences, %s remain', args.gene, len(merger))
         candidates = list(merger)
+        logger.info('%d candidates', len(candidates))
     del table
 
-    logger.info('%d candidates', len(candidates))
     # Assign names etc.
     if database:
         for candidate in candidates:
