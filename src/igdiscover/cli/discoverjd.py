@@ -209,7 +209,7 @@ def count_occurrences(candidates, table_path, search_columns, other_gene, other_
         if len(chunk) == 0:  # TODO that this is needed is possibly a pandas bug
             continue
         chunk['haystack'] = chunk.loc[:, search_columns].astype(str).sum(axis=1)
-        chunk['haystack'] = chunk['haystack'].str.replace('(', '').replace(')', '')
+        chunk['haystack'] = chunk['haystack'].str.replace('(', '', regex=False).replace(')', '', regex=False)
 
         for row in chunk.itertuples():
             if row.haystack not in search_cache:
