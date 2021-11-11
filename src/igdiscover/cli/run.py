@@ -48,13 +48,7 @@ def run_snakemake(
     except FileNotFoundError as e:
         sys.exit("Pipeline configuration file {!r} not found. Please create it!".format(e.filename))
 
-    print('IgDiscover version {} with Python {}. Configuration:'.format(__version__,
-        platform.python_version()))
-    for k, v in sorted(vars(config).items()):
-        # TODO the following line is only necessary for non-YAML configurations
-        if k.startswith('_'):
-            continue
-        print('   ', k, ': ', repr(v), sep='')
+    print(f"IgDiscover version {__version__} with Python {platform.python_version()}")
     sys.stdout.flush()
 
     old_root_handlers = logger.root.handlers
