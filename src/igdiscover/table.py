@@ -51,6 +51,9 @@ _RENAME = {
     "V_gene": "v_call",
     "D_gene": "d_call",
     "J_gene": "j_call",
+    "V_evalue": "v_support",
+    "D_evalue": "d_support",
+    "J_evalue": "j_support",
 }
 
 

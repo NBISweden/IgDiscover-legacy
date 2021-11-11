@@ -33,7 +33,7 @@ def add_arguments(parser):
 
 def main(args):
     usecols = ['v_call', 'd_call', 'j_call', 'V_errors', 'D_errors', 'J_errors', 'D_covered',
-        'D_evalue']
+        'd_support']
 
     # Support reading a table without D_errors
     try:
@@ -49,7 +49,7 @@ def main(args):
         table = table[table.J_errors == 0]
         logger.info('%s rows remain after requiring J errors = 0', len(table))
     if args.gene == 'D' or args.x == 'D':
-        table = table[table.D_evalue <= args.d_evalue]
+        table = table[table.d_support <= args.d_evalue]
         logger.info('%s rows remain after requiring D E-value <= %s', len(table), args.d_evalue)
         table = table[table.D_covered >= args.d_coverage]
         logger.info('%s rows remain after requiring D coverage >= %s', len(table), args.d_coverage)

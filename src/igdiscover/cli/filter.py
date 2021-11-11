@@ -88,7 +88,7 @@ def filtered_table(table,
     stats.has_no_stop = len(filtered)
 
     # Filter out sequences with a too low V gene hit E-value
-    filtered = filtered[filtered.V_evalue <= v_gene_evalue]
+    filtered = filtered[filtered.v_support <= v_gene_evalue]
     stats.good_v_evalue = len(filtered)
 
     # Filter out sequences with too low V gene coverage

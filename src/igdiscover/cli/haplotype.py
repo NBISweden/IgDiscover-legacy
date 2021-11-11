@@ -294,7 +294,7 @@ def plot_haplotypes(blocks: List[HaplotypePair], show_unknown: bool=False, binar
 
 def read_and_filter(path: str, d_evalue: float, d_coverage: float):
     usecols = ['v_call', 'd_call', 'j_call', 'V_errors', 'D_errors', 'J_errors', 'D_covered',
-        'D_evalue']
+        'd_support']
     # Support reading a table without D_errors
     try:
         table = read_table(path, usecols=usecols)
@@ -307,7 +307,7 @@ def read_and_filter(path: str, d_evalue: float, d_coverage: float):
     logger.info('%s rows remain after requiring V errors = 0', len(table))
     table = table[table.J_errors == 0]
     logger.info('%s rows remain after requiring J errors = 0', len(table))
-    table = table[table.D_evalue <= d_evalue]
+    table = table[table.d_support <= d_evalue]
     logger.info('%s rows remain after requiring D E-value <= %s', len(table), d_evalue)
     table = table[table.D_covered >= d_coverage]
     logger.info('%s rows remain after requiring D coverage >= %s', len(table), d_coverage)

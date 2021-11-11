@@ -213,7 +213,7 @@ class Discoverer:
     def count_unique_d(self, table):
         g = table[(table.D_errors == 0) &
             (table.D_covered >= self.d_coverage) &
-            (table.D_evalue <= self.d_evalue)]
+            (table.d_support <= self.d_evalue)]
         return len(set(s for s in g.d_call if s))
 
     @staticmethod
@@ -513,7 +513,7 @@ def main(args):
         logger.info('Use --seed=%d to reproduce this run', seed)
 
     table = read_table(args.table, usecols=('sequence_id', 'chain', 'v_call', 'd_call', 'j_call',
-        'V_nt', 'CDR3_nt', 'barcode', 'V_CDR3_start', 'V_SHM', 'J_SHM', 'D_covered', 'D_evalue',
+        'V_nt', 'CDR3_nt', 'barcode', 'V_CDR3_start', 'V_SHM', 'J_SHM', 'D_covered', 'd_support',
         'V_errors', 'D_errors', 'J_errors', 'VDJ_nt'))
     table['V_no_CDR3'] = [s[:start] if start != 0 else s for s, start in
         zip(table.V_nt, table.V_CDR3_start)]
