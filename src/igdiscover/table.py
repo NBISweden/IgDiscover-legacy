@@ -82,6 +82,22 @@ def read_table(path, usecols=None, log=False, nrows=None):
     """
     Read in the table created by the parse subcommand (typically named *.tab)
     """
+    if usecols:
+        # Adjust requested column names in case the input uses old column names
+        available_columns = set(pd.read_table(path, sep="\t", nrows=0).columns)
+        new_to_old = {v: k for k, v in _RENAME.items()}
+        new_usecols = []
+        for col in usecols:
+            if col not in available_columns and col in new_to_old:
+                logger.info(
+                    "Requested column %s not found, assuming old file format and using %s instead",
+                    col, new_to_old[col]
+                )
+                new_usecols.append(new_to_old[col])
+            else:
+                new_usecols.append(col)
+        usecols = new_usecols
+
     d = pd.read_csv(path, usecols=usecols, sep='\t', nrows=nrows)
     fix_columns(d)
     if log:
