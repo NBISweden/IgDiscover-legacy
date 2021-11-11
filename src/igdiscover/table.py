@@ -34,7 +34,7 @@ _STRING_COLUMNS = [
     'J_nt',
     'VDJ_nt',
     'VDJ_aa',
-    'name',
+    'sequence_id',
     'barcode',
     'race_G',
     'sequence',
@@ -44,6 +44,7 @@ _INTEGER_COLUMNS = ('V_errors', 'D_errors', 'J_errors', 'V_CDR3_start')
 
 _RENAME = {
     "CDR3_clusters": "clonotypes",
+    "name": "sequence_id",
     "genomic_sequence": "sequence",
     "VD_junction": "np1",
     "DJ_junction": "np2",

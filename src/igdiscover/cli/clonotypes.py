@@ -33,7 +33,7 @@ from ..cluster import hamming_single_linkage
 from ..utils import slice_arg
 
 
-CLONOTYPE_COLUMNS = ['name', 'count', 'v_call', 'd_call', 'j_call', 'CDR3_nt', 'CDR3_aa',
+CLONOTYPE_COLUMNS = ['sequence_id', 'count', 'v_call', 'd_call', 'j_call', 'CDR3_nt', 'CDR3_aa',
     'FR1_SHM', 'CDR1_SHM', 'FR2_SHM', 'CDR2_SHM', 'FR3_SHM', 'FR4_SHM',
     'FR1_aa_mut', 'CDR1_aa_mut', 'FR2_aa_mut', 'CDR2_aa_mut', 'FR3_aa_mut', 'V_aa_mut', 'J_aa_mut',
     'V_errors', 'J_errors', 'V_SHM', 'J_SHM', 'barcode', 'VDJ_nt', 'VDJ_aa']

@@ -192,7 +192,7 @@ def main(args):
     for table in pd.read_table(args.table, sep="\t", chunksize=1000, dtype=COLUMN_TYPES):
         table = augment_table(table, database)
         if args.rename is not None:
-            table["name"] = [f"seq{i+1}" for i in table.index]
+            table["sequence_id"] = [f"seq{i+1}" for i in table.index]
         try:
             table.to_csv(sys.stdout, index=False, header=first, sep="\t")
         except BrokenPipeError:
@@ -266,7 +266,6 @@ def augment_table(table, database):
 
     parsed_headers = table["sequence_id"].apply(lambda s: pd.Series(parse_header(s)))
     table["sequence_id"] = parsed_headers[0]
-    table["name"] = parsed_headers[0]
     table["count"] = parsed_headers[1]  # TODO consensus_count/duplicate_count
     table["barcode"] = parsed_headers[2]
     table["stop"] = table["stop_codon"].map({"F": "no", "T": "yes"})
@@ -482,7 +481,7 @@ def augment_table(table, database):
             "fwr4_aa": nt_to_aa(fwr4_nt),
         })
 
-    # Overwrites existing columns
+    # Overwrite some existing columns
     fwr4 = table.apply(make_fwr4, axis=1)
     table["fwr4_start"] = fwr4["fwr4_start"].astype("Int64")
     table["fwr4_end"] = fwr4["fwr4_end"].astype("Int64")
@@ -533,7 +532,7 @@ def augment_table(table, database):
     ):
         assert colname in table.columns
 
-    # The following columns existed in the non-AIRR of IgDiscover, but
+    # The following columns existed in the non-AIRR version of IgDiscover, but
     # are omitted for now:
     #
     # - leader

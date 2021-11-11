@@ -145,14 +145,14 @@ def main(args):
             assert len(query_rows) >= 1
             if summary_file:
                 for query_row in query_rows:
-                    print(query_row.name, len(result_table), sep='\t', end='', file=summary_file)
+                    print(query_row.sequence_id, len(result_table), sep='\t', end='', file=summary_file)
                     for col in summary_columns:
                         mean = result_table[col].mean() if len(result_table) > 0 else 0
                         print('\t{:.2f}'.format(mean), end='', file=summary_file)
                     print(file=summary_file)
 
             for query_row in query_rows:
-                print('# Query: {}'.format(query_row.name), '', *(query_row[3:]), sep='\t')
+                print('# Query: {}'.format(query_row.sequence_id), '', *(query_row[3:]), sep='\t')
             if len(result_table) > 0:
                 print(result_table.to_csv(sep='\t', header=False, index=False))
             else:

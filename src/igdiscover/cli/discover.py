@@ -387,7 +387,7 @@ class Discoverer:
                 unique_d = self.count_unique_d(group)
                 unique_barcodes = self.count_unique_barcodes(group)
                 count = len(group.index)
-                read_names = list(group.name)
+                read_names = list(group.sequence_id)
                 info[key] = Groupinfo(count=count, unique_D=unique_d, unique_J=unique_j,
                     unique_CDR3=unique_cdr3, shared_CDR3_ratio=shared_cdr3_ratio,
                     clonotypes=clonotypes, read_names=read_names,
@@ -512,9 +512,9 @@ def main(args):
         seed = random.randrange(10**6)
         logger.info('Use --seed=%d to reproduce this run', seed)
 
-    table = read_table(args.table, usecols=('name', 'chain', 'v_call', 'd_call', 'j_call', 'V_nt',
-        'CDR3_nt', 'barcode', 'V_CDR3_start', 'V_SHM', 'J_SHM', 'D_covered', 'D_evalue', 'V_errors',
-        'D_errors', 'J_errors', 'VDJ_nt'))
+    table = read_table(args.table, usecols=('sequence_id', 'chain', 'v_call', 'd_call', 'j_call',
+        'V_nt', 'CDR3_nt', 'barcode', 'V_CDR3_start', 'V_SHM', 'J_SHM', 'D_covered', 'D_evalue',
+        'V_errors', 'D_errors', 'J_errors', 'VDJ_nt'))
     table['V_no_CDR3'] = [s[:start] if start != 0 else s for s, start in
         zip(table.V_nt, table.V_CDR3_start)]
 
