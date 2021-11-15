@@ -232,13 +232,6 @@ def augment_table(table, database):
 
     check_table(table, database)
 
-    # Copy these over
-    # TODO instead, use the source columns directly in subsequent scripts
-    table["CDR1_nt"] = table["cdr1"]
-    table["CDR1_aa"] = table["cdr1_aa"]
-    table["CDR2_nt"] = table["cdr2"]
-    table["CDR2_aa"] = table["cdr2_aa"]
-
     # Minor transformation needed
     table["V_nt"] = table["v_sequence_alignment"].str.replace("-", "")
     table["V_aa"] = table["v_sequence_alignment_aa"]

@@ -54,6 +54,10 @@ _RENAME = {
     "V_evalue": "v_support",
     "D_evalue": "d_support",
     "J_evalue": "j_support",
+    "CDR1_nt": "cdr1",
+    "CDR1_aa": "cdr1_aa",
+    "CDR2_nt": "cdr2",
+    "CDR2_aa": "cdr2_aa",
     "CDR3_nt": "cdr3",
     "CDR3_aa": "cdr3_aa",
 }
