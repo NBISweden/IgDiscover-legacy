@@ -87,7 +87,7 @@ preview any changes you may have made.
 Making a release
 ----------------
 
-We use `versioneer <https://github.com/warner/python-versioneer>`_ to
+We use `setuptools_scm <https://github.com/pypa/setuptools_scm/>`_ to
 manage version numbers. It extracts the version number from the
 most recent tag in Git. Thus, to increment the version number, create
 a Git tag::
@@ -98,10 +98,10 @@ The ``v`` prefix is mandatory.
 
 Then:
 
-* ``tests/run.sh``
-* ``python3 setup.py sdist``
-* ``twine upload sdist/igdiscover-0.10.tar.gz``
-* Update bioconda recipe
+* Run ``pytest``
+* Push the tag: ``git push --tags``
+* The GitHub workflow will create a new build and deploy it to PyPI
+* Wait for the BiocondaBot to create a bump PR; adjust the dependencies if needed
 
 
 .. _removing-igdiscover:
