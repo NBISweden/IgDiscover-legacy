@@ -234,7 +234,7 @@ class Discoverer:
 
         total = 0
         for j_gene, group in table.groupby('j_call'):
-            sequences = list(set(s for s in group.CDR3_nt if s))
+            sequences = list(set(s for s in group.cdr3 if s))
             components = single_linkage(sequences, linked)
             total += len(components)
         return total
@@ -376,10 +376,10 @@ class Discoverer:
             # self.cdr3_counts are CDR3 counts of all CDR3s in the entire table.
             # We restrict this here to the counts for CDR3s belonging to
             # clusters other than the current one.
-            other_cdr3_counts = self.cdr3_counts - Counter(s for s in sibling_info.group.CDR3_nt if s)
+            other_cdr3_counts = self.cdr3_counts - Counter(s for s in sibling_info.group.cdr3 if s)
             info = dict()
             for key, group in groups:
-                cdr3_counts = Counter(s for s in group.CDR3_nt if s)
+                cdr3_counts = Counter(s for s in group.cdr3 if s)
                 unique_cdr3 = len(cdr3_counts)
                 shared_cdr3_ratio = safe_divide(len(other_cdr3_counts & cdr3_counts), unique_cdr3)
                 unique_j = len(set(s for s in group.j_call if s))
@@ -513,7 +513,7 @@ def main(args):
         logger.info('Use --seed=%d to reproduce this run', seed)
 
     table = read_table(args.table, usecols=('sequence_id', 'chain', 'v_call', 'd_call', 'j_call',
-        'V_nt', 'CDR3_nt', 'barcode', 'V_CDR3_start', 'V_SHM', 'J_SHM', 'D_covered', 'd_support',
+        'V_nt', 'cdr3', 'barcode', 'V_CDR3_start', 'V_SHM', 'J_SHM', 'D_covered', 'd_support',
         'V_errors', 'D_errors', 'J_errors', 'VDJ_nt'))
     table['V_no_CDR3'] = [s[:start] if start != 0 else s for s, start in
         zip(table.V_nt, table.V_CDR3_start)]
@@ -553,7 +553,7 @@ def main(args):
             continue
         groups.append((gene, group))
 
-    cdr3_counts = Counter(s for s in table.CDR3_nt if s)
+    cdr3_counts = Counter(s for s in table.cdr3 if s)
     logger.info('%s unique CDR3s detected overall', len(cdr3_counts))
     discoverer = Discoverer(
         database,

@@ -35,7 +35,7 @@ def plot_difference_histogram(group, gene_name, bins=np.arange(20.1)):
     Plot a histogram of percentage differences for a specific gene.
     """
     exact_matches = group[group.V_SHM == 0]
-    cdr3s_exact = len(set(s for s in exact_matches.CDR3_nt if s))
+    cdr3s_exact = len(set(s for s in exact_matches.cdr3 if s))
     js_exact = len(set(exact_matches.j_call))
 
     fig = Figure(figsize=(100/25.4, 60/25.4))
@@ -57,7 +57,7 @@ def plot_difference_histogram(group, gene_name, bins=np.arange(20.1)):
 
 
 def main(args):
-    table = read_table(args.table, usecols=['v_call', 'j_call', 'V_SHM', 'J_SHM', 'CDR3_nt'])
+    table = read_table(args.table, usecols=['v_call', 'j_call', 'V_SHM', 'J_SHM', 'cdr3'])
     if not args.multi and not args.boxplot:
         print('Don’t know what to do', file=sys.stderr)
         sys.exit(2)

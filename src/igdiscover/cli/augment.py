@@ -436,10 +436,6 @@ def augment_table(table, database):
     table["cdr3"] = cdr3["cdr3"]
     table["cdr3_aa"] = cdr3["cdr3_aa"]
 
-    # Copy
-    table["CDR3_nt"] = table["cdr3"]
-    table["CDR3_aa"] = table["cdr3_aa"]
-
     def find_v_cdr3_start(row):
         """Start of CDR3 within V"""
         if pd.isna(row.v_call) or pd.isna(row.cdr3_start):

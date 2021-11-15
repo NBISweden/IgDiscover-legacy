@@ -198,7 +198,7 @@ def count_occurrences(candidates, table_path, search_columns, other_gene, other_
     candidates_map = {c.sequence: c for c in candidates}
 
     search_order = [c.sequence for c in candidates]
-    cols = [other_gene, 'V_errors', 'J_errors', 'CDR3_nt'] + search_columns
+    cols = [other_gene, 'V_errors', 'J_errors', 'cdr3'] + search_columns
 
     search_cache = defaultdict(list)  # map haystack sequence to list of candidates that occur in it
     for chunk in pd.read_csv(table_path, usecols=cols, chunksize=10000, sep='\t'):
@@ -219,7 +219,7 @@ def count_occurrences(candidates, table_path, search_columns, other_gene, other_
             for candidate in search_cache[row.haystack]:
                 candidate.exact_occ += 1  # TODO += row.count?
                 candidate.other_genes.add(getattr(row, other_gene))
-                candidate.cdr3s.add(row.CDR3_nt)
+                candidate.cdr3s.add(row.cdr3)
                 if merge:
                     # When overlapping candidates have been merged,
                     # there will be no other pattern that is a
@@ -258,7 +258,7 @@ def sequence_candidates(table, column, minimum_length, core=slice(None, None), m
 
 
 def count_unique_cdr3(table):
-    return len(set(s for s in table.CDR3_nt if s))
+    return len(set(s for s in table.cdr3 if s))
 
 
 def count_unique_gene(table, gene_type):
@@ -337,7 +337,7 @@ def main(args):
     other_gene = other.lower() + '_call'
     other_errors = other + '_errors'
     table = read_table(args.table,
-        usecols=['count', 'v_call', 'd_call', 'j_call', 'V_errors', 'J_errors', 'J_covered', column, 'CDR3_nt'])
+        usecols=['count', 'v_call', 'd_call', 'j_call', 'V_errors', 'J_errors', 'J_covered', column, 'cdr3'])
     logger.info('Table with %s rows read', len(table))
 
     if args.j_coverage is None and args.gene == 'J':

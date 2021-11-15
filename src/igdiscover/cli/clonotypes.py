@@ -33,7 +33,7 @@ from ..cluster import hamming_single_linkage
 from ..utils import slice_arg
 
 
-CLONOTYPE_COLUMNS = ['sequence_id', 'count', 'v_call', 'd_call', 'j_call', 'CDR3_nt', 'CDR3_aa',
+CLONOTYPE_COLUMNS = ['sequence_id', 'count', 'v_call', 'd_call', 'j_call', 'cdr3', 'cdr3_aa',
     'FR1_SHM', 'CDR1_SHM', 'FR2_SHM', 'CDR2_SHM', 'FR3_SHM', 'FR4_SHM',
     'FR1_aa_mut', 'CDR1_aa_mut', 'FR2_aa_mut', 'CDR2_aa_mut', 'FR3_aa_mut', 'V_aa_mut', 'J_aa_mut',
     'V_errors', 'J_errors', 'V_SHM', 'J_SHM', 'barcode', 'VDJ_nt', 'VDJ_aa']
@@ -96,9 +96,9 @@ def run_clonotypes(
     table = read_table(table, usecols=usecols)
     table = table[usecols]
     logger.info('Read table with %s rows', len(table))
-    table.insert(5, 'CDR3_length', table['CDR3_nt'].apply(len))
+    table.insert(5, 'CDR3_length', table['cdr3'].apply(len))
     table = table[table['CDR3_length'] > 0]
-    table = table[table['CDR3_aa'].map(lambda s: '*' not in s)]
+    table = table[table['cdr3_aa'].map(lambda s: '*' not in s)]
     logger.info('After discarding rows with unusable CDR3, %s remain', len(table))
     with ExitStack() as stack:
         if members:
@@ -110,10 +110,10 @@ def run_clonotypes(
         columns.remove('barcode')
         columns.remove('count')
         columns.insert(0, 'count')
-        columns.insert(columns.index('CDR3_nt'), 'CDR3_length')
+        columns.insert(columns.index('cdr3'), 'CDR3_length')
         print(*columns, sep='\t')
         print_header = True
-        cdr3_column = 'CDR3_aa' if aa else 'CDR3_nt'
+        cdr3_column = 'cdr3_aa' if aa else 'cdr3'
         grouped = group_by_clonotype(table, mismatches, sort, cdr3_core, cdr3_column)
         logger.info('Writing clonotypes')
         started = time.time()
@@ -242,10 +242,10 @@ def representative(table):
 
 def augment_group(table, v_shm_threshold=5, suffix='_mindiffrate'):
     """
-    Add columns to the given table that contain percentage difference of VDJ_nt, VDJ_aa, CDR3_nt,
-    CDR3_aa to the least mutated (in terms of V_SHM) sequence in this group.
+    Add columns to the given table that contain percentage difference of VDJ_nt, VDJ_aa, cdr3,
+    cdr3_aa to the least mutated (in terms of V_SHM) sequence in this group.
     """
-    columns = ['CDR3_nt', 'CDR3_aa', 'VDJ_nt', 'VDJ_aa']
+    columns = ['cdr3', 'cdr3_aa', 'VDJ_nt', 'VDJ_aa']
     i = table.columns.get_loc('barcode')  # insert before this column
     for column in columns[::-1]:
         table.insert(i, column + suffix, None)

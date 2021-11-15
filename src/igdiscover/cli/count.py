@@ -101,7 +101,7 @@ def run_count(
         gene_names = None
 
     usecols = ['v_call', 'd_call', 'j_call', 'V_errors', 'D_errors', 'J_errors', 'D_covered',
-        'd_support', 'CDR3_nt']
+        'd_support', 'cdr3']
     table = read_table(table, usecols=usecols)
     logger.info('Table with %s rows read', len(table))
 

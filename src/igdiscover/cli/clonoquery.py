@@ -65,7 +65,7 @@ def collect(querytable, reftable, mismatches, cdr3_core_slice, cdr3_column):
     # Determine set of vjlentypes to query
     query_vjlentypes = defaultdict(list)
     for row in querytable.itertuples():
-        vjlentype = (row.v_call, row.j_call, len(row.CDR3_nt))
+        vjlentype = (row.v_call, row.j_call, len(row.cdr3))
         query_vjlentypes[vjlentype].append(row)
 
     groupby = ['v_call', 'j_call', 'CDR3_length']
@@ -120,13 +120,13 @@ def main(args):
         logger.info('After filtering out rows with count < %s, %s rows remain', args.minimum_count,
             len(reftable))
     for tab in querytable, reftable:
-        tab.insert(5, 'CDR3_length', tab['CDR3_nt'].apply(len))
+        tab.insert(5, 'CDR3_length', tab['cdr3'].apply(len))
 
     if len(querytable) > len(reftable):
         logger.warning('The reference table is smaller than the '
             'query table! Did you swap query and reference?')
 
-    cdr3_column = 'CDR3_aa' if args.aa else 'CDR3_nt'
+    cdr3_column = 'cdr3_aa' if args.aa else 'cdr3'
     summary_columns = ['FR1_SHM', 'CDR1_SHM', 'FR2_SHM', 'CDR2_SHM', 'FR3_SHM', 'V_SHM', 'J_SHM',
         'V_aa_mut', 'J_aa_mut']
     summary_columns.extend(col for col in usecols if col.endswith('_aa_mut'))

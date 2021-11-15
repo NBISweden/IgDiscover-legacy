@@ -99,7 +99,7 @@ def filtered_table(table,
     filtered = filtered[filtered.J_covered >= j_gene_coverage]
     stats.good_j_coverage = len(filtered)
 
-    stats.has_cdr3 = sum(filtered['CDR3_nt'] != '')
+    stats.has_cdr3 = sum(filtered['cdr3'] != '')
     return filtered, stats
 
 

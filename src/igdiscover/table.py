@@ -23,8 +23,8 @@ _STRING_COLUMNS = [
     'CDR1_aa',
     'CDR2_nt',
     'CDR2_aa',
-    'CDR3_nt',
-    'CDR3_aa',
+    'cdr3',
+    'cdr3_aa',
     'V_nt',
     'V_aa',
     'V_end',
@@ -54,6 +54,8 @@ _RENAME = {
     "V_evalue": "v_support",
     "D_evalue": "d_support",
     "J_evalue": "j_support",
+    "CDR3_nt": "cdr3",
+    "CDR3_aa": "cdr3_aa",
 }
 
 
