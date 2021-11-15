@@ -2,6 +2,11 @@
 Changes
 =======
 
+development version
+-------------------
+
+* IgDiscover now uses AIRR-formatted TSV files
+
 v0.12 (2020-01-20)
 ------------------
 
