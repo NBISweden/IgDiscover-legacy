@@ -11,13 +11,11 @@ import logging
 
 import numpy as np
 import pandas as pd
-import dnaio
 from tinyalign import edit_distance, hamming_distance
 
-from .igblast import igblast
+from .igblast import Database
 from ..utils import nt_to_aa
 from ..parse import parse_header
-from ..species import cdr3_start, cdr3_end
 
 
 logger = logging.getLogger(__name__)
@@ -41,100 +39,6 @@ def add_arguments(parser):
 
     arg("database", help="Database directory with V.fasta, D.fasta, J.fasta.")
     arg("table", help="AIRR rearrangement table")
-
-
-class Database:
-    def __init__(self, path, sequence_type):
-        """path -- path to database directory with V.fasta, D.fasta, J.fasta"""
-        self.path = path
-        self.sequence_type = sequence_type
-        self._v_records = self._read_fasta(os.path.join(path, "V.fasta"))
-        self.v = self._records_to_dict(self._v_records)
-        self._d_records = self._read_fasta(os.path.join(path, "D.fasta"))
-        self.d = self._records_to_dict(self._d_records)
-        self._j_records = self._read_fasta(os.path.join(path, "J.fasta"))
-        self.j = self._records_to_dict(self._j_records)
-        self._cdr3_starts = dict()
-        self._cdr3_ends = dict()
-        for chain in ("heavy", "kappa", "lambda", "alpha", "beta", "gamma", "delta"):
-            self._cdr3_starts[chain] = {
-                name: cdr3_start(s, chain) for name, s in self.v.items()
-            }
-            self._cdr3_ends[chain] = {
-                name: cdr3_end(s, chain) for name, s in self.j.items()
-            }
-        self.v_regions_nt, self.v_regions_aa = self._find_v_regions()
-
-    @staticmethod
-    def _read_fasta(path):
-        records = []
-        with dnaio.open(path) as sr:
-            for record in sr:
-                record.name = record.name.split(maxsplit=1)[0]
-                records.append(record)
-        return records
-
-    @staticmethod
-    def _records_to_dict(records):
-        return {record.name: record.sequence.upper() for record in records}
-
-    def v_cdr3_start(self, gene, chain):
-        return self._cdr3_starts[chain][gene]
-
-    def j_cdr3_end(self, gene, chain):
-        return self._cdr3_ends[chain][gene]
-
-    def _find_v_regions(self):
-        """
-        Run IgBLAST on the V sequences to determine the nucleotide and amino-acid sequences of the
-        FR1, CDR1, FR2, CDR2 and FR3 regions
-        """
-        v_regions_nt = dict()
-        v_regions_aa = dict()
-        for record in igblast(
-            self.path, self._v_records, self.sequence_type, threads=1
-        ):
-            nt_regions = dict()
-            aa_regions = dict()
-            for region in ("FR1", "CDR1", "FR2", "CDR2", "FR3"):
-                nt_seq = record.region_sequence(region)
-                if nt_seq is None:
-                    break
-                if len(nt_seq) % 3 != 0:
-                    logger.warning(
-                        "Length %s of %s region in %r is not divisible by three; region "
-                        "info for this gene will not be available",
-                        len(nt_seq),
-                        region,
-                        record.query_name,
-                    )
-                    # not codon-aligned, skip entire record
-                    break
-                nt_regions[region] = nt_seq
-                try:
-                    aa_seq = nt_to_aa(nt_seq)
-                except ValueError as e:
-                    logger.warning(
-                        "The %s region could not be converted to amino acids: %s",
-                        region,
-                        str(e),
-                    )
-                    break
-                if "*" in aa_seq:
-                    logger.warning(
-                        "The %s region in %r contains a stop codon (%r); region info "
-                        "for this gene will not be available",
-                        region,
-                        record.query_name,
-                        aa_seq,
-                    )
-                    break
-                aa_regions[region] = aa_seq
-            else:
-                v_regions_nt[record.query_name] = nt_regions
-                v_regions_aa[record.query_name] = aa_regions
-
-        return v_regions_nt, v_regions_aa
 
 
 def count_errors(s, t):

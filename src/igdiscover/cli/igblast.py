@@ -264,6 +264,8 @@ class Database:
         self.sequence_type = sequence_type
         self._v_records = self._read_fasta(os.path.join(path, 'V.fasta'))
         self.v = self._records_to_dict(self._v_records)
+        self._d_records = self._read_fasta(os.path.join(path, 'D.fasta'))
+        self.d = self._records_to_dict(self._d_records)
         self._j_records = self._read_fasta(os.path.join(path, 'J.fasta'))
         self.j = self._records_to_dict(self._j_records)
         self._cdr3_starts = dict()
