@@ -95,6 +95,7 @@ def main(args):
     first = True
     for table in pd.read_table(args.table, sep="\t", chunksize=1000, dtype=COLUMN_TYPES):
         table = augment_table(table, database)
+        format_float_columns(table)
         if args.rename is not None:
             table["sequence_id"] = [f"seq{i+1}" for i in table.index]
         try:
@@ -429,7 +430,6 @@ def augment_table(table, database):
 
     # TODO
     # - extend_left_ungapped for V sequences
-    # - write with {:.1f} (see TableWriter.write())
     return table
 
 
@@ -477,6 +477,23 @@ def check_table(table, database):
                 j_ref[row.j_germline_start - 1 : row.j_germline_end]
                 == row.j_germline_alignment.replace("-", "")
             )
+
+
+def format_float_columns(table):
+    """
+    Round values in some float columns and convert to string
+
+    Unnecessarily precise float values just take up space
+    """
+    for name in (
+        'V_covered', 'D_covered', 'J_covered',
+        'FR1_SHM', 'CDR1_SHM', 'FR2_SHM', 'CDR2_SHM', 'FR3_SHM', 'FR4_SHM',
+        'V_SHM', 'J_SHM', 'V_aa_mut', 'J_aa_mut',
+        'FR1_aa_mut', 'CDR1_aa_mut', 'FR2_aa_mut', 'CDR2_aa_mut', 'FR3_aa_mut',
+    ):
+        table[name] = table[name].map("{:.1f}".format)
+    for name in ("v_support", "d_support", "j_support"):
+        table[name] = table[name].map("{:G}".format)
 
 
 def query_position(record, gene: str, reference_position: int):
