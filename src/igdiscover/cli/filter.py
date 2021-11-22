@@ -84,7 +84,7 @@ def filtered_table(table,
     filtered['v_call'] = pd.Categorical(filtered['v_call'])
 
     # Filter out sequences that have a stop codon
-    filtered = filtered[filtered.stop == 'no']
+    filtered = filtered[filtered.stop_codon == 'F']
     stats.has_no_stop = len(filtered)
 
     # Filter out sequences with a too low V gene hit E-value

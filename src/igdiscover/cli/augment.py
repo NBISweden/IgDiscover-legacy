@@ -161,7 +161,6 @@ def augment_table(table, database):
     table["sequence_id"] = parsed_headers[0]
     table["count"] = parsed_headers[1]  # TODO consensus_count/duplicate_count
     table["barcode"] = parsed_headers[2]
-    table["stop"] = table["stop_codon"].map({"F": "no", "T": "yes"})
 
     table["V_errors"] = table.apply(
         lambda row: count_errors(row.v_germline_alignment, row.v_sequence_alignment),
