@@ -19,7 +19,7 @@ import numpy as np
 import pandas as pd
 from tinyalign import edit_distance
 
-from ..table import read_table
+from ..table import read_table, vdj_nt_column
 from ..cluster import cluster_sequences, single_linkage
 from ..utils import (unique_name, downsampled, SerialPool, Merger, has_stop,
     available_cpu_count)
@@ -365,6 +365,7 @@ class Discoverer:
             # Sequence without the CDR3-covering part
             sibling_no_cdr3 = sibling[:self._guess_cdr3_start(assignments)]
             group_exact_v = assignments[assignments.V_no_CDR3 == sibling_no_cdr3]
+
             group_full_exact_v = assignments[assignments['VDJ_nt'].str.startswith(sibling, na=False)]
             groups = (
                 ('window', sibling_info.group),

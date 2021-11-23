@@ -2,7 +2,11 @@
 Function for reading the table created by the 'parse' subcommand.
 """
 import logging
+
+import numpy as np
 import pandas as pd
+
+from igdiscover.utils import nt_to_aa
 
 logger = logging.getLogger(__name__)
 
@@ -32,8 +36,6 @@ _STRING_COLUMNS = [
     'D_region',
     'np2',
     'J_nt',
-    'VDJ_nt',
-    'VDJ_aa',
     'sequence_id',
     'barcode',
     'race_G',
@@ -92,9 +94,12 @@ def read_table(path, usecols=None, log=False, nrows=None):
     """
     Read in the table created by the parse subcommand (typically named *.tab)
     """
+    recompute_cols = []
+    new_usecols = usecols
     if usecols:
         # Adjust requested column names in case the input uses old column names
         available_columns = set(pd.read_table(path, sep="\t", nrows=0).columns)
+
         new_to_old = {v: k for k, v in _RENAME.items()}
         new_usecols = []
         for col in usecols:
@@ -106,10 +111,41 @@ def read_table(path, usecols=None, log=False, nrows=None):
                 new_usecols.append(new_to_old[col])
             else:
                 new_usecols.append(col)
-        usecols = new_usecols
 
-    d = pd.read_csv(path, usecols=usecols, sep='\t', nrows=nrows)
+        if "VDJ_nt" in usecols or "VDJ_aa" in usecols:
+            # We no longer store these columns in the file, derive from other columns
+            for col in "VDJ_nt", "VDJ_aa":
+                if col in new_usecols:
+                    new_usecols.remove(col)
+                    recompute_cols.append(col)
+            new_usecols.extend(["v_sequence_start", "j_sequence_end", "sequence"])
+
+    d = pd.read_csv(path, usecols=new_usecols, sep='\t', nrows=nrows)
     fix_columns(d)
+
+    if recompute_cols:
+        vdj_nt = vdj_nt_column(d)
+        for col in recompute_cols:
+            if col == "VDJ_nt":
+                d[col] = vdj_nt
+            elif col == "VDJ_aa":
+                d[col] = vdj_nt.map(nt_to_aa, na_action="ignore")
+
+    if usecols:
+        for col in usecols:
+            assert col in d.columns, col
+        d = d[list(usecols)]  # reorder columns
     if log:
         logger.info('%s rows in input table', len(d))
     return d
+
+
+def vdj_nt_column(table):
+    """Return a Series with the nucleotide VDJ sequences"""
+    def vdj_nt(row):
+        if pd.isna(row.v_call) or pd.isna(row.j_call):
+            return np.nan
+
+        return row.sequence[row.v_sequence_start - 1 : row.j_sequence_end]
+
+    return table.apply(vdj_nt, axis=1)

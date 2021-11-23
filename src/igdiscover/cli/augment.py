@@ -33,8 +33,6 @@ EXTRA_COLUMNS = [
     "V_covered",
     "D_covered",
     "J_covered",
-    "VDJ_nt",
-    "VDJ_aa",
     "FR1_SHM",
     "CDR1_SHM",
     "FR2_SHM",
@@ -261,13 +259,6 @@ def augment_record(record, database):
     record["J_covered"] = covered(
         record["j_germline_alignment"], database.j, record["j_call"]
     )
-
-    if record["v_call"] and record["j_call"]:
-        vdj_nt = record["sequence"][
-            record["v_sequence_start"] - 1 : record["j_sequence_end"]
-        ]
-        record["VDJ_nt"] = vdj_nt
-        record["VDJ_aa"] = nt_to_aa(vdj_nt)
 
     set_shm_columns(record, database)
     set_aa_mut_columns(record, database)

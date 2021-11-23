@@ -28,15 +28,15 @@ import pandas as pd
 from xopen import xopen
 from tinyalign import hamming_distance, edit_distance
 
-from ..table import read_table
+from ..table import read_table, vdj_nt_column
 from ..cluster import hamming_single_linkage
-from ..utils import slice_arg
-
+from ..utils import slice_arg, nt_to_aa
 
 CLONOTYPE_COLUMNS = ['sequence_id', 'count', 'v_call', 'd_call', 'j_call', 'cdr3', 'cdr3_aa',
     'FR1_SHM', 'CDR1_SHM', 'FR2_SHM', 'CDR2_SHM', 'FR3_SHM', 'FR4_SHM',
     'FR1_aa_mut', 'CDR1_aa_mut', 'FR2_aa_mut', 'CDR2_aa_mut', 'FR3_aa_mut', 'V_aa_mut', 'J_aa_mut',
-    'V_errors', 'J_errors', 'V_SHM', 'J_SHM', 'barcode', 'VDJ_nt', 'VDJ_aa']
+    'V_errors', 'J_errors', 'V_SHM', 'J_SHM', 'barcode', 'VDJ_nt', 'VDJ_aa',
+]
 
 
 logger = logging.getLogger(__name__)
@@ -94,7 +94,6 @@ def run_clonotypes(
         usecols = [col for col in usecols if not col.endswith('_aa_mut')]
 
     table = read_table(table, usecols=usecols)
-    table = table[usecols]
     logger.info('Read table with %s rows', len(table))
     table.insert(5, 'CDR3_length', table['cdr3'].apply(len))
     table = table[table['CDR3_length'] > 0]
