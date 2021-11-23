@@ -1,7 +1,7 @@
 """
 Augment AIRR-formatted IgBLAST output with extra IgDiscover-specific columns
 
-In particular, detect the CDR3 sequence
+Also, fill in the CDR3 columns
 """
 import csv
 import json
@@ -141,21 +141,22 @@ def main(args):
             except BrokenPipeError:
                 sys.exit(1)
 
-            elapsed = time.time() - start_time
-            if elapsed >= last_status_update + 3:  # TODO 60
-                logger.info(
-                    "Processed {:10,d} sequences at {:.3f} ms/sequence".format(
-                        n, elapsed / n * 1e3
+            if record["cdr3"]:
+                detected_cdr3s += 1
+            if n % 10000 == 0:
+                elapsed = time.time() - start_time
+                if elapsed >= last_status_update + 60:
+                    logger.info(
+                        "Processed {:10,d} sequences at {:.2f} ms/sequence".format(
+                            n, elapsed / n * 1e3
+                        )
                     )
-                )
-                last_status_update = elapsed
-            # detected_cdr3s += ...
+                    last_status_update = elapsed
 
     elapsed = time.time() - start_time
     logger.info(
-        "Processed {:10,d} sequences at {:.1f} ms/sequence".format(n, elapsed / n * 1e3)
+        "Processed {:10,d} sequences at {:.2f} ms/sequence".format(n, elapsed / n * 1e3)
     )
-    logger.info("%d IgBLAST assignments parsed and written", n)
     logger.info("CDR3s detected in %.1f%% of all sequences", detected_cdr3s / n * 100)
     if args.stats:
         stats = {"total": n, "detected_cdr3s": detected_cdr3s}
