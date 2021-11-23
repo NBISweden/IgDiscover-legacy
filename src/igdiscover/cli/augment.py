@@ -5,7 +5,6 @@ In particular, detect the CDR3 sequence
 """
 import json
 import sys
-import os
 import time
 import logging
 
@@ -93,7 +92,9 @@ def main(args):
     n = 0
     detected_cdr3s = 0
     first = True
-    for table in pd.read_table(args.table, sep="\t", chunksize=1000, dtype=COLUMN_TYPES):
+    for table in pd.read_table(
+        args.table, sep="\t", chunksize=1000, dtype=COLUMN_TYPES
+    ):
         table = augment_table(table, database)
         format_float_columns(table)
         if args.rename is not None:
@@ -289,13 +290,19 @@ def augment_table(table, database):
     }
 
     def find_cdr3(row):
-        no_result = pd.Series({
-            "cdr3_start": np.nan,
-            "cdr3_end": np.nan,
-            "cdr3": np.nan,
-            "cdr3_aa": np.nan,
-        })
-        if pd.isna(row.v_call) or pd.isna(row.j_call) or row.locus not in locus_to_chain:
+        no_result = pd.Series(
+            {
+                "cdr3_start": np.nan,
+                "cdr3_end": np.nan,
+                "cdr3": np.nan,
+                "cdr3_aa": np.nan,
+            }
+        )
+        if (
+            pd.isna(row.v_call)
+            or pd.isna(row.j_call)
+            or row.locus not in locus_to_chain
+        ):
             return no_result
         # CDR3 start
         cdr3_ref_start = database.v_cdr3_start(
@@ -320,12 +327,14 @@ def augment_table(table, database):
         if cdr3_query_end is None:
             return no_result
         cdr3_nt = row.sequence[cdr3_query_start:cdr3_query_end]
-        return pd.Series({
-            "cdr3_start": cdr3_query_start + 1,
-            "cdr3_end": cdr3_query_end,
-            "cdr3": cdr3_nt,
-            "cdr3_aa": nt_to_aa(cdr3_nt),
-        })
+        return pd.Series(
+            {
+                "cdr3_start": cdr3_query_start + 1,
+                "cdr3_end": cdr3_query_end,
+                "cdr3": cdr3_nt,
+                "cdr3_aa": nt_to_aa(cdr3_nt),
+            }
+        )
 
     cdr3 = table.apply(find_cdr3, axis=1)
     table["cdr3_start"] = cdr3["cdr3_start"].astype("Int64")
@@ -347,12 +356,14 @@ def augment_table(table, database):
         """
         Compute fwr4
         """
-        no_result = pd.Series({
-            "fwr4_start": np.nan,
-            "fwr4_end": np.nan,
-            "fwr4": np.nan,
-            "fwr4_aa": np.nan,
-        })
+        no_result = pd.Series(
+            {
+                "fwr4_start": np.nan,
+                "fwr4_end": np.nan,
+                "fwr4": np.nan,
+                "fwr4_aa": np.nan,
+            }
+        )
         j_call = row.j_call
         if pd.isna(j_call) or row.locus not in locus_to_chain:
             return no_result
@@ -362,13 +373,15 @@ def augment_table(table, database):
         if cdr3_ref_end is None or pd.isna(cdr3_query_end):
             return no_result
 
-        fwr4_nt = row.sequence[cdr3_query_end:row.j_sequence_end]
-        return pd.Series({
-            "fwr4_start": cdr3_query_end + 1,
-            "fwr4_end": row.j_sequence_end,
-            "fwr4": fwr4_nt,
-            "fwr4_aa": nt_to_aa(fwr4_nt),
-        })
+        fwr4_nt = row.sequence[cdr3_query_end : row.j_sequence_end]
+        return pd.Series(
+            {
+                "fwr4_start": cdr3_query_end + 1,
+                "fwr4_end": row.j_sequence_end,
+                "fwr4": fwr4_nt,
+                "fwr4_aa": nt_to_aa(fwr4_nt),
+            }
+        )
 
     # Overwrite some existing columns
     fwr4 = table.apply(make_fwr4, axis=1)
@@ -383,10 +396,10 @@ def augment_table(table, database):
         """
         if pd.isna(row.cdr3_end) or pd.isna(row.j_sequence_end):
             return np.nan
-        sequence = row.sequence[row.cdr3_end:row.j_sequence_end]
-        germline = database.j[row.j_call][row.j_germline_start-1:row.j_germline_end]
+        sequence = row.sequence[row.cdr3_end : row.j_sequence_end]
+        germline = database.j[row.j_call][row.j_germline_start - 1 : row.j_germline_end]
         dist = edit_distance(germline, sequence)
-        return 100. * dist / len(germline)
+        return 100.0 * dist / len(germline)
 
     def fr4_aa_mut(row):
         """
@@ -394,12 +407,12 @@ def augment_table(table, database):
         """
         if pd.isna(row.cdr3_end) or pd.isna(row.j_sequence_end):
             return np.nan
-        sequence = row.sequence[row.cdr3_end:row.j_sequence_end]
-        germline = database.j[row.j_call][row.j_germline_start-1:row.j_germline_end]
+        sequence = row.sequence[row.cdr3_end : row.j_sequence_end]
+        germline = database.j[row.j_call][row.j_germline_start - 1 : row.j_germline_end]
         sequence_aa = nt_to_aa(sequence)
         germline_aa = nt_to_aa(germline)
         dist = edit_distance(germline_aa, sequence_aa)
-        return 100. * dist / len(germline_aa)
+        return 100.0 * dist / len(germline_aa)
 
     table["FR4_SHM"] = table.apply(fr4_shm, axis=1)
     table["J_aa_mut"] = table.apply(fr4_aa_mut, axis=1)
@@ -473,10 +486,9 @@ def check_table(table, database):
             ] == row.j_sequence_alignment.replace("-", "")
 
             j_ref = database.j[row.j_call]
-            assert (
-                j_ref[row.j_germline_start - 1 : row.j_germline_end]
-                == row.j_germline_alignment.replace("-", "")
-            )
+            assert j_ref[
+                row.j_germline_start - 1 : row.j_germline_end
+            ] == row.j_germline_alignment.replace("-", "")
 
 
 def format_float_columns(table):
@@ -486,10 +498,24 @@ def format_float_columns(table):
     Unnecessarily precise float values just take up space
     """
     for name in (
-        'V_covered', 'D_covered', 'J_covered',
-        'FR1_SHM', 'CDR1_SHM', 'FR2_SHM', 'CDR2_SHM', 'FR3_SHM', 'FR4_SHM',
-        'V_SHM', 'J_SHM', 'V_aa_mut', 'J_aa_mut',
-        'FR1_aa_mut', 'CDR1_aa_mut', 'FR2_aa_mut', 'CDR2_aa_mut', 'FR3_aa_mut',
+        "V_covered",
+        "D_covered",
+        "J_covered",
+        "FR1_SHM",
+        "CDR1_SHM",
+        "FR2_SHM",
+        "CDR2_SHM",
+        "FR3_SHM",
+        "FR4_SHM",
+        "V_SHM",
+        "J_SHM",
+        "V_aa_mut",
+        "J_aa_mut",
+        "FR1_aa_mut",
+        "CDR1_aa_mut",
+        "FR2_aa_mut",
+        "CDR2_aa_mut",
+        "FR3_aa_mut",
     ):
         table[name] = table[name].map("{:.1f}".format)
     for name in ("v_support", "d_support", "j_support"):
