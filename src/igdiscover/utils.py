@@ -194,7 +194,7 @@ def relative_symlink(src, dst, force=False):
 
 def nt_to_aa(s, _get=GENETIC_CODE.get):
     """Translate a nucleotide sequence to an amino acid sequence"""
-    return ''.join(_get(s[i:i+3], '*') for i in range(0, len(s), 3))
+    return ''.join([_get(s[i:i+3], '*') for i in range(0, len(s), 3)])
 
 
 def has_stop(sequence):
