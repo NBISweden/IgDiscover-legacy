@@ -414,14 +414,15 @@ final/dendrogram_(V,D,J).pdf
     These three PDF files contain dendrograms of the V, D and J sequences in the individualized
     database.
 
-final/assigned.tab.gz
-    V/D/J gene assignments and other information for each sequence.
-    The file is created by parsing the IgBLAST output in the ``igblast.txt.gz`` file.
-    This is a table that contains one row for each input sequence.
-    See below for a detailed description of the columns.
+final/assigned.tsv.gz
+    V/D/J gene assignments and other information for each sequence. This is an AIRR-compliant
+    TSV file, obtained from running IgBLAST and adding some IgDiscovere-specific columns.
+    See the `AIRR rearrangement specification <https://docs.airr-community.org/en/stable/datarep/rearrangements.html>`_.
+    See also below for a description of the columns.
 
-final/filtered.tab.gz
-    Filtered V/D/J gene assignments. This is the same as the assigned.tab file mentioned above, but with low-quality assignments filtered out.
+final/filtered.tsv.gz
+    Filtered V/D/J gene assignments. This is the same as the ``assigned.tsv.gz``, but with
+    low-quality assignments filtered out.
     Run ``igdiscover filter --help`` to see the filtering criteria.
 
 final/expressed_(V,D,J).tab, final/expressed_(V,D,J).pdf
@@ -516,39 +517,30 @@ Format of output files
 ======================
 
 
-assigned.tab.gz
+assigned.tsv.gz
 ---------------
 
-This file is a gzip-compressed table with tab-separated values. It is created by
-the ``igdiscover igblast`` subcommand and is the result of parsing raw output from IgBLAST.
-It contains a few additional columns that do not come directly from IgBLAST.
-In particular, the CDR3 sequence is detected, the sequence before the V gene match is split into *UTR* and *leader*, and
-the RACE-specific run of G nucleotides is also detected.
-The first row is a header row with column names.
-Each subsequent row describes the IgBLAST results for a single pre-processed input sequence.
+This file is a gzip-compressed table with tab-separated values. It follows the
+`AIRR Rearrangement Schema <https://docs.airr-community.org/en/stable/datarep/rearrangements.html>`_.
+It is created by the ``igdiscover igblast`` subcommand followed by ``igdiscover augment``.
+Columns ``sequence_id`` to ``np2_length`` have a meaning as per that schema and most of them are
+copied unmodified from IgBLAST. Subsequent columns are specific to IgDiscover and are ignored
+by other tools accepting AIRR-formatted tables.
+
+In brief, the first row is a header with column names, and each subsequent row describes the IgBLAST
+results for a single pre-processed input sequence.
 
 Note: This file is typically quite large.
 LibreOffice can open the file directly (even though it is compressed), but make sure you have enough RAM.
 
-Columns:
+Columns specific to IgDiscover (added by ``igdiscover augment``):
 
 count
-    How many copies of input sequence this query sequence represents. Copied from the ``;size=3;`` entry in the FASTA
-    header field that is added by ``VSEARCH -derep_fulllength``.
-
-V_gene, D_gene, J_gene
-    V/D/J gene match for the query sequence
-
-stop
-    whether the sequence contains a stop codon (either “yes” or “no”)
-
-productive
+    How many copies of input sequence this query sequence represents. Copied from the ``;size=3;``
+    entry in the FASTA header field that is added by ``VSEARCH -derep_fulllength``.
 
 V_covered, D_covered, J_covered
     percentage of bases of the reference gene that is covered by the bases of the query sequence
-
-V_evalue, D_evalue, J_evalue
-    E-value of V/D/J hit
 
 FR1_SHM, CDR1_SHM, FR2_SHM, CDR2_SHM, FR3_SHM, V_SHM, J_SHM
     rate of somatic hypermutation (actually, an error rate)
@@ -558,12 +550,11 @@ V_errors, J_errors
 
 UTR
     Sequence of the 5' UTR (the part before the V gene match up to, but not including, the start codon)
+    (Note: Currently not included.)
 
 leader
     Leader sequence (the part between UTR and the V gene match)
-
-CDR1_nt, CDR1_aa, CDR2_nt, CDR2_aa, CDR3_nt, CDR3_aa
-    nucleotide and amino acid sequence of CDR1/2/3
+    (Note: Currently not included.)
 
 V_nt, V_aa
     Nucleotide and amino acid sequence of V gene match
@@ -571,9 +562,6 @@ V_nt, V_aa
 V_CDR3_start
     Start coordinate of CDR3 within ``V_nt``. Set to zero if no CDR3 was detected.
     Comparisons involving the V gene ignore those V bases that are part of the CDR3.
-
-V_end, VD_junction, D_region, DJ_junction, J_start
-    nucleotide sequences for various match regions
 
 name, barcode, race_G, genomic_sequence
     see the following explanation
@@ -586,10 +574,10 @@ The UTR, leader, barcode, race_G and genomic_sequence columns are filled in the 
 4. If there is a V gene match, take the sequence *before* it and split it up in the following way. Search for the start codon and write the part before it into the **UTR** column. Write the part starting with the start column into the **leader** column.
 
 
-filtered.tab.gz
+filtered.tsv.gz
 ---------------
 
-This table is the same as the ``assigned.tab.gz`` table, except that rows containing low-quality matches have been filtered out.
+This table is the same as the ``assigned.tsv.gz`` table, except that rows containing low-quality matches have been filtered out.
 Rows fulfilling any of the following criteria are filtered:
 
 - The J gene was not assigned
@@ -963,7 +951,7 @@ errorplot
 
 The ``igdiscover clonotypes`` command lists the clonotypes present in a sample.
 The only required parameter is the name of a file with assigned sequences.
-Normally, this will be a ``filtered.tab.gz`` file.
+Normally, this will be a ``filtered.tsv.gz`` file.
 
 Two sequences are considered to be of the same clonotype if
 
