@@ -11,6 +11,44 @@ from igdiscover.utils import nt_to_aa
 logger = logging.getLogger(__name__)
 
 
+# This lists only the AIRR integer columns for now. The other columns, which are currently
+# converted according to _STRING_COLUMNS or _INTEGER_COLUMNS should also be
+# added here.
+COLUMN_TYPES = {
+    "v_alignment_start": "Int64",
+    "v_alignment_end": "Int64",
+    "d_alignment_start": "Int64",
+    "d_alignment_end": "Int64",
+    "j_alignment_start": "Int64",
+    "j_alignment_end": "Int64",
+    "v_sequence_start": "Int64",
+    "v_sequence_end": "Int64",
+    "v_germline_start": "Int64",
+    "v_germline_end": "Int64",
+    "d_sequence_start": "Int64",
+    "d_sequence_end": "Int64",
+    "d_germline_start": "Int64",
+    "d_germline_end": "Int64",
+    "j_sequence_start": "Int64",
+    "j_sequence_end": "Int64",
+    "j_germline_start": "Int64",
+    "j_germline_end": "Int64",
+    "fwr1_start": "Int64",
+    "fwr1_end": "Int64",
+    "cdr1_start": "Int64",
+    "cdr1_end": "Int64",
+    "fwr2_start": "Int64",
+    "fwr2_end": "Int64",
+    "cdr2_start": "Int64",
+    "cdr2_end": "Int64",
+    "fwr3_start": "Int64",
+    "fwr3_end": "Int64",
+    "fwr4_start": "Int64",
+    "fwr4_end": "Int64",
+    "cdr3_start": "Int64",
+    "cdr3_end": "Int64",
+}
+
 # These columns contain string data
 # convert them to str to avoid a PerformanceWarning
 # TODO some of these are actually categorical or bool
@@ -120,7 +158,7 @@ def read_table(path, usecols=None, log=False, nrows=None):
                     recompute_cols.append(col)
             new_usecols.extend(["v_sequence_start", "j_sequence_end", "sequence"])
 
-    d = pd.read_table(path, usecols=new_usecols, nrows=nrows)
+    d = pd.read_table(path, dtype=COLUMN_TYPES, usecols=new_usecols, nrows=nrows)
     fix_columns(d)
 
     if recompute_cols:

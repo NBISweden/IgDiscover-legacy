@@ -108,6 +108,7 @@ def add_arguments(parser):
 def main(args):
     logger.info("Running IgBLAST on database sequences to find CDR/FR region locations")
     database = Database(args.database, args.sequence_type)
+    logger.info("Running IgBLAST on reads")
     start_time = time.time()
     last_status_update = 0
     detected_cdr3s = 0
