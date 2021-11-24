@@ -62,22 +62,22 @@ def chdir(path):
 
 @pytest.fixture(scope="session")
 def filtered_tab_session(tmp_path_factory):
-    """Generate iteration-01/filtered.tab.gz"""
+    """Generate iteration-01/filtered.tsv.gz"""
 
     pipeline_dir = tmp_path_factory.mktemp("pipedir") / "pipedir"
     init_testdata(pipeline_dir)
     with chdir(pipeline_dir):
-        run_snakemake(targets=["iteration-01/filtered.tab.gz"])
+        run_snakemake(targets=["iteration-01/filtered.tsv.gz"])
     return pipeline_dir
 
 
 @pytest.fixture
-def has_filtered_tab(filtered_tab_session, tmp_path):
+def has_filtered_tsv(filtered_tab_session, tmp_path):
     """
-    Give a fresh copy of a pipeline dir in which iteration-01/filtered.tab.gz
+    Give a fresh copy of a pipeline dir in which iteration-01/filtered.tsv.gz
     is guaranteed to exist
     """
-    pipeline_dir = tmp_path / "has_filtered_tab"
+    pipeline_dir = tmp_path / "has_filtered_tsv"
     shutil.copytree(
         filtered_tab_session,
         pipeline_dir,
@@ -113,9 +113,9 @@ def test_clusterplot(tmpdir):
     assert tmpdir.join('IGHV1-1801.png').check()
 
 
-def test_igblast(run):
-    args = ['igblast', '--threads=1', datapath('database/'), datapath('igblast.fasta')]
-    run(args, resultpath('assigned.tab'))
+def test_igblastwrap(run):
+    args = ['igblastwrap', '--threads=1', datapath('database/'), datapath('igblast.fasta')]
+    run(args, resultpath('assigned.tsv'))
 
 
 def test_run_init(pipeline_dir):
@@ -187,35 +187,35 @@ def test_flash(pipeline_dir):
         assert (pipeline_dir / "reads/2-flash.log").exists()
 
 
-def test_snakemake_assigned_tab(has_filtered_tab):
-    assert (has_filtered_tab / "iteration-01/filtered.tab.gz").exists()
-    assert not (has_filtered_tab / "iteration-01/new_V_germline.tab").exists()
+def test_snakemake_assigned_tab(has_filtered_tsv):
+    assert (has_filtered_tsv / "iteration-01/filtered.tsv.gz").exists()
+    assert not (has_filtered_tsv / "iteration-01/new_V_germline.tab").exists()
 
 
-def test_snakemake_exact_tab(has_filtered_tab):
-    with chdir(has_filtered_tab):
+def test_snakemake_exact_tab(has_filtered_tsv):
+    with chdir(has_filtered_tsv):
         run_snakemake(targets=["iteration-01/exact.tab"])
-    assert (has_filtered_tab / "iteration-01/exact.tab").exists()
+    assert (has_filtered_tsv / "iteration-01/exact.tab").exists()
 
 
-def test_snakemake_final(has_filtered_tab):
-    with chdir(has_filtered_tab):
+def test_snakemake_final(has_filtered_tsv):
+    with chdir(has_filtered_tsv):
         run_snakemake(targets=["nofinal"])
-    assert (has_filtered_tab / "iteration-01/new_V_germline.tab").exists()
-    assert not (has_filtered_tab / "final/assigned.tab.gz").exists()
+    assert (has_filtered_tsv / "iteration-01/new_V_germline.tab").exists()
+    assert not (has_filtered_tsv / "final/assigned.tsv.gz").exists()
 
-    with chdir(has_filtered_tab):
+    with chdir(has_filtered_tsv):
         run_snakemake()
-    assert (has_filtered_tab / "final/assigned.tab.gz").exists()
+    assert (has_filtered_tsv / "final/assigned.tsv.gz").exists()
 
 
-def test_clonotypes(has_filtered_tab):
-    run_clonotypes(has_filtered_tab / "iteration-01/assigned.tab.gz", limit=5)
+def test_clonotypes(has_filtered_tsv):
+    run_clonotypes(has_filtered_tsv / "iteration-01/assigned.tsv.gz", limit=5)
 
 
-def test_fastq_input(has_filtered_tab, tmp_path):
+def test_fastq_input(has_filtered_tsv, tmp_path):
     # Use merged reads from already-run pipeline as input for a new run
-    single_reads = has_filtered_tab / "reads" / "2-merged.fastq.gz"
+    single_reads = has_filtered_tsv / "reads" / "2-merged.fastq.gz"
     directory = tmp_path / "singleend-fastq"
     run_init(
         database="testdata/database",
@@ -227,10 +227,10 @@ def test_fastq_input(has_filtered_tab, tmp_path):
         run_snakemake(targets=["stats/reads.json"])
 
 
-def test_fasta_input(has_filtered_tab, tmp_path):
+def test_fasta_input(has_filtered_tsv, tmp_path):
     fasta_path = tmp_path / "justfasta.fasta"
     convert_fastq_to_fasta(
-        has_filtered_tab / "reads" / "2-merged.fastq.gz",
+        has_filtered_tsv / "reads" / "2-merged.fastq.gz",
         fasta_path,
     )
     directory = tmp_path / "singleend-fasta"

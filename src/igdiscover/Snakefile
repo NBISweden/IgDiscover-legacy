@@ -525,7 +525,7 @@ else:
 
 rule igdiscover_igblast:
     output:
-        tabgz="{dir}/assigned.airr.tsv.gz",
+        tabgz=temp("{dir}/airr.tsv.gz"),
     input:
         fastagz=PREPROCESSED_READS,
         db_v="{dir}/database/V.fasta",
@@ -545,10 +545,10 @@ rule igdiscover_igblast:
 
 rule igdiscover_augment:
     output:
-        tabgz="{dir}/assigned.tab.gz",
+        tabgz="{dir}/assigned.tsv.gz",
         json="{dir}/stats/assigned.json"
     input:
-        airr_tsv="{dir}/assigned.airr.tsv.gz",
+        airr_tsv="{dir}/airr.tsv.gz",
         db_v="{dir}/database/V.fasta",
         db_d="{dir}/database/D.fasta",
         db_j="{dir}/database/J.fasta"
@@ -594,10 +594,10 @@ rule check_parsing:
 
 rule igdiscover_filter:
     output:
-        filtered="{dir}/filtered.tab.gz",
+        filtered="{dir}/filtered.tsv.gz",
         json="{dir}/stats/filtered.json"
     input:
-        assigned="{dir}/assigned.tab.gz",
+        assigned="{dir}/assigned.tsv.gz",
         success="{dir}/stats/parsing-successful"
     run:
         conf = config.preprocessing_filter
@@ -612,7 +612,7 @@ rule igdiscover_exact:
     output:
         exact="{dir}/exact.tab"
     input:
-        filtered="{dir}/filtered.tab.gz"
+        filtered="{dir}/filtered.tsv.gz"
     shell:
         # extract rows where V_errors == 0
         """zcat {input.filtered} |"""
@@ -624,7 +624,7 @@ rule igdiscover_count:
         plot="{dir}/expressed_{gene,[VDJ]}.pdf",
         counts="{dir}/expressed_{gene}.tab"
     input:
-        tab="{dir}/filtered.tab.gz"
+        tab="{dir}/filtered.tsv.gz"
     shell:
         "igdiscover count --gene={wildcards.gene} "
         "--allele-ratio=0.2 "
@@ -635,7 +635,7 @@ rule igdiscover_clusterplot:
     output:
         done="{dir}/clusterplots/done"
     input:
-        tab="{dir}/filtered.tab.gz"
+        tab="{dir}/filtered.tsv.gz"
     params:
         clusterplots="{dir}/clusterplots/",
         ignore_j=' --ignore-J' if config.ignore_j else ''
@@ -650,7 +650,7 @@ rule igdiscover_discover:
         read_names="{dir}/read_names_map.tab",
     input:
         v_reference="{dir}/database/V.fasta",
-        tab="{dir}/filtered.tab.gz"
+        tab="{dir}/filtered.tsv.gz"
     params:
         ignore_j=' --ignore-J' if config.ignore_j else '',
         seed=' --seed={}'.format(config.seed) if config.seed is not None else '',
@@ -725,7 +725,7 @@ rule igdiscover_discover_j:
         fasta="iteration-01/new_J.fasta",
     input:
         j_reference="iteration-01/database/J.fasta",
-        tab="iteration-01/filtered.tab.gz",
+        tab="iteration-01/filtered.tsv.gz",
     params:
         allele_ratio='--allele-ratio={}'.format(config.j_discovery['allele_ratio']),
         cross_mapping_ratio=' --cross-mapping-ratio={}'.format(config.j_discovery['cross_mapping_ratio'])
@@ -740,7 +740,7 @@ rule stats_correlation_V_J:
     output:
         pdf="{dir}/correlationVJ.pdf"
     input:
-        table="{dir}/assigned.tab.gz"
+        table="{dir}/assigned.tsv.gz"
     run:
         import matplotlib
         matplotlib.use('pdf')
@@ -772,7 +772,7 @@ rule plot_errorhistograms:
         multi_pdf='{dir}/errorhistograms.pdf',
         boxplot_pdf='{dir}/v-shm-distributions.pdf'
     input:
-        table='{dir}/filtered.tab.gz'
+        table='{dir}/filtered.tsv.gz'
     params:
         ignore_j=' --max-j-shm=0' if config.ignore_j else ''
     shell:
