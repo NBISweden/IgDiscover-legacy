@@ -120,7 +120,7 @@ def read_table(path, usecols=None, log=False, nrows=None):
                     recompute_cols.append(col)
             new_usecols.extend(["v_sequence_start", "j_sequence_end", "sequence"])
 
-    d = pd.read_csv(path, usecols=new_usecols, sep='\t', nrows=nrows)
+    d = pd.read_table(path, usecols=new_usecols, nrows=nrows)
     fix_columns(d)
 
     if recompute_cols:
