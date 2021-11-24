@@ -1,19 +1,5 @@
 """
-Run IgBLAST and output a result table
-
-This is a wrapper for the "igblastn" tool which has a simpler command-line
-syntax and can also run IgBLAST in parallel.
-
-The results are parsed, postprocessed and printed as a tab-separated table
-to standard output.
-
-Postprocessing includes:
-
-- The CDR3 is detected by using a regular expression
-- The leader is detected within the sequence before the found V gene (by
-  searching for the start codon).
-- If the V sequence hit starts not at base 1 in the reference, it is extended
-  to the left.
+This provides functions for running the "igblastn" command-line tool
 """
 import sys
 import os
@@ -35,40 +21,13 @@ import gzip
 import dnaio
 from xopen import xopen
 
-from ..utils import SerialPool, available_cpu_count, nt_to_aa
-from ..parse import TableWriter, IgBlastParser
-from ..species import cdr3_start, cdr3_end
-from ..config import GlobalConfig
+from .utils import SerialPool, available_cpu_count, nt_to_aa
+from .parse import TableWriter, IgBlastParser
+from .species import cdr3_start, cdr3_end
+from .config import GlobalConfig
 
 
 logger = logging.getLogger(__name__)
-
-
-def add_arguments(parser):
-    arg = parser.add_argument
-    arg('--threads', '-t', '-j', type=int, default=1,
-        help='Number of threads. Default: 1. Use 0 for no. of available CPUs.')
-    arg('--cache', action='store_true', default=None, help='Use the cache')
-    arg('--no-cache', action='store_false', dest='cache', default=None, help='Do not use the cache')
-    arg('--penalty', type=int, choices=(-1, -2, -3, -4), default=None,
-        help='BLAST mismatch penalty (default: -1)')
-    arg('--species', default=None,
-        help='Tell IgBLAST which species to use. Note that this setting does '
-            'not seem to have any effect since we provide our own database to '
-            'IgBLAST. Default: Use IgBLAST’s default')
-    arg('--sequence-type', default='Ig', choices=('Ig', 'TCR'),
-        help='Sequence type. Default: %(default)s')
-    arg('--raw', metavar='FILE', help='Write raw IgBLAST output to FILE '
-            '(add .gz to compress)')
-    arg('--limit', type=int, metavar='N',
-        help='Limit processing to first N records')
-    arg('--rename', default=None, metavar='PREFIX',
-        help='Rename reads to PREFIXseqN (where N is a number starting at 1)')
-    arg('--stats', metavar='FILE',
-        help='Write statistics in JSON format to FILE')
-
-    arg('database', help='Database directory with V.fasta, D.fasta, J.fasta.')
-    arg('fasta', help='File with original reads')
 
 
 def escape_shell_command(command):
@@ -369,63 +328,3 @@ def igblast(database, sequences, sequence_type, species=None, threads=1, penalty
             if raw_output:
                 raw_output.write(igblast_output)
             yield from igblast_records
-
-
-def main(args):
-    config = GlobalConfig()
-    use_cache = config.use_cache
-    if args.cache is not None:
-        use_cache = args.cache
-    if use_cache:
-        global _igblastcache
-        _igblastcache = IgBlastCache()
-        logger.info('IgBLAST cache enabled')
-    if args.threads == 0:
-        args.threads = available_cpu_count()
-    logger.info("Running IgBLAST on database sequences to find CDR/FR region locations")
-    database = Database(args.database, args.sequence_type)
-    logger.info("Running IgBLAST on input reads")
-    detected_cdr3s = 0
-    writer = TableWriter(sys.stdout)
-    start_time = time.time()
-    last_status_update = 0
-    with ExitStack() as stack:
-        if args.raw:
-            raw_output = stack.enter_context(xopen(args.raw, 'w'))
-        else:
-            raw_output = None
-        sequences = stack.enter_context(dnaio.open(args.fasta))
-        sequences = islice(sequences, 0, args.limit)
-
-        n = 0  # number of records processed so far
-        for record in igblast(database, sequences, sequence_type=args.sequence_type,
-                species=args.species, threads=args.threads, penalty=args.penalty,
-                raw_output=raw_output, use_cache=use_cache):
-            n += 1
-            if args.rename is not None:
-                record.query_name = "{}seq{}".format(args.rename, n)
-            d = record.asdict()
-            if d['CDR3_aa']:
-                detected_cdr3s += 1
-            try:
-                writer.write(d)
-            except IOError as e:
-                if e.errno == errno.EPIPE:
-                    sys.exit(1)
-                raise
-            if n % 1000 == 0:
-                elapsed = time.time() - start_time
-                if elapsed >= last_status_update + 60:
-                    logger.info(
-                        'Processed {:10,d} sequences at {:.3f} ms/sequence'.format(n, elapsed / n * 1E3))
-                    last_status_update = elapsed
-    elapsed = time.time() - start_time
-    logger.info('Processed {:10,d} sequences at {:.1f} ms/sequence'.format(n, elapsed / n * 1E3))
-
-    logger.info('%d IgBLAST assignments parsed and written', n)
-    logger.info('CDR3s detected in %.1f%% of all sequences', detected_cdr3s / n * 100)
-    if args.stats:
-        stats = {'total': n, 'detected_cdr3s': detected_cdr3s}
-        with open(args.stats, 'w') as f:
-            json.dump(stats, f)
-            print(file=f)

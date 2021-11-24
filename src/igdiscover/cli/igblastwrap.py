@@ -13,7 +13,7 @@ import tempfile
 
 import dnaio
 
-from .igblast import chunked, makeblastdb, run_igblast, IgBlastCache
+from ..igblast import chunked, makeblastdb, run_igblast, IgBlastCache
 from ..utils import SerialPool, available_cpu_count
 from ..config import GlobalConfig
 
@@ -156,7 +156,7 @@ def main(args):
     if args.cache is not None:
         use_cache = args.cache
     if use_cache:
-        from . import igblast as igblast_module
+        from .. import igblast as igblast_module
 
         igblast_module._igblastcache = IgBlastCache()  # FIXME
         logger.info("IgBLAST cache enabled")

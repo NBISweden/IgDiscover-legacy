@@ -12,7 +12,7 @@ import time
 from tinyalign import edit_distance, hamming_distance
 from xopen import xopen
 
-from igdiscover.cli.igblast import Database
+from igdiscover.igblast import Database
 from igdiscover.parse import parse_header
 from igdiscover.utils import nt_to_aa
 
