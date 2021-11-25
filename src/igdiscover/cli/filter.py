@@ -14,7 +14,7 @@ import logging
 import json
 import pandas as pd
 
-from ..table import fix_columns
+from ..table import read_table_chunks
 
 logger = logging.getLogger(__name__)
 
@@ -107,8 +107,7 @@ def main(args):
     first = True
     written = 0
     stats = FilteringStatistics()
-    for chunk in pd.read_table(args.table, chunksize=10000, float_precision='high'):
-        fix_columns(chunk)
+    for chunk in read_table_chunks(args.table, chunksize=10000):
         filtered, chunk_stats = filtered_table(chunk, v_gene_coverage=args.v_coverage,
             j_gene_coverage=args.j_coverage, v_gene_evalue=args.v_evalue)
         stats += chunk_stats

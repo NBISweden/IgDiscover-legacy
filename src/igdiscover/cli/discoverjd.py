@@ -16,8 +16,7 @@ import dnaio
 
 from tinyalign import edit_distance
 from ..utils import Merger, merge_overlapping, unique_name, is_same_gene, slice_arg
-from ..table import read_table, fix_columns
-
+from ..table import read_table, read_table_chunks
 
 logger = logging.getLogger(__name__)
 
@@ -201,10 +200,9 @@ def count_occurrences(candidates, table_path, search_columns, other_gene, other_
     cols = [other_gene, 'V_errors', 'J_errors', 'cdr3'] + search_columns
 
     search_cache = defaultdict(list)  # map haystack sequence to list of candidates that occur in it
-    for chunk in pd.read_table(table_path, usecols=cols, chunksize=10000):
-        fix_columns(chunk)
+    for chunk in read_table_chunks(table_path, usecols=cols, chunksize=10000):
         if perfect_matches:
-            chunk = chunk[chunk[other_errors] == 0]
+            chunk = chunk[chunk[other_errors] == 0].copy()
         # concatenate search columns
         if len(chunk) == 0:  # TODO that this is needed is possibly a pandas bug
             continue

@@ -16,11 +16,6 @@ from igdiscover.igblast import Database
 from igdiscover.utils import nt_to_aa
 
 EXTRA_COLUMNS = [
-    "V_nt",
-    "V_aa",
-    "D_region",
-    "J_nt",
-    "J_aa",
     "V_SHM",
     "J_SHM",
     "count",
@@ -203,13 +198,6 @@ def format_float_columns(record):
 def augment_record(record, database):
     for col in "v_call", "d_call", "j_call":
         record[col] = record[col].lstrip("%")
-
-    # Minor transformation needed
-    record["V_nt"] = record["v_sequence_alignment"].replace("-", "")
-    record["V_aa"] = record["v_sequence_alignment_aa"]
-    record["D_region"] = record["d_sequence_alignment"].replace("-", "")
-    record["J_nt"] = record["j_sequence_alignment"].replace("-", "")
-    record["J_aa"] = record["j_sequence_alignment_aa"]
 
     record["V_SHM"] = (
         (100.0 - record["v_identity"]) if record["v_identity"] is not None else None

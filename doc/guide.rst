@@ -556,9 +556,6 @@ leader
     Leader sequence (the part between UTR and the V gene match)
     (Note: Currently not included.)
 
-V_nt, V_aa
-    Nucleotide and amino acid sequence of V gene match
-
 V_CDR3_start
     Start coordinate of CDR3 within ``V_nt``. Set to zero if no CDR3 was detected.
     Comparisons involving the V gene ignore those V bases that are part of the CDR3.
