@@ -13,7 +13,6 @@ from tinyalign import edit_distance, hamming_distance
 from xopen import xopen
 
 from igdiscover.igblast import Database
-from igdiscover.parse import parse_header
 from igdiscover.utils import nt_to_aa
 
 EXTRA_COLUMNS = [
@@ -457,3 +456,27 @@ def query_position(record, gene: str, reference_position: int):
         if ref_pos == reference_position:
             return query_pos
     return None
+
+
+def parse_header(header):
+    """
+    Extract size= and barcode= fields from the FASTA/FASTQ header line
+
+    >>> parse_header("name;size=12;barcode=ACG;")
+    ('name', 12, 'ACG')
+    >>> parse_header("another name;size=200;foo=bar;")
+    ('another name', 200, None)
+    """
+    fields = header.split(';')
+    query_name = fields[0]
+    size = barcode = None
+    for field in fields[1:]:
+        if field == '':
+            continue
+        if '=' in field:
+            key, value = field.split('=', maxsplit=1)
+            if key == 'size':
+                size = int(value)
+            elif key == 'barcode':
+                barcode = value
+    return query_name, size, barcode

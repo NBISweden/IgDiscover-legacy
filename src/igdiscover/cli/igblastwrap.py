@@ -2,19 +2,16 @@
 Run IgBLAST and output the AIRR-formatted result table
 """
 import sys
-import os
 import time
-import multiprocessing
 from contextlib import ExitStack
 from itertools import islice
 import errno
 import logging
-import tempfile
 
 import dnaio
 
-from ..igblast import chunked, makeblastdb, run_igblast, IgBlastCache
-from ..utils import SerialPool, available_cpu_count
+from ..igblast import IgBlastCache, igblast_parallel_chunked
+from ..utils import available_cpu_count
 from ..config import GlobalConfig
 
 
@@ -71,85 +68,6 @@ def add_arguments(parser):
     arg("fasta", help="File with original reads")
 
 
-class Runner:
-    """
-    This is the target of a multiprocessing pool. The target needs to
-    be pickleable, and because nested functions cannot be pickled,
-    we need this separate class.
-
-    It runs IgBLAST and parses the output for a list of sequences.
-    """
-
-    def __init__(
-        self, blastdb_dir, species, sequence_type, penalty, database, use_cache
-    ):
-        self.blastdb_dir = blastdb_dir
-        self.species = species
-        self.sequence_type = sequence_type
-        self.penalty = penalty
-        self.database = database
-        self.use_cache = use_cache
-
-    def __call__(self, sequences):
-        """
-        Return raw IgBLAST output
-        """
-        return run_igblast(
-            sequences,
-            self.blastdb_dir,
-            self.species,
-            self.sequence_type,
-            self.penalty,
-            self.use_cache,
-            airr=True,
-        )
-
-
-def igblast(
-    database,
-    sequences,
-    sequence_type,
-    species=None,
-    threads=1,
-    penalty=None,
-    use_cache=False,
-):
-    """
-    Run IgBLAST on chunks of the input and yield the AIRR-formatted results.
-
-    database -- Path to database directory with V./D./J.fasta files
-    sequences -- an iterable of Sequence objects
-    sequence_type -- 'Ig' or 'TCR'
-    threads -- number of threads.
-    """
-    with ExitStack() as stack:
-        # Create the three BLAST databases in a temporary directory
-        blastdb_dir = stack.enter_context(tempfile.TemporaryDirectory())
-        for gene in ["V", "D", "J"]:
-            # Without adding the "%" prefix, IgBLAST reports record names that look like GenBank
-            # ids as "gb|original_name|".
-            makeblastdb(
-                os.path.join(database, gene + ".fasta"),
-                os.path.join(blastdb_dir, gene),
-                prefix="%",
-            )
-
-        chunks = chunked(sequences, chunksize=1000)
-        runner = Runner(
-            blastdb_dir,
-            species=species,
-            sequence_type=sequence_type,
-            penalty=penalty,
-            database=database,
-            use_cache=use_cache,
-        )
-        pool = stack.enter_context(
-            multiprocessing.Pool(threads) if threads > 1 else SerialPool()
-        )
-        for igblast_output in pool.imap(runner, chunks, chunksize=1):
-            yield igblast_output
-
-
 def main(args):
     config = GlobalConfig()
     use_cache = config.use_cache
@@ -170,7 +88,7 @@ def main(args):
         sequences = islice(sequences, 0, args.limit)
 
         n = 0  # number of records processed so far
-        for record in igblast(
+        for record in igblast_parallel_chunked(
             args.database,
             sequences,
             sequence_type=args.sequence_type,

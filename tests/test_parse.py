@@ -1,6 +1,6 @@
 """
 """
-from igdiscover.parse import parse_header
+from igdiscover.cli.augment import parse_header
 
 
 def test():

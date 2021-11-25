@@ -1,6 +1,7 @@
 """
 This provides functions for running the "igblastn" command-line tool
 """
+import csv
 import sys
 import os
 import shlex
@@ -8,10 +9,13 @@ import time
 import multiprocessing
 import subprocess
 from contextlib import ExitStack
+from dataclasses import dataclass
 from io import StringIO
 from itertools import islice
 import hashlib
 import errno
+from typing import List, Dict
+
 import pkg_resources
 import logging
 import tempfile
@@ -22,7 +26,6 @@ import dnaio
 from xopen import xopen
 
 from .utils import SerialPool, available_cpu_count, nt_to_aa
-from .parse import TableWriter, IgBlastParser
 from .species import cdr3_start, cdr3_end
 from .config import GlobalConfig
 
@@ -90,7 +93,7 @@ class IgBlastCache:
         return data
 
 
-def run_igblast(sequences, blastdb_dir, species, sequence_type, penalty=None, use_cache=True, airr: bool = False) -> str:
+def run_igblast(sequences, blastdb_dir, species, sequence_type, penalty=None, use_cache=True) -> str:
     """
     Run the igblastn command-line program.
 
@@ -110,7 +113,6 @@ def run_igblast(sequences, blastdb_dir, species, sequence_type, penalty=None, us
     # An empty .aux suppresses a warning from IgBLAST. /dev/null does not work.
     empty_aux_path = pkg_resources.resource_filename('igdiscover', 'empty.aux')
     variable_arguments += ['-auxiliary_data', empty_aux_path]
-    outfmt = '19' if airr else '7 sseqid qstart qseq sstart sseq pident slen evalue'
     arguments = []
     if penalty is not None:
         arguments += ['-penalty', str(penalty)]
@@ -124,7 +126,7 @@ def run_igblast(sequences, blastdb_dir, species, sequence_type, penalty=None, us
         '-num_alignments_V', '1',
         '-num_alignments_D', '1',
         '-num_alignments_J', '1',
-        '-outfmt', outfmt,
+        '-outfmt', '19',  # AIRR format
         '-query', '-',
     ]
     fasta_str = ''.join(">{}\n{}\n".format(r.name, r.sequence) for r in sequences)
@@ -163,15 +165,18 @@ def chunked(iterable, chunksize: int):
         yield chunk
 
 
-class Runner:
+class RawRunner:
     """
     This is the target of a multiprocessing pool. The target needs to
     be pickleable, and because nested functions cannot be pickled,
     we need this separate class.
 
-    It runs IgBLAST and parses the output for a list of sequences.
+    It runs IgBLAST and returns raw AIRR-formatted output
     """
-    def __init__(self, blastdb_dir, species, sequence_type, penalty, database, use_cache):
+
+    def __init__(
+        self, blastdb_dir, species, sequence_type, penalty, database, use_cache
+    ):
         self.blastdb_dir = blastdb_dir
         self.species = species
         self.sequence_type = sequence_type
@@ -181,16 +186,16 @@ class Runner:
 
     def __call__(self, sequences):
         """
-        Return tuples (igblast_result, records) where igblast_result is the raw IgBLAST output
-        and records is a list of (Extended-)IgBlastRecord objects (the parsed output).
+        Return raw IgBLAST output
         """
-        igblast_result = run_igblast(sequences, self.blastdb_dir, self.species, self.sequence_type,
-            self.penalty, self.use_cache)
-        sio = StringIO(igblast_result)
-        parser = IgBlastParser(sequences, sio, self.database)
-        records = list(parser)
-        assert len(records) == len(sequences)
-        return igblast_result, records
+        return run_igblast(
+            sequences,
+            self.blastdb_dir,
+            self.species,
+            self.sequence_type,
+            self.penalty,
+            self.use_cache,
+        )
 
 
 def makeblastdb(fasta, database_name, prefix=''):
@@ -260,7 +265,7 @@ class Database:
         """
         v_regions_nt = dict()
         v_regions_aa = dict()
-        for record in igblast(self.path, self._v_records, self.sequence_type, threads=1):
+        for record in igblast_records(self.path, self._v_records, self.sequence_type):
             nt_regions = dict()
             aa_regions = dict()
             for region in ('FR1', 'CDR1', 'FR2', 'CDR2', 'FR3'):
@@ -293,38 +298,112 @@ class Database:
         return v_regions_nt, v_regions_aa
 
 
-def igblast(database, sequences, sequence_type, species=None, threads=1, penalty=None,
-        raw_output=None, use_cache=False):
+def igblast_records(database, sequences, sequence_type, species=None, penalty=None,
+        use_cache=False):
     """
-    Run IgBLAST, parse results and yield (Extended-)IgBlastRecord objects.
+    Run IgBLAST, parse results and yield RegionRecords objects.
 
-    database -- Path to database directory with V./D./J.fasta files *or* a Database object.
-        If it is a path, then only IgBlastRecord objects are returned.
+    database -- Path to database directory with V./D./J.fasta files
+    sequences -- an iterable of Sequence objects
+    sequence_type -- 'Ig' or 'TCR'
+    """
+    # Create the BLAST databases in a temporary directory
+    with tempfile.TemporaryDirectory() as blastdb_dir:
+        make_vdj_blastdb(blastdb_dir, database)
+        igblast_result = run_igblast(sequences, blastdb_dir, species, sequence_type, penalty, use_cache)
+        sio = StringIO(igblast_result)
+        for record in parse_region_records(sio):
+            yield record
+
+
+def parse_region_records(file):
+    csv.register_dialect(
+        "airr",
+        delimiter="\t",
+        lineterminator="\n",
+        strict=True,
+    )
+    reader = csv.DictReader(file, dialect="airr")
+    for record in reader:
+        yield RegionsRecord(
+            query_name=record["sequence_id"],
+            fields=record,
+        )
+
+
+@dataclass
+class RegionsRecord:
+    query_name: str
+    fields: Dict[str, str]
+
+    COLUMNS_MAP = {
+        "CDR1": "cdr1",
+        "CDR2": "cdr2",
+        "FR1": "fwr1",
+        "FR2": "fwr2",
+        "FR3": "fwr3",
+    }
+
+    def region_sequence(self, region: str) -> str:
+        """
+        Return the nucleotide sequence of a named region. Allowed names are:
+        CDR1, CDR2, CDR3, FR1, FR2, FR3. Sequences are extracted from the full read
+        using begin and end coordinates from IgBLAST’s "alignment summary" table.
+        """
+        if region not in self.COLUMNS_MAP:
+            raise KeyError(f"Region '{region}' not allowed")
+        return self.fields[self.COLUMNS_MAP[region]]
+
+
+def igblast_parallel_chunked(
+    database,
+    sequences,
+    sequence_type,
+    species=None,
+    threads=1,
+    penalty=None,
+    use_cache=False,
+):
+    """
+    Run IgBLAST on the input sequences and yield AIRR-formatted results.
+
+    The input is split up into chunks of 1000 sequences and distributed to
+    *threads* number of IgBLAST instances that run in parallel.
+
+    database -- Path to database directory with V./D./J.fasta files
     sequences -- an iterable of Sequence objects
     sequence_type -- 'Ig' or 'TCR'
     threads -- number of threads.
-    raw_output -- If not None, raw IgBLAST output is written to this file
     """
-    if isinstance(database, str):
-        database_dir = database
-        database = None
-    else:
-        database_dir = database.path
     with ExitStack() as stack:
         # Create the three BLAST databases in a temporary directory
         blastdb_dir = stack.enter_context(tempfile.TemporaryDirectory())
-        for gene in ['V', 'D', 'J']:
-            makeblastdb(
-                os.path.join(database_dir, gene + '.fasta'),
-                os.path.join(blastdb_dir, gene),
-                prefix='%',
-            )
+        make_vdj_blastdb(blastdb_dir, database)
 
         chunks = chunked(sequences, chunksize=1000)
-        runner = Runner(blastdb_dir, species=species, sequence_type=sequence_type, penalty=penalty,
-            database=database, use_cache=use_cache)
-        pool = stack.enter_context(multiprocessing.Pool(threads) if threads > 1 else SerialPool())
-        for igblast_output, igblast_records in pool.imap(runner, chunks, chunksize=1):
-            if raw_output:
-                raw_output.write(igblast_output)
-            yield from igblast_records
+        runner = RawRunner(
+            blastdb_dir,
+            species=species,
+            sequence_type=sequence_type,
+            penalty=penalty,
+            database=database,
+            use_cache=use_cache,
+        )
+        pool = stack.enter_context(
+            multiprocessing.Pool(threads) if threads > 1 else SerialPool()
+        )
+        for igblast_output in pool.imap(runner, chunks, chunksize=1):
+            yield igblast_output
+
+
+def make_vdj_blastdb(blastdb_dir, database_dir):
+    """Run makeblastdb for all {V,D,J}.fasta in the database_dir"""
+
+    for gene in ["V", "D", "J"]:
+        # Without adding the "%" prefix, IgBLAST reports record names that look like GenBank
+        # ids as "gb|original_name|".
+        makeblastdb(
+            os.path.join(database_dir, gene + ".fasta"),
+            os.path.join(blastdb_dir, gene),
+            prefix="%",
+        )
