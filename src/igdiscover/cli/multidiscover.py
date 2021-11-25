@@ -29,7 +29,7 @@ def main(args):
     # Read in tables
     tables = []
     for path in args.tables:
-        table = pd.read_csv(path, sep='\t')
+        table = pd.read_table(path)
         table = table[table.database_diff >= args.minimum_db_diff]
         table = table.dropna()
         tables.append(table)

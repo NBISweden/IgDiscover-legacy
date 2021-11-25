@@ -116,7 +116,7 @@ def fix_columns(df):
             continue
         df[col].fillna('', inplace=True)
         df[col] = df[col].astype('str')
-        # Empty strings have been set to NaN by read_csv. Replacing
+        # Empty strings have been set to NaN by read_table. Replacing
         # by the empty string avoids problems with groupby, which
         # ignores NaN values.
     # Columns that have any NaN values in them cannot be converted to

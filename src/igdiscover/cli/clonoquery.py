@@ -104,8 +104,8 @@ def collect(querytable, reftable, mismatches, cdr3_core_slice, cdr3_column):
 def main(args):
     usecols = CLONOTYPE_COLUMNS
     # TODO backwards compatibility
-    if ('FR1_aa_mut' not in pd.read_csv(args.querytable, nrows=0, sep='\t').columns or
-            'FR1_aa_mut' not in pd.read_csv(args.reftable, nrows=0, sep='\t').columns):
+    if ('FR1_aa_mut' not in pd.read_table(args.querytable, nrows=0).columns or
+            'FR1_aa_mut' not in pd.read_table(args.reftable, nrows=0).columns):
         usecols = [col for col in usecols if not col.endswith('_aa_mut')]
     querytable = read_table(args.querytable, usecols=usecols)
     querytable = querytable[usecols]  # reorder columns

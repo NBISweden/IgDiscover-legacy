@@ -90,7 +90,7 @@ def run_clonotypes(
     logger.info('Reading input table ...')
     usecols = CLONOTYPE_COLUMNS
     # TODO backwards compatibility
-    if 'FR1_aa_mut' not in pd.read_csv(table, nrows=0, sep='\t').columns:
+    if 'FR1_aa_mut' not in pd.read_table(table, nrows=0).columns:
         usecols = [col for col in usecols if not col.endswith('_aa_mut')]
 
     table = read_table(table, usecols=usecols)

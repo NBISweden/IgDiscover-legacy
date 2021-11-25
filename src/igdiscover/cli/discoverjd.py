@@ -201,7 +201,7 @@ def count_occurrences(candidates, table_path, search_columns, other_gene, other_
     cols = [other_gene, 'V_errors', 'J_errors', 'cdr3'] + search_columns
 
     search_cache = defaultdict(list)  # map haystack sequence to list of candidates that occur in it
-    for chunk in pd.read_csv(table_path, usecols=cols, chunksize=10000, sep='\t'):
+    for chunk in pd.read_table(table_path, usecols=cols, chunksize=10000):
         fix_columns(chunk)
         if perfect_matches:
             chunk = chunk[chunk[other_errors] == 0]
