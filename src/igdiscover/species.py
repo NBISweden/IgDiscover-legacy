@@ -18,7 +18,7 @@ from .utils import nt_to_aa
 #
 _CDR3_REGEX = {
     # Heavy chain
-    'VH': re.compile("""
+    'IGH': re.compile("""
         [FY] [FHVWY] C
         (?P<cdr3>
             [ADEGIKMNRSTV] .{3,31}
@@ -27,7 +27,7 @@ _CDR3_REGEX = {
         """, re.VERBOSE),
 
     # Light chain, kappa
-    'VK': re.compile("""
+    'IGK': re.compile("""
         [FSVY] [CFHNVY] [CDFGLSW]
         (?P<cdr3>
             .{4,15}
@@ -36,7 +36,7 @@ _CDR3_REGEX = {
         """, re.VERBOSE),
 
     # Light chain, lambda
-    'VL': re.compile("""
+    'IGL': re.compile("""
         # the negative lookahead assertion ensures that the rightmost start is found
         [CDY](?![CDY][CFHSY][CFGW])[CFHSY][CFGW]
         (?P<cdr3>
@@ -53,22 +53,22 @@ _CDR3_VH_ALTERNATIVE_REGEX = re.compile("""
 """, re.VERBOSE)
 
 
-def find_cdr3(sequence, chain):
+def find_cdr3(sequence, locus):
     """
-    Find the CDR3 in the given sequence, assuming it comes from the given chain ('VH', 'VK', 'VL').
-    If the chain is not one of 'VH', 'VK', 'VL', return None.
+    Find the CDR3 in the given sequence, assuming it comes from the given locus
+    (chain type). If the locus is not one of 'IGH', 'IGK', 'IGL', return None.
 
     Return a tuple (start, stop) if found, None otherwise.
     """
     try:
-        regex = _CDR3_REGEX[chain]
+        regex = _CDR3_REGEX[locus]
     except KeyError:
         return None
     matches = []
     for offset in 0, 1, 2:
         aa = nt_to_aa(sequence[offset:])
         match = regex.search(aa)
-        if not match and chain == 'VH':
+        if not match and locus == "IGH":
             match = _CDR3_VH_ALTERNATIVE_REGEX.search(aa)
         if match:
             start, stop = match.span('cdr3')
@@ -96,10 +96,10 @@ _CDR3_START_VH_ALTERNATIVE_REGEX = re.compile("""
 
 
 _CDR3_START_REGEXES = {
-    'kappa': re.compile('[FSVY][CFHNVY][CDFGLSW]'),
-    'lambda': re.compile('[CDY](?![CDY][CFHSY][CFGW])[CFHSY][CFGW]'),
-    'gamma': re.compile('[YFH]C'),  # TODO test whether this also works for alpha and beta
-    'delta': re.compile('[YFH]C'),
+    "IGK": re.compile('[FSVY][CFHNVY][CDFGLSW]'),
+    "IGL": re.compile('[CDY](?![CDY][CFHSY][CFGW])[CFHSY][CFGW]'),
+    "TRG": re.compile('[YFH]C'),  # TODO test whether this also works for alpha and beta
+    "TRD": re.compile('[YFH]C'),
 }
 
 
@@ -113,29 +113,27 @@ def _cdr3_start_heavy(aa):
     return len(head) + match.start('cdr3_start')
 
 
-def cdr3_start(nt, chain):
+def cdr3_start(nt, locus):
     """
     Find CDR3 start location within a V gene (Ig or TCR)
 
     nt -- nucleotide sequence of the gene
-    chain -- one of the following strings:
-      - 'heavy', 'lambda', 'kappa' for Ig genes
-      - 'alpha', 'beta', 'gamma', 'delta' for TCR genes
+    locus -- one of "IGH", "IGK", "IGL", "TRA", "TRB", "TRG", "TRD"
     """
     aa = nt_to_aa(nt)
-    if chain == 'heavy':
+    if locus == "IGH":
         start = _cdr3_start_heavy(aa)
         if start is None:
             return None
         return 3 * start
-    if chain in ('kappa', 'lambda', 'gamma', 'delta'):
+    if locus in ("IGK", "IGL", "TRG", "TRD"):
         head, tail = aa[:-15], aa[-15:]
-        match = _CDR3_START_REGEXES[chain].search(tail)
+        match = _CDR3_START_REGEXES[locus].search(tail)
         if match:
             return 3 * (len(head) + match.end())
         else:
             return None
-    elif chain in ('alpha', 'beta'):
+    elif locus in ("TRA", "TRB"):
         head, tail = aa[:-8], aa[-8:]
         pos = tail.find('C')
         if pos == -1:
@@ -146,26 +144,24 @@ def cdr3_start(nt, chain):
 
 # Matches after the end of the CDR3 within a J sequence
 _CDR3_END_REGEXES = {
-    'heavy': re.compile('W[GAV]'),
-    'kappa': re.compile('FG'),
-    'lambda': re.compile('FG'),
-    'alpha': re.compile('FG'),
-    'beta': re.compile('FG'),
-    'gamma': re.compile('FG'),
-    'delta': re.compile('FG'),
+    "IGH": re.compile("W[GAV]"),
+    "IGK": re.compile("FG"),
+    "IGL": re.compile("FG"),
+    "TRA": re.compile("FG"),
+    "TRB": re.compile("FG"),
+    "TRG": re.compile("FG"),
+    "TRD": re.compile("FG"),
 }
 
 
-def cdr3_end(nt, chain):
+def cdr3_end(nt, locus):
     """
     Find the position of the CDR3 end within a J sequence
 
     nt -- nucleotide sequence of the J gene
-    chain -- one of the following strings:
-      - 'heavy', 'lambda', 'kappa' for Ig genes
-      - 'alpha', 'beta', 'gamma', 'delta' for TCR genes
+    locus -- one of "IGH", "IGK", "IGL", "TRA", "TRB", "TRG", "TRD"
     """
-    regex = _CDR3_END_REGEXES[chain]
+    regex = _CDR3_END_REGEXES[locus]
     for frame in 0, 1, 2:
         aa = nt_to_aa(nt[frame:])
         match = regex.search(aa)

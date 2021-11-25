@@ -56,7 +56,7 @@ _STRING_COLUMNS = [
     'v_call',  # categorical
     'd_call',  # categorical
     'j_call',  # categorical
-    'chain',  # categorical
+    'locus',  # categorical
     'stop',  # bool
     'productive',  # bool
     'UTR',

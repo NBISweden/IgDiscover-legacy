@@ -201,7 +201,7 @@ class Discoverer:
         """
         Return a guess for the chain type of a given group
         """
-        return Counter(group.chain).most_common()[0][0]
+        return Counter(group.locus).most_common()[0][0]
 
     @staticmethod
     def _guess_cdr3_start(group):
@@ -513,7 +513,7 @@ def main(args):
         seed = random.randrange(10**6)
         logger.info('Use --seed=%d to reproduce this run', seed)
 
-    table = read_table(args.table, usecols=('sequence_id', 'chain', 'v_call', 'd_call', 'j_call',
+    table = read_table(args.table, usecols=('sequence_id', 'locus', 'v_call', 'd_call', 'j_call',
         'V_nt', 'cdr3', 'barcode', 'V_CDR3_start', 'V_SHM', 'J_SHM', 'D_covered', 'd_support',
         'V_errors', 'D_errors', 'J_errors', 'VDJ_nt'))
     table['V_no_CDR3'] = [s[:start] if start != 0 else s for s, start in

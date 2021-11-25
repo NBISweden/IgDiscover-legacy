@@ -23,7 +23,6 @@ EXTRA_COLUMNS = [
     "J_aa",
     "V_SHM",
     "J_SHM",
-    "chain",
     "count",
     "barcode",
     "V_errors",
@@ -71,14 +70,14 @@ COLUMN_TYPES = {
     "cdr2_end": int,
 }
 
-LOCUS_TO_LONG_CHAIN = {
-    "IGH": "heavy",
-    "IGK": "kappa",
-    "IGL": "lambda",
-    "TRA": "alpha",
-    "TRB": "beta",
-    "TRG": "gamma",
-    "TRD": "delta",
+ALLOWED_LOCI = {
+    "IGH",
+    "IGK",
+    "IGL",
+    "TRA",
+    "TRB",
+    "TRG",
+    "TRD",
 }
 
 logger = logging.getLogger(__name__)
@@ -219,17 +218,6 @@ def augment_record(record, database):
         (100.0 - record["j_identity"]) if record["j_identity"] is not None else None
     )
 
-    locus_to_chain = {
-        "IGH": "VH",
-        "IGK": "VK",
-        "IGL": "VL",
-        "TRA": "VA",
-        "TRB": "VB",
-        "TRG": "VG",
-        "TRD": "VD",
-    }
-    record["chain"] = locus_to_chain.get(record["locus"])
-
     sequence_id, size, barcode = parse_header(record["sequence_id"])
     record["sequence_id"] = sequence_id
     record["count"] = size  # TODO consensus_count/duplicate_count
@@ -363,13 +351,13 @@ def set_cdr3_columns(record, database):
     if (
         not record["v_call"]
         or not record["j_call"]
-        or record["locus"] not in LOCUS_TO_LONG_CHAIN
+        or record["locus"] not in ALLOWED_LOCI
     ):
         return
 
     # CDR3 start
     cdr3_ref_start = database.v_cdr3_start(
-        record["v_call"], LOCUS_TO_LONG_CHAIN[record["locus"]]
+        record["v_call"], record["locus"]
     )
     if cdr3_ref_start is None:
         return
@@ -382,9 +370,7 @@ def set_cdr3_columns(record, database):
         )
 
     # CDR3 end
-    cdr3_ref_end = database.j_cdr3_end(
-        record["j_call"], LOCUS_TO_LONG_CHAIN[record["locus"]]
-    )
+    cdr3_ref_end = database.j_cdr3_end(record["j_call"], record["locus"])
     if cdr3_ref_end is None:
         return
 
@@ -401,12 +387,10 @@ def set_cdr3_columns(record, database):
 
 def set_fwr4_columns(record, database):
     j_call = record["j_call"]
-    if not j_call or record["locus"] not in LOCUS_TO_LONG_CHAIN:
+    if not j_call or record["locus"] not in ALLOWED_LOCI:
         return
 
-    cdr3_ref_end = database.j_cdr3_end(
-        record["j_call"], LOCUS_TO_LONG_CHAIN[record["locus"]]
-    )
+    cdr3_ref_end = database.j_cdr3_end(record["j_call"], record["locus"])
     cdr3_query_end = record["cdr3_end"]
     if cdr3_ref_end is None or not cdr3_query_end:
         return

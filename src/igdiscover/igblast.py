@@ -2,32 +2,25 @@
 This provides functions for running the "igblastn" command-line tool
 """
 import csv
-import sys
 import os
 import shlex
-import time
 import multiprocessing
 import subprocess
 from contextlib import ExitStack
 from dataclasses import dataclass
 from io import StringIO
-from itertools import islice
 import hashlib
-import errno
-from typing import List, Dict
+from typing import Dict
 
 import pkg_resources
 import logging
 import tempfile
-import json
 import gzip
 
 import dnaio
-from xopen import xopen
 
-from .utils import SerialPool, available_cpu_count, nt_to_aa
+from .utils import SerialPool, nt_to_aa
 from .species import cdr3_start, cdr3_end
-from .config import GlobalConfig
 
 
 logger = logging.getLogger(__name__)
@@ -234,9 +227,9 @@ class Database:
         self.j = self._records_to_dict(self._j_records)
         self._cdr3_starts = dict()
         self._cdr3_ends = dict()
-        for chain in ('heavy', 'kappa', 'lambda', 'alpha', 'beta', 'gamma', 'delta'):
-            self._cdr3_starts[chain] = {name: cdr3_start(s, chain) for name, s in self.v.items()}
-            self._cdr3_ends[chain] = {name: cdr3_end(s, chain) for name, s in self.j.items()}
+        for locus in ("IGH", "IGK", "IGL", "TRA", "TRB", "TRG", "TRD"):
+            self._cdr3_starts[locus] = {name: cdr3_start(s, locus) for name, s in self.v.items()}
+            self._cdr3_ends[locus] = {name: cdr3_end(s, locus) for name, s in self.j.items()}
         self.v_regions_nt, self.v_regions_aa = self._find_v_regions()
 
     @staticmethod
@@ -252,11 +245,11 @@ class Database:
     def _records_to_dict(records):
         return {record.name: record.sequence.upper() for record in records}
 
-    def v_cdr3_start(self, gene, chain):
-        return self._cdr3_starts[chain][gene]
+    def v_cdr3_start(self, gene, locus):
+        return self._cdr3_starts[locus][gene]
 
-    def j_cdr3_end(self, gene, chain):
-        return self._cdr3_ends[chain][gene]
+    def j_cdr3_end(self, gene, locus):
+        return self._cdr3_ends[locus][gene]
 
     def _find_v_regions(self):
         """

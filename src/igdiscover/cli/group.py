@@ -119,7 +119,7 @@ def cluster_by_cdr3(records, pseudo_cdr3: slice, real_cdr3: bool) -> List[List]:
     records_cdr3s = []
     for record in records:
         if real_cdr3:
-            match = find_cdr3(record.sequence, chain='VH')
+            match = find_cdr3(record.sequence, locus="IGH")
             if match:
                 cdr3 = record.sequence[match[0]:match[1]]
             else:
