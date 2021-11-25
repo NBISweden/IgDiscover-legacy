@@ -1,7 +1,7 @@
 """
 Group sequences that share a unique molecular identifier (UMI, barcode)
 
-Since the same barcode can sometimes be used by different sequences, the CDR3
+Since the same UMI can sometimes be used by different sequences, the CDR3
 sequence can further be used to distinguish sequences. You can choose between
 using either a 'pseudo CDR3' sequence, which encompasses by default bases 80
 to 61 counted from the 3' end. Or you can use the real CDR3 detected with a
@@ -119,7 +119,7 @@ def cluster_by_cdr3(records, pseudo_cdr3: slice, real_cdr3: bool) -> List[List]:
     records_cdr3s = []
     for record in records:
         if real_cdr3:
-            match = find_cdr3(record.sequence, chain='VH')
+            match = find_cdr3(record.sequence, locus="IGH")
             if match:
                 cdr3 = record.sequence[match[0]:match[1]]
             else:

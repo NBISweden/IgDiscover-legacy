@@ -44,7 +44,7 @@ def run_snakemake(
     targets=None,
 ):
     try:
-        config = Config.from_default_path()
+        _ = Config.from_default_path()
     except FileNotFoundError as e:
         sys.exit("Pipeline configuration file {!r} not found. Please create it!".format(e.filename))
 

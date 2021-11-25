@@ -19,7 +19,7 @@ import numpy as np
 import pandas as pd
 from tinyalign import edit_distance
 
-from ..table import read_table
+from ..table import read_table, vdj_nt_column
 from ..cluster import cluster_sequences, single_linkage
 from ..utils import (unique_name, downsampled, SerialPool, Merger, has_stop,
     available_cpu_count)
@@ -201,7 +201,7 @@ class Discoverer:
         """
         Return a guess for the chain type of a given group
         """
-        return Counter(group.chain).most_common()[0][0]
+        return Counter(group.locus).most_common()[0][0]
 
     @staticmethod
     def _guess_cdr3_start(group):
@@ -213,8 +213,8 @@ class Discoverer:
     def count_unique_d(self, table):
         g = table[(table.D_errors == 0) &
             (table.D_covered >= self.d_coverage) &
-            (table.D_evalue <= self.d_evalue)]
-        return len(set(s for s in g.D_gene if s))
+            (table.d_support <= self.d_evalue)]
+        return len(set(s for s in g.d_call if s))
 
     @staticmethod
     def count_unique_barcodes(group):
@@ -233,8 +233,8 @@ class Discoverer:
             return edit_distance(s, t, distance) <= distance
 
         total = 0
-        for j_gene, group in table.groupby('J_gene'):
-            sequences = list(set(s for s in group.CDR3_nt if s))
+        for j_gene, group in table.groupby('j_call'):
+            sequences = list(set(s for s in group.cdr3 if s))
             components = single_linkage(sequences, linked)
             total += len(components)
         return total
@@ -365,6 +365,7 @@ class Discoverer:
             # Sequence without the CDR3-covering part
             sibling_no_cdr3 = sibling[:self._guess_cdr3_start(assignments)]
             group_exact_v = assignments[assignments.V_no_CDR3 == sibling_no_cdr3]
+
             group_full_exact_v = assignments[assignments['VDJ_nt'].str.startswith(sibling, na=False)]
             groups = (
                 ('window', sibling_info.group),
@@ -376,18 +377,18 @@ class Discoverer:
             # self.cdr3_counts are CDR3 counts of all CDR3s in the entire table.
             # We restrict this here to the counts for CDR3s belonging to
             # clusters other than the current one.
-            other_cdr3_counts = self.cdr3_counts - Counter(s for s in sibling_info.group.CDR3_nt if s)
+            other_cdr3_counts = self.cdr3_counts - Counter(s for s in sibling_info.group.cdr3 if s)
             info = dict()
             for key, group in groups:
-                cdr3_counts = Counter(s for s in group.CDR3_nt if s)
+                cdr3_counts = Counter(s for s in group.cdr3 if s)
                 unique_cdr3 = len(cdr3_counts)
                 shared_cdr3_ratio = safe_divide(len(other_cdr3_counts & cdr3_counts), unique_cdr3)
-                unique_j = len(set(s for s in group.J_gene if s))
+                unique_j = len(set(s for s in group.j_call if s))
                 clonotypes = self.count_clonotypes(group)
                 unique_d = self.count_unique_d(group)
                 unique_barcodes = self.count_unique_barcodes(group)
                 count = len(group.index)
-                read_names = list(group.name)
+                read_names = list(group.sequence_id)
                 info[key] = Groupinfo(count=count, unique_D=unique_d, unique_J=unique_j,
                     unique_CDR3=unique_cdr3, shared_CDR3_ratio=shared_cdr3_ratio,
                     clonotypes=clonotypes, read_names=read_names,
@@ -512,9 +513,9 @@ def main(args):
         seed = random.randrange(10**6)
         logger.info('Use --seed=%d to reproduce this run', seed)
 
-    table = read_table(args.table, usecols=('name', 'chain', 'V_gene', 'D_gene', 'J_gene', 'V_nt',
-        'CDR3_nt', 'barcode', 'V_CDR3_start', 'V_SHM', 'J_SHM', 'D_covered', 'D_evalue', 'V_errors',
-        'D_errors', 'J_errors', 'VDJ_nt'))
+    table = read_table(args.table, usecols=('sequence_id', 'locus', 'v_call', 'd_call', 'j_call',
+        'V_nt', 'cdr3', 'barcode', 'V_CDR3_start', 'V_SHM', 'J_SHM', 'D_covered', 'd_support',
+        'V_errors', 'D_errors', 'J_errors', 'VDJ_nt'))
     table['V_no_CDR3'] = [s[:start] if start != 0 else s for s, start in
         zip(table.V_nt, table.V_CDR3_start)]
 
@@ -546,14 +547,14 @@ def main(args):
         windows = []
 
     groups = []
-    for gene, group in table.groupby('V_gene'):
+    for gene, group in table.groupby('v_call'):
         if genes and gene not in genes:
             continue
         if len(group) < MINGROUPSIZE:
             continue
         groups.append((gene, group))
 
-    cdr3_counts = Counter(s for s in table.CDR3_nt if s)
+    cdr3_counts = Counter(s for s in table.cdr3 if s)
     logger.info('%s unique CDR3s detected overall', len(cdr3_counts))
     discoverer = Discoverer(
         database,

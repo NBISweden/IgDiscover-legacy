@@ -14,7 +14,7 @@ import logging
 import json
 import pandas as pd
 
-from ..table import fix_columns
+from ..table import read_table_chunks
 
 logger = logging.getLogger(__name__)
 
@@ -78,17 +78,17 @@ def filtered_table(table,
     stats = FilteringStatistics()
     stats.total = len(table)
     # Both V and J must be assigned
-    # (Note V_gene and J_gene columns use empty strings instead of NA)
-    filtered = table[(table['V_gene'] != '') & (table['J_gene'] != '')][:]
+    # (Note v_call and j_call columns use empty strings instead of NA)
+    filtered = table[(table['v_call'] != '') & (table['j_call'] != '')][:]
     stats.has_vj_assignment = len(filtered)
-    filtered['V_gene'] = pd.Categorical(filtered['V_gene'])
+    filtered['v_call'] = pd.Categorical(filtered['v_call'])
 
     # Filter out sequences that have a stop codon
-    filtered = filtered[filtered.stop == 'no']
+    filtered = filtered[filtered.stop_codon == 'F']
     stats.has_no_stop = len(filtered)
 
     # Filter out sequences with a too low V gene hit E-value
-    filtered = filtered[filtered.V_evalue <= v_gene_evalue]
+    filtered = filtered[filtered.v_support <= v_gene_evalue]
     stats.good_v_evalue = len(filtered)
 
     # Filter out sequences with too low V gene coverage
@@ -99,7 +99,7 @@ def filtered_table(table,
     filtered = filtered[filtered.J_covered >= j_gene_coverage]
     stats.good_j_coverage = len(filtered)
 
-    stats.has_cdr3 = sum(filtered['CDR3_nt'] != '')
+    stats.has_cdr3 = sum(filtered['cdr3'] != '')
     return filtered, stats
 
 
@@ -107,8 +107,7 @@ def main(args):
     first = True
     written = 0
     stats = FilteringStatistics()
-    for chunk in pd.read_csv(args.table, chunksize=10000, float_precision='high', sep='\t'):
-        fix_columns(chunk)
+    for chunk in read_table_chunks(args.table, chunksize=10000):
         filtered, chunk_stats = filtered_table(chunk, v_gene_coverage=args.v_coverage,
             j_gene_coverage=args.j_coverage, v_gene_evalue=args.v_evalue)
         stats += chunk_stats

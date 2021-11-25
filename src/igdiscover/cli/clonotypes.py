@@ -28,15 +28,15 @@ import pandas as pd
 from xopen import xopen
 from tinyalign import hamming_distance, edit_distance
 
-from ..table import read_table
+from ..table import read_table, vdj_nt_column
 from ..cluster import hamming_single_linkage
-from ..utils import slice_arg
+from ..utils import slice_arg, nt_to_aa
 
-
-CLONOTYPE_COLUMNS = ['name', 'count', 'V_gene', 'D_gene', 'J_gene', 'CDR3_nt', 'CDR3_aa',
+CLONOTYPE_COLUMNS = ['sequence_id', 'count', 'v_call', 'd_call', 'j_call', 'cdr3', 'cdr3_aa',
     'FR1_SHM', 'CDR1_SHM', 'FR2_SHM', 'CDR2_SHM', 'FR3_SHM', 'FR4_SHM',
     'FR1_aa_mut', 'CDR1_aa_mut', 'FR2_aa_mut', 'CDR2_aa_mut', 'FR3_aa_mut', 'V_aa_mut', 'J_aa_mut',
-    'V_errors', 'J_errors', 'V_SHM', 'J_SHM', 'barcode', 'VDJ_nt', 'VDJ_aa']
+    'V_errors', 'J_errors', 'V_SHM', 'J_SHM', 'barcode', 'VDJ_nt', 'VDJ_aa',
+]
 
 
 logger = logging.getLogger(__name__)
@@ -90,15 +90,14 @@ def run_clonotypes(
     logger.info('Reading input table ...')
     usecols = CLONOTYPE_COLUMNS
     # TODO backwards compatibility
-    if 'FR1_aa_mut' not in pd.read_csv(table, nrows=0, sep='\t').columns:
+    if 'FR1_aa_mut' not in pd.read_table(table, nrows=0).columns:
         usecols = [col for col in usecols if not col.endswith('_aa_mut')]
 
     table = read_table(table, usecols=usecols)
-    table = table[usecols]
     logger.info('Read table with %s rows', len(table))
-    table.insert(5, 'CDR3_length', table['CDR3_nt'].apply(len))
+    table.insert(5, 'CDR3_length', table['cdr3'].apply(len))
     table = table[table['CDR3_length'] > 0]
-    table = table[table['CDR3_aa'].map(lambda s: '*' not in s)]
+    table = table[table['cdr3_aa'].map(lambda s: '*' not in s)]
     logger.info('After discarding rows with unusable CDR3, %s remain', len(table))
     with ExitStack() as stack:
         if members:
@@ -110,10 +109,10 @@ def run_clonotypes(
         columns.remove('barcode')
         columns.remove('count')
         columns.insert(0, 'count')
-        columns.insert(columns.index('CDR3_nt'), 'CDR3_length')
+        columns.insert(columns.index('cdr3'), 'CDR3_length')
         print(*columns, sep='\t')
         print_header = True
-        cdr3_column = 'CDR3_aa' if aa else 'CDR3_nt'
+        cdr3_column = 'cdr3_aa' if aa else 'cdr3'
         grouped = group_by_clonotype(table, mismatches, sort, cdr3_core, cdr3_column)
         logger.info('Writing clonotypes')
         started = time.time()
@@ -154,7 +153,7 @@ def group_by_clonotype(table, mismatches, sort, cdr3_core, cdr3_column):
     prev_v = None
     groups = []
     for (v_gene, j_gene, cdr3_length), vj_group in table.groupby(
-            ['V_gene', 'J_gene', 'CDR3_length']):
+            ['v_call', 'j_call', 'CDR3_length']):
         if prev_v != v_gene:
             logger.info('Processing %s', v_gene)
         prev_v = v_gene
@@ -242,10 +241,10 @@ def representative(table):
 
 def augment_group(table, v_shm_threshold=5, suffix='_mindiffrate'):
     """
-    Add columns to the given table that contain percentage difference of VDJ_nt, VDJ_aa, CDR3_nt,
-    CDR3_aa to the least mutated (in terms of V_SHM) sequence in this group.
+    Add columns to the given table that contain percentage difference of VDJ_nt, VDJ_aa, cdr3,
+    cdr3_aa to the least mutated (in terms of V_SHM) sequence in this group.
     """
-    columns = ['CDR3_nt', 'CDR3_aa', 'VDJ_nt', 'VDJ_aa']
+    columns = ['cdr3', 'cdr3_aa', 'VDJ_nt', 'VDJ_aa']
     i = table.columns.get_loc('barcode')  # insert before this column
     for column in columns[::-1]:
         table.insert(i, column + suffix, None)

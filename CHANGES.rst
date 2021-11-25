@@ -2,6 +2,26 @@
 Changes
 =======
 
+development version
+-------------------
+
+* IgDiscover now uses AIRR-formatted files:
+  See the `AIRR rearrangement schema <https://docs.airr-community.org/en/stable/datarep/rearrangements.html>`_
+* IgBLAST is run with the appropriate parameters to produce AIRR-compliant files
+* ``assigned.tab.gz`` and ``filtered.tab.gz`` contain this IgBLAST output plus extra columns
+  that IgDiscover needs (the AIRR schema allows extra columns)
+*``assigned.tab.gz`` and ``filtered.tab.gz`` are now called ``assigned.tsv.gz`` and
+  ``filtered.tsv.gz`` (the ``.tsv`` extension is required by the AIRR specification)
+* One downside is that, because there are more columns than before, the "assigned" and "filtered"
+  files are larger than before.
+* The upside is that these files can be used with other tools that accept AIRR-compliant files.
+* Old "assigned" and "filtered" files can still be read by most IgDiscover commands. Output will
+  always use new column names.
+* The ``VDJ_nt`` column was removed to reduce file size somewhat. It is now recomputed when
+  necessary from the appropriate offsets.
+* Update to IgBLAST 1.17
+
+
 v0.12 (2020-01-20)
 ------------------
 

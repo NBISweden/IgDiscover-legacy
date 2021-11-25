@@ -77,9 +77,11 @@ def main(args):
 
     if not os.path.exists(args.directory):
         os.mkdir(args.directory)
-    gene_col = args.type + '_gene'
+    gene_col = args.type.lower() + '_call'
     seq_col = args.type + '_nt'
-    usecols = ['J_SHM', 'V_gene', gene_col, seq_col]
+    usecols = ['J_SHM', 'v_call', seq_col]
+    if gene_col not in usecols:
+        usecols.append(gene_col)
     table = read_table(args.table, usecols=usecols)
 
     # Discard rows with any mutation within J at all

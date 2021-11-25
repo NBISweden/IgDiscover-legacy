@@ -32,8 +32,8 @@ def add_arguments(parser):
 
 
 def main(args):
-    usecols = ['V_gene', 'D_gene', 'J_gene', 'V_errors', 'D_errors', 'J_errors', 'D_covered',
-        'D_evalue']
+    usecols = ['v_call', 'd_call', 'j_call', 'V_errors', 'D_errors', 'J_errors', 'D_covered',
+        'd_support']
 
     # Support reading a table without D_errors
     try:
@@ -49,7 +49,7 @@ def main(args):
         table = table[table.J_errors == 0]
         logger.info('%s rows remain after requiring J errors = 0', len(table))
     if args.gene == 'D' or args.x == 'D':
-        table = table[table.D_evalue <= args.d_evalue]
+        table = table[table.d_support <= args.d_evalue]
         logger.info('%s rows remain after requiring D E-value <= %s', len(table), args.d_evalue)
         table = table[table.D_covered >= args.d_coverage]
         logger.info('%s rows remain after requiring D coverage >= %s', len(table), args.d_coverage)
@@ -57,8 +57,8 @@ def main(args):
             table = table[table.D_errors == 0]
             logger.info('%s rows remain after requiring D errors = 0', len(table))
 
-    gene1 = args.x + '_gene'
-    gene2 = args.gene + '_gene'
+    gene1 = args.x.lower() + '_call'
+    gene2 = args.gene.lower() + '_call'
     expression_counts = table.groupby((gene1, gene2)).size().to_frame().reset_index()
     matrix = pd.DataFrame(
         expression_counts.pivot(index=gene1, columns=gene2, values=0).fillna(0), dtype=int)
@@ -101,9 +101,9 @@ def main(args):
                     name, args.order)
                 index = 1000000
             return index * 1000 + allele
-        matrix['V_gene_tmp'] = pd.Series(matrix.index, index=matrix.index).apply(orderfunc)
-        matrix.sort_values('V_gene_tmp', inplace=True)
-        del matrix['V_gene_tmp']
+        matrix['v_call_tmp'] = pd.Series(matrix.index, index=matrix.index).apply(orderfunc)
+        matrix.sort_values('v_call_tmp', inplace=True)
+        del matrix['v_call_tmp']
 
     print('#\n# Allele-specific expression\n#')
     print(matrix)

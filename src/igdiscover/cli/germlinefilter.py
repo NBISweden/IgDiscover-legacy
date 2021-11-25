@@ -379,7 +379,7 @@ def main(args):
     total = 0
     overall_table = None
     for path in args.tables:
-        table = pd.read_csv(path, sep='\t')
+        table = pd.read_table(path)
         i = list(table.columns).index('consensus')
         # whitelist_diff distinguishes between 0 and !=0 only
         # at this point. Accurate edit distances are computed later.

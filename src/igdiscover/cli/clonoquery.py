@@ -65,10 +65,10 @@ def collect(querytable, reftable, mismatches, cdr3_core_slice, cdr3_column):
     # Determine set of vjlentypes to query
     query_vjlentypes = defaultdict(list)
     for row in querytable.itertuples():
-        vjlentype = (row.V_gene, row.J_gene, len(row.CDR3_nt))
+        vjlentype = (row.v_call, row.j_call, len(row.cdr3))
         query_vjlentypes[vjlentype].append(row)
 
-    groupby = ['V_gene', 'J_gene', 'CDR3_length']
+    groupby = ['v_call', 'j_call', 'CDR3_length']
     for vjlentype, vjlen_group in reftable.groupby(groupby):
         # (v_gene, j_gene, cdr3_length) = vjlentype
         if vjlentype not in query_vjlentypes:
@@ -104,13 +104,13 @@ def collect(querytable, reftable, mismatches, cdr3_core_slice, cdr3_column):
 def main(args):
     usecols = CLONOTYPE_COLUMNS
     # TODO backwards compatibility
-    if ('FR1_aa_mut' not in pd.read_csv(args.querytable, nrows=0, sep='\t').columns or
-            'FR1_aa_mut' not in pd.read_csv(args.reftable, nrows=0, sep='\t').columns):
+    if ('FR1_aa_mut' not in pd.read_table(args.querytable, nrows=0).columns or
+            'FR1_aa_mut' not in pd.read_table(args.reftable, nrows=0).columns):
         usecols = [col for col in usecols if not col.endswith('_aa_mut')]
     querytable = read_table(args.querytable, usecols=usecols)
     querytable = querytable[usecols]  # reorder columns
     # Filter empty rows (happens sometimes)
-    querytable = querytable[querytable.V_gene != '']
+    querytable = querytable[querytable.v_call != '']
     logger.info('Read query table with %s rows', len(querytable))
     reftable = read_table(args.reftable, usecols=usecols)
     reftable = reftable[usecols]
@@ -120,13 +120,13 @@ def main(args):
         logger.info('After filtering out rows with count < %s, %s rows remain', args.minimum_count,
             len(reftable))
     for tab in querytable, reftable:
-        tab.insert(5, 'CDR3_length', tab['CDR3_nt'].apply(len))
+        tab.insert(5, 'CDR3_length', tab['cdr3'].apply(len))
 
     if len(querytable) > len(reftable):
         logger.warning('The reference table is smaller than the '
             'query table! Did you swap query and reference?')
 
-    cdr3_column = 'CDR3_aa' if args.aa else 'CDR3_nt'
+    cdr3_column = 'cdr3_aa' if args.aa else 'cdr3'
     summary_columns = ['FR1_SHM', 'CDR1_SHM', 'FR2_SHM', 'CDR2_SHM', 'FR3_SHM', 'V_SHM', 'J_SHM',
         'V_aa_mut', 'J_aa_mut']
     summary_columns.extend(col for col in usecols if col.endswith('_aa_mut'))
@@ -145,14 +145,14 @@ def main(args):
             assert len(query_rows) >= 1
             if summary_file:
                 for query_row in query_rows:
-                    print(query_row.name, len(result_table), sep='\t', end='', file=summary_file)
+                    print(query_row.sequence_id, len(result_table), sep='\t', end='', file=summary_file)
                     for col in summary_columns:
                         mean = result_table[col].mean() if len(result_table) > 0 else 0
                         print('\t{:.2f}'.format(mean), end='', file=summary_file)
                     print(file=summary_file)
 
             for query_row in query_rows:
-                print('# Query: {}'.format(query_row.name), '', *(query_row[3:]), sep='\t')
+                print('# Query: {}'.format(query_row.sequence_id), '', *(query_row[3:]), sep='\t')
             if len(result_table) > 0:
                 print(result_table.to_csv(sep='\t', header=False, index=False))
             else:
