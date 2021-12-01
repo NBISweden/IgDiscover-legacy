@@ -8,6 +8,7 @@ IgDiscover computes V/D/J gene usage profiles and discovers novel V genes
 - Plot V gene usage
 - Discover new V genes given more than one dataset
 """
+import ast
 import sys
 import logging
 import pkgutil
@@ -57,29 +58,23 @@ def format_duration(seconds):
 
 
 def main(arguments=None):
+    if arguments is None:
+        arguments = sys.argv[1:]
     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    subcommand_name = get_subcommand_name(arguments)
+    module = importlib.import_module("." + subcommand_name, cli_package.__name__)
+
     parser = HelpfulArgumentParser(description=__doc__, prog='igdiscover')
     parser.add_argument('--profile', default=False, action='store_true',
         help='Save profiling information to igdiscover.prof')
     parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
     parser.add_argument('--debug', action='store_true', default=False, help='Print debug messages')
 
-    show_cpustats = dict()
     subparsers = parser.add_subparsers()
-
-    # Import each module that implements a subcommand and add a subparser for it.
-    # Each subcommand is implemented as a module in the cli subpackage.
-    # It needs to implement an add_arguments() and a main() function.
-    modules = pkgutil.iter_modules(cli_package.__path__)
-    for _, module_name, _ in modules:
-        module = importlib.import_module("." + module_name, cli_package.__name__)
-        subparser = subparsers.add_parser(module_name,
-            help=module.__doc__.split('\n')[1], description=module.__doc__)
-        subparser.set_defaults(func=module.main)
-        module.add_arguments(subparser)
-        if hasattr(module, 'do_not_show_cpustats'):
-            show_cpustats[module.main] = False
-
+    subparser = subparsers.add_parser(
+        subcommand_name, help=module.__doc__.split("\n", maxsplit=1)[1], description=module.__doc__
+    )
+    module.add_arguments(subparser)
     args = parser.parse_args(arguments)
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)
@@ -87,23 +82,18 @@ def main(arguments=None):
 
     do_profiling = args.profile
     del args.profile
-    if hasattr(args, 'func'):
-        subcommand = args.func
-        del args.func
-    else:
-        parser.error('Please provide the name of a subcommand to run')
     if do_profiling:
         import cProfile as profile
-        to_run = lambda: profile.runctx('subcommand(args)', globals(), dict(subcommand=subcommand, args=args), filename='igdiscover.prof')
+        to_run = lambda: profile.runctx('module.main(args)', globals(), dict(module=module, args=args), filename='igdiscover.prof')
         logger.info('Writing profiling data to igdiscover.prof')
     else:
-        to_run = lambda: subcommand(args)
+        to_run = lambda: module.main(args)
     try:
         to_run()
     except CommandLineError as e:
         logger.error(e)
         sys.exit(1)
-    if sys.platform == 'linux' and show_cpustats.get(subcommand, True):
+    if sys.platform == 'linux' and not getattr(module, "do_not_show_cpustats", False):
         rself = resource.getrusage(resource.RUSAGE_SELF)
         rchildren = resource.getrusage(resource.RUSAGE_CHILDREN)
         memory_kb = rself.ru_maxrss + rchildren.ru_maxrss
@@ -111,6 +101,49 @@ def main(arguments=None):
         cpu_time_s = format_duration(cpu_time)
         logger.info('CPU time {}. Maximum memory usage {:.3f} GB'.format(
             cpu_time_s, memory_kb / 1E6))
+
+
+def get_subcommand_name(arguments) -> str:
+    """
+    Parse arguments to find out which subcommand was requested.
+
+    This sets up a minimal ArgumentParser with the correct help strings.
+
+    Because help is obtained from a module’s docstring, but importing each module
+    makes startup slow, the modules are only parsed with the ast module and
+    not fully imported at this stage.
+
+    Return:
+        subcommand name
+    """
+    parser = HelpfulArgumentParser(description=__doc__, prog="whatshap")
+    parser.add_argument("--version", action="version", version=__version__)
+    subparsers = parser.add_subparsers()
+
+    for module_name, docstring in cli_modules(cli_package):
+        help = docstring.split("\n", maxsplit=1)[1]
+        subparser = subparsers.add_parser(
+            module_name, help=help, description=docstring, add_help=False
+        )
+        subparser.set_defaults(module_name=module_name)
+    args, _ = parser.parse_known_args(arguments)
+    module_name = getattr(args, "module_name", None)
+    if module_name is None:
+        parser.error("Please provide the name of a subcommand to run")
+    return module_name
+
+
+def cli_modules(package):
+    """
+    Yield (module_name, docstring) tuples for all modules in the given package.
+    """
+    modules = pkgutil.iter_modules(package.__path__)
+    for module in modules:
+        spec = importlib.util.find_spec(package.__name__ + "." + module.name)
+        with open(spec.origin) as f:
+            mod_ast = ast.parse(f.read())
+        docstring = ast.get_docstring(mod_ast, clean=False)
+        yield module.name, docstring
 
 
 if __name__ == '__main__':
