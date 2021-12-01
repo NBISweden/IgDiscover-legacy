@@ -1,6 +1,4 @@
 *~
-*.kate-swp
-.ipynb_checkpoints/
 raw/
 tmp/
 __pycache__/
@@ -16,7 +14,6 @@ _build
 bin/
 testrun
 dist/
-igblast/
 *.pyc
 .pytest_cache/
 src/igdiscover/_version.py
