@@ -2,8 +2,8 @@
 Changes
 =======
 
-development version
--------------------
+v0.13 (2022-02-21)
+------------------
 
 * IgDiscover now uses AIRR-formatted files:
   See the `AIRR rearrangement schema <https://docs.airr-community.org/en/stable/datarep/rearrangements.html>`_
