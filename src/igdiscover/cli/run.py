@@ -29,6 +29,7 @@ def add_arguments(parser):
         'Default: Use as many cores as available (%(default)s)')
     arg('--keepgoing', '-k', default=False, action='store_true',
         help='If one job fails, finish the others.')
+    arg('--notemp', '--nt', default=False, action='store_true', help='Keep temporary files')
     arg('targets', nargs='*', default=[],
         help='File(s) to create. If omitted, the full pipeline is run.')
 
@@ -42,6 +43,7 @@ def run_snakemake(
     cores=available_cpu_count(),
     keepgoing=False,
     targets=None,
+    notemp=False,
 ):
     try:
         _ = Config.from_default_path()
@@ -66,6 +68,7 @@ def run_snakemake(
             keepgoing=keepgoing,
             printshellcmds=True,
             targets=targets,
+            notemp=notemp,
         )
         logger.root.handlers = old_root_handlers
 
