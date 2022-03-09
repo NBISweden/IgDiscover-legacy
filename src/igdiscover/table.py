@@ -6,7 +6,7 @@ import logging
 import numpy as np
 import pandas as pd
 
-from igdiscover.utils import nt_to_aa
+from .utils import nt_to_aa
 
 logger = logging.getLogger(__name__)
 

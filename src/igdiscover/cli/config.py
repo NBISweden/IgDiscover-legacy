@@ -12,7 +12,7 @@ import sys
 
 from ruamel.yaml import YAML
 
-from igdiscover.config import Config
+from ..config import Config
 
 logger = logging.getLogger(__name__)
 do_not_show_cpustats = 1

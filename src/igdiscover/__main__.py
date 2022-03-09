@@ -17,8 +17,8 @@ import matplotlib as mpl
 import warnings
 import resource
 
-import igdiscover.cli as cli_package
-from igdiscover.cli import CommandLineError
+from . import cli as cli_package
+from .cli import CommandLineError
 
 from . import __version__
 
