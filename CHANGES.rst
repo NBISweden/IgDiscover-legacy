@@ -2,6 +2,12 @@
 Changes
 =======
 
+v0.14 (2022-03-10)
+------------------
+
+* Fix a crash (``KeyError``) during "igdiscover augment" when region info
+  for a database sequence could not be obtained.
+
 v0.13 (2022-02-21)
 ------------------
 

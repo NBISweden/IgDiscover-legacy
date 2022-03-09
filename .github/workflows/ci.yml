@@ -27,8 +27,8 @@ jobs:
         run: "echo 'use_cache: true' > $HOME/.config/igdiscover.conf"
       - name: Download test data
         run: |
-          wget -nv https://bitbucket.org/igdiscover/testdata/downloads/igdiscover-testdata-0.6.tar.gz
-          tar xvf igdiscover-testdata-0.6.tar.gz
+          wget -nv https://bitbucket.org/igdiscover/testdata/downloads/igdiscover-testdata-0.7.tar.gz
+          tar xvf igdiscover-testdata-0.7.tar.gz
           ln -s igdiscover-testdata testdata
       - name: Run tests
         run: pytest

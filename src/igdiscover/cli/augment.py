@@ -277,7 +277,10 @@ def set_shm_columns(record, database):
             record[region + "_SHM"] = None
             continue
         sequence = record["sequence"][start - 1 : end]
-        germline = database.v_regions_nt[record["v_call"]].get(region)
+        regions = database.v_regions_nt.get(record["v_call"])
+        if not regions:
+            continue
+        germline = regions.get(region)
         dist = edit_distance(germline, sequence)
         record[region + "_SHM"] = 100.0 * dist / len(germline)
 
@@ -303,7 +306,10 @@ def set_aa_mut_columns(record, database):
         if start is None or end is None:
             continue
         sequence_aa = nt_to_aa(record["sequence"][start - 1 : end])
-        germline_aa = database.v_regions_aa[record["v_call"]].get(region)
+        regions = database.v_regions_aa.get(record["v_call"])
+        if not regions:
+            continue
+        germline_aa = regions.get(region)
         if germline_aa is None:
             continue
         # Some FR1 alignments are reported with a frameshift by IgBLAST. By requiring that
