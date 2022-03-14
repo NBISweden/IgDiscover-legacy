@@ -125,10 +125,10 @@ def describe_nt_change(s: str, t: str):
     '3_4delTT; 7C>T'
     >>> describe_nt_change('AAGCTAA', 'AACTGAA')
     '3G>C; 4C>T; 5T>G'
+    >>> describe_nt_change('TTGGTCAAGCCTGGAGGGTCCCTGAGACTCTCCTGTGCAGCCTCT', 'GGCTCCCAGATACTCTCCTCTGCAGCCTCT')
+    '1_15delTTGGTCAAGCCTGGA; 18G>C; 23T>A; 26G>T; 35G>C'
     """
-    alignment = align_global(s, t, insertion=-4, deletion=-4)
-    row1 = alignment.ref_row.replace('\0', '-')
-    row2 = alignment.query_row.replace('\0', '-')
+    alignment = align_affine(s, t)
     changes = []
 
     def grouper(c):
@@ -143,7 +143,7 @@ def describe_nt_change(s: str, t: str):
             return 'SUBST'
 
     index = 1
-    for event, group in groupby(zip(row1, row2), grouper):
+    for event, group in groupby(zip(alignment.ref_row, alignment.query_row), grouper):
         if event == 'MATCH':
             index += len(list(group))
         elif event == 'SUBST':
@@ -177,188 +177,134 @@ class Alignment:
         self.errors = errors
 
 
-def align_global_core(ref: str, query: str, match=1, mismatch=-2, insertion=-2, deletion=-2):
+def align_affine(
+    ref: str, query: str, gap_open=-6, gap_extend=-1, mismatch=-3, match=1
+):
     """
-    Compute an optimal global alignment between strings *ref* and *query*.
-    An alignment is optimal if it has maximal score.
+    Return an optimal global alignment of strings ref and query, using affine gap penalties.
 
-    Return an Alignment object.
+    The default scores are those that BWA uses.
     """
+    #          query (n, j)
+    #        --------------->
+    #       |
+    #   ref | (m, i)
+    #       |
+    #       V
+    #
     m = len(ref)
     n = len(query)
-    # DP Matrix:
-    #            query (j)
-    #          ----------> n
-    #         |
-    # ref (i) |
-    #         |
-    #         V
-    #         m
 
-    # the DP matrix is stored column-major
-    scores = [[0] * (n + 1) for _ in range(m+1)]
-    backtrace = [[0] * (n + 1) for _ in range(m+1)]
+    if not (gap_open <= 0 and gap_extend <= 0 and mismatch <= 0 and match >= 0):
+        raise ValueError(
+            "gap_open/gap_extend/mismatch scores must be <= 0; "
+            "match score must be >= 0"
+        )
 
-    start_in_ref = False
-    start_in_query = False
-    stop_in_ref = False
-    stop_in_query = False
+    # Initialize three dynamic programming tables:
+    #
+    # - M(i, j) is the score of an optimal alignment between ref[:i] and query[:j]
+    #   that does not end with an insertion nor a deletion
+    # - H(i, j) is the score of an optimal alignment between ref[:i] and query[:j]
+    #   that aligns query[j-1] to a gap
+    # - V(i, j) is the score of an optimal alignment between ref[:i] and query[:j]
+    #   that aligns ref[i-1] to a gap
 
-    UP = 0
-    LEFT = 1
-    DIAG = 2
-    GAPCHAR = '\0'
+    def zero_matrix():
+        return [[0] * (n + 1) for _ in range(m + 1)]
+
+    M = zero_matrix()
+    H = zero_matrix()
+    V = zero_matrix()
+    gapchar = "-"
+
+    inf = float("inf")
+    H[0][0] = V[0][0] = -inf
 
     # initialize first column
-    for i in range(m + 1):
-        scores[i][0] = 0 if start_in_ref else i * deletion
-        backtrace[i][0] = UP
+    for i in range(1, m + 1):
+        M[i][0] = -inf
+        H[i][0] = -inf
+        V[i][0] = gap_open + (i - 1) * gap_extend
 
     # initialize first row
-    for j in range(n + 1):
-        scores[0][j] = 0 if start_in_query else j * insertion
-        backtrace[0][j] = LEFT
-
-    # fill the entire DP matrix
-    # outer loop goes over columns
     for j in range(1, n + 1):
-        for i in range(1, m + 1):
-            bt = DIAG
-            score = scores[i-1][j-1] + (match if (ref[i-1] == query[j-1]) else mismatch)
-            tmp = scores[i-1][j] + insertion
-            if tmp > score:
-                bt = UP
-                score = tmp
-            tmp = scores[i][j-1] + deletion
-            if tmp > score:
-                bt = LEFT
-                score = tmp
-            scores[i][j] = score
-            backtrace[i][j] = bt
+        M[0][j] = -inf
+        H[0][j] = gap_open + (j - 1) * gap_extend
+        V[0][j] = -inf
 
-    # initialize best score and its position to the bottomright cell
-    best_i = m
-    best_j = n
-    best_score = scores[m][n]
+    for i in range(1, m + 1):
+        refchar = ref[i - 1]
+        for j in range(1, n + 1):
+            diag_score = match if refchar == query[j - 1] else mismatch
+            M[i][j] = diag_score + max(
+                M[i - 1][j - 1], V[i - 1][j - 1], H[i - 1][j - 1]
+            )
+            # The terms where V is updated from H and H updated from V can be
+            # removed if one thinks that insertions should not follow indels
+            # directly.
+            V[i][j] = max(
+                H[i - 1][j] + gap_open, V[i - 1][j] + gap_extend, M[i - 1][j] + gap_open
+            )
+            H[i][j] = max(
+                H[i][j - 1] + gap_extend, V[i][j - 1] + gap_open, M[i][j - 1] + gap_open
+            )
 
-    if stop_in_query:
-        # search also in last row
-        for j in range(n + 1):
-            if scores[m][j] >= best_score:
-                best_score = scores[m][j]
-                best_i = m
-                best_j = j
-
-    if stop_in_ref:
-        # search also in last column
-        for i in range(m + 1):
-            if scores[i][n] >= best_score:
-                best_i = i
-                best_j = n
-                best_score = scores[i][n]
-
-    # trace back
-    p1 = []
-    p2 = []
+    ref_row = []
+    query_row = []
     i = m
     j = n
-
-    # first, walk from the lower right corner to the
-    # position where we found the maximum score
-
     errors = 0
 
-    # if gaps are currently errors, this is 1, otherwise it's 0
-    gaps_are_errors = 0 if stop_in_query else 1
-    if i == best_i:  # we are in the last row
-        while j > best_j:
-            p1.append(GAPCHAR)
-            j -= 1
-            p2.append(query[j])
-            errors += gaps_are_errors
-    else:  # we are in the last column
-        gaps_are_errors = 0 if stop_in_ref else 1
-        while i > best_i:
-            i -= 1
-            p1.append(ref[i])
-            p2.append(GAPCHAR)
-            errors += gaps_are_errors
+    TRACE_M, TRACE_V, TRACE_H = "MVH"
+    optimal_score = max(M[m][n], V[m][n], H[m][n])
+    if optimal_score == M[m][j]:
+        state = TRACE_M
+    elif optimal_score == V[m][j]:
+        state = TRACE_V
+    else:
+        state = TRACE_H
 
-    assert i == best_i and j == best_j
-
-    # the actual backtracing
-    # The alignments are constructed in reverse
-    # and this is undone afterwards.
-    while i > 0 and j > 0:
-        direction = backtrace[i][j]
-        if direction == DIAG:
-            i -= 1
-            j -= 1
-            if ref[i] != query[j]:
+    # Compute traceback
+    while i > 0 or j > 0:
+        assert i >= 0 and j >= 0
+        if state == TRACE_M:
+            m_score = M[i - 1][j - 1]
+            v_score = V[i - 1][j - 1]
+            h_score = H[i - 1][j - 1]
+            c1 = ref[i - 1]
+            c2 = query[j - 1]
+            ref_row.append(c1)
+            query_row.append(c2)
+            if c1 != c2:
                 errors += 1
-            p1.append(ref[i])
-            p2.append(query[j])
-        elif direction == LEFT:
-            errors += 1
-            p1.append(GAPCHAR)
-            j -= 1
-            p2.append(query[j])
-        elif direction == UP:
             i -= 1
-            p1.append(ref[i])
-            p2.append(GAPCHAR)
+            j -= 1
+        elif state == TRACE_V:
+            m_score = M[i - 1][j] + gap_open
+            v_score = V[i - 1][j] + gap_extend
+            h_score = H[i - 1][j] + gap_open
             errors += 1
+            ref_row.append(ref[i - 1])
+            query_row.append(gapchar)
+            i -= 1
         else:
-            assert False, "DP table corrupt"
+            assert state == TRACE_H
+            m_score = M[i][j - 1] + gap_open
+            v_score = V[i][j - 1] + gap_open
+            h_score = H[i][j - 1] + gap_extend
+            errors += 1
+            ref_row.append(gapchar)
+            query_row.append(query[j - 1])
+            j -= 1
 
-    start1 = i if start_in_ref else 0
-    start2 = j if start_in_query else 0
+        # Update state
+        if h_score > m_score and h_score > v_score:
+            state = TRACE_H
+        elif v_score > m_score:
+            state = TRACE_V
+        else:
+            state = TRACE_M
 
-    errors += (i - start1) + (j - start2)
-
-    while j > 0:
-        p1.append(GAPCHAR)
-        j -= 1
-        p2.append(query[j])
-    while i > 0:
-        i -= 1
-        p1.append(ref[i])
-        p2.append(GAPCHAR)
-    assert i == 0 and j == 0
-
-    p1 = "".join(p1[::-1])
-    p2 = "".join(p2[::-1])
-
-    return Alignment(p1, p2, start1, best_i, start2, best_j, best_score, errors)
-
-
-def align_global(ref: str, query: str, match=1, mismatch=-2, insertion=-2, deletion=-2):
-    m = len(ref)
-    n = len(query)
-    start = 0
-    while start < m and start < n and ref[start] == query[start]:
-        start += 1
-
-    stop_ref = m
-    stop_query = n
-    while stop_ref > start and stop_query > start and ref[stop_ref-1] == query[stop_query-1]:
-        stop_ref -= 1
-        stop_query -= 1
-
-    assert 0 <= start <= stop_ref <= m
-    assert 0 <= start <= stop_query <= n
-
-    alignment = align_global_core(
-        ref[start:stop_ref], query[start:stop_query], match, mismatch, insertion, deletion)
-
-    alignment.ref_row = ref[:start] + alignment.ref_row + ref[stop_ref:]
-    assert alignment.ref_start == 0
-    assert alignment.ref_stop == stop_ref - start
-    alignment.ref_stop = m
-    alignment.query_row = query[:start] + alignment.query_row + query[stop_query:]
-    assert alignment.query_start == 0
-    assert alignment.query_stop == stop_query - start
-    alignment.query_stop = n
-    alignment.score += start + m - stop_ref
-
-    return alignment
+    ref_row, query_row = "".join(ref_row[::-1]), "".join(query_row[::-1])
+    return Alignment(ref_row, query_row, 0, m, 0, n, optimal_score, errors)

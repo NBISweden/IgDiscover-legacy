@@ -2,11 +2,19 @@
 Changes
 =======
 
+development version
+-------------------
+
+* Change the algorithm used for describing how the discovered V gene differs from the
+  germline gene (the ``database_changes`` column). This gives more sensible descriptions when
+  the V gene is truncated at one end.
+
 v0.14 (2022-03-10)
 ------------------
 
 * Fix a crash (``KeyError``) during "igdiscover augment" when region info
   for a database sequence could not be obtained.
+
 
 v0.13 (2022-02-21)
 ------------------
