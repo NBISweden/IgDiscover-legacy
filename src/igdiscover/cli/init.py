@@ -17,8 +17,7 @@ from ..config import Config
 
 try:
     import tkinter as tk
-    from tkinter import messagebox
-    from tkinter import filedialog
+    from tkinter import messagebox, filedialog, TclError
 except ImportError:
     tk = None
 
@@ -234,9 +233,10 @@ def run_init(
     if (reads1 is None and single_reads is None) or database is None:
         try:
             gui = TkinterGui()
-        except ImportError:  # TODO tk.TclError cannot be caught when import of tk fails
-            raise CommandLineError('GUI cannot be started. Please provide reads1 file '
-                'and database directory on command line.')
+        except (ImportError, TclError) as e:
+            raise CommandLineError(f'GUI cannot be started: {e}\n'
+                'Please provide reads1 file and database directory on command line.'
+            )
     else:
         gui = None
 
