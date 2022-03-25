@@ -228,7 +228,7 @@ def representative(table):
     if n == 1:
         return table.iloc[0]
     elif n == 2:
-        result = table.iloc[0]
+        result = table.iloc[0].copy()
     else:
         c = Counter()
         for row in table.itertuples():
