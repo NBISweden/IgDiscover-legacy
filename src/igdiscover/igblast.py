@@ -191,6 +191,17 @@ class RawRunner:
         )
 
 
+class MakeBlastDbError(subprocess.CalledProcessError):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def __str__(self):
+        return f"Running '{escape_shell_command(self.cmd)}' failed with " \
+               f"exit code {self.returncode}. " \
+               f"Standard output:\n{self.output.decode()}\n" \
+               f"Standard error:\n{self.stderr.decode()}"
+
+
 def makeblastdb(fasta, database_name, prefix=''):
     """
     prefix -- prefix to add to sequence ids
@@ -209,9 +220,13 @@ def makeblastdb(fasta, database_name, prefix=''):
         database_name
     ]
     logger.debug("Running %s", escape_shell_command(command))
-    process_output = subprocess.check_output(command, stderr=subprocess.STDOUT)
+    try:
+        process_output = subprocess.check_output(command, stderr=subprocess.PIPE)
+    except subprocess.CalledProcessError as e:
+        raise MakeBlastDbError(e.returncode, command, output=e.output, stderr=e.stderr) from None
+
     if b'Error: ' in process_output:
-        raise subprocess.SubprocessError()
+        raise MakeBlastDbError(0, command, stderr=process_output) from None
 
 
 class Database:
