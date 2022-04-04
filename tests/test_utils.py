@@ -3,7 +3,7 @@ import pkg_resources
 import pytest
 
 from igdiscover.utils import (has_stop, validate_fasta, FastaValidationError, find_overlap,
-    merge_overlapping)
+    merge_overlapping, UniqueNamer)
 from igdiscover.cli.config import Config
 
 
@@ -79,3 +79,11 @@ def test_merge_overlapping():
     assert merge_overlapping('LOWORLD', 'HELLOW') == 'HELLOWORLD'
     assert merge_overlapping('HELLOWORLD', 'LOWO') == 'HELLOWORLD'
     assert merge_overlapping('LOWO', 'HELLOWORLD') == 'HELLOWORLD'
+
+
+def test_unique_namer():
+    namer = UniqueNamer()
+    assert "ABC_S1234" == namer("ABC_S1234")
+    assert "ABC_S1234A" == namer("ABC_S1234")
+    assert "X" == namer("X")
+    assert "ABC_S1234B" == namer("ABC_S1234")

@@ -22,7 +22,7 @@ from tinyalign import edit_distance
 from ..table import read_table, vdj_nt_column
 from ..cluster import cluster_sequences, single_linkage
 from ..utils import (unique_name, downsampled, SerialPool, Merger, has_stop,
-    available_cpu_count)
+    available_cpu_count, UniqueNamer)
 from ..align import iterative_consensus, describe_nt_change
 
 logger = logging.getLogger(__name__)
@@ -583,8 +583,10 @@ def main(args):
         pool = stack.enter_context(Pool(args.threads))
         if args.read_names:
             read_names_file = stack.enter_context(open(args.read_names, 'w'))
+        namer = UniqueNamer()
         for candidates in pool.imap(discoverer, groups, chunksize=1):
             for candidate in candidates:
+                candidate = candidate._replace(name=namer(candidate.name))
                 writer.writerow(candidate.formatted_dict())
                 if read_names_file:
                     print(candidate.name, *candidate.read_names, sep='\t', file=read_names_file)

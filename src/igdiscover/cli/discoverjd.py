@@ -15,7 +15,7 @@ from typing import List
 import dnaio
 
 from tinyalign import edit_distance
-from ..utils import Merger, merge_overlapping, unique_name, is_same_gene, slice_arg
+from ..utils import Merger, merge_overlapping, unique_name, is_same_gene, slice_arg, UniqueNamer
 from ..table import read_table, read_table_chunks
 
 logger = logging.getLogger(__name__)
@@ -447,6 +447,9 @@ def main(args):
 
     candidates = sorted(candidates, key=lambda c: c.name)
     candidates = [c for c in candidates if c.exact_occ >= args.min_count or c.db_distance == 0]
+    namer = UniqueNamer()
+    for candidate in candidates:
+        candidate.name = namer(candidate.name)
     print_table(candidates, other_gene, missing=args.gene == 'D')
 
     if args.fasta:
