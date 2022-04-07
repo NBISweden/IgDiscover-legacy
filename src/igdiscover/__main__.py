@@ -116,7 +116,7 @@ def get_subcommand_name(arguments) -> str:
     Return:
         subcommand name
     """
-    parser = HelpfulArgumentParser(description=__doc__, prog="whatshap")
+    parser = HelpfulArgumentParser(description=__doc__, prog="igdiscover")
     parser.add_argument("--version", action="version", version=__version__)
     subparsers = parser.add_subparsers()
 
