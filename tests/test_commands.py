@@ -93,6 +93,12 @@ def test_main():
     assert exc.value.code == 0
 
 
+def test_help():
+    with pytest.raises(SystemExit) as exc:
+        main(["--help"])
+    assert exc.value.code == 0
+
+
 def test_group_by_barcode_only(run):
     args = ['group', '-b', '4', datapath('ungrouped.fasta')]
     run(args,  resultpath('grouped-by-barcode-only.fasta'))

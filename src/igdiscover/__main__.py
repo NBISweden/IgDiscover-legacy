@@ -121,7 +121,7 @@ def get_subcommand_name(arguments) -> str:
     subparsers = parser.add_subparsers()
 
     for module_name, docstring in cli_modules(cli_package):
-        help = docstring.split("\n", maxsplit=1)[1]
+        help = docstring.split("\n", maxsplit=1)[1].replace("%", "%%")
         subparser = subparsers.add_parser(
             module_name, help=help, description=docstring, add_help=False
         )
