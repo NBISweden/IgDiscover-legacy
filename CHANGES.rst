@@ -2,12 +2,15 @@
 Changes
 =======
 
-development version
--------------------
+v0.15 (2022-04-07)
+------------------
 
 * Change the algorithm used for describing how the discovered V gene differs from the
   germline gene (the ``database_changes`` column). This gives more sensible descriptions when
   the V gene is truncated at one end.
+* Faster startup time (mostly noticable when using ``--version`` or ``--help``)
+* Ensure candidates get a unique name even if the hashes (``_Sxxxx``) collide
+* #108 Print a sensible error message when the GUI cannot be started.
 
 v0.14 (2022-03-10)
 ------------------
