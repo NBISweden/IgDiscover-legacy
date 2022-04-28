@@ -10,7 +10,7 @@ from contextlib import ExitStack
 from dataclasses import dataclass
 from io import StringIO
 import hashlib
-from typing import Dict
+from typing import Dict, Optional
 
 import pkg_resources
 import logging
@@ -36,12 +36,13 @@ class IgBlastCache:
     binary = 'igblastn'
 
     def __init__(self):
-        version_string = subprocess.check_output([IgBlastCache.binary, '-version'])
-        self._hasher = hashlib.md5(version_string)
+        self._hasher = None
         cache_home = os.environ.get('XDG_CACHE_HOME', os.path.expanduser('~/.cache'))
         self._cachedir = os.path.join(cache_home, 'igdiscover')
-        logger.info('Caching IgBLAST results in %r', self._cachedir)
-        self._lock = multiprocessing.Lock()
+
+    @property
+    def cachedir(self):
+        return self._cachedir
 
     def _path(self, digest):
         """Return path to cache file given a digest"""
@@ -54,15 +55,14 @@ class IgBlastCache:
         except FileNotFoundError:
             return None
 
-    def _store(self, digest, data):
-        path = self._path(digest)
-        dir = os.path.dirname(path)
-        os.makedirs(dir, exist_ok=True)
-        with gzip.open(path, 'wt') as f:
-            f.write(data)
+    def _make_hasher(self):
+        if self._hasher is None:
+            version_string = subprocess.check_output([IgBlastCache.binary, '-version'])
+            self._hasher = hashlib.md5(version_string)
+        return self._hasher.copy()
 
     def retrieve(self, variable_arguments, fixed_arguments, blastdb_dir, fasta_str) -> str:
-        hasher = self._hasher.copy()
+        hasher = self._make_hasher()
         hasher.update(' '.join(fixed_arguments).encode())
         for gene in 'V', 'D', 'J':
             with open(os.path.join(blastdb_dir, gene + '.fasta'), 'rb') as f:
@@ -80,13 +80,23 @@ class IgBlastCache:
                 assert output == ''
                 with open(path) as f:
                     data = f.read()
-            with self._lock:  # TODO does this help?
-                self._store(digest, data)
+
+                compressed_path = os.path.join(tmpdir, "igblast.txt.gz")
+                with gzip.open(compressed_path, 'wt') as f:
+                    f.write(data)
+
+                cache_path = self._path(digest)
+                cache_dir = os.path.dirname(cache_path)
+                os.makedirs(cache_dir, exist_ok=True)
+                # Atomic move - hopefully this means we don’t need a lock
+                os.rename(compressed_path, cache_path)
 
         return data
 
 
-def run_igblast(sequences, blastdb_dir, species, sequence_type, penalty=None, use_cache=True) -> str:
+def run_igblast(
+    sequences, blastdb_dir, species, sequence_type, penalty=None, cache: Optional[IgBlastCache] = None
+) -> str:
     """
     Run the igblastn command-line program.
 
@@ -124,9 +134,8 @@ def run_igblast(sequences, blastdb_dir, species, sequence_type, penalty=None, us
     ]
     fasta_str = ''.join(">{}\n{}\n".format(r.name, r.sequence) for r in sequences)
 
-    if use_cache:
-        global _igblastcache
-        return _igblastcache.retrieve(variable_arguments, arguments, blastdb_dir, fasta_str)
+    if cache:
+        return cache.retrieve(variable_arguments, arguments, blastdb_dir, fasta_str)
     else:
         # For some reason, it has become unreliable to let IgBLAST 1.10 write its result
         # to standard output using "-out -". The data becomes corrupt. This does not occur
@@ -168,14 +177,14 @@ class RawRunner:
     """
 
     def __init__(
-        self, blastdb_dir, species, sequence_type, penalty, database, use_cache
+        self, blastdb_dir, species, sequence_type, penalty, database, cache
     ):
         self.blastdb_dir = blastdb_dir
         self.species = species
         self.sequence_type = sequence_type
         self.penalty = penalty
         self.database = database
-        self.use_cache = use_cache
+        self.cache = cache
 
     def __call__(self, sequences):
         """
@@ -187,7 +196,7 @@ class RawRunner:
             self.species,
             self.sequence_type,
             self.penalty,
-            self.use_cache,
+            self.cache,
         )
 
 
@@ -370,7 +379,7 @@ def igblast_parallel_chunked(
     species=None,
     threads=1,
     penalty=None,
-    use_cache=False,
+    cache=None,
 ):
     """
     Run IgBLAST on the input sequences and yield AIRR-formatted results.
@@ -395,7 +404,7 @@ def igblast_parallel_chunked(
             sequence_type=sequence_type,
             penalty=penalty,
             database=database,
-            use_cache=use_cache,
+            cache=cache,
         )
         pool = stack.enter_context(
             multiprocessing.Pool(threads) if threads > 1 else SerialPool()

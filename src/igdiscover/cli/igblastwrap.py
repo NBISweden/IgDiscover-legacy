@@ -74,10 +74,10 @@ def main(args):
     if args.cache is not None:
         use_cache = args.cache
     if use_cache:
-        from .. import igblast as igblast_module
-
-        igblast_module._igblastcache = IgBlastCache()  # FIXME
-        logger.info("IgBLAST cache enabled")
+        cache = IgBlastCache()
+        logger.info("IgBLAST cache enabled (directory: '%s')", cache.cachedir)
+    else:
+        cache = None
     if args.threads == 0:
         args.threads = available_cpu_count()
     logger.info("Running IgBLAST on input reads")
@@ -95,7 +95,7 @@ def main(args):
             species=args.species,
             threads=args.threads,
             penalty=args.penalty,
-            use_cache=use_cache,
+            cache=cache,
         ):
             lines = record.splitlines()
             try:
