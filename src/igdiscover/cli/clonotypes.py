@@ -28,9 +28,9 @@ import pandas as pd
 from xopen import xopen
 from tinyalign import hamming_distance, edit_distance
 
-from ..table import read_table, vdj_nt_column
+from ..table import read_table
 from ..cluster import hamming_single_linkage
-from ..utils import slice_arg, nt_to_aa
+from ..utils import slice_arg
 
 CLONOTYPE_COLUMNS = ['sequence_id', 'count', 'v_call', 'd_call', 'j_call', 'cdr3', 'cdr3_aa',
     'FR1_SHM', 'CDR1_SHM', 'FR2_SHM', 'CDR2_SHM', 'FR3_SHM', 'FR4_SHM',

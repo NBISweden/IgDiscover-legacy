@@ -21,7 +21,7 @@ from xopen import xopen
 
 from ..table import read_table
 from ..utils import slice_arg
-from .clonotypes import is_similar_with_junction, CLONOTYPE_COLUMNS, augment_group
+from .clonotypes import is_similar_with_junction, CLONOTYPE_COLUMNS
 
 logger = logging.getLogger(__name__)
 
