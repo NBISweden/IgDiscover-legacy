@@ -4,3 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
 write_to = "src/igdiscover/_version.py"
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "error",
+]
+testpaths = ["tests"]
+xfail_strict = true
+addopts = "-v"
