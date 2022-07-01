@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 def add_arguments(parser):
     arg = parser.add_argument
-    arg('--minimum-count', '-c', metavar='N', default=1, type=int,
+    arg('--minimum-count', '-c', metavar='N', default=0, type=int,
         help='Discard all rows with count less than N. Default: %(default)s')
     arg('--cdr3-core', default=None,
         type=slice_arg, metavar='START:END',
@@ -102,21 +102,8 @@ def collect(querytable, reftable, mismatches, cdr3_core_slice, cdr3_column):
 
 
 def main(args):
-    usecols = CLONOTYPE_COLUMNS
-    querytable = read_table(args.querytable, usecols=usecols)
-    querytable = querytable[usecols]  # reorder columns
-    # Filter empty rows (happens sometimes)
-    querytable = querytable[querytable.v_call != '']
-    logger.info('Read query table with %s rows', len(querytable))
-    reftable = read_table(args.reftable, usecols=usecols)
-    reftable = reftable[usecols]
-    logger.info('Read reference table with %s rows', len(reftable))
-    if args.minimum_count > 1:
-        reftable = reftable[reftable['count'] >= args.minimum_count]
-        logger.info('After filtering out rows with count < %s, %s rows remain', args.minimum_count,
-            len(reftable))
-    for tab in querytable, reftable:
-        tab.insert(5, 'CDR3_length', tab['cdr3'].apply(len))
+    querytable = read_and_preprocess_table(args.querytable, filter_empty=True)
+    reftable = read_and_preprocess_table(args.reftable, minimum_count=args.minimum_count)
 
     if len(querytable) > len(reftable):
         logger.warning('The reference table is smaller than the '
@@ -125,7 +112,7 @@ def main(args):
     cdr3_column = 'cdr3_aa' if args.aa else 'cdr3'
     summary_columns = ['FR1_SHM', 'CDR1_SHM', 'FR2_SHM', 'CDR2_SHM', 'FR3_SHM', 'V_SHM', 'J_SHM',
         'V_aa_mut', 'J_aa_mut']
-    summary_columns.extend(col for col in usecols if col.endswith('_aa_mut'))
+    summary_columns.extend(col for col in CLONOTYPE_COLUMNS if col.endswith('_aa_mut'))
     with ExitStack() as stack:
         if args.summary:
             summary_file = stack.enter_context(xopen(args.summary, 'w'))
@@ -153,3 +140,21 @@ def main(args):
                 print(result_table.to_csv(sep='\t', header=False, index=False))
             else:
                 print()
+
+
+def read_and_preprocess_table(path, minimum_count=None, filter_empty=False):
+    table = read_table(path, usecols=CLONOTYPE_COLUMNS)
+    # Reorder columns
+    table = table[CLONOTYPE_COLUMNS]
+    # Filter empty rows
+    if filter_empty:
+        table = table[table.v_call != '']
+    logger.info('Read table from %s with %s rows', path, len(table))
+
+    if minimum_count:
+        table = table[table['count'] >= minimum_count]
+        logger.info('  After filtering out rows with count < %s, %s rows remain', minimum_count,
+            len(table))
+
+    table.insert(5, 'CDR3_length', table['cdr3'].apply(len))
+    return table
