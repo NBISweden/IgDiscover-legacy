@@ -16,7 +16,6 @@ import logging
 from collections import defaultdict
 from contextlib import ExitStack
 
-import pandas as pd
 from xopen import xopen
 
 from ..table import read_table
