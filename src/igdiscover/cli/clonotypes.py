@@ -141,7 +141,7 @@ def run_clonotypes(
                         f" {n} clonotypes and {k} sequences written"
                     )
                     progress_updated = elapsed
-    logger.info('%d clonotypes written', n)
+    logger.info('%d clonotypes and %d sequences written', n, k)
 
 
 def group_by_clonotype(table, mismatches, sort, cdr3_core, cdr3_column):

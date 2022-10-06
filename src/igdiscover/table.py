@@ -208,7 +208,7 @@ def transform_usecols(usecols, available_columns):
     for col in usecols:
         if col not in available_columns and col in new_to_old:
             logger.info(
-                "Requested column %s not found, assuming old file format and using %s instead",
+                "Requested column '%s' not found, assuming old file format and using '%s' instead",
                 col, new_to_old[col]
             )
             new_usecols.add(new_to_old[col])
