@@ -113,6 +113,12 @@ def run_clonotypes(
         print(*columns, sep='\t')
         print_header = True
         cdr3_column = 'cdr3_aa' if aa else 'cdr3'
+
+        if mindiffrate:
+            barcode_col_index = table.columns.get_loc('barcode')  # insert before this column
+            for column in ['cdr3', 'cdr3_aa', 'VDJ_nt', 'VDJ_aa'][::-1]:
+                table.insert(barcode_col_index, column + '_mindiffrate', None)
+
         grouped = group_by_clonotype(table, mismatches, sort, cdr3_core, cdr3_column)
         logger.info('Writing clonotypes')
         started = time.time()
@@ -241,14 +247,9 @@ def representative(table):
 
 def augment_group(table, v_shm_threshold=5, suffix='_mindiffrate'):
     """
-    Add columns to the given table that contain percentage difference of VDJ_nt, VDJ_aa, cdr3,
+    Fill in the _mindiffrate columns. These contain percentage difference of VDJ_nt, VDJ_aa, cdr3,
     cdr3_aa to the least mutated (in terms of V_SHM) sequence in this group.
     """
-    columns = ['cdr3', 'cdr3_aa', 'VDJ_nt', 'VDJ_aa']
-    i = table.columns.get_loc('barcode')  # insert before this column
-    for column in columns[::-1]:
-        table.insert(i, column + suffix, None)
-
     if table.empty:
         return table
 
@@ -257,7 +258,7 @@ def augment_group(table, v_shm_threshold=5, suffix='_mindiffrate'):
     if root['V_SHM'] > v_shm_threshold:
         return table
 
-    for column in columns:
+    for column in ['cdr3', 'cdr3_aa', 'VDJ_nt', 'VDJ_aa']:
         root_seq = root[column]
         table[column + suffix] = table[column].apply(lambda s:
             round(edit_distance(root_seq, s, maxdiff=int(0.2 * len(root_seq))) / len(root_seq) * 100., 1)

@@ -145,8 +145,9 @@ def read_and_preprocess_table(path, minimum_count=None, filter_empty=False):
     table = read_table(path, usecols=CLONOTYPE_COLUMNS)
     # Reorder columns
     table = table[CLONOTYPE_COLUMNS]
-    # Filter empty rows
+
     if filter_empty:
+        # Filter empty rows
         table = table[table.v_call != '']
     logger.info('Read table from %s with %s rows', path, len(table))
 
