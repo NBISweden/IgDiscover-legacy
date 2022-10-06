@@ -181,11 +181,13 @@ def group_by_clonotype(table, mismatches, sort, cdr3_core, cdr3_column):
 def group_by_cdr3(table, mismatches, cdr3_core, cdr3_column):
     """
     Cluster the rows of the table by Hamming distance between
-    their CDR3 sequences. Yield (index, group) tuples similar 
-    to .groupby().
+    their CDR3 sequences.
     """
     # Cluster all unique CDR3s by Hamming distance
     sequences = sorted(set(table[cdr3_column]))
+    if len(sequences) == 1:
+        yield table
+        return
 
     def linked(s, t):
         return is_similar_with_junction(s, t, mismatches, cdr3_core)
