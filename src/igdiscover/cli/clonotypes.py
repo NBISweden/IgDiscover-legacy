@@ -179,7 +179,7 @@ def group_by_cdr3(table, mismatches, cdr3_core, cdr3_column):
     to .groupby().
     """
     # Cluster all unique CDR3s by Hamming distance
-    sequences = list(set(table[cdr3_column]))
+    sequences = sorted(set(table[cdr3_column]))
 
     def linked(s, t):
         return is_similar_with_junction(s, t, mismatches, cdr3_core)
