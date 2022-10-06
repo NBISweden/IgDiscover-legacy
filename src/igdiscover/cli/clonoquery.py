@@ -19,31 +19,16 @@ from contextlib import ExitStack
 from xopen import xopen
 
 from ..table import read_table
-from ..utils import slice_arg
-from .clonotypes import is_similar_with_junction, CLONOTYPE_COLUMNS
+from .clonotypes import is_similar_with_junction, CLONOTYPE_COLUMNS, add_clonotyping_cdr3_arguments
 
 logger = logging.getLogger(__name__)
 
 
 def add_arguments(parser):
     arg = parser.add_argument
+    add_clonotyping_cdr3_arguments(arg)
     arg('--minimum-count', '-c', metavar='N', default=0, type=int,
         help='Discard all rows with count less than N. Default: %(default)s')
-    arg('--cdr3-core', default=None,
-        type=slice_arg, metavar='START:END',
-        help='START:END defines the non-junction region of CDR3 '
-            'sequences. Use negative numbers for END to count '
-            'from the end. Regions before and after are considered to '
-            'be junction sequence, and for two CDR3s to be considered '
-            'similar, at least one of the junctions must be identical. '
-            'Default: no junction region.')
-    arg('--mismatches', default=1, type=float,
-        help='No. of allowed mismatches between CDR3 sequences. '
-            'Can also be a fraction between 0 and 1 (such as 0.15), '
-            'interpreted relative to the length of the CDR3 (minus the front non-core). '
-            'Default: %(default)s')
-    arg('--aa', default=False, action='store_true',
-        help='Count CDR3 mismatches on amino-acid level. Default: Compare nucleotides.')
     arg('--summary', metavar='FILE',
         help='Write summary table to FILE')
     arg('reftable', help='Reference table with parsed and filtered '

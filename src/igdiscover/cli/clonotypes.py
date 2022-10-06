@@ -50,6 +50,15 @@ def add_arguments(parser):
         help='Print out only the first N groups')
     arg('--v-shm-threshold', default=5, type=float,
         help='V SHM threshold for _mindiffrate computations')
+    add_clonotyping_cdr3_arguments(arg)
+    arg('--no-mindiffrate', dest='mindiffrate', action='store_false', default=True,
+        help='Do not add _mindiffrate columns')
+    arg('--members', metavar='FILE',
+        help='Write member table to FILE')
+    arg('table', help='Table with parsed and filtered IgBLAST results')
+
+
+def add_clonotyping_cdr3_arguments(arg):
     arg('--cdr3-core', default=None,
         type=slice_arg, metavar='START:END',
         help='START:END defines the non-junction region of CDR3 '
@@ -65,11 +74,6 @@ def add_arguments(parser):
             'Default: %(default)s')
     arg('--aa', default=False, action='store_true',
         help='Count CDR3 mismatches on amino-acid level. Default: Compare nucleotides.')
-    arg('--no-mindiffrate', dest='mindiffrate', action='store_false', default=True,
-        help='Do not add _mindiffrate columns')
-    arg('--members', metavar='FILE',
-        help='Write member table to FILE')
-    arg('table', help='Table with parsed and filtered IgBLAST results')
 
 
 def main(args):
