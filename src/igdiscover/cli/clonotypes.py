@@ -171,13 +171,18 @@ def group_by_clonotype(table, mismatches, sort, cdr3_core, cdr3_column):
         cdr3_core=cdr3_core,
         cdr3_column=cdr3_column,
     )
+    table.insert(
+        0, "clonotype_id", table.groupby(["vjlen_id", "cdr3_cluster_id"]).ngroup()
+    )
+    del table["vjlen_id"]
+    del table["cdr3_cluster_id"]
     groups = []
-    for _, group in table.groupby(["vjlen_id", "cdr3_cluster_id"]):
+    for _, group in table.groupby("clonotype_id"):
         v_gene = group["v_call"].iloc[0]
         if prev_v != v_gene:
             logger.info('Processing %s', v_gene)
         prev_v = v_gene
-        g = group.drop(["vjlen_id", "cdr3_cluster_id"], axis=1)
+        g = group.drop("clonotype_id", axis=1)
         if sort:
             # When sorting by group size is requested, we need to buffer results
             groups.append(g)
@@ -211,7 +216,6 @@ def assign_cdr3_cluster_id(table, mismatches, cdr3_core, cdr3_column):
             cluster_ids[cdr3] = cluster_id
 
     # Assign cluster id to each row
-    # table.insert(1, "cdr3_cluster_id", 0)
     table["cdr3_cluster_id"] = table[cdr3_column].apply(lambda cdr3: cluster_ids[cdr3])
     return table
 
