@@ -161,37 +161,43 @@ def group_by_clonotype(table, mismatches, sort, cdr3_core, cdr3_column):
     """
     logger.info('Computing clonotypes ...')
     prev_v = None
+
+    table.insert(
+        0, "vjlen_id", table.groupby(["v_call", "j_call", "CDR3_length"]).ngroup()
+    )
+    table = table.groupby("vjlen_id", group_keys=True).apply(
+        assign_cdr3_cluster_id,
+        mismatches=mismatches,
+        cdr3_core=cdr3_core,
+        cdr3_column=cdr3_column,
+    )
     groups = []
-    for (v_gene, j_gene, cdr3_length), vj_group in table.groupby(
-            ['v_call', 'j_call', 'CDR3_length']):
+    for _, group in table.groupby(["vjlen_id", "cdr3_cluster_id"]):
+        v_gene = group["v_call"].iloc[0]
         if prev_v != v_gene:
             logger.info('Processing %s', v_gene)
         prev_v = v_gene
-        cdr3_groups = group_by_cdr3(vj_group.copy(), mismatches=mismatches, cdr3_core=cdr3_core,
-            cdr3_column=cdr3_column)
+        g = group.drop(["vjlen_id", "cdr3_cluster_id"], axis=1)
         if sort:
-            # When sorting by group size is requested, we need to buffer
-            # results
-            groups.append(cdr3_groups)
+            # When sorting by group size is requested, we need to buffer results
+            groups.append(g)
         else:
-            yield from cdr3_groups
+            yield g
     if sort:
         logger.info("Sorting by size ...")
-        flattened = list(itertools.chain(*groups))
-        flattened.sort(key=len, reverse=True)
-        yield from flattened
+        yield from sorted(groups, key=len, reverse=True)
 
 
-def group_by_cdr3(table, mismatches, cdr3_core, cdr3_column):
+def assign_cdr3_cluster_id(table, mismatches, cdr3_core, cdr3_column):
     """
     Cluster the rows of the table by Hamming distance between
-    their CDR3 sequences.
+    their CDR3 sequences and use it to add a "cdr3_cluster_id" column.
     """
     # Cluster all unique CDR3s by Hamming distance
     sequences = sorted(set(table[cdr3_column]))
     if len(sequences) == 1:
-        yield table
-        return
+        table.insert(1, "cdr3_cluster_id", 0)  # TODO remove?
+        return table
 
     def linked(s, t):
         return is_similar_with_junction(s, t, mismatches, cdr3_core)
@@ -205,10 +211,9 @@ def group_by_cdr3(table, mismatches, cdr3_core, cdr3_column):
             cluster_ids[cdr3] = cluster_id
 
     # Assign cluster id to each row
-    table['cluster_id'] = table[cdr3_column].apply(lambda cdr3: cluster_ids[cdr3])
-
-    for index, group in table.groupby('cluster_id'):
-        yield group.drop('cluster_id', axis=1)
+    # table.insert(1, "cdr3_cluster_id", 0)
+    table["cdr3_cluster_id"] = table[cdr3_column].apply(lambda cdr3: cluster_ids[cdr3])
+    return table
 
 
 def is_similar_with_junction(s, t, mismatches, cdr3_core):
