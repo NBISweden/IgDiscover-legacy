@@ -165,6 +165,7 @@ def group_by_clonotype(table, mismatches, sort, cdr3_core, cdr3_column):
     table.insert(
         0, "vjlen_id", table.groupby(["v_call", "j_call", "CDR3_length"]).ngroup()
     )
+    table.insert(1, "cdr3_cluster_id", 0)
     table = table.groupby("vjlen_id", group_keys=True).apply(
         assign_cdr3_cluster_id,
         mismatches=mismatches,
@@ -182,12 +183,11 @@ def group_by_clonotype(table, mismatches, sort, cdr3_core, cdr3_column):
         if prev_v != v_gene:
             logger.info('Processing %s', v_gene)
         prev_v = v_gene
-        g = group.drop("clonotype_id", axis=1)
         if sort:
             # When sorting by group size is requested, we need to buffer results
-            groups.append(g)
+            groups.append(group)
         else:
-            yield g
+            yield group
     if sort:
         logger.info("Sorting by size ...")
         yield from sorted(groups, key=len, reverse=True)
@@ -201,7 +201,6 @@ def assign_cdr3_cluster_id(table, mismatches, cdr3_core, cdr3_column):
     # Cluster all unique CDR3s by Hamming distance
     sequences = sorted(set(table[cdr3_column]))
     if len(sequences) == 1:
-        table.insert(1, "cdr3_cluster_id", 0)  # TODO remove?
         return table
 
     def linked(s, t):
