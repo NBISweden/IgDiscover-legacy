@@ -55,6 +55,10 @@ def add_arguments(parser):
         help='Do not add _mindiffrate columns')
     arg('--members', metavar='FILE',
         help='Write member table to FILE')
+    arg('--clustered', metavar='FILE',
+        help='Write table with added clonotype ids to FILE. This contains the same information as '
+        'the --members table, but is easier to parse (an added clonotype_id column '
+        'instead of newlines between groups of clonotype members)')
     arg('table', help='Table with parsed and filtered IgBLAST results')
 
 
@@ -88,6 +92,7 @@ def run_clonotypes(
     aa=False,
     mismatches=1,
     members=None,
+    clustered=None,
     cdr3_core=None,
     mindiffrate=True,
 ):
@@ -108,6 +113,10 @@ def run_clonotypes(
             members_file = stack.enter_context(xopen(members, 'w'))
         else:
             members_file = None
+        if clustered:
+            clustered_file = stack.enter_context(xopen(clustered, 'w'))
+        else:
+            clustered_file = None
 
         columns = usecols[:]
         columns.remove('barcode')
@@ -115,7 +124,8 @@ def run_clonotypes(
         columns.insert(0, 'count')
         columns.insert(columns.index('cdr3'), 'CDR3_length')
         print(*columns, sep='\t')
-        print_header = True
+        members_header = True
+        output_header = True
         cdr3_column = 'cdr3_aa' if aa else 'cdr3'
 
         if mindiffrate:
@@ -128,14 +138,27 @@ def run_clonotypes(
         started = time.time()
         n = k = 0
         progress_updated = 0
+        chunk = []
         for group in itertools.islice(grouped, 0, limit):
             if mindiffrate:
                 group = augment_group(group, v_shm_threshold=v_shm_threshold)
             if members_file:
                 # We get an intentional empty line between groups since
                 # to_csv() already includes a line break
-                print(group.to_csv(sep='\t', header=print_header, index=False), file=members_file)
-                print_header = False
+                print(
+                    group.drop("clonotype_id", axis=1).to_csv(sep='\t', header=members_header, index=False),
+                    file=members_file
+                )
+                members_header = False
+
+            if clustered_file:
+                # Avoid some CSV conversion overhead by writing a minimum number of rows at once
+                chunk.append(group)
+                if sum(len(g) for g in chunk) >= 100:
+                    clustered_file.write(pd.concat(chunk).to_csv(sep='\t', header=output_header, index=False))
+                    output_header = False
+                    chunk = []
+
             rep = representative(group)
             print(*[rep[col] for col in columns], sep='\t')
             n += 1
@@ -151,6 +174,9 @@ def run_clonotypes(
                         f" {n} clonotypes and {k} sequences written"
                     )
                     progress_updated = elapsed
+
+        if chunk and clustered_file:
+            clustered_file.write(pd.concat(chunk).to_csv(sep='\t', header=output_header, index=False))
     logger.info('%d clonotypes and %d sequences written', n, k)
 
 
@@ -173,10 +199,9 @@ def group_by_clonotype(table, mismatches, sort, cdr3_core, cdr3_column):
         cdr3_column=cdr3_column,
     )
     table.insert(
-        0, "clonotype_id", table.groupby(["vjlen_id", "cdr3_cluster_id"]).ngroup()
+        3, "clonotype_id", table.groupby(["vjlen_id", "cdr3_cluster_id"]).ngroup()
     )
-    del table["vjlen_id"]
-    del table["cdr3_cluster_id"]
+    table.drop(["vjlen_id", "cdr3_cluster_id"], axis=1, inplace=True)
     groups = []
     for _, group in table.groupby("clonotype_id"):
         v_gene = group["v_call"].iloc[0]
