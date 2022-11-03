@@ -109,34 +109,34 @@ def run_clonotypes(
     table = table[table['CDR3_length'] > 0]
     table = table[table['cdr3_aa'].map(lambda s: '*' not in s)]
     logger.info('After discarding rows with unusable CDR3, %s remain', len(table))
+
+    columns = usecols[:]
+    columns.remove('barcode')
+    columns.remove('count')
+    columns.insert(0, 'count')
+    columns.insert(columns.index('cdr3'), 'CDR3_length')
+    if not clustered:
+        print(*columns, sep='\t')
+    members_header = True
+    cdr3_column = 'cdr3_aa' if aa else 'cdr3'
+
+    if mindiffrate:
+        barcode_col_index = table.columns.get_loc('barcode')  # insert before this column
+        for column in ['cdr3', 'cdr3_aa', 'VDJ_nt', 'VDJ_aa'][::-1]:
+            table.insert(barcode_col_index, column + '_mindiffrate', None)
+
+    logger.info("Computing clonotypes ...")
+    table = add_clonotype_id(table, mismatches, cdr3_column, cdr3_core)
+    if clustered:
+        table.to_csv(clustered, sep="\t", index=False)
+        logger.info('Found %d clonotypes', table["clonotype_id"].max() + 1)
+        return
+
     with ExitStack() as stack:
         if members:
             members_file = stack.enter_context(xopen(members, 'w'))
         else:
             members_file = None
-
-        columns = usecols[:]
-        columns.remove('barcode')
-        columns.remove('count')
-        columns.insert(0, 'count')
-        columns.insert(columns.index('cdr3'), 'CDR3_length')
-        if not clustered:
-            print(*columns, sep='\t')
-        members_header = True
-        output_header = True
-        cdr3_column = 'cdr3_aa' if aa else 'cdr3'
-
-        if mindiffrate:
-            barcode_col_index = table.columns.get_loc('barcode')  # insert before this column
-            for column in ['cdr3', 'cdr3_aa', 'VDJ_nt', 'VDJ_aa'][::-1]:
-                table.insert(barcode_col_index, column + '_mindiffrate', None)
-
-        logger.info("Computing clonotypes ...")
-        table = add_clonotype_id(table, mismatches, cdr3_column, cdr3_core)
-        if clustered:
-            table.to_csv(clustered, sep="\t", index=False)
-            logger.info('Found %d clonotypes', table["clonotype_id"].max() + 1)
-            return
 
         grouped = group_by_clonotype(table, mismatches, sort, cdr3_core, cdr3_column)
         started = time.time()
