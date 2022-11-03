@@ -56,9 +56,10 @@ def add_arguments(parser):
     arg('--members', metavar='FILE',
         help='Write member table to FILE')
     arg('--clustered', metavar='FILE',
-        help='Write table with added clonotype ids to FILE. This contains the same information as '
-        'the --members table, but is easier to parse (an added clonotype_id column '
-        'instead of newlines between groups of clonotype members)')
+        help='Fast mode: Only write a table with added clonotype ids to FILE, then exit. '
+             'This table contains the same information as the --members table, '
+             'but is easier to parse (the clonotype_id column denotes the clonotype a '
+             'sequence belongs to). No members or clonotypes tables are created if you use this.')
     arg('table', help='Table with parsed and filtered IgBLAST results')
 
 
@@ -113,17 +114,14 @@ def run_clonotypes(
             members_file = stack.enter_context(xopen(members, 'w'))
         else:
             members_file = None
-        if clustered:
-            clustered_file = stack.enter_context(xopen(clustered, 'w'))
-        else:
-            clustered_file = None
 
         columns = usecols[:]
         columns.remove('barcode')
         columns.remove('count')
         columns.insert(0, 'count')
         columns.insert(columns.index('cdr3'), 'CDR3_length')
-        print(*columns, sep='\t')
+        if not clustered:
+            print(*columns, sep='\t')
         members_header = True
         output_header = True
         cdr3_column = 'cdr3_aa' if aa else 'cdr3'
@@ -135,6 +133,11 @@ def run_clonotypes(
 
         logger.info("Computing clonotypes ...")
         table = add_clonotype_id(table, mismatches, cdr3_column, cdr3_core)
+        if clustered:
+            table.to_csv(clustered, sep="\t", index=False)
+            logger.info('Found %d clonotypes', table["clonotype_id"].max() + 1)
+            return
+
         grouped = group_by_clonotype(table, mismatches, sort, cdr3_core, cdr3_column)
         started = time.time()
         n = k = 0
@@ -151,14 +154,6 @@ def run_clonotypes(
                     file=members_file
                 )
                 members_header = False
-
-            if clustered_file:
-                # Avoid some CSV conversion overhead by writing a minimum number of rows at once
-                chunk.append(group)
-                if sum(len(g) for g in chunk) >= 100:
-                    clustered_file.write(pd.concat(chunk).to_csv(sep='\t', header=output_header, index=False))
-                    output_header = False
-                    chunk = []
 
             rep = representative(group)
             print(*[rep[col] for col in columns], sep='\t')
