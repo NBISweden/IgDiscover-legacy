@@ -133,8 +133,9 @@ def run_clonotypes(
             for column in ['cdr3', 'cdr3_aa', 'VDJ_nt', 'VDJ_aa'][::-1]:
                 table.insert(barcode_col_index, column + '_mindiffrate', None)
 
+        logger.info("Computing clonotypes ...")
+        table = add_clonotype_id(table, mismatches, cdr3_column, cdr3_core)
         grouped = group_by_clonotype(table, mismatches, sort, cdr3_core, cdr3_column)
-        logger.info('Writing clonotypes')
         started = time.time()
         n = k = 0
         progress_updated = 0
@@ -175,33 +176,15 @@ def run_clonotypes(
                     )
                     progress_updated = elapsed
 
-        if chunk and clustered_file:
-            clustered_file.write(pd.concat(chunk).to_csv(sep='\t', header=output_header, index=False))
     logger.info('%d clonotypes and %d sequences written', n, k)
 
 
 def group_by_clonotype(table, mismatches, sort, cdr3_core, cdr3_column):
     """
     Yield clonotype groups. Each item is a DataFrame with all the members of the
-    clonotype.
+    clonotype. The input table must have "clonotype_id" column.
     """
-    logger.info('Computing clonotypes ...')
     prev_v = None
-
-    table.insert(
-        0, "vjlen_id", table.groupby(["v_call", "j_call", "CDR3_length"]).ngroup()
-    )
-    table.insert(1, "cdr3_cluster_id", 0)
-    table = table.groupby("vjlen_id", group_keys=True).apply(
-        assign_cdr3_cluster_id,
-        mismatches=mismatches,
-        cdr3_core=cdr3_core,
-        cdr3_column=cdr3_column,
-    )
-    table.insert(
-        3, "clonotype_id", table.groupby(["vjlen_id", "cdr3_cluster_id"]).ngroup()
-    )
-    table.drop(["vjlen_id", "cdr3_cluster_id"], axis=1, inplace=True)
     groups = []
     for _, group in table.groupby("clonotype_id"):
         v_gene = group["v_call"].iloc[0]
@@ -216,6 +199,27 @@ def group_by_clonotype(table, mismatches, sort, cdr3_core, cdr3_column):
     if sort:
         logger.info("Sorting by size ...")
         yield from sorted(groups, key=len, reverse=True)
+
+
+def add_clonotype_id(table: pd.DataFrame, mismatches: int, cdr3_column: str, cdr3_core) -> pd.DataFrame:
+    """
+    Cluster sequences into clonotypes and add a 'clonotype_id' column
+    """
+    table.insert(
+        0, "vjlen_id", table.groupby(["v_call", "j_call", "CDR3_length"]).ngroup()
+    )
+    table.insert(1, "cdr3_cluster_id", 0)
+    table = table.groupby("vjlen_id", group_keys=True).apply(
+        assign_cdr3_cluster_id,
+        mismatches=mismatches,
+        cdr3_core=cdr3_core,
+        cdr3_column=cdr3_column,
+    )
+    table.insert(
+        3, "clonotype_id", table.groupby(["vjlen_id", "cdr3_cluster_id"]).ngroup()
+    )
+    table.drop(["vjlen_id", "cdr3_cluster_id"], axis=1, inplace=True)
+    return table
 
 
 def assign_cdr3_cluster_id(table, mismatches, cdr3_core, cdr3_column):
