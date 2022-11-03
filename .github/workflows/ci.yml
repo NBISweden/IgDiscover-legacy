@@ -4,6 +4,10 @@ on: [push, pull_request]
 
 jobs:
   test:
+    # Run for PRs only if they come from a forked repo (avoids duplicate runs)
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
     timeout-minutes: 15
     runs-on: ubuntu-latest
     strategy:
