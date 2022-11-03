@@ -83,7 +83,7 @@ def test_unique_namer():
 
 
 class TestPrefixDict:
-    def setup(self):
+    def setup_method(self):
         self.pd = PrefixDict([
             ('AAACCT', 7),
             ('AGAAA', 11),

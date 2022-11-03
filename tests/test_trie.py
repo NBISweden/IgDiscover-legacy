@@ -11,7 +11,7 @@ def random_nt(length):
 class TestTrie:
     LENGTHS = (0, 1, 2, 3, 4, 5, 6, 10, 12, 15, 20)
 
-    def setup(self):
+    def setup_method(self):
         self.strings = set()
         self.trie = Trie()
         # Create a set and a Trie both containing the same strings
