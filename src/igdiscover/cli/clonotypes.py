@@ -23,6 +23,7 @@ import logging
 import time
 from contextlib import ExitStack
 from collections import Counter
+from typing import Sequence
 
 import pandas as pd
 from xopen import xopen
@@ -60,7 +61,10 @@ def add_arguments(parser):
              'This table contains the same information as the --members table, '
              'but is easier to parse (the clonotype_id column denotes the clonotype a '
              'sequence belongs to). No members or clonotypes tables are created if you use this.')
-    arg('table', help='Table with parsed and filtered IgBLAST results')
+    arg(dest='table_paths', metavar='table', nargs='+',
+        help='Table(s) with parsed and filtered IgBLAST results. If more than one table is '
+             'provided, they are merged and treated as a single dataset for clonotype assignment, '
+             'and a file_id column is added that identifies the input file for each row.')
 
 
 def add_clonotyping_cdr3_arguments(arg):
@@ -86,7 +90,7 @@ def main(args):
 
 
 def run_clonotypes(
-    table,
+    table_paths: Sequence[str],
     sort=False,
     limit=None,
     v_shm_threshold=5,
@@ -97,11 +101,21 @@ def run_clonotypes(
     cdr3_core=None,
     mindiffrate=True,
 ):
-    logger.info('Reading input table ...')
+    logger.info('Reading input tables ...')
     usecols = CLONOTYPE_COLUMNS
-    table = read_table(table, usecols=usecols)
-    logger.info('Read table with %s rows', len(table))
-    table.insert(5, 'CDR3_length', table['cdr3'].apply(len))
+    tables = [read_table(path, usecols=usecols) for path in table_paths]
+
+    if len(table_paths) == 1:
+        table = tables[0]
+        has_file_id = False
+        logger.info('Read table with %s rows', len(table))
+    else:
+        table = pd.concat(tables, keys=range(len(table_paths)), names=["file_id"])
+        has_file_id = True
+        logger.info("Read %d tables with %s rows in total", len(tables), len(table))
+        del tables
+
+    table.insert(list(table.columns).index('cdr3'), 'CDR3_length', table['cdr3'].apply(len))
     table = table[table['CDR3_length'] > 0]
     table = table[table['cdr3_aa'].map(lambda s: '*' not in s)]
     logger.info('After discarding rows with unusable CDR3, %s remain', len(table))
@@ -123,6 +137,8 @@ def run_clonotypes(
 
     logger.info("Computing clonotypes ...")
     table = add_clonotype_id(table, mismatches, cdr3_column, cdr3_core)
+    if has_file_id:
+        table.reset_index(level=0, inplace=True)
     if clustered:
         table.to_csv(clustered, sep="\t", index=False)
         logger.info('Found %d clonotypes', table["clonotype_id"].max() + 1)
@@ -196,18 +212,18 @@ def add_clonotype_id(table: pd.DataFrame, mismatches: int, cdr3_column: str, cdr
     """
     Cluster sequences into clonotypes and add a 'clonotype_id' column
     """
-    table.insert(
-        0, "vjlen_id", table.groupby(["v_call", "j_call", "CDR3_length"]).ngroup()
-    )
-    table.insert(1, "cdr3_cluster_id", 0)
-    table = table.groupby("vjlen_id", group_keys=True).apply(
+    table["vjlen_id"] = table.groupby(["v_call", "j_call", "CDR3_length"], sort=False).ngroup()
+    table["cdr3_cluster_id"] = 0
+    table = table.groupby("vjlen_id", group_keys=True, sort=False).apply(
         assign_cdr3_cluster_id,
         mismatches=mismatches,
         cdr3_core=cdr3_core,
         cdr3_column=cdr3_column,
     )
     table.insert(
-        3, "clonotype_id", table.groupby(["vjlen_id", "cdr3_cluster_id"]).ngroup()
+        list(table.columns).index("sequence_id") + 1,
+        "clonotype_id",
+        table.groupby(["vjlen_id", "cdr3_cluster_id"], sort=False).ngroup()
     )
     table.drop(["vjlen_id", "cdr3_cluster_id"], axis=1, inplace=True)
     return table

@@ -216,7 +216,7 @@ def test_snakemake_final(has_filtered_tsv):
 
 
 def test_clonotypes(has_filtered_tsv):
-    run_clonotypes(has_filtered_tsv / "iteration-01/assigned.tsv.gz", limit=5)
+    run_clonotypes([has_filtered_tsv / "iteration-01/assigned.tsv.gz"], limit=5)
 
 
 def test_fastq_input(has_filtered_tsv, tmp_path):

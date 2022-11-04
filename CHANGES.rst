@@ -2,6 +2,16 @@
 Changes
 =======
 
+development version
+-------------------
+
+* The ``clonotypes`` command has gained option ``--clustered``. It outputs the same information as
+  what the ``--members`` table contains, but in a more easily usable format. It is also faster than
+  using ``--members``.
+* The ``clonotypes`` command was sped up a little bit for the case when not using ``--clustered``.
+* The ``clonotypes`` gained the ability to accept multiple input tables. They are merged and then
+  the clustering is done on all sequences.
+
 v0.15 (2022-04-07)
 ------------------
 
