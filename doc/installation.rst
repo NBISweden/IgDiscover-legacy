@@ -54,6 +54,11 @@ Installing IgDiscover with Conda
 
        conda create -n igdiscover igdiscover
 
+   When you use a non-x86 Mac (with M1 processor), you may need to run this
+   command instead::
+
+       CONDA_SUBDIR=osx-64 conda create -n igdiscover igdiscover
+
    This will create a new so-called “environment” for IgDiscover (retry if it fails). **Whenever you
    want to run IgDiscover, you will need to activate the environment with this
    command**::
