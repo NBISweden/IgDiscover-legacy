@@ -103,7 +103,7 @@ def run_clonotypes(
 ):
     logger.info('Reading input tables ...')
     usecols = CLONOTYPE_COLUMNS
-    tables = [read_table(path, usecols=usecols) for path in table_paths]
+    tables = [read_table(path) for path in table_paths]
 
     if len(table_paths) == 1:
         table = tables[0]
@@ -219,7 +219,7 @@ def add_clonotype_id(table: pd.DataFrame, mismatches: int, cdr3_column: str, cdr
         cdr3_column=cdr3_column,
     )
     table.insert(
-        list(table.columns).index("sequence_id") + 1,
+        0,
         "clonotype_id",
         table.groupby(["vjlen_id", "cdr3_cluster_id"], sort=False).ngroup()
     )
