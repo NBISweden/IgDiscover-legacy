@@ -57,10 +57,10 @@ def add_arguments(parser):
     arg('--members', metavar='FILE',
         help='Write member table to FILE')
     arg('--clustered', metavar='FILE',
-        help='Fast mode: Only write a table with added clonotype ids to FILE, then exit. '
+        help='Write a table with added clonotype ids to FILE. '
              'This table contains the same information as the --members table, '
              'but is easier to parse (the clonotype_id column denotes the clonotype a '
-             'sequence belongs to). No members or clonotypes tables are created if you use this.')
+             'sequence belongs to).')
     arg(dest='table_paths', metavar='table', nargs='+',
         help='Table(s) with parsed and filtered IgBLAST results. If more than one table is '
              'provided, they are merged and treated as a single dataset for clonotype assignment, '
@@ -125,8 +125,7 @@ def run_clonotypes(
     columns.remove('count')
     columns.insert(0, 'count')
     columns.insert(columns.index('cdr3'), 'CDR3_length')
-    if not clustered:
-        print(*columns, sep='\t')
+    print(*columns, sep='\t')
     members_header = True
     cdr3_column = 'cdr3_aa' if aa else 'cdr3'
 
@@ -142,7 +141,6 @@ def run_clonotypes(
     if clustered:
         table.to_csv(clustered, sep="\t", index=False)
         logger.info('Found %d clonotypes', table["clonotype_id"].max() + 1)
-        return
 
     with ExitStack() as stack:
         if members:
