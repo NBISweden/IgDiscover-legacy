@@ -189,13 +189,8 @@ def group_by_clonotype(table, mismatches, sort, cdr3_core, cdr3_column):
     Yield clonotype groups. Each item is a DataFrame with all the members of the
     clonotype. The input table must have "clonotype_id" column.
     """
-    prev_v = None
     groups = []
     for _, group in table.groupby("clonotype_id"):
-        v_gene = group["v_call"].iloc[0]
-        if prev_v != v_gene:
-            logger.info('Processing %s', v_gene)
-        prev_v = v_gene
         if sort:
             # When sorting by group size is requested, we need to buffer results
             groups.append(group)
