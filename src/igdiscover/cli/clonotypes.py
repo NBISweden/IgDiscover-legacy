@@ -214,7 +214,7 @@ def add_clonotype_id(table: pd.DataFrame, mismatches: int, cdr3_column: str, cdr
     """
     table["vjlen_id"] = table.groupby(["v_call", "j_call", "CDR3_length"], sort=False).ngroup()
     table["cdr3_cluster_id"] = 0
-    table = table.groupby("vjlen_id", group_keys=True, sort=False).apply(
+    table = table.groupby("vjlen_id", group_keys=False, sort=False).apply(
         assign_cdr3_cluster_id,
         mismatches=mismatches,
         cdr3_core=cdr3_core,
