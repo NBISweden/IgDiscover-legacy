@@ -31,7 +31,7 @@ from tinyalign import hamming_distance, edit_distance
 
 from ..table import read_table
 from ..cluster import hamming_single_linkage
-from ..utils import slice_arg
+from ..utils import slice_arg, nt_to_aa
 
 CLONOTYPE_COLUMNS = ['sequence_id', 'count', 'v_call', 'd_call', 'j_call', 'cdr3', 'cdr3_aa',
     'FR1_SHM', 'CDR1_SHM', 'FR2_SHM', 'CDR2_SHM', 'FR3_SHM', 'FR4_SHM',
@@ -102,7 +102,6 @@ def run_clonotypes(
     mindiffrate=True,
 ):
     logger.info('Reading input tables ...')
-    usecols = CLONOTYPE_COLUMNS
     tables = [read_table(path) for path in table_paths]
 
     if len(table_paths) == 1:
@@ -120,7 +119,7 @@ def run_clonotypes(
     table = table[table['cdr3_aa'].map(lambda s: '*' not in s)]
     logger.info('After discarding rows with unusable CDR3, %s remain', len(table))
 
-    columns = usecols[:]
+    columns = list(table.columns)
     columns.remove('barcode')
     columns.remove('count')
     columns.insert(0, 'count')
@@ -133,6 +132,14 @@ def run_clonotypes(
         barcode_col_index = table.columns.get_loc('barcode')  # insert before this column
         for column in ['cdr3', 'cdr3_aa', 'VDJ_nt', 'VDJ_aa'][::-1]:
             table.insert(barcode_col_index, column + '_mindiffrate', None)
+        if "VDJ_nt" not in columns:
+            # Recent IgDiscover versions do not have a VDJ_nt column
+            def extract_vdj_nt(row):
+                if row["v_call"] and row["j_call"]:
+                    return row["sequence"][row["v_sequence_start"] - 1 : row["j_sequence_end"]]
+                return None
+            table["VDJ_nt"] = table.apply(extract_vdj_nt, axis=1)
+            table["VDJ_aa"] = table["VDJ_nt"].apply(nt_to_aa)
 
     logger.info("Computing clonotypes ...")
     table = add_clonotype_id(table, mismatches, cdr3_column, cdr3_core)

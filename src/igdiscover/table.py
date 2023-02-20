@@ -59,6 +59,7 @@ _STRING_COLUMNS = [
     'locus',  # categorical
     'stop',  # bool
     'productive',  # bool
+    'vj_in_frame',  # bool
     'UTR',
     'leader',
     'CDR1_nt',
