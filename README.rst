@@ -17,8 +17,8 @@ Heavy chains, kappa and lambda light chains are supported (to discover VH, VK an
 
 IgDiscover is the result of a collaboration between the `Gunilla Karlsson Hedestam group <http://ki.se/en/mtc/gunilla-karlsson-hedestam-group>`_
 at the `Department of Microbiology, Tumor and Cell Biology <http://ki.se/en/mtc/>`_ at `Karolinska Institutet <http://ki.se/en/>`_,
-Sweden and the `Bioinformatics Long-Term Support <https://www.scilifelab.se/facilities/wabi/>`_ facility
-at `Science for Life Laboratory (SciLifeLab) <https://www.scilifelab.se/>`_, Sweden.
+Sweden and the `National Bioinformatics Infrastructure Sweden <https://nbis.se/>`_
+at `Science for Life Laboratory (SciLifeLab) <https://www.scilifelab.se/>`_.
 
 If you use IgDiscover, please cite:
 
