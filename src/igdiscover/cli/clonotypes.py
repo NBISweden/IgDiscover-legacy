@@ -123,7 +123,6 @@ def run_clonotypes(
     columns.remove('barcode')
     columns.remove('count')
     columns.insert(0, 'count')
-    columns.insert(columns.index('cdr3'), 'CDR3_length')
     print(*columns, sep='\t')
     members_header = True
     cdr3_column = 'cdr3_aa' if aa else 'cdr3'
