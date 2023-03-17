@@ -7,7 +7,7 @@ import sys
 import logging
 import resource
 import platform
-import pkg_resources
+import importlib.resources
 from contextlib import closing
 from snakemake import snakemake
 
@@ -59,17 +59,18 @@ def run_snakemake(
     with closing(logging.FileHandler("log.txt")) as file_handler:
         root.addHandler(file_handler)
 
-        snakefile_path = pkg_resources.resource_filename('igdiscover', 'Snakefile')
-        success = snakemake(
-            snakefile_path,
-            snakemakepath='snakemake',  # Needed in snakemake 3.9.0
-            dryrun=dryrun,
-            cores=cores,
-            keepgoing=keepgoing,
-            printshellcmds=True,
-            targets=targets,
-            notemp=notemp,
-        )
+        snakefile = importlib.resources.files('igdiscover') / 'Snakefile'
+        with importlib.resources.as_file(snakefile) as snakefile_path:
+            success = snakemake(
+                snakefile_path,
+                snakemakepath='snakemake',  # Needed in snakemake 3.9.0
+                dryrun=dryrun,
+                cores=cores,
+                keepgoing=keepgoing,
+                printshellcmds=True,
+                targets=targets,
+                notemp=notemp,
+            )
         logger.root.handlers = old_root_handlers
 
     if sys.platform == 'linux' and not dryrun:

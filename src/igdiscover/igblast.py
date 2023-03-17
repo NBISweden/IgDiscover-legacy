@@ -10,9 +10,9 @@ from contextlib import ExitStack
 from dataclasses import dataclass
 from io import StringIO
 import hashlib
+from pathlib import Path
 from typing import Dict, Optional
-
-import pkg_resources
+import importlib.resources
 import logging
 import tempfile
 import gzip
@@ -114,8 +114,9 @@ def run_igblast(
         variable_arguments += ['-germline_db_{gene}'.format(gene=gene),
             os.path.join(blastdb_dir, '{gene}'.format(gene=gene))]
     # An empty .aux suppresses a warning from IgBLAST. /dev/null does not work.
-    empty_aux_path = pkg_resources.resource_filename('igdiscover', 'empty.aux')
-    variable_arguments += ['-auxiliary_data', empty_aux_path]
+    empty_aux_path = importlib.resources.files('igdiscover') / 'empty.aux'
+    assert isinstance(empty_aux_path, Path)
+
     arguments = []
     if penalty is not None:
         arguments += ['-penalty', str(penalty)]
@@ -123,6 +124,7 @@ def run_igblast(
         arguments += ['-organism', species]
 
     arguments += [
+        '-auxiliary_data', str(empty_aux_path),
         '-ig_seqtype', sequence_type,
         '-num_threads', '1',
         '-domain_system', 'imgt',

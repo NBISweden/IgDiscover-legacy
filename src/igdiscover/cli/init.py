@@ -8,7 +8,7 @@ import os
 import os.path
 import sys
 import subprocess
-import pkg_resources
+import importlib.resources
 import dnaio
 from xopen import xopen
 
@@ -277,8 +277,6 @@ def run_init(
     if database is not None:
         dbpath = database
     else:
-        # TODO as soon as we distribute our own database files, we can use this:
-        # database_path = pkg_resources.resource_filename('igdiscover', 'databases')
         databases_path = None
         dbpath = gui.database_path(databases_path)
         if not dbpath:
@@ -320,7 +318,7 @@ def run_init(
         create_symlink(reads1, directory, target)
 
     # Write the configuration file
-    configuration = pkg_resources.resource_string('igdiscover', Config.DEFAULT_PATH).decode()
+    configuration = importlib.resources.files('igdiscover').joinpath(Config.DEFAULT_PATH).read_text()
     with open(os.path.join(directory, Config.DEFAULT_PATH), 'w') as f:
         f.write(configuration)
 

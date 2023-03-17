@@ -1,5 +1,5 @@
+import importlib.resources
 from io import StringIO
-import pkg_resources
 import pytest
 
 from igdiscover.utils import (has_stop, validate_fasta, FastaValidationError, find_overlap,
@@ -32,7 +32,8 @@ def assert_dicts_equal(expected, actual):
 
 def test_config():
     empty_config = Config(file=StringIO('{}'))
-    with pkg_resources.resource_stream('igdiscover', Config.DEFAULT_PATH) as file:
+    config = importlib.resources.files('igdiscover').joinpath(Config.DEFAULT_PATH)
+    with config.open('rb') as file:
         packaged_config = Config(file=file)
     # force library name to be equal since it is dynamically determined
     empty_config.library_name = packaged_config.library_name = 'nolib'
