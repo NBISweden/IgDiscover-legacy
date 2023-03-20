@@ -4,10 +4,10 @@ channels:
   - defaults
 dependencies:
   - nomkl
-  - python>=3.7
+  - python>=3.9
   - numpy
   - pandas>=1
-  - matplotlib-base>=3.0,<3.5
+  - matplotlib-base>=3.0
   - seaborn-base>=0.9
   - snakemake-minimal>=4.5
   - scipy
