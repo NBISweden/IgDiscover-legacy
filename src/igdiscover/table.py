@@ -169,14 +169,20 @@ def fix_columns(d, usecols, recompute_cols):
     return d
 
 
-def read_table(path, usecols=None, log=False, nrows=None, chunksize=None):
+def read_table(path, usecols=None, log=False, nrows=None, chunksize=None, skipcols=None):
     """
     Read in the table created by the parse subcommand (typically named *.tab)
     """
+    assert not (usecols and skipcols)
     if usecols:
         # Adjust requested column names in case the input uses old column names
         available_columns = set(pd.read_table(path, nrows=0).columns)
         new_usecols, recompute_cols = transform_usecols(usecols, available_columns)
+    elif skipcols:
+        available_columns = set(pd.read_table(path, nrows=0).columns)
+        skipcols = set(skipcols)
+        new_usecols = [colname for colname in available_columns if colname not in skipcols]
+        recompute_cols = []
     else:
         new_usecols = usecols
         recompute_cols = []

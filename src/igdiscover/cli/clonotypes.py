@@ -181,7 +181,16 @@ def run_clonotypes(
 
 def read_tables(table_paths):
     logger.info('Reading input tables ...')
-    tables = [read_table(path) for path in table_paths]
+    required_alignment_columns = [
+        "sequence_alignment",  # as per AIRR standard
+        "sequence_alignment_aa",  # because it is used by us
+        "germline_alignment",  # as per AIRR standard
+    ]
+    skipcols = [
+        name for name in pd.read_table(table_paths[0], nrows=0).columns
+        if "_alignment" in name and name not in required_alignment_columns
+    ]
+    tables = [read_table(path, skipcols=skipcols) for path in table_paths]
     if len(table_paths) == 1:
         table = tables[0]
         has_file_id = False
