@@ -101,18 +101,7 @@ def run_clonotypes(
     cdr3_core=None,
     mindiffrate=True,
 ):
-    logger.info('Reading input tables ...')
-    tables = [read_table(path) for path in table_paths]
-
-    if len(table_paths) == 1:
-        table = tables[0]
-        has_file_id = False
-        logger.info('Read table with %s rows', len(table))
-    else:
-        table = pd.concat(tables, keys=range(len(table_paths)), names=["file_id"])
-        has_file_id = True
-        logger.info("Read %d tables with %s rows in total", len(tables), len(table))
-        del tables
+    table, has_file_id = read_tables(table_paths)
 
     table.insert(list(table.columns).index('cdr3'), 'CDR3_length', table['cdr3'].apply(len))
     table = table[table['CDR3_length'] > 0]
@@ -188,6 +177,22 @@ def run_clonotypes(
                     progress_updated = elapsed
 
     logger.info('%d clonotypes and %d sequences written', n, k)
+
+
+def read_tables(table_paths):
+    logger.info('Reading input tables ...')
+    tables = [read_table(path) for path in table_paths]
+    if len(table_paths) == 1:
+        table = tables[0]
+        has_file_id = False
+        logger.info('Read table with %s rows', len(table))
+    else:
+        table = pd.concat(tables, keys=range(len(table_paths)), names=["file_id"])
+        has_file_id = True
+        logger.info("Read %d tables with %s rows in total", len(tables), len(table))
+        del tables
+
+    return table, has_file_id
 
 
 def group_by_clonotype(table, mismatches, sort, cdr3_core, cdr3_column):
