@@ -536,11 +536,14 @@ rule igdiscover_igblast:
         database='{dir}/database',
         species=' --species={}'.format(config.species) if config.species else '',
         sequence_type=' --sequence-type={}'.format(config.sequence_type),
+    log:
+        "{dir}/igblast.log"
     threads: 16
     shell:
         "time igdiscover igblastwrap{params.sequence_type}{params.penalty} --threads={threads}"
-        "{params.species} {params.database} {input.fastagz} | "
-        "{GZIP} > {output.tabgz}"
+        "{params.species} {params.database} {input.fastagz}"
+        " 2> >(tee {log} >&2) |"
+        " {GZIP} > {output.tabgz}"
 
 
 rule igdiscover_augment:
