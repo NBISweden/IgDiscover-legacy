@@ -1,14 +1,18 @@
-.. image:: https://img.shields.io/pypi/v/igdiscover.svg
-    :target: https://pypi.python.org/pypi/igdiscover
+⚠️ ❗ ⚠️ ❗ ⚠️ 
 
-.. image:: https://github.com/NBISweden/IgDiscover/actions/workflows/ci.yml/badge.svg
-    :target: https://github.com/NBISweden/IgDiscover/actions/workflows/ci.yml
++------------------------------------------+
+| Please see the new repository at         |
+| https://gitlab.com/gkhlab/igdiscover22/  |
+| or the homepage at                       |
+| https://www.igdiscover.se/               |
+| for the most recent and maintained       |
+| IgDiscover version.                      |
++------------------------------------------+
 
-.. image:: https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg
-    :target: http://bioconda.github.io/recipes/igdiscover/README.html
+⚠️ ❗ ⚠️ ❗ ⚠️ 
 
+----
 
-==========
 IgDiscover
 ==========
 
